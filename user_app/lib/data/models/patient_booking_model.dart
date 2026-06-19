@@ -1,0 +1,171 @@
+import 'bookable_slot_model.dart';
+import 'previous_report_model.dart';
+
+DateTime _parseDateTime(dynamic value) {
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.parse(value);
+  throw FormatException('Invalid date: $value');
+}
+
+class PatientBookingStats {
+  final int total;
+  final int upcoming;
+  final int past;
+
+  const PatientBookingStats({
+    required this.total,
+    required this.upcoming,
+    required this.past,
+  });
+
+  factory PatientBookingStats.fromJson(Map<String, dynamic> json) {
+    return PatientBookingStats(
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      upcoming: (json['upcoming'] as num?)?.toInt() ?? 0,
+      past: (json['past'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class PatientBookingModel {
+  final String id;
+  final String doctorId;
+  final String doctorName;
+  final String? doctorProfilePicture;
+  final String consultationType;
+  final String typeLabel;
+  final DateTime slotStart;
+  final DateTime slotEnd;
+  final String label;
+  final int? consultationFee;
+  final String status;
+  final String? clinicName;
+  final String? clinicAddress;
+  final String? visitReason;
+  final String? patientAddress;
+  final String? patientCity;
+  final bool isUpcoming;
+  final DateTime? createdAt;
+  final String? appointmentCode;
+  final DateTime? appointmentVerifiedAt;
+  final bool canJoinVideo;
+  final int? videoStartsInMinutes;
+  final bool hasFeedback;
+  final bool canRequestFeedback;
+  final List<PreviousReportModel> previousReports;
+
+  const PatientBookingModel({
+    required this.id,
+    required this.doctorId,
+    required this.doctorName,
+    this.doctorProfilePicture,
+    required this.consultationType,
+    required this.typeLabel,
+    required this.slotStart,
+    required this.slotEnd,
+    required this.label,
+    this.consultationFee,
+    required this.status,
+    this.clinicName,
+    this.clinicAddress,
+    this.visitReason,
+    this.patientAddress,
+    this.patientCity,
+    required this.isUpcoming,
+    this.createdAt,
+    this.appointmentCode,
+    this.appointmentVerifiedAt,
+    this.canJoinVideo = false,
+    this.videoStartsInMinutes,
+    this.hasFeedback = false,
+    this.canRequestFeedback = false,
+    this.previousReports = const [],
+  });
+
+  bool get isClinicVisit => consultationType == 'visit_site';
+
+  bool get isOnlineConsult => consultationType == 'online_consult';
+
+  bool get isAppointmentVerified => appointmentVerifiedAt != null;
+
+  factory PatientBookingModel.fromJson(Map<String, dynamic> json) {
+    return PatientBookingModel(
+      id: json['id'] as String,
+      doctorId: json['doctorId'] as String,
+      doctorName: json['doctorName'] as String? ?? 'Doctor',
+      doctorProfilePicture: json['doctorProfilePicture'] as String?,
+      consultationType: json['consultationType'] as String? ?? 'online_consult',
+      typeLabel: json['typeLabel'] as String? ?? 'Consultation',
+      slotStart: _parseDateTime(json['slotStart']),
+      slotEnd: _parseDateTime(json['slotEnd']),
+      label: json['label'] as String? ?? '',
+      consultationFee: (json['consultationFee'] as num?)?.toInt(),
+      status: json['status'] as String? ?? 'confirmed',
+      clinicName: json['clinicName'] as String?,
+      clinicAddress: json['clinicAddress'] as String?,
+      visitReason: json['visitReason'] as String?,
+      patientAddress: json['patientAddress'] as String?,
+      patientCity: json['patientCity'] as String?,
+      isUpcoming: json['isUpcoming'] as bool? ?? false,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
+      appointmentCode: json['appointmentCode'] as String?,
+      appointmentVerifiedAt: json['appointmentVerifiedAt'] != null
+          ? DateTime.tryParse(json['appointmentVerifiedAt'] as String)
+          : null,
+      canJoinVideo: json['canJoinVideo'] as bool? ?? false,
+      videoStartsInMinutes: (json['videoStartsInMinutes'] as num?)?.toInt(),
+      hasFeedback: json['hasFeedback'] as bool? ?? false,
+      canRequestFeedback: json['canRequestFeedback'] as bool? ?? false,
+      previousReports: (json['previousReports'] as List<dynamic>? ?? [])
+          .map((e) => PreviousReportModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  ConsultationBookingResult toConsultationResult() {
+    return ConsultationBookingResult(
+      id: id,
+      doctorId: doctorId,
+      consultationType: consultationType,
+      doctorName: doctorName,
+      patientName: '',
+      patientMobile: '',
+      slotStart: slotStart,
+      slotEnd: slotEnd,
+      label: label,
+      consultationFee: consultationFee,
+      status: status,
+      clinicName: clinicName,
+      clinicAddress: clinicAddress,
+      visitReason: visitReason,
+      patientAddress: patientAddress,
+      patientCity: patientCity,
+      appointmentCode: appointmentCode,
+      appointmentVerifiedAt: appointmentVerifiedAt,
+    );
+  }
+}
+
+class PatientBookingsResponse {
+  final List<PatientBookingModel> bookings;
+  final PatientBookingStats stats;
+
+  const PatientBookingsResponse({
+    required this.bookings,
+    required this.stats,
+  });
+
+  factory PatientBookingsResponse.fromJson(Map<String, dynamic> json) {
+    final list = (json['bookings'] as List<dynamic>? ?? [])
+        .map((e) => PatientBookingModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final statsJson =
+        json['stats'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    return PatientBookingsResponse(
+      bookings: list,
+      stats: PatientBookingStats.fromJson(statsJson),
+    );
+  }
+}

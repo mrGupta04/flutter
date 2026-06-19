@@ -1,0 +1,427 @@
+import 'package:dio/dio.dart';
+import '../../core/constants/app_constants.dart';
+import '../models/models.dart';
+import 'mock_database.dart';
+
+/// Mock API handler for Dio service
+class MockApi {
+  MockApi._();
+
+  static final MockDatabase _db = MockDatabase.instance;
+
+  static Future<Response> handleRequest({
+    required String path,
+    required String method,
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    _db.seedIfEmpty();
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (path == AppConstants.endpointAadhaarConfig && method == 'GET') {
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'statusCode': 200,
+          'data': {
+            'provider': 'mock',
+            'uidaiOtp': false,
+            'description': 'Mock OTP (development)',
+          },
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointAadhaarSendOtp && method == 'POST') {
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'message': 'OTP sent',
+          'statusCode': 200,
+          'data': {
+            'message': 'OTP sent',
+            'maskedAadhaar': 'XXXX-XXXX-1234',
+            'expiresInSeconds': 600,
+            'devOtp': '123456',
+          },
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointAadhaarVerifyOtp && method == 'POST') {
+      final doctorId = data?['doctorId'] as String? ?? '';
+      final doctor = _db.getDoctorById(doctorId) ?? _db.latestDoctor;
+      final updated = doctor?.copyWith(
+            aadhaarVerified: true,
+            aadhaarLast4: '1234',
+          ) ??
+          doctor;
+      if (updated != null) {
+        _db.updateDoctor(updated);
+      }
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'message': 'Aadhaar verified',
+          'statusCode': 200,
+          'data': {
+            'verified': true,
+            'maskedAadhaar': 'XXXX-XXXX-1234',
+            'aadhaarLast4': '1234',
+            'doctor': updated?.toJson(),
+          },
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointRegisterDoctor && method == 'POST') {
+      final doctor = DoctorModel.fromJson(data ?? {});
+      final created = _db.registerDoctor(doctor);
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'message': 'Doctor registered successfully',
+          'statusCode': 200,
+          'data': created.toJson(),
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointGetProfile && method == 'GET') {
+      final doctorId = queryParameters?['doctorId'] as String?;
+      final doctor = doctorId != null
+          ? _db.getDoctorById(doctorId)
+          : _db.latestDoctor;
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'statusCode': 200,
+          'data': doctor?.toJson(),
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointUpdateProfile && method == 'PUT') {
+      final doctor = DoctorModel.fromJson(data ?? {});
+      final updated = _db.updateDoctor(doctor);
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'message': 'Profile updated successfully',
+          'statusCode': 200,
+          'data': updated.toJson(),
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointPatientRegister && method == 'POST') {
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'message': 'Account created successfully',
+          'statusCode': 201,
+          'token': 'mock-patient-token',
+          'data': {
+            'id': 'mock-patient-1',
+            'firstName': data?['firstName'] ?? 'Demo',
+            'lastName': data?['lastName'],
+            'email': data?['email'] ?? 'patient@example.com',
+            'mobileNumber': data?['mobileNumber'] ?? '9876543210',
+            'age': int.tryParse('${data?['age']}') ?? 30,
+            'gender': data?['gender'] ?? 'Male',
+            'aadhaarLast4': '1234',
+            'profilePicture': 'https://i.pravatar.cc/150?img=12',
+            'aadhaarCardUrl': 'https://example.com/aadhaar.jpg',
+          },
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointPatientLogin && method == 'POST') {
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'message': 'Login successful',
+          'statusCode': 200,
+          'token': 'mock-patient-token',
+          'data': {
+            'id': 'mock-patient-1',
+            'firstName': 'Demo',
+            'lastName': 'Patient',
+            'email': data?['email'] ?? 'patient@example.com',
+            'mobileNumber': '9876543210',
+            'age': 30,
+            'gender': 'Male',
+            'aadhaarLast4': '1234',
+            'profilePicture': 'https://i.pravatar.cc/150?img=12',
+          },
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointPatientProfile &&
+        (method == 'GET' || method == 'PUT')) {
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'statusCode': 200,
+          'message': method == 'PUT' ? 'Profile updated successfully' : null,
+          'data': {
+            'id': 'mock-patient-1',
+            'firstName': data?['firstName'] ?? 'Demo',
+            'lastName': data?['lastName'] ?? 'Patient',
+            'email': data?['email'] ?? 'patient@example.com',
+            'mobileNumber': data?['mobileNumber'] ?? '9876543210',
+            'age': int.tryParse('${data?['age']}') ?? 30,
+            'gender': data?['gender'] ?? 'Male',
+            'aadhaarLast4': '1234',
+            'profilePicture': 'https://i.pravatar.cc/150?img=12',
+            'aadhaarCardUrl': 'https://example.com/aadhaar.jpg',
+          },
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointVerifiedDoctors && method == 'GET') {
+      final consultationType = queryParameters?['consultationType'] as String?;
+      final doctors = _db.getVerifiedDoctors(consultationType: consultationType);
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'statusCode': 200,
+          'data': doctors.map((d) => d.toJson()).toList(),
+        },
+      );
+    }
+
+    if (path == AppConstants.endpointDoctorBookableSlots && method == 'GET') {
+      final doctorId = queryParameters?['doctorId'] as String? ?? '';
+      final consultationType =
+          queryParameters?['type'] as String? ?? 'online_consult';
+      try {
+        final data = _db.getBookableSlots(
+          doctorId: doctorId,
+          consultationType: consultationType,
+        );
+        return _ok(path, method, {'success': true, 'statusCode': 200, 'data': data});
+      } catch (e) {
+        return _error(path, method, e.toString(), 404);
+      }
+    }
+
+    if (path == AppConstants.endpointOnlineConsultBook && method == 'POST') {
+      final doctorId = data?['doctorId'] as String? ?? '';
+      try {
+        final booking = _db.createBooking(
+          doctorId: doctorId,
+          consultationType: 'online_consult',
+          payload: data ?? {},
+        );
+        return _ok(
+          path,
+          method,
+          {
+            'success': true,
+            'message': 'Online consultation booked',
+            'statusCode': 201,
+            'data': booking,
+          },
+        );
+      } catch (e) {
+        return _error(path, method, e.toString(), 409);
+      }
+    }
+
+    if (path == AppConstants.endpointHospitalVisitBook && method == 'POST') {
+      final doctorId = data?['doctorId'] as String? ?? '';
+      try {
+        final booking = _db.createBooking(
+          doctorId: doctorId,
+          consultationType: 'visit_site',
+          payload: data ?? {},
+        );
+        return _ok(
+          path,
+          method,
+          {
+            'success': true,
+            'message': 'Hospital visit booked',
+            'statusCode': 201,
+            'data': booking,
+          },
+        );
+      } catch (e) {
+        return _error(path, method, e.toString(), 409);
+      }
+    }
+
+    if (path == AppConstants.endpointPatientBookings && method == 'GET') {
+      final now = DateTime.now();
+      final upcoming = now.add(const Duration(days: 2));
+      final past = now.subtract(const Duration(days: 3));
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'statusCode': 200,
+          'data': {
+            'stats': {'total': 2, 'upcoming': 1, 'past': 1},
+            'bookings': [
+              {
+                'id': 'mock-booking-1',
+                'doctorId': 'mock-doctor-1',
+                'doctorName': 'Dr. Demo Sharma',
+                'consultationType': 'online_consult',
+                'typeLabel': 'Online consult',
+                'slotStart': upcoming.toIso8601String(),
+                'slotEnd': upcoming.add(const Duration(hours: 1)).toIso8601String(),
+                'label': '10:00 AM – 11:00 AM',
+                'consultationFee': 500,
+                'status': 'confirmed',
+                'isUpcoming': true,
+              },
+              {
+                'id': 'mock-booking-2',
+                'doctorId': 'mock-doctor-2',
+                'doctorName': 'Dr. Priya Patel',
+                'consultationType': 'visit_site',
+                'typeLabel': 'Clinic visit',
+                'slotStart': upcoming.toIso8601String(),
+                'slotEnd': upcoming.add(const Duration(hours: 1)).toIso8601String(),
+                'label': '2:00 PM – 3:00 PM',
+                'consultationFee': 800,
+                'status': 'confirmed',
+                'clinicName': 'City Care Clinic',
+                'clinicAddress': 'MG Road, Mumbai',
+                'appointmentCode': '4829',
+                'isUpcoming': true,
+              },
+            ],
+          },
+        },
+      );
+    }
+
+    return _error(path, method, 'Endpoint not found', 404);
+  }
+
+  static Future<Response> handleUpload({
+    required String path,
+    required String filePath,
+    required Map<String, String> fields,
+  }) async {
+    _db.seedIfEmpty();
+
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (path == AppConstants.endpointUploadDocument) {
+      final doctorId = fields['doctorId'] ?? _db.latestDoctor?.id ?? '';
+      final documentTypeValue = fields['documentType'];
+      final documentType = _parseDocumentType(documentTypeValue) ??
+          DocumentType.medicalLicense;
+        final fileName = _fileNameFromPath(filePath);
+      final mimeType = _guessMimeType(fileName);
+        const fileSize = 1024 * 500;
+
+      final document = _db.addDocument(
+        doctorId: doctorId,
+        documentType: documentType,
+        fileName: fileName,
+        mimeType: mimeType,
+        fileSize: fileSize,
+      );
+
+      return _ok(
+        path,
+        'POST',
+        {
+          'success': true,
+          'message': 'Document uploaded successfully',
+          'statusCode': 200,
+          'data': document.toJson(),
+        },
+      );
+    }
+
+    return _error(path, 'POST', 'Endpoint not found', 404);
+  }
+
+  static Response _ok(String path, String method, Map<String, dynamic> data) {
+    return Response(
+      requestOptions: RequestOptions(path: path, method: method),
+      data: data,
+      statusCode: data['statusCode'] as int? ?? 200,
+    );
+  }
+
+  static Response _error(
+    String path,
+    String method,
+    String message,
+    int statusCode,
+  ) {
+    return Response(
+      requestOptions: RequestOptions(path: path, method: method),
+      data: {
+        'success': false,
+        'error': message,
+        'statusCode': statusCode,
+      },
+      statusCode: statusCode,
+    );
+  }
+
+  static DocumentType? _parseDocumentType(String? value) {
+    switch (value) {
+      case 'medical_license':
+        return DocumentType.medicalLicense;
+      case 'government_id':
+        return DocumentType.governmentId;
+      case 'degree_certificate':
+        return DocumentType.degreeCertificate;
+      case 'clinic_proof':
+        return DocumentType.clinicProof;
+      case 'cancelled_cheque':
+        return DocumentType.cancelledCheque;
+      default:
+        return null;
+    }
+  }
+
+  static String _guessMimeType(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'webp'].contains(extension)) {
+      return 'image/$extension';
+    }
+    if (extension == 'pdf') return 'application/pdf';
+    return 'application/octet-stream';
+  }
+
+  static String _fileNameFromPath(String path) {
+    final normalized = path.replaceAll('\\', '/');
+    final segments = normalized.split('/');
+    return segments.isNotEmpty ? segments.last : 'document.pdf';
+  }
+}

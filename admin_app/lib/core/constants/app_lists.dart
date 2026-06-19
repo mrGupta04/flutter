@@ -1,0 +1,78 @@
+/// Static lists used in form dropdowns and chips
+class AppLists {
+  AppLists._();
+
+  static const List<String> genders = [
+    'Male',
+    'Female',
+    'Other',
+  ];
+
+  /// Common medical specializations (alphabetical).
+  static const List<String> specializations = [
+    'Allergy & Immunology',
+    'Anesthesiology',
+    'Ayurveda',
+    'Cardiology',
+    'Cardiothoracic Surgery',
+    'Critical Care Medicine',
+    'Dental Surgery',
+    'Dentistry',
+    'Dermatology',
+    'Emergency Medicine',
+    'Endocrinology',
+    'ENT (Otolaryngology)',
+    'Family Medicine',
+    'Gastroenterology',
+    'General Medicine',
+    'General Physician',
+    'General Surgery',
+    'Geriatrics',
+    'Gynecology',
+    'Gynecology & Obstetrics',
+    'Hematology',
+    'Homeopathy',
+    'Infectious Disease',
+    'Internal Medicine',
+    'Medical Oncology',
+    'Neonatology',
+    'Nephrology',
+    'Neurology',
+    'Neurosurgery',
+    'Nutrition & Dietetics',
+    'Obstetrics',
+    'Oncology',
+    'Ophthalmology',
+    'Orthopedics',
+    'Pain Management',
+    'Pathology',
+    'Pediatric Surgery',
+    'Pediatrics',
+    'Physiotherapy',
+    'Plastic Surgery',
+    'Psychiatry',
+    'Pulmonology',
+    'Radiation Oncology',
+    'Radiology',
+    'Respiratory Medicine',
+    'Rheumatology',
+    'Sleep Medicine',
+    'Sports Medicine',
+    'Surgical Oncology',
+    'Urology',
+    'Vascular Surgery',
+  ];
+
+  static const List<String> languages = [
+    'English',
+    'Hindi',
+    'Tamil',
+    'Telugu',
+    'Kannada',
+    'Malayalam',
+    'Marathi',
+    'Bengali',
+    'Gujarati',
+    'Punjabi',
+  ];
+}

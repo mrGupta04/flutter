@@ -1,0 +1,162 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'app_colors.dart';
+import 'app_decorations.dart';
+import 'app_text_styles.dart';
+
+class AppTheme {
+  AppTheme._();
+
+  static ThemeData get lightTheme => _buildTheme(Brightness.light);
+  static ThemeData get darkTheme => _buildTheme(Brightness.dark);
+
+  static ThemeData _buildTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final textPrimary =
+        isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final textSecondary =
+        isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+    final surface = isDark ? AppColors.darkSurface : AppColors.surface;
+    final background =
+        isDark ? AppColors.darkBackground : AppColors.background;
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: ColorScheme(
+        brightness: brightness,
+        primary: AppColors.primary,
+        onPrimary: AppColors.white,
+        secondary: AppColors.offer,
+        onSecondary: AppColors.white,
+        error: AppColors.error,
+        onError: AppColors.white,
+        surface: surface,
+        onSurface: textPrimary,
+      ),
+      scaffoldBackgroundColor: background,
+      fontFamily: GoogleFonts.inter().fontFamily,
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData(brightness: brightness).textTheme,
+      ).apply(bodyColor: textPrimary, displayColor: textPrimary),
+      appBarTheme: AppBarTheme(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: AppColors.headerGreen,
+        foregroundColor: AppColors.white,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        titleTextStyle: AppTextStyles.titleLarge.copyWith(
+          color: AppColors.white,
+          fontWeight: FontWeight.w600,
+        ),
+        iconTheme: const IconThemeData(color: AppColors.white, size: 22),
+        surfaceTintColor: Colors.transparent,
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppDecorations.borderRadiusLg,
+        ),
+        margin: EdgeInsets.zero,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: AppDecorations.borderRadiusMd,
+          ),
+          textStyle: AppTextStyles.button.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary),
+          shape: RoundedRectangleBorder(
+            borderRadius: AppDecorations.borderRadiusMd,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: AppDecorations.borderRadiusMd,
+          borderSide: const BorderSide(color: AppColors.grey200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppDecorations.borderRadiusMd,
+          borderSide: const BorderSide(color: AppColors.grey200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: AppDecorations.borderRadiusMd,
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        labelStyle: AppTextStyles.labelMedium.copyWith(color: textSecondary),
+        hintStyle: AppTextStyles.bodyMedium.copyWith(color: textSecondary),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor:
+            isDark ? AppColors.darkSurfaceElevated : AppColors.white,
+        selectedColor: AppColors.primary,
+        disabledColor: AppColors.grey100,
+        labelStyle: AppTextStyles.labelMedium.copyWith(
+          color: textPrimary,
+        ),
+        secondaryLabelStyle: AppTextStyles.labelMedium.copyWith(
+          color: textSecondary,
+        ),
+        brightness: brightness,
+        checkmarkColor: AppColors.white,
+        deleteIconColor: textSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppDecorations.borderRadiusPill,
+          side: BorderSide(
+            color: isDark ? AppColors.grey700 : AppColors.grey200,
+          ),
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: AppColors.white,
+        unselectedLabelColor: AppColors.white.withValues(alpha: 0.72),
+        indicatorColor: AppColors.white,
+        labelStyle: AppTextStyles.labelMedium.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: AppTextStyles.labelMedium,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary,
+        linearTrackColor: AppColors.grey100,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppDecorations.borderRadiusMd,
+        ),
+        backgroundColor: AppColors.grey800,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppDecorations.radiusXl),
+          ),
+        ),
+        showDragHandle: true,
+      ),
+    );
+  }
+}

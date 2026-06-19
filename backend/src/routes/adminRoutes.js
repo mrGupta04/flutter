@@ -1,0 +1,598 @@
+const express = require('express');
+const {
+  findDoctorById,
+  findDocumentsByDoctorId,
+  listDoctors,
+  approveDoctor,
+  rejectDoctor,
+} = require('../db/repositories');
+const {
+  findNurseById,
+  findDocumentsByNurseId,
+  listNurses,
+  approveNurse,
+  rejectNurse,
+} = require('../db/nurseRepositories');
+const {
+  findAmbulanceById,
+  findDocumentsByAmbulanceId,
+  listAmbulances,
+  approveAmbulance,
+  rejectAmbulance,
+} = require('../db/ambulanceRepositories');
+const {
+  findDocumentById,
+  verifyDocument,
+  rejectDocument,
+  ensureDoctorDocumentsFromProfile,
+  ensureNurseDocumentsFromProfile,
+  ensureAmbulanceDocumentsFromProfile,
+} = require('../db/documentVerification');
+const {
+  findBloodBankById,
+  listBloodBanks,
+  approveBloodBank,
+  rejectBloodBank,
+} = require('../db/bloodBankRepositories');
+const { sendSuccess, sendError } = require('../utils/response');
+const { adminRequired } = require('../middleware/auth');
+
+const router = express.Router();
+
+// ——— Doctor applications (admin only) ———
+
+router.get('/doctors', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const status = req.query.status;
+
+    const { doctors, pagination } = await listDoctors({ status, page, pageSize });
+
+    return sendSuccess(res, {
+      data: doctors,
+      pagination,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list doctors', 500);
+  }
+});
+
+router.get('/doctors/:id', adminRequired, async (req, res) => {
+  try {
+    const doctor = await findDoctorById(req.params.id);
+    if (!doctor) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+    return sendSuccess(res, { data: doctor });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch doctor', 500);
+  }
+});
+
+router.get('/doctors/:id/documents', adminRequired, async (req, res) => {
+  try {
+    const doctor = await findDoctorById(req.params.id);
+    if (!doctor) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+    const documents = await ensureDoctorDocumentsFromProfile(doctor);
+    return sendSuccess(res, { data: documents });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch documents', 500);
+  }
+});
+
+router.post(
+  '/doctors/:doctorId/documents/:documentId/verify',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { doctorId, documentId } = req.params;
+      const document = await findDocumentById(documentId);
+      if (!document || document.doctorId !== doctorId) {
+        return sendError(res, 'Document not found', 404);
+      }
+
+      const verified = await verifyDocument(documentId, req.auth?.adminId);
+      return sendSuccess(res, {
+        message: 'Document verified',
+        data: verified,
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to verify document', status);
+    }
+  },
+);
+
+router.post(
+  '/doctors/:doctorId/documents/:documentId/reject',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { doctorId, documentId } = req.params;
+      const { rejectionReason } = req.body;
+      if (!rejectionReason?.trim()) {
+        return sendError(res, 'rejectionReason is required');
+      }
+
+      const document = await findDocumentById(documentId);
+      if (!document || document.doctorId !== doctorId) {
+        return sendError(res, 'Document not found', 404);
+      }
+
+      const rejected = await rejectDocument(
+        documentId,
+        rejectionReason.trim(),
+        req.auth?.adminId,
+      );
+      return sendSuccess(res, {
+        message: 'Document rejected',
+        data: rejected,
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to reject document', status);
+    }
+  },
+);
+
+// Admin approval: pending / under_review → verified (live on user app)
+router.post('/doctors/:id/approve', adminRequired, async (req, res) => {
+  try {
+    const { approvalNotes } = req.body;
+    const existing = await findDoctorById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+
+    const doctor = await approveDoctor(req.params.id, approvalNotes);
+
+    return sendSuccess(res, {
+      message: 'Doctor approved successfully',
+      data: doctor,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to approve doctor', status);
+  }
+});
+
+router.post('/doctors/:id/reject', adminRequired, async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    if (!rejectionReason?.trim()) {
+      return sendError(res, 'rejectionReason is required');
+    }
+
+    const existing = await findDoctorById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+
+    const allowed = ['pending', 'under_review', 'verifier_approved'];
+    if (!allowed.includes(existing.verificationStatus)) {
+      return sendError(
+        res,
+        `Cannot reject doctor with status "${existing.verificationStatus}"`,
+        400,
+      );
+    }
+
+    const doctor = await rejectDoctor(req.params.id, rejectionReason.trim());
+
+    return sendSuccess(res, {
+      message: 'Doctor rejected successfully',
+      data: doctor,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to reject doctor', 500);
+  }
+});
+
+// ——— Nurse applications (admin only) ———
+
+router.get('/nurses', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const status = req.query.status;
+
+    const { nurses, pagination } = await listNurses({ status, page, pageSize });
+
+    return sendSuccess(res, {
+      data: nurses,
+      pagination,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list nurses', 500);
+  }
+});
+
+router.get('/nurses/:id', adminRequired, async (req, res) => {
+  try {
+    const nurse = await findNurseById(req.params.id);
+    if (!nurse) {
+      return sendError(res, 'Nurse not found', 404);
+    }
+    return sendSuccess(res, { data: nurse });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch nurse', 500);
+  }
+});
+
+router.get('/nurses/:id/documents', adminRequired, async (req, res) => {
+  try {
+    const nurse = await findNurseById(req.params.id);
+    if (!nurse) {
+      return sendError(res, 'Nurse not found', 404);
+    }
+    const documents = await ensureNurseDocumentsFromProfile(nurse);
+    return sendSuccess(res, { data: documents });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch documents', 500);
+  }
+});
+
+router.post(
+  '/nurses/:nurseId/documents/:documentId/verify',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { nurseId, documentId } = req.params;
+      const document = await findDocumentById(documentId);
+      if (!document || document.nurseId !== nurseId) {
+        return sendError(res, 'Document not found', 404);
+      }
+
+      const verified = await verifyDocument(documentId, req.auth?.adminId);
+      return sendSuccess(res, {
+        message: 'Document verified',
+        data: verified,
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to verify document', status);
+    }
+  },
+);
+
+router.post(
+  '/nurses/:nurseId/documents/:documentId/reject',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { nurseId, documentId } = req.params;
+      const { rejectionReason } = req.body;
+      if (!rejectionReason?.trim()) {
+        return sendError(res, 'rejectionReason is required');
+      }
+
+      const document = await findDocumentById(documentId);
+      if (!document || document.nurseId !== nurseId) {
+        return sendError(res, 'Document not found', 404);
+      }
+
+      const rejected = await rejectDocument(
+        documentId,
+        rejectionReason.trim(),
+        req.auth?.adminId,
+      );
+      return sendSuccess(res, {
+        message: 'Document rejected',
+        data: rejected,
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to reject document', status);
+    }
+  },
+);
+
+router.post('/nurses/:id/approve', adminRequired, async (req, res) => {
+  try {
+    const { approvalNotes } = req.body;
+    const existing = await findNurseById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Nurse not found', 404);
+    }
+
+    const nurse = await approveNurse(req.params.id, approvalNotes);
+
+    return sendSuccess(res, {
+      message: 'Nurse approved successfully',
+      data: nurse,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to approve nurse', status);
+  }
+});
+
+router.post('/nurses/:id/reject', adminRequired, async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    if (!rejectionReason?.trim()) {
+      return sendError(res, 'rejectionReason is required');
+    }
+
+    const existing = await findNurseById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Nurse not found', 404);
+    }
+
+    const allowed = ['pending', 'under_review', 'verifier_approved'];
+    if (!allowed.includes(existing.verificationStatus)) {
+      return sendError(
+        res,
+        `Cannot reject nurse with status "${existing.verificationStatus}"`,
+        400,
+      );
+    }
+
+    const nurse = await rejectNurse(req.params.id, rejectionReason.trim());
+
+    return sendSuccess(res, {
+      message: 'Nurse rejected successfully',
+      data: nurse,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to reject nurse', 500);
+  }
+});
+
+// ——— Ambulance applications (admin only) ———
+
+router.get('/ambulances', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const status = req.query.status;
+
+    const { ambulances, pagination } = await listAmbulances({ status, page, pageSize });
+
+    return sendSuccess(res, { data: ambulances, pagination });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list ambulances', 500);
+  }
+});
+
+router.get('/ambulances/:id', adminRequired, async (req, res) => {
+  try {
+    const ambulance = await findAmbulanceById(req.params.id);
+    if (!ambulance) {
+      return sendError(res, 'Ambulance service not found', 404);
+    }
+    return sendSuccess(res, { data: ambulance });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch ambulance', 500);
+  }
+});
+
+router.get('/ambulances/:id/documents', adminRequired, async (req, res) => {
+  try {
+    const ambulance = await findAmbulanceById(req.params.id);
+    if (!ambulance) {
+      return sendError(res, 'Ambulance service not found', 404);
+    }
+    const documents = await ensureAmbulanceDocumentsFromProfile(ambulance);
+    return sendSuccess(res, { data: documents });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch documents', 500);
+  }
+});
+
+router.post(
+  '/ambulances/:ambulanceId/documents/:documentId/verify',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { ambulanceId, documentId } = req.params;
+      const document = await findDocumentById(documentId);
+      if (!document || document.ambulanceId !== ambulanceId) {
+        return sendError(res, 'Document not found', 404);
+      }
+
+      const verified = await verifyDocument(documentId, req.auth?.adminId);
+      return sendSuccess(res, {
+        message: 'Document verified',
+        data: verified,
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to verify document', status);
+    }
+  },
+);
+
+router.post(
+  '/ambulances/:ambulanceId/documents/:documentId/reject',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { ambulanceId, documentId } = req.params;
+      const { rejectionReason } = req.body;
+      if (!rejectionReason?.trim()) {
+        return sendError(res, 'rejectionReason is required');
+      }
+
+      const document = await findDocumentById(documentId);
+      if (!document || document.ambulanceId !== ambulanceId) {
+        return sendError(res, 'Document not found', 404);
+      }
+
+      const rejected = await rejectDocument(
+        documentId,
+        rejectionReason.trim(),
+        req.auth?.adminId,
+      );
+      return sendSuccess(res, {
+        message: 'Document rejected',
+        data: rejected,
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to reject document', status);
+    }
+  },
+);
+
+router.post('/ambulances/:id/approve', adminRequired, async (req, res) => {
+  try {
+    const { approvalNotes } = req.body;
+    const existing = await findAmbulanceById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Ambulance service not found', 404);
+    }
+
+    const ambulance = await approveAmbulance(req.params.id, approvalNotes);
+
+    return sendSuccess(res, {
+      message: 'Ambulance approved successfully',
+      data: ambulance,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to approve ambulance', status);
+  }
+});
+
+router.post('/ambulances/:id/reject', adminRequired, async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    if (!rejectionReason?.trim()) {
+      return sendError(res, 'rejectionReason is required');
+    }
+
+    const existing = await findAmbulanceById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Ambulance service not found', 404);
+    }
+
+    const allowed = ['pending', 'under_review', 'verifier_approved'];
+    if (!allowed.includes(existing.verificationStatus)) {
+      return sendError(
+        res,
+        `Cannot reject ambulance with status "${existing.verificationStatus}"`,
+        400,
+      );
+    }
+
+    const ambulance = await rejectAmbulance(req.params.id, rejectionReason.trim());
+
+    return sendSuccess(res, {
+      message: 'Ambulance rejected successfully',
+      data: ambulance,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to reject ambulance', 500);
+  }
+});
+
+// ——— Blood bank applications (admin only) ———
+
+router.get('/blood-banks', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const status = req.query.status;
+
+    const { bloodBanks, pagination } = await listBloodBanks({ status, page, pageSize });
+
+    return sendSuccess(res, { data: bloodBanks, pagination });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list blood banks', 500);
+  }
+});
+
+router.get('/blood-banks/:id', adminRequired, async (req, res) => {
+  try {
+    const bloodBank = await findBloodBankById(req.params.id);
+    if (!bloodBank) {
+      return sendError(res, 'Blood bank not found', 404);
+    }
+    return sendSuccess(res, { data: bloodBank });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch blood bank', 500);
+  }
+});
+
+router.post('/blood-banks/:id/approve', adminRequired, async (req, res) => {
+  try {
+    const { approvalNotes } = req.body;
+    const existing = await findBloodBankById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Blood bank not found', 404);
+    }
+
+    const bloodBank = await approveBloodBank(req.params.id, approvalNotes);
+
+    return sendSuccess(res, {
+      message: 'Blood bank approved successfully',
+      data: bloodBank,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to approve blood bank', status);
+  }
+});
+
+router.post('/blood-banks/:id/reject', adminRequired, async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    if (!rejectionReason?.trim()) {
+      return sendError(res, 'rejectionReason is required');
+    }
+
+    const existing = await findBloodBankById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Blood bank not found', 404);
+    }
+
+    const allowed = ['pending', 'under_review', 'verifier_approved'];
+    if (!allowed.includes(existing.verificationStatus)) {
+      return sendError(
+        res,
+        `Cannot reject blood bank with status "${existing.verificationStatus}"`,
+        400,
+      );
+    }
+
+    const bloodBank = await rejectBloodBank(req.params.id, rejectionReason.trim());
+
+    return sendSuccess(res, {
+      message: 'Blood bank rejected successfully',
+      data: bloodBank,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to reject blood bank', 500);
+  }
+});
+
+module.exports = router;
