@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const ConsultationBooking = require('./models/ConsultationBooking');
 const { findDoctorById, getConsultationFeeForType } = require('./repositories');
+const { normalizeUploadUrl } = require('../utils/uploadUrl');
 const { findAvailabilityForActiveWeek } = require('./availabilityRepositories');
 const { isWeekExpired } = require('../utils/availabilityWeek');
 const {
@@ -737,7 +738,7 @@ async function listPatientBookings(patientId, mobileNumber) {
       id: b.id,
       doctorId: b.doctorId,
       doctorName,
-      doctorProfilePicture: doctor?.profilePicture,
+      doctorProfilePicture: normalizeUploadUrl(doctor?.profilePicture),
       consultationType: b.consultationType,
       typeLabel,
       patientName: b.patientName,

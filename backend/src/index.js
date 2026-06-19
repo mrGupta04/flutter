@@ -21,6 +21,8 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const app = express();
 
+// Render / reverse proxies — correct protocol for upload URLs
+app.set('trust proxy', 1);
 
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(

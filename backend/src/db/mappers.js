@@ -1,4 +1,9 @@
 const { isDoctorLiveNow } = require('../utils/doctorPresence');
+const {
+  normalizeUploadFields,
+  DOCTOR_UPLOAD_FIELDS,
+  normalizeUploadUrl,
+} = require('../utils/uploadUrl');
 
 function normalizeVerificationStatus(status) {
   if (status === 'verifier_approved') return 'under_review';
@@ -9,7 +14,8 @@ function toDoctor(doc) {
   if (!doc) return null;
   const d = doc.toObject ? doc.toObject() : doc;
   const lastActiveAt = d.lastActiveAt ?? null;
-  return {
+  return normalizeUploadFields(
+    {
     id: d.id || (d._id != null ? String(d._id) : undefined),
     firstName: d.firstName,
     lastName: d.lastName,
@@ -71,7 +77,9 @@ function toDoctor(doc) {
     isLiveNow: isDoctorLiveNow(lastActiveAt),
     averageRating: d.averageRating ?? null,
     ratingCount: d.ratingCount ?? 0,
-  };
+  },
+    DOCTOR_UPLOAD_FIELDS,
+  );
 }
 
 function toDocument(doc) {
@@ -85,7 +93,7 @@ function toDocument(doc) {
     vehicleId: d.vehicleId,
     driverId: d.driverId,
     documentType: d.documentType,
-    fileUrl: d.fileUrl,
+    fileUrl: normalizeUploadUrl(d.fileUrl),
     fileName: d.fileName,
     fileSize: d.fileSize,
     mimeType: d.mimeType,

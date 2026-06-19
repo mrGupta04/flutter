@@ -1,8 +1,4 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
 const {
   registerPatient,
   loginPatient,
@@ -12,30 +8,10 @@ const {
 const { listPatientBookings, addPreviousReportToBooking } = require('../db/bookingRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const { signToken, authRequired } = require('../middleware/auth');
+const { upload, filePublicUrl } = require('../middleware/multerUpload');
+const { normalizeUploadUrl } = require('../utils/uploadUrl');
 
 const router = express.Router();
-
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || '';
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
-
-function filePublicUrl(req, filename) {
-  return `${req.protocol}://${req.get('host')}/uploads/${filename}`;
-}
 
 function requirePatientAuth(req, res) {
   if (req.auth?.type !== 'patient' || !req.auth?.patientId) {
@@ -150,7 +126,13 @@ router.get('/profile', authRequired, async (req, res) => {
       return sendError(res, 'Patient not found', 404);
     }
 
-    return sendSuccess(res, { data: patient });
+    return sendSuccess(res, {
+      data: {
+        ...patient,
+        profilePicture: normalizeUploadUrl(patient.profilePicture),
+        aadhaarCardUrl: normalizeUploadUrl(patient.aadhaarCardUrl),
+      },
+    });
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to load profile', 500);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/media_url_utils.dart';
 import '../../core/utils/validation_utils.dart';
 import '../../data/models/consultation_type.dart';
 import '../../data/models/doctor_model.dart';
@@ -773,8 +774,8 @@ class _DoctorAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = doctor.profilePicture != null &&
-        doctor.profilePicture!.startsWith('http');
+    final imageUrl = MediaUrlUtils.resolve(doctor.profilePicture);
+    final hasImage = imageUrl.isNotEmpty;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -816,7 +817,7 @@ class _DoctorAvatar extends StatelessWidget {
         height: 64,
         child: hasImage
             ? Image.network(
-                doctor.profilePicture!,
+                imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => _placeholder(),
               )
