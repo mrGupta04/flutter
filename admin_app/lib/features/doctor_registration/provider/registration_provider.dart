@@ -468,9 +468,12 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
 
     if (response.success) {
       final maskedEmail = response.data?['maskedEmail'] as String?;
-      final message = maskedEmail != null && maskedEmail.isNotEmpty
-          ? 'Verification code sent to $maskedEmail. Check your inbox.'
-          : (response.message ?? 'Verification code sent. Check your inbox.');
+      final devOtp = response.data?['devOtp'] as String?;
+      final message = devOtp != null && devOtp.isNotEmpty
+          ? 'Dev verification code: $devOtp'
+          : maskedEmail != null && maskedEmail.isNotEmpty
+              ? 'Verification code sent to $maskedEmail. Check your inbox.'
+              : (response.message ?? 'Verification code sent. Check your inbox.');
       state = state.copyWith(
         isSendingEmailOtp: false,
         emailVerificationMessage: message,

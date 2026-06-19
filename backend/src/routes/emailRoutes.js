@@ -30,7 +30,7 @@ router.post('/send-otp', async (req, res) => {
 
     const normalizedEmail = normalizeEmail(email);
     const emailTaken = await findDoctorByEmail(normalizedEmail, doctorId);
-    if (emailTaken?.emailVerified) {
+    if (emailTaken) {
       return sendError(res, 'Email is already registered', 409);
     }
 
@@ -59,6 +59,8 @@ router.post('/verify-otp', async (req, res) => {
     if (!doctorId || !email || !otp) {
       return sendError(res, 'doctorId, email, and otp are required');
     }
+
+    await ensureDoctorStub(doctorId);
 
     const result = await verifyEmailVerificationOtp({
       doctorId,

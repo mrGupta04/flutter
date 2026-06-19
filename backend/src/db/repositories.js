@@ -270,7 +270,7 @@ async function listDoctors({
 
 async function updateDoctorEmailVerified({ doctorId, email }) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  await Doctor.updateOne(
+  const result = await Doctor.updateOne(
     { id: doctorId },
     {
       $set: {
@@ -280,6 +280,9 @@ async function updateDoctorEmailVerified({ doctorId, email }) {
       },
     },
   );
+  if (result.matchedCount === 0) {
+    throw new Error('Doctor record not found. Please request a new verification code.');
+  }
   return findDoctorById(doctorId);
 }
 

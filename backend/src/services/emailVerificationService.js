@@ -33,7 +33,7 @@ async function sendEmailVerificationOtp({ doctorId, email }) {
   }
 
   const emailTaken = await findDoctorByEmail(normalizedEmail, doctorId);
-  if (emailTaken?.emailVerified) {
+  if (emailTaken) {
     throw new Error('Email is already registered');
   }
 
@@ -69,6 +69,7 @@ async function sendEmailVerificationOtp({ doctorId, email }) {
     maskedEmail: maskEmail(normalizedEmail),
     expiresInSeconds: Math.floor((result.expiresAt - new Date()) / 1000),
     provider: result.provider || provider.name,
+    ...(result.devOtp ? { devOtp: result.devOtp, devNote: result.devNote } : {}),
   };
 }
 

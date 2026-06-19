@@ -4,9 +4,11 @@ const smtpProvider = require('./smtpProvider');
 const REQUIRED_SMTP_VARS = ['SMTP_USER', 'SMTP_PASS'];
 
 function resolveProviderName() {
-  const configured = (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase().trim();
+  const configured = (process.env.EMAIL_PROVIDER || '').toLowerCase().trim();
   if (configured === 'mock') return 'mock';
-  return 'smtp';
+  if (configured === 'smtp') return 'smtp';
+  // Auto-detect: use SMTP when configured, otherwise mock (local dev).
+  return getMissingSmtpVars().length === 0 ? 'smtp' : 'mock';
 }
 
 function getMissingSmtpVars() {
