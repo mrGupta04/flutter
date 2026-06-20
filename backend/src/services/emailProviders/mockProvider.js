@@ -52,4 +52,19 @@ async function verifyOtp({ record, otp }) {
   return { valid };
 }
 
-module.exports = { sendOtp, verifyOtp, name: 'mock' };
+async function sendTransactionalEmail({ to, subject, text, html, attachments }) {
+  console.log(`[email-mock] Transactional email to ${to}: ${subject}`);
+  if (attachments?.length) {
+    attachments.forEach((attachment) => {
+      console.log(
+        `[email-mock] Attachment: ${attachment.filename || attachment.path}`,
+      );
+    });
+  }
+  return {
+    provider: 'mock',
+    message: `Development mock email logged for ${to}.`,
+  };
+}
+
+module.exports = { sendOtp, verifyOtp, sendTransactionalEmail, name: 'mock' };

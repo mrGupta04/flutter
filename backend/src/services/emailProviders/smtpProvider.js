@@ -2,6 +2,15 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 
 const OTP_TTL_MS = 10 * 60 * 1000;
+const SMTP_TIMEOUT_MS = parseInt(process.env.SMTP_TIMEOUT_MS || '20000', 10);
+
+function smtpTimeouts() {
+  return {
+    connectionTimeout: SMTP_TIMEOUT_MS,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
+  };
+}
 
 function generateOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -35,6 +44,7 @@ function createTransport() {
     return nodemailer.createTransport({
       service,
       auth: { user, pass },
+      ...smtpTimeouts(),
     });
   }
 
@@ -47,6 +57,7 @@ function createTransport() {
     tls: {
       minVersion: 'TLSv1.2',
     },
+    ...smtpTimeouts(),
   });
 }
 
@@ -59,9 +70,31 @@ function getTransport() {
   return cachedTransport;
 }
 
+function smtpRenderHint() {
+  return (
+    ' On Render free tier, outbound SMTP (ports 25/465/587) is blocked — ' +
+    ' Upgrade to a paid Render instance to use Gmail SMTP.'
+  );
+}
+
 async function verifyConnection() {
   const transport = getTransport();
-  await transport.verify();
+  try {
+    await Promise.race([
+      transport.verify(),
+      new Promise((_, reject) => {
+        setTimeout(
+          () => reject(new Error('Connection timeout')),
+          SMTP_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } catch (err) {
+    if (/timeout|ETIMEDOUT|ECONNREFUSED|ENETUNREACH/i.test(err.message)) {
+      throw new Error(err.message + smtpRenderHint());
+    }
+    throw err;
+  }
 }
 
 function buildFromAddress() {
@@ -113,9 +146,14 @@ async function sendVerificationEmail({ email, otp }) {
       `,
     });
   } catch (err) {
+    const hint =
+      /timeout|ETIMEDOUT|ECONNREFUSED|ENETUNREACH/i.test(err.message)
+        ? smtpRenderHint()
+        : '';
     console.error('[email-smtp] Failed to send verification email:', err.message);
     throw new Error(
-      'Unable to send verification email right now. Check SMTP settings and try again.',
+      'Unable to send verification email right now. Check SMTP settings and try again.' +
+        hint,
     );
   }
 
@@ -142,7 +180,7 @@ async function verifyOtp({ record, otp }) {
   return { valid };
 }
 
-async function sendTransactionalEmail({ to, subject, text, html }) {
+async function sendTransactionalEmail({ to, subject, text, html, attachments }) {
   const transport = getTransport();
   const from = buildFromAddress();
 
@@ -152,6 +190,7 @@ async function sendTransactionalEmail({ to, subject, text, html }) {
     subject,
     text,
     html,
+    attachments: attachments || undefined,
   });
 
   return { provider: 'smtp', message: `Email sent to ${to}.` };

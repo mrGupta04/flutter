@@ -4,9 +4,15 @@ const {
   markVideoCallStarted,
   markVideoCallEnded,
 } = require('../services/videoConsultService');
+const {
+  getPrescriptionContext,
+  saveAndFinalizePrescription,
+  getPrescription,
+} = require('../services/prescriptionService');
 const { submitFeedback, dismissFeedback } = require('../services/feedbackService');
 const { sendSuccess, sendError } = require('../utils/response');
 const { authRequired } = require('../middleware/auth');
+const { getPublicBaseUrl } = require('../middleware/multerUpload');
 
 const router = express.Router();
 
@@ -96,6 +102,59 @@ router.post('/:bookingId/feedback/dismiss', authRequired, async (req, res) => {
     console.error(err);
     const status = err.statusCode || 500;
     return sendError(res, err.message || 'Failed to dismiss feedback', status);
+  }
+});
+
+// GET /consultations/:bookingId/prescription/context
+router.get('/:bookingId/prescription/context', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 401);
+    }
+    const data = await getPrescriptionContext(req.params.bookingId, req.auth);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load prescription context', status);
+  }
+});
+
+// POST /consultations/:bookingId/prescription
+router.post('/:bookingId/prescription', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 401);
+    }
+    const data = await saveAndFinalizePrescription(
+      req.params.bookingId,
+      req.auth,
+      req.body,
+      getPublicBaseUrl(req),
+    );
+    return sendSuccess(res, {
+      message: data.email?.sent
+        ? 'Prescription saved and emailed to the patient'
+        : 'Prescription saved for the patient',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to save prescription', status);
+  }
+});
+
+// GET /consultations/:bookingId/prescription
+router.get('/:bookingId/prescription', authRequired, async (req, res) => {
+  try {
+    if (!requireParticipantAuth(req, res)) return;
+    const data = await getPrescription(req.params.bookingId, req.auth);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load prescription', status);
   }
 });
 

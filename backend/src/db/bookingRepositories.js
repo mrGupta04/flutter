@@ -11,6 +11,10 @@ const {
 } = require('../utils/slotDateTime');
 const { videoJoinFields } = require('../utils/videoJoinWindow');
 const { findFeedbackByBookingIds, feedbackFieldsForBooking } = require('./feedbackRepositories');
+const {
+  findPrescriptionsByBookingIds,
+  prescriptionFieldsForBooking,
+} = require('./prescriptionRepositories');
 const { buildRoomId } = require('../services/videoConsultService');
 const { notifyBookingConfirmed } = require('../services/bookingNotificationService');
 
@@ -714,6 +718,9 @@ async function listPatientBookings(patientId, mobileNumber) {
 
   const now = new Date();
   const feedbackMap = await findFeedbackByBookingIds(bookings.map((b) => b.id));
+  const prescriptionMap = await findPrescriptionsByBookingIds(
+    bookings.map((b) => b.id),
+  );
 
   const results = [];
   for (const b of bookings) {
@@ -765,6 +772,7 @@ async function listPatientBookings(patientId, mobileNumber) {
       ...videoJoinFields(b, now),
       ...feedbackFieldsForBooking(b, feedbackMap, now),
       ...bookingPreviousReportsFields(b),
+      ...prescriptionFieldsForBooking(prescriptionMap.get(b.id)),
     });
   }
 

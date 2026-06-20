@@ -41,6 +41,8 @@ class AppConstants {
       '/consultations/$bookingId/feedback';
   static String endpointConsultationFeedbackDismiss(String bookingId) =>
       '/consultations/$bookingId/feedback/dismiss';
+  static String endpointConsultationPrescription(String bookingId) =>
+      '/consultations/$bookingId/prescription';
   static const String endpointAadhaarConfig = '/doctor/aadhaar/config';
   static const String endpointAadhaarSendOtp = '/doctor/aadhaar/send-otp';
   static const String endpointAadhaarVerifyOtp = '/doctor/aadhaar/verify-otp';

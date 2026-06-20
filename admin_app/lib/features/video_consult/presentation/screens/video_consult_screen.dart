@@ -7,7 +7,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/models/video_session_model.dart';
 import '../../../../data/repositories/video_consult_repository.dart';
+import '../../../../data/repositories/prescription_repository.dart';
 import '../widgets/agora_video_call_view.dart';
+import '../widgets/prescription_sheet.dart';
 
 class VideoConsultScreen extends StatefulWidget {
   const VideoConsultScreen({
@@ -25,10 +27,12 @@ class VideoConsultScreen extends StatefulWidget {
 
 class _VideoConsultScreenState extends State<VideoConsultScreen> {
   final _repository = VideoConsultRepository();
+  final _prescriptionRepository = PrescriptionRepository();
   VideoSessionModel? _session;
   String? _error;
   bool _loading = true;
   bool _ending = false;
+  bool _prescriptionSent = false;
   Timer? _elapsedTimer;
   Duration _elapsed = Duration.zero;
   WebViewController? _webController;
@@ -73,6 +77,8 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
       }
 
       _startElapsedTimer();
+      await _loadPrescriptionStatus();
+      if (!mounted) return;
       setState(() {
         _session = session;
         _loading = false;
@@ -94,8 +100,60 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
     });
   }
 
+  Future<void> _loadPrescriptionStatus() async {
+    try {
+      final contextData =
+          await _prescriptionRepository.fetchContext(widget.bookingId);
+      if (contextData.prescription?.isFinalized == true) {
+        _prescriptionSent = true;
+      }
+    } catch (_) {
+      // Ignore — prescription prompt still available manually.
+    }
+  }
+
+  Future<void> _openPrescription() async {
+    final saved = await PrescriptionSheet.show(
+      context,
+      bookingId: widget.bookingId,
+      onSaved: () => _prescriptionSent = true,
+    );
+    if (saved == true && mounted) {
+      setState(() => _prescriptionSent = true);
+    }
+  }
+
   Future<void> _endCall() async {
     if (_ending) return;
+
+    if (!_prescriptionSent) {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('End consultation?'),
+          content: const Text(
+            'You can write a prescription before ending the call. The patient will receive a PDF in their profile and by email.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'prescription'),
+              child: const Text('Write prescription'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'end'),
+              child: const Text('End without prescription'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (action == 'prescription') {
+        await _openPrescription();
+        return;
+      }
+      if (action != 'end') return;
+    }
+
     setState(() => _ending = true);
     try {
       await _repository.markEnded(widget.bookingId);
@@ -145,6 +203,14 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
         ],
       ),
       body: _buildBody(peer),
+      floatingActionButton: _session != null && _session!.canJoin
+          ? FloatingActionButton.extended(
+              onPressed: _openPrescription,
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.medication_rounded),
+              label: const Text('Prescription'),
+            )
+          : null,
       bottomNavigationBar: _session != null && _session!.canJoin
           ? SafeArea(
               child: Padding(

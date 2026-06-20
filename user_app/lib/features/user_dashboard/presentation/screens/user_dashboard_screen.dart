@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/patient_booking_model.dart';
 import '../../../../shared/widgets/appointment_code_display.dart';
+import '../../../../shared/widgets/horizontal_filter_chips.dart';
 import '../../../../data/models/patient_user_model.dart';
 import '../../../user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
@@ -32,7 +34,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     Future.microtask(() {
       ref.read(patientDashboardProvider.notifier).loadBookings();
     });
@@ -145,6 +147,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
               labelColor: AppColors.white,
               unselectedLabelColor: AppColors.white.withValues(alpha: 0.7),
               tabs: const [
+                Tab(text: 'Current booking'),
                 Tab(text: 'My bookings'),
                 Tab(text: 'Profile'),
               ],
@@ -154,7 +157,12 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
         body: TabBarView(
           controller: _tabController,
           children: [
-            _BookingsTab(
+            _CurrentBookingsTab(
+              dash: dash,
+              onRefresh: () =>
+                  ref.read(patientDashboardProvider.notifier).loadBookings(),
+            ),
+            _PastBookingsTab(
               dash: dash,
               onRefresh: () =>
                   ref.read(patientDashboardProvider.notifier).loadBookings(),
@@ -243,11 +251,103 @@ class _ProfileTab extends StatelessWidget {
   }
 }
 
-class _BookingsTab extends StatelessWidget {
-  const _BookingsTab({required this.dash, required this.onRefresh});
+class _CurrentBookingsTab extends StatefulWidget {
+  const _CurrentBookingsTab({required this.dash, required this.onRefresh});
 
   final PatientDashboardState dash;
   final Future<void> Function() onRefresh;
+
+  @override
+  State<_CurrentBookingsTab> createState() => _CurrentBookingsTabState();
+}
+
+class _CurrentBookingsTabState extends State<_CurrentBookingsTab> {
+  PatientBookingCategory _category = PatientBookingCategory.all;
+
+  @override
+  Widget build(BuildContext context) {
+    return _FilteredBookingsTab(
+      dash: widget.dash,
+      onRefresh: widget.onRefresh,
+      category: _category,
+      onCategoryChanged: (value) {
+        setState(() {
+          _category = PatientBookingCategory.values.firstWhere(
+            (c) => c.label == value,
+            orElse: () => PatientBookingCategory.all,
+          );
+        });
+      },
+      bookings: widget.dash.filterByCategory(
+        widget.dash.upcomingBookings,
+        _category,
+      ),
+      isUpcoming: true,
+      emptyTitle: 'No upcoming bookings',
+      emptySubtitle:
+          'Book an online consult, clinic visit, or other care service from home.',
+    );
+  }
+}
+
+class _PastBookingsTab extends StatefulWidget {
+  const _PastBookingsTab({required this.dash, required this.onRefresh});
+
+  final PatientDashboardState dash;
+  final Future<void> Function() onRefresh;
+
+  @override
+  State<_PastBookingsTab> createState() => _PastBookingsTabState();
+}
+
+class _PastBookingsTabState extends State<_PastBookingsTab> {
+  PatientBookingCategory _category = PatientBookingCategory.all;
+
+  @override
+  Widget build(BuildContext context) {
+    return _FilteredBookingsTab(
+      dash: widget.dash,
+      onRefresh: widget.onRefresh,
+      category: _category,
+      onCategoryChanged: (value) {
+        setState(() {
+          _category = PatientBookingCategory.values.firstWhere(
+            (c) => c.label == value,
+            orElse: () => PatientBookingCategory.all,
+          );
+        });
+      },
+      bookings: widget.dash.filterByCategory(
+        widget.dash.pastBookings,
+        _category,
+      ),
+      isUpcoming: false,
+      emptyTitle: 'No past bookings',
+      emptySubtitle: 'Your completed appointments will appear here.',
+    );
+  }
+}
+
+class _FilteredBookingsTab extends StatelessWidget {
+  const _FilteredBookingsTab({
+    required this.dash,
+    required this.onRefresh,
+    required this.category,
+    required this.onCategoryChanged,
+    required this.bookings,
+    required this.isUpcoming,
+    required this.emptyTitle,
+    required this.emptySubtitle,
+  });
+
+  final PatientDashboardState dash;
+  final Future<void> Function() onRefresh;
+  final PatientBookingCategory category;
+  final ValueChanged<String> onCategoryChanged;
+  final List<PatientBookingModel> bookings;
+  final bool isUpcoming;
+  final String emptyTitle;
+  final String emptySubtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -255,44 +355,45 @@ class _BookingsTab extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final filterLabels =
+        PatientBookingCategory.values.map((c) => c.label).toList();
+
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.only(top: 12, bottom: 16),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          Row(
-            children: [
-              _StatChip(
-                label: 'Total',
-                value: '${dash.stats.total}',
-                color: AppColors.primary,
-              ),
-              const SizedBox(width: 8),
-              _StatChip(
-                label: 'Upcoming',
-                value: '${dash.stats.upcoming}',
-                color: AppColors.success,
-              ),
-              const SizedBox(width: 8),
-              _StatChip(
-                label: 'Past',
-                value: '${dash.stats.past}',
-                color: AppColors.textSecondary,
-              ),
-            ],
+          HorizontalFilterChips(
+            labels: filterLabels,
+            selected: category.label,
+            onSelected: onCategoryChanged,
           ),
-          if (dash.error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              dash.error!,
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                _StatChip(
+                  label: isUpcoming ? 'Upcoming' : 'Past',
+                  value: '${bookings.length}',
+                  color: isUpcoming ? AppColors.success : AppColors.textSecondary,
+                ),
+              ],
             ),
-          ],
-          const SizedBox(height: 16),
-          if (dash.bookings.isEmpty)
+          ),
+          if (dash.error != null)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 48),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Text(
+                dash.error!,
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+              ),
+            ),
+          const SizedBox(height: 12),
+          if (bookings.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
               child: Column(
                 children: [
                   Icon(
@@ -302,14 +403,14 @@ class _BookingsTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'No bookings yet',
+                    emptyTitle,
                     style: AppTextStyles.titleMedium.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Book an online consult or clinic visit from home.',
+                    emptySubtitle,
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
@@ -318,42 +419,22 @@ class _BookingsTab extends StatelessWidget {
                 ],
               ),
             )
-          else ...[
-            if (dash.upcomingBookings.isNotEmpty) ...[
-              Text(
-                'Upcoming',
-                style: AppTextStyles.titleSmall.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: bookings
+                    .map(
+                      (b) => _BookingCard(
+                        booking: b,
+                        isUpcoming: isUpcoming,
+                        onVideoEnded: isUpcoming ? onRefresh : null,
+                        onRefresh: onRefresh,
+                      ),
+                    )
+                    .toList(),
               ),
-              const SizedBox(height: 8),
-              ...dash.upcomingBookings.map(
-                (b) => _BookingCard(
-                  booking: b,
-                  isUpcoming: true,
-                  onVideoEnded: onRefresh,
-                  onRefresh: onRefresh,
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            if (dash.pastBookings.isNotEmpty) ...[
-              Text(
-                'Past',
-                style: AppTextStyles.titleSmall.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ...dash.pastBookings.map(
-                (b) => _BookingCard(
-                  booking: b,
-                  isUpcoming: false,
-                  onRefresh: onRefresh,
-                ),
-              ),
-            ],
-          ],
+            ),
         ],
       ),
     );
@@ -372,6 +453,24 @@ class _BookingCard extends StatelessWidget {
   final bool isUpcoming;
   final Future<void> Function()? onVideoEnded;
   final Future<void> Function()? onRefresh;
+
+  Future<void> _openPrescriptionPdf(BuildContext context, String? url) async {
+    final resolved = MediaUrlUtils.resolve(url);
+    if (resolved.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prescription file is not available yet.')),
+      );
+      return;
+    }
+    final uri = Uri.parse(resolved);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the prescription PDF.')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -503,6 +602,25 @@ class _BookingCard extends StatelessWidget {
                       sessionLabel: booking.label,
                       videoStartsInMinutes: booking.videoStartsInMinutes,
                       onReturned: onVideoEnded,
+                    ),
+                  ],
+                  if (!isUpcoming && booking.hasPrescription) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _openPrescriptionPdf(
+                          context,
+                          booking.prescriptionPdfUrl,
+                        ),
+                        icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                        label: Text(
+                          booking.prescriptionFileName != null &&
+                                  booking.prescriptionFileName!.isNotEmpty
+                              ? 'View prescription'
+                              : 'View prescription PDF',
+                        ),
+                      ),
                     ),
                   ],
                   if (!isUpcoming && booking.canRequestFeedback) ...[

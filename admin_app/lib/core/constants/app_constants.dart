@@ -24,6 +24,10 @@ class AppConstants {
       '/consultations/$bookingId/video-session/join';
   static String endpointConsultationVideoEnd(String bookingId) =>
       '/consultations/$bookingId/video-session/end';
+  static String endpointConsultationPrescriptionContext(String bookingId) =>
+      '/consultations/$bookingId/prescription/context';
+  static String endpointConsultationPrescription(String bookingId) =>
+      '/consultations/$bookingId/prescription';
   static const String endpointNurseBookings = '/nurse/bookings';
   static const String endpointAmbulanceBookings = '/ambulance/bookings';
   static const String endpointBloodBankBookings = '/blood-bank/bookings';

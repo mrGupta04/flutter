@@ -1,6 +1,37 @@
 import 'bookable_slot_model.dart';
 import 'previous_report_model.dart';
 
+/// Filter categories for patient booking lists.
+enum PatientBookingCategory {
+  all('All'),
+  onlineConsult('Online book'),
+  hospitalVisit('Hospital visit'),
+  nurse('Nurse'),
+  ambulance('Ambulance'),
+  bloodBank('Blood bank');
+
+  const PatientBookingCategory(this.label);
+
+  final String label;
+
+  bool matches(PatientBookingModel booking) {
+    switch (this) {
+      case PatientBookingCategory.all:
+        return true;
+      case PatientBookingCategory.onlineConsult:
+        return booking.isOnlineConsult;
+      case PatientBookingCategory.hospitalVisit:
+        return booking.isClinicVisit;
+      case PatientBookingCategory.nurse:
+        return booking.serviceType == 'nurse';
+      case PatientBookingCategory.ambulance:
+        return booking.serviceType == 'ambulance';
+      case PatientBookingCategory.bloodBank:
+        return booking.serviceType == 'blood_bank';
+    }
+  }
+}
+
 DateTime _parseDateTime(dynamic value) {
   if (value is DateTime) return value;
   if (value is String) return DateTime.parse(value);
@@ -32,6 +63,7 @@ class PatientBookingModel {
   final String doctorId;
   final String doctorName;
   final String? doctorProfilePicture;
+  final String serviceType;
   final String consultationType;
   final String typeLabel;
   final DateTime slotStart;
@@ -42,6 +74,7 @@ class PatientBookingModel {
   final String? clinicName;
   final String? clinicAddress;
   final String? visitReason;
+  final String? patientNotes;
   final String? patientAddress;
   final String? patientCity;
   final bool isUpcoming;
@@ -52,6 +85,9 @@ class PatientBookingModel {
   final int? videoStartsInMinutes;
   final bool hasFeedback;
   final bool canRequestFeedback;
+  final bool hasPrescription;
+  final String? prescriptionPdfUrl;
+  final String? prescriptionFileName;
   final List<PreviousReportModel> previousReports;
 
   const PatientBookingModel({
@@ -59,6 +95,7 @@ class PatientBookingModel {
     required this.doctorId,
     required this.doctorName,
     this.doctorProfilePicture,
+    this.serviceType = 'doctor',
     required this.consultationType,
     required this.typeLabel,
     required this.slotStart,
@@ -69,6 +106,7 @@ class PatientBookingModel {
     this.clinicName,
     this.clinicAddress,
     this.visitReason,
+    this.patientNotes,
     this.patientAddress,
     this.patientCity,
     required this.isUpcoming,
@@ -79,6 +117,9 @@ class PatientBookingModel {
     this.videoStartsInMinutes,
     this.hasFeedback = false,
     this.canRequestFeedback = false,
+    this.hasPrescription = false,
+    this.prescriptionPdfUrl,
+    this.prescriptionFileName,
     this.previousReports = const [],
   });
 
@@ -94,6 +135,7 @@ class PatientBookingModel {
       doctorId: json['doctorId'] as String,
       doctorName: json['doctorName'] as String? ?? 'Doctor',
       doctorProfilePicture: json['doctorProfilePicture'] as String?,
+      serviceType: json['serviceType'] as String? ?? 'doctor',
       consultationType: json['consultationType'] as String? ?? 'online_consult',
       typeLabel: json['typeLabel'] as String? ?? 'Consultation',
       slotStart: _parseDateTime(json['slotStart']),
@@ -104,6 +146,7 @@ class PatientBookingModel {
       clinicName: json['clinicName'] as String?,
       clinicAddress: json['clinicAddress'] as String?,
       visitReason: json['visitReason'] as String?,
+      patientNotes: json['patientNotes'] as String?,
       patientAddress: json['patientAddress'] as String?,
       patientCity: json['patientCity'] as String?,
       isUpcoming: json['isUpcoming'] as bool? ?? false,
@@ -118,6 +161,9 @@ class PatientBookingModel {
       videoStartsInMinutes: (json['videoStartsInMinutes'] as num?)?.toInt(),
       hasFeedback: json['hasFeedback'] as bool? ?? false,
       canRequestFeedback: json['canRequestFeedback'] as bool? ?? false,
+      hasPrescription: json['hasPrescription'] as bool? ?? false,
+      prescriptionPdfUrl: json['prescriptionPdfUrl'] as String?,
+      prescriptionFileName: json['prescriptionFileName'] as String?,
       previousReports: (json['previousReports'] as List<dynamic>? ?? [])
           .map((e) => PreviousReportModel.fromJson(e as Map<String, dynamic>))
           .toList(),

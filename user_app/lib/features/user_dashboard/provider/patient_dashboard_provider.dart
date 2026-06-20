@@ -31,6 +31,12 @@ class PatientDashboardState {
   List<PatientBookingModel> get pastBookings =>
       bookings.where((b) => !b.isUpcoming).toList();
 
+  List<PatientBookingModel> filterByCategory(
+    List<PatientBookingModel> list,
+    PatientBookingCategory category,
+  ) =>
+      list.where((b) => category.matches(b)).toList();
+
   PatientDashboardState copyWith({
     List<PatientBookingModel>? bookings,
     PatientBookingStats? stats,

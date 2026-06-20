@@ -16,7 +16,11 @@ const consultationRoutes = require('./routes/consultationRoutes');
 const { getProviderInfo: getRazorpayInfo } = require('./services/razorpayService');
 const { getProviderInfo: getVideoProviderInfo } = require('./services/videoConsultService');
 const { sendSuccess, sendError } = require('./utils/response');
-const { verifySmtpConnection, getProviderInfo } = require('./services/emailProviders');
+const {
+  verifySmtpConnection,
+  getProviderInfo,
+  resolveProviderName,
+} = require('./services/emailProviders');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const app = express();
@@ -90,22 +94,6 @@ async function start() {
 
   await connectDB();
 
-  try {
-    await verifySmtpConnection();
-    console.log('Email verification SMTP connection verified');
-  } catch (err) {
-    const provider = (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase();
-    if (provider === 'mock') {
-      console.warn('Email verification running in mock mode (EMAIL_PROVIDER=mock)');
-    } else {
-      const message = `Email SMTP verification failed: ${err.message}`;
-      if (NODE_ENV === 'production') {
-        throw new Error(message);
-      }
-      console.warn(`WARNING: ${message}`);
-    }
-  }
-
   const paymentInfo = getRazorpayInfo();
   if (paymentInfo.provider === 'mock') {
     console.warn(
@@ -131,11 +119,33 @@ async function start() {
     console.log('Database seeded with sample data (SEED_DATABASE=true)');
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`1mg Doctors API [${NODE_ENV}] http://0.0.0.0:${PORT}`);
-    console.log(`  Health: http://localhost:${PORT}/health`);
-    console.log(`  API:    http://localhost:${PORT}/api/v1`);
+  await new Promise((resolve) => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`1mg Doctors API [${NODE_ENV}] http://0.0.0.0:${PORT}`);
+      console.log(`  Health: http://localhost:${PORT}/health`);
+      console.log(`  API:    http://localhost:${PORT}/api/v1`);
+      resolve();
+    });
   });
+
+  void verifySmtpAtStartup();
+}
+
+async function verifySmtpAtStartup() {
+  if (resolveProviderName() === 'mock') {
+    console.warn('Email verification running in mock mode (EMAIL_PROVIDER=mock)');
+    return;
+  }
+
+  try {
+    await verifySmtpConnection();
+    console.log('Email verification SMTP connection verified');
+  } catch (err) {
+    console.warn(
+      `WARNING: Email SMTP verification failed: ${err.message}. ` +
+        'The API is running; OTP delivery will be attempted when doctors request a code.',
+    );
+  }
 }
 
 start().catch((err) => {
