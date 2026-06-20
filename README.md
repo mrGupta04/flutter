@@ -119,6 +119,6 @@ Flow: **Admin app** → register as doctor/nurse → admin verifies → approved
 |-------|-----|
 | `MONGODB_URI is required` | Add connection string to `backend/.env` |
 | Network error in app | `npm start` running? Correct API URL on phone? |
-| Email verification fails / connection timeout | Use Gmail with `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, and a Google App Password. On Render free tier SMTP is blocked — upgrade to Starter and redeploy. Or use mock mode locally (`EMAIL_PROVIDER=mock`) and read OTP from server logs |
+| Email verification fails / connection timeout | Render free tier blocks Gmail SMTP (ports 465/587). Use **Gmail API** instead: set `EMAIL_PROVIDER=gmail-api` with `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_USER`. Run `node scripts/gmailAuthSetup.js` locally to get the refresh token. Or use mock mode locally (`EMAIL_PROVIDER=mock`) |
 | Atlas connection timeout | Whitelist your IP in Atlas Network Access |
 | Plugin symlink warning on Windows | Enable **Developer Mode** in Windows settings |

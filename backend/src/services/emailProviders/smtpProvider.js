@@ -110,9 +110,9 @@ function isConnectionError(err) {
 
 function smtpRenderHint() {
   return (
-    ' On Render free tier, outbound SMTP (ports 465/587) is blocked — upgrade to Starter or higher. ' +
-    'On paid Render, use SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, SMTP_SECURE=true, and a Google App Password (no spaces). ' +
-    'Redeploy after changing env vars.'
+    ' Gmail SMTP uses ports 465/587 which are blocked on Render free tier. ' +
+    'Upgrade to Starter, or switch to EMAIL_PROVIDER=gmail-api (same Gmail account, uses HTTPS and works on all Render tiers). ' +
+    'Run: node scripts/gmailAuthSetup.js to get GMAIL_REFRESH_TOKEN.'
   );
 }
 
