@@ -1,8 +1,13 @@
+const net = require('net');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 
 const OTP_TTL_MS = 10 * 60 * 1000;
-const SMTP_TIMEOUT_MS = parseInt(process.env.SMTP_TIMEOUT_MS || '30000', 10);
+const SMTP_TIMEOUT_MS = parseInt(
+  process.env.SMTP_TIMEOUT_MS ||
+    (process.env.RENDER === 'true' ? '60000' : '30000'),
+  10,
+);
 
 function smtpTimeouts() {
   return {
@@ -17,7 +22,6 @@ function generateOtp() {
 }
 
 function normalizeSmtpPass(pass) {
-  // Google app passwords are 16 chars; users often paste "abcd efgh ijkl mnop".
   return String(pass || '').replace(/\s+/g, '').trim();
 }
 
@@ -27,8 +31,7 @@ function readSmtpConfig() {
   const user = String(process.env.SMTP_USER || '').trim();
   const pass = normalizeSmtpPass(process.env.SMTP_PASS);
   const service = String(process.env.SMTP_SERVICE || '').trim().toLowerCase();
-  const secure =
-    process.env.SMTP_SECURE === 'true' || port === 465;
+  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
 
   if (!user || !pass) {
     throw new Error('SMTP is not configured. Set SMTP_USER and SMTP_PASS.');
@@ -42,12 +45,19 @@ function readSmtpConfig() {
   return { host, port, user, pass, service, secure };
 }
 
+function isGmailSmtp(config) {
+  const host = String(config.host || '').toLowerCase();
+  return config.service === 'gmail' || host === 'smtp.gmail.com';
+}
+
 function buildTransportOptions({ host, port, user, pass, secure }) {
   return {
     host,
     port,
     secure,
     auth: { user, pass },
+    pool: false,
+    family: 4,
     requireTLS: !secure && port === 587,
     tls: {
       minVersion: 'TLSv1.2',
@@ -60,33 +70,24 @@ function getTransportProfiles() {
   const config = readSmtpConfig();
   const { host, port, user, pass, service, secure } = config;
 
-  if (service === 'gmail' && !host) {
-    // Port 465 (SSL) is more reliable on cloud hosts like Render than 587 (STARTTLS).
-    return [
-      {
-        label: '465',
-        options: buildTransportOptions({
-          host: 'smtp.gmail.com',
-          port: 465,
-          user,
-          pass,
-          secure: true,
-        }),
-      },
-      {
-        label: '587',
-        options: buildTransportOptions({
-          host: 'smtp.gmail.com',
-          port: 587,
-          user,
-          pass,
-          secure: false,
-        }),
-      },
-    ];
+  if (isGmailSmtp(config)) {
+    const preferredPort = Number.isFinite(port) ? port : 465;
+    const ports =
+      preferredPort === 587 ? [587, 465] : [465, 587];
+
+    return ports.map((smtpPort) => ({
+      label: String(smtpPort),
+      options: buildTransportOptions({
+        host: 'smtp.gmail.com',
+        port: smtpPort,
+        user,
+        pass,
+        secure: smtpPort === 465,
+      }),
+    }));
   }
 
-  const resolvedHost = host || (service === 'gmail' ? 'smtp.gmail.com' : host);
+  const resolvedHost = host || 'localhost';
   return [
     {
       label: String(port),
@@ -101,6 +102,51 @@ function getTransportProfiles() {
   ];
 }
 
+function getSmtpConfigSummary() {
+  const config = readSmtpConfig();
+  const profiles = getTransportProfiles();
+  return {
+    host: isGmailSmtp(config) ? 'smtp.gmail.com' : config.host,
+    ports: profiles.map((profile) => profile.label),
+    user: config.user,
+    secure: config.secure,
+    timeoutMs: SMTP_TIMEOUT_MS,
+    onRender: process.env.RENDER === 'true',
+  };
+}
+
+function logSmtpConfigSummary() {
+  try {
+    const summary = getSmtpConfigSummary();
+    console.log(
+      `[email-smtp] Config: ${summary.host}:${summary.ports.join('/')} user=${summary.user} timeout=${summary.timeoutMs}ms render=${summary.onRender}`,
+    );
+  } catch (err) {
+    console.warn(`[email-smtp] Config incomplete: ${err.message}`);
+  }
+}
+
+function probeTcpPort(host, port, timeoutMs = 10000) {
+  return new Promise((resolve) => {
+    const socket = net.connect({
+      host,
+      port,
+      family: 4,
+    });
+
+    const finish = (open) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(open);
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+  });
+}
+
 function isConnectionError(err) {
   const message = String(err?.message || err || '');
   return /timeout|ETIMEDOUT|ECONNREFUSED|ENETUNREACH|ECONNRESET|EPIPE/i.test(
@@ -109,10 +155,16 @@ function isConnectionError(err) {
 }
 
 function smtpRenderHint() {
+  if (process.env.RENDER === 'true') {
+    return (
+      ' On Render: set EMAIL_PROVIDER=smtp, SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, SMTP_SECURE=true, SMTP_USER, SMTP_PASS (Google App Password). ' +
+      'Confirm Instance Type is Starter (not Free), save env vars, then Manual Deploy. ' +
+      'If TCP probe shows ports blocked, the service is still on Free tier.'
+    );
+  }
+
   return (
-    ' Gmail SMTP uses ports 465/587 which are blocked on Render free tier. ' +
-    'Upgrade to Starter, or switch to EMAIL_PROVIDER=gmail-api (same Gmail account, uses HTTPS and works on all Render tiers). ' +
-    'Run: node scripts/gmailAuthSetup.js to get GMAIL_REFRESH_TOKEN.'
+    ' Use SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, SMTP_SECURE=true, and a Google App Password.'
   );
 }
 
@@ -151,6 +203,24 @@ async function withSmtpTransport(action) {
 }
 
 async function verifyConnection() {
+  logSmtpConfigSummary();
+
+  const config = readSmtpConfig();
+  if (isGmailSmtp(config)) {
+    const probe465 = await probeTcpPort('smtp.gmail.com', 465, 10000);
+    const probe587 = await probeTcpPort('smtp.gmail.com', 587, 10000);
+    console.log(
+      `[email-smtp] TCP probe smtp.gmail.com:465=${probe465 ? 'open' : 'blocked'} smtp.gmail.com:587=${probe587 ? 'open' : 'blocked'}`,
+    );
+
+    if (!probe465 && !probe587) {
+      throw new Error(
+        'Cannot reach Gmail SMTP ports (465/587). Render free tier blocks outbound SMTP — upgrade to Starter and redeploy.' +
+          smtpRenderHint(),
+      );
+    }
+  }
+
   try {
     await withSmtpTransport(async (transport) => {
       await Promise.race([
@@ -277,5 +347,7 @@ module.exports = {
   verifyConnection,
   sendTransactionalEmail,
   buildFromAddress,
+  getSmtpConfigSummary,
+  logSmtpConfigSummary,
   name: 'smtp',
 };
