@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 
 const OTP_TTL_MS = 10 * 60 * 1000;
-const SMTP_TIMEOUT_MS = parseInt(process.env.SMTP_TIMEOUT_MS || '20000', 10);
+const SMTP_TIMEOUT_MS = parseInt(process.env.SMTP_TIMEOUT_MS || '30000', 10);
 
 function smtpTimeouts() {
   return {
@@ -16,12 +16,17 @@ function generateOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+function normalizeSmtpPass(pass) {
+  // Google app passwords are 16 chars; users often paste "abcd efgh ijkl mnop".
+  return String(pass || '').replace(/\s+/g, '').trim();
+}
+
 function readSmtpConfig() {
   const host = String(process.env.SMTP_HOST || '').trim();
-  const port = Number(process.env.SMTP_PORT || 587);
+  const port = Number(process.env.SMTP_PORT || 465);
   const user = String(process.env.SMTP_USER || '').trim();
-  const pass = String(process.env.SMTP_PASS || '').trim();
-  const service = String(process.env.SMTP_SERVICE || '').trim();
+  const pass = normalizeSmtpPass(process.env.SMTP_PASS);
+  const service = String(process.env.SMTP_SERVICE || '').trim().toLowerCase();
   const secure =
     process.env.SMTP_SECURE === 'true' || port === 465;
 
@@ -30,25 +35,15 @@ function readSmtpConfig() {
   }
   if (!service && !host) {
     throw new Error(
-      'SMTP is not configured. Set SMTP_SERVICE (e.g. gmail) or SMTP_HOST.',
+      'SMTP is not configured. Set SMTP_HOST=smtp.gmail.com or SMTP_SERVICE=gmail.',
     );
   }
 
   return { host, port, user, pass, service, secure };
 }
 
-function createTransport() {
-  const { host, port, user, pass, service, secure } = readSmtpConfig();
-
-  if (service) {
-    return nodemailer.createTransport({
-      service,
-      auth: { user, pass },
-      ...smtpTimeouts(),
-    });
-  }
-
-  return nodemailer.createTransport({
+function buildTransportOptions({ host, port, user, pass, secure }) {
+  return {
     host,
     port,
     secure,
@@ -58,39 +53,118 @@ function createTransport() {
       minVersion: 'TLSv1.2',
     },
     ...smtpTimeouts(),
-  });
+  };
 }
 
-let cachedTransport = null;
+function getTransportProfiles() {
+  const config = readSmtpConfig();
+  const { host, port, user, pass, service, secure } = config;
 
-function getTransport() {
-  if (!cachedTransport) {
-    cachedTransport = createTransport();
+  if (service === 'gmail' && !host) {
+    // Port 465 (SSL) is more reliable on cloud hosts like Render than 587 (STARTTLS).
+    return [
+      {
+        label: '465',
+        options: buildTransportOptions({
+          host: 'smtp.gmail.com',
+          port: 465,
+          user,
+          pass,
+          secure: true,
+        }),
+      },
+      {
+        label: '587',
+        options: buildTransportOptions({
+          host: 'smtp.gmail.com',
+          port: 587,
+          user,
+          pass,
+          secure: false,
+        }),
+      },
+    ];
   }
-  return cachedTransport;
+
+  const resolvedHost = host || (service === 'gmail' ? 'smtp.gmail.com' : host);
+  return [
+    {
+      label: String(port),
+      options: buildTransportOptions({
+        host: resolvedHost,
+        port,
+        user,
+        pass,
+        secure,
+      }),
+    },
+  ];
+}
+
+function isConnectionError(err) {
+  const message = String(err?.message || err || '');
+  return /timeout|ETIMEDOUT|ECONNREFUSED|ENETUNREACH|ECONNRESET|EPIPE/i.test(
+    message,
+  );
 }
 
 function smtpRenderHint() {
   return (
-    ' On Render free tier, outbound SMTP (ports 25/465/587) is blocked — ' +
-    ' Upgrade to a paid Render instance to use Gmail SMTP.'
+    ' On Render free tier, outbound SMTP (ports 465/587) is blocked — upgrade to Starter or higher. ' +
+    'On paid Render, use SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, SMTP_SECURE=true, and a Google App Password (no spaces). ' +
+    'Redeploy after changing env vars.'
   );
 }
 
-async function verifyConnection() {
-  const transport = getTransport();
-  try {
-    await Promise.race([
-      transport.verify(),
-      new Promise((_, reject) => {
-        setTimeout(
-          () => reject(new Error('Connection timeout')),
-          SMTP_TIMEOUT_MS,
+async function withSmtpTransport(action) {
+  const profiles = getTransportProfiles();
+  let lastError;
+
+  for (let index = 0; index < profiles.length; index += 1) {
+    const profile = profiles[index];
+    const transport = nodemailer.createTransport(profile.options);
+
+    try {
+      const result = await action(transport);
+      if (index > 0) {
+        console.log(
+          `[email-smtp] Connected via Gmail port ${profile.label} (fallback)`,
         );
-      }),
-    ]);
+      }
+      return result;
+    } catch (err) {
+      lastError = err;
+      const hasFallback = index < profiles.length - 1;
+      if (hasFallback && isConnectionError(err)) {
+        console.warn(
+          `[email-smtp] Gmail port ${profile.label} failed (${err.message}), trying next port...`,
+        );
+        continue;
+      }
+      throw err;
+    } finally {
+      transport.close?.();
+    }
+  }
+
+  throw lastError || new Error('SMTP connection failed');
+}
+
+async function verifyConnection() {
+  try {
+    await withSmtpTransport(async (transport) => {
+      await Promise.race([
+        transport.verify(),
+        new Promise((_, reject) => {
+          setTimeout(
+            () => reject(new Error('Connection timeout')),
+            SMTP_TIMEOUT_MS,
+          );
+        }),
+      ]);
+    });
   } catch (err) {
-    if (/timeout|ETIMEDOUT|ECONNREFUSED|ENETUNREACH/i.test(err.message)) {
+    if (isConnectionError(err)) {
       throw new Error(err.message + smtpRenderHint());
     }
     throw err;
@@ -98,7 +172,9 @@ async function verifyConnection() {
 }
 
 function buildFromAddress() {
-  const fromName = String(process.env.SMTP_FROM_NAME || process.env.APP_NAME || 'MedConnect Doctors').trim();
+  const fromName = String(
+    process.env.SMTP_FROM_NAME || process.env.APP_NAME || 'MedConnect Doctors',
+  ).trim();
   const fromEmail = String(
     process.env.SMTP_FROM || process.env.SMTP_USER || '',
   ).trim();
@@ -112,25 +188,25 @@ function buildFromAddress() {
 
 async function sendVerificationEmail({ email, otp }) {
   const appName = process.env.APP_NAME || 'MedConnect Doctors';
-  const transport = getTransport();
   const from = buildFromAddress();
 
   try {
-    await transport.sendMail({
-      from,
-      to: email,
-      subject: `${appName} — your email verification code`,
-      text: [
-        `Hello,`,
-        ``,
-        `Use this code to verify your email for ${appName} doctor registration:`,
-        ``,
-        `${otp}`,
-        ``,
-        `This code expires in 10 minutes.`,
-        `If you did not request this, you can ignore this email.`,
-      ].join('\n'),
-      html: `
+    await withSmtpTransport((transport) =>
+      transport.sendMail({
+        from,
+        to: email,
+        subject: `${appName} — your email verification code`,
+        text: [
+          'Hello,',
+          '',
+          `Use this code to verify your email for ${appName} doctor registration:`,
+          '',
+          otp,
+          '',
+          'This code expires in 10 minutes.',
+          'If you did not request this, you can ignore this email.',
+        ].join('\n'),
+        html: `
         <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1f2937;max-width:520px;">
           <h2 style="margin:0 0 12px;">Verify your email</h2>
           <p style="margin:0 0 16px;">
@@ -144,15 +220,13 @@ async function sendVerificationEmail({ email, otp }) {
           </p>
         </div>
       `,
-    });
+      }),
+    );
   } catch (err) {
-    const hint =
-      /timeout|ETIMEDOUT|ECONNREFUSED|ENETUNREACH/i.test(err.message)
-        ? smtpRenderHint()
-        : '';
+    const hint = isConnectionError(err) ? smtpRenderHint() : '';
     console.error('[email-smtp] Failed to send verification email:', err.message);
     throw new Error(
-      'Unable to send verification email right now. Check SMTP settings and try again.' +
+      'Unable to send verification email right now. Check Gmail SMTP settings and try again.' +
         hint,
     );
   }
@@ -181,17 +255,18 @@ async function verifyOtp({ record, otp }) {
 }
 
 async function sendTransactionalEmail({ to, subject, text, html, attachments }) {
-  const transport = getTransport();
   const from = buildFromAddress();
 
-  await transport.sendMail({
-    from,
-    to,
-    subject,
-    text,
-    html,
-    attachments: attachments || undefined,
-  });
+  await withSmtpTransport((transport) =>
+    transport.sendMail({
+      from,
+      to,
+      subject,
+      text,
+      html,
+      attachments: attachments || undefined,
+    }),
+  );
 
   return { provider: 'smtp', message: `Email sent to ${to}.` };
 }
@@ -201,7 +276,6 @@ module.exports = {
   verifyOtp,
   verifyConnection,
   sendTransactionalEmail,
-  getTransport,
   buildFromAddress,
   name: 'smtp',
 };

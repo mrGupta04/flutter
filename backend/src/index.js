@@ -139,10 +139,10 @@ async function verifySmtpAtStartup() {
 
   try {
     await verifySmtpConnection();
-    console.log('Email verification SMTP connection verified');
+    console.log('Email verification connection verified');
   } catch (err) {
     console.warn(
-      `WARNING: Email SMTP verification failed: ${err.message}. ` +
+      `WARNING: Email verification failed: ${err.message}. ` +
         'The API is running; OTP delivery will be attempted when doctors request a code.',
     );
   }

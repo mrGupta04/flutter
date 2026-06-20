@@ -1,6 +1,6 @@
 const EmailVerification = require('../db/models/EmailVerification');
 const { findDoctorByEmail } = require('../db/repositories');
-const { getProvider, getProviderInfo } = require('./emailProviders');
+const { getProvider, getProviderInfo, getProviderByName, resolveProviderName } = require('./emailProviders');
 
 const MAX_ATTEMPTS = 5;
 const RESEND_COOLDOWN_MS = 60 * 1000;
@@ -109,10 +109,7 @@ async function verifyEmailVerificationOtp({ doctorId, email, otp }) {
     throw new Error('Too many attempts. Please request a new code.');
   }
 
-  const provider =
-    record.provider === 'smtp'
-      ? require('./emailProviders/smtpProvider')
-      : require('./emailProviders/mockProvider');
+  const provider = getProviderByName(record.provider || resolveProviderName());
 
   let valid = false;
   try {

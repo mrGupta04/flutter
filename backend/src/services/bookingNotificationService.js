@@ -1,7 +1,6 @@
 const { formatSlotLabel } = require('../utils/slotDateTime');
 const { sendSms } = require('./smsService');
-const { resolveProviderName } = require('./emailProviders');
-const smtpProvider = require('./emailProviders/smtpProvider');
+const { getProvider, resolveProviderName } = require('./emailProviders');
 
 const APP_NAME = process.env.APP_NAME || 'MedConnect';
 
@@ -98,8 +97,9 @@ async function sendBookingEmail({ to, subject, text, html }) {
     return { sent: true, provider: 'mock' };
   }
 
-  await smtpProvider.sendTransactionalEmail({ to, subject, text, html });
-  return { sent: true, provider: 'smtp' };
+  const provider = getProvider();
+  await provider.sendTransactionalEmail({ to, subject, text, html });
+  return { sent: true, provider: resolveProviderName() };
 }
 
 async function notifyBookingConfirmed({ booking, doctor }) {

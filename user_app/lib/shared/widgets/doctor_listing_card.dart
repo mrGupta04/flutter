@@ -782,7 +782,7 @@ class _DoctorAvatar extends StatelessWidget {
       children: [
         if (doctor.isLiveNow)
           BlinkingLiveAvatarBorder(
-            child: _avatarImage(hasImage),
+            child: _avatarImage(hasImage, imageUrl),
           )
         else
           Container(
@@ -797,7 +797,7 @@ class _DoctorAvatar extends StatelessWidget {
                 color: AppColors.white,
                 shape: BoxShape.circle,
               ),
-              child: _avatarImage(hasImage),
+              child: _avatarImage(hasImage, imageUrl),
             ),
           ),
         if (doctor.isLiveNow)
@@ -810,7 +810,7 @@ class _DoctorAvatar extends StatelessWidget {
     );
   }
 
-  Widget _avatarImage(bool hasImage) {
+  Widget _avatarImage(bool hasImage, String imageUrl) {
     return ClipOval(
       child: SizedBox(
         width: 64,
