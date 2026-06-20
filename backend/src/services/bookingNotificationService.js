@@ -88,9 +88,9 @@ function buildConfirmationEmailText({
 }
 
 async function sendBookingEmail({ to, subject, text, html }) {
-  const provider = resolveProviderName();
+  const providerName = resolveProviderName();
 
-  if (provider === 'mock') {
+  if (providerName === 'mock') {
     console.log(`[email-mock] Booking confirmation to ${to}`);
     console.log(`[email-mock] Subject: ${subject}`);
     console.log(text);
@@ -99,7 +99,7 @@ async function sendBookingEmail({ to, subject, text, html }) {
 
   const provider = getProvider();
   await provider.sendTransactionalEmail({ to, subject, text, html });
-  return { sent: true, provider: resolveProviderName() };
+  return { sent: true, provider: providerName };
 }
 
 async function notifyBookingConfirmed({ booking, doctor }) {
