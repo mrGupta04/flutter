@@ -6,8 +6,6 @@ const {
 } = require('../db/repositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const {
-  sendEmailVerificationOtp,
-  verifyEmailVerificationOtp,
   normalizeEmail,
   getProviderInfo,
 } = require('../services/emailVerificationService');
@@ -36,14 +34,20 @@ router.post('/send-otp', async (req, res) => {
 
     await ensureDoctorStub(doctorId);
 
-    const result = await sendEmailVerificationOtp({
+    // Temporary bypass: skip OTP delivery until Render email stability is resolved.
+    const doctor = await updateDoctorEmailVerified({
       doctorId,
       email: normalizedEmail,
     });
 
     return sendSuccess(res, {
-      message: result.message,
-      data: result,
+      message: 'Email verification temporarily bypassed',
+      data: {
+        provider: 'bypass',
+        bypassed: true,
+        verified: true,
+        doctor,
+      },
     });
   } catch (err) {
     console.error(err);
@@ -54,29 +58,27 @@ router.post('/send-otp', async (req, res) => {
 // POST /doctor/email/verify-otp
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { doctorId, email, otp } = req.body;
+    const { doctorId, email } = req.body;
 
-    if (!doctorId || !email || !otp) {
-      return sendError(res, 'doctorId, email, and otp are required');
+    if (!doctorId || !email) {
+      return sendError(res, 'doctorId and email are required');
     }
 
     await ensureDoctorStub(doctorId);
-
-    const result = await verifyEmailVerificationOtp({
-      doctorId,
-      email,
-      otp,
-    });
+    const normalizedEmail = normalizeEmail(email);
 
     const doctor = await updateDoctorEmailVerified({
       doctorId,
-      email: result.email,
+      email: normalizedEmail,
     });
 
     return sendSuccess(res, {
-      message: 'Email verified successfully',
+      message: 'Email verification temporarily bypassed',
       data: {
-        ...result,
+        provider: 'bypass',
+        bypassed: true,
+        verified: true,
+        email: normalizedEmail,
         doctor,
       },
     });

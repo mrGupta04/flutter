@@ -450,15 +450,12 @@ router.post('/register', authOptional, async (req, res) => {
     }
 
     const existingDoctor = data.id ? await findDoctorById(data.id) : null;
+    // Temporary bypass: allow registration submission without OTP-based email verification.
     if (
-      !existingDoctor?.emailVerified ||
+      existingDoctor &&
       String(existingDoctor.email || '').toLowerCase() !== normalizedEmail
     ) {
-      return sendError(
-        res,
-        'Please verify your email before submitting registration',
-        400,
-      );
+      return sendError(res, 'Email mismatch for existing doctor profile', 400);
     }
 
     const mobileTaken = await findDoctorByMobile(mobile, data.id || '');
