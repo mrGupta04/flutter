@@ -6,6 +6,8 @@ const {
 } = require('../db/repositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const {
+  sendEmailVerificationOtp,
+  verifyEmailVerificationOtp,
   normalizeEmail,
   getProviderInfo,
 } = require('../services/emailVerificationService');
@@ -34,20 +36,14 @@ router.post('/send-otp', async (req, res) => {
 
     await ensureDoctorStub(doctorId);
 
-    // Temporary bypass: skip OTP delivery until Render email stability is resolved.
-    const doctor = await updateDoctorEmailVerified({
+    const result = await sendEmailVerificationOtp({
       doctorId,
       email: normalizedEmail,
     });
 
     return sendSuccess(res, {
-      message: 'Email verification temporarily bypassed',
-      data: {
-        provider: 'bypass',
-        bypassed: true,
-        verified: true,
-        doctor,
-      },
+      message: result.message,
+      data: result,
     });
   } catch (err) {
     console.error(err);
@@ -58,27 +54,29 @@ router.post('/send-otp', async (req, res) => {
 // POST /doctor/email/verify-otp
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { doctorId, email } = req.body;
+    const { doctorId, email, otp } = req.body;
 
-    if (!doctorId || !email) {
-      return sendError(res, 'doctorId and email are required');
+    if (!doctorId || !email || !otp) {
+      return sendError(res, 'doctorId, email, and otp are required');
     }
 
     await ensureDoctorStub(doctorId);
-    const normalizedEmail = normalizeEmail(email);
+
+    const result = await verifyEmailVerificationOtp({
+      doctorId,
+      email,
+      otp,
+    });
 
     const doctor = await updateDoctorEmailVerified({
       doctorId,
-      email: normalizedEmail,
+      email: result.email,
     });
 
     return sendSuccess(res, {
-      message: 'Email verification temporarily bypassed',
+      message: 'Email verified successfully',
       data: {
-        provider: 'bypass',
-        bypassed: true,
-        verified: true,
-        email: normalizedEmail,
+        ...result,
         doctor,
       },
     });
