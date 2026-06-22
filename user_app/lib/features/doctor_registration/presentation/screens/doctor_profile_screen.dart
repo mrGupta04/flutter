@@ -14,6 +14,7 @@ import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/blinking_online_badge.dart';
+import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/doctor_feedback_carousel.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../provider/doctor_feedback_provider.dart';
@@ -400,9 +401,17 @@ class _DoctorProfileBody extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                DoctorConsultationFeesBanner(doctor: doctor),
+                if (doctor.offersOnlineConsult || doctor.offersVisitSite)
+                  const SizedBox(height: 12),
                 if (doctor.offersOnlineConsult)
                   CustomButton(
-                    label: 'Book online consult',
+                    label: _bookingButtonLabel(
+                      'Book online consult',
+                      doctor.feeForConsultationType(
+                        ConsultationType.onlineConsult,
+                      ),
+                    ),
                     icon: Icons.videocam_rounded,
                     onPressed: () => openOnlineConsultBooking(context, doctor),
                   ),
@@ -410,7 +419,12 @@ class _DoctorProfileBody extends ConsumerWidget {
                   const SizedBox(height: 10),
                 if (doctor.offersVisitSite)
                   CustomOutlineButton(
-                    label: 'Book hospital visit',
+                    label: _bookingButtonLabel(
+                      'Book hospital visit',
+                      doctor.feeForConsultationType(
+                        ConsultationType.visitSite,
+                      ),
+                    ),
                     icon: Icons.local_hospital_rounded,
                     onPressed: () => openHospitalVisitBooking(context, doctor),
                   ),
@@ -431,6 +445,11 @@ class _DoctorProfileBody extends ConsumerWidget {
       ],
     );
   }
+}
+
+String _bookingButtonLabel(String action, int? fee) {
+  if (fee == null || fee <= 0) return action;
+  return '$action · ₹$fee';
 }
 
 class _HospitalPhotoGallery extends StatelessWidget {

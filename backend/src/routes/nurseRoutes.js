@@ -42,11 +42,7 @@ const router = express.Router();
 
 
 
-function normalizeMobile(mobile) {
-
-  return String(mobile || '').replace(/\D/g, '').slice(-10);
-
-}
+const { normalizeMobile, validateMobile } = require('../utils/mobile');
 
 
 
@@ -385,7 +381,13 @@ router.post('/register', async (req, res) => {
 
     const nurseId = body.id || uuidv4();
 
-    const mobile = normalizeMobile(body.mobileNumber);
+    const mobileCheck = validateMobile(body.mobileNumber, {
+      countryCode: body.countryCode,
+    });
+    if (!mobileCheck.valid) {
+      return sendError(res, mobileCheck.error, 400);
+    }
+    const mobile = mobileCheck.mobile;
 
 
 
@@ -418,6 +420,8 @@ router.post('/register', async (req, res) => {
           email: body.email?.trim().toLowerCase(),
 
           mobileNumber: mobile || body.mobileNumber,
+
+          countryCode: mobileCheck.countryCode,
 
           profilePicture: body.profilePicture?.trim(),
 

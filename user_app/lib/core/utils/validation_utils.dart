@@ -1,6 +1,8 @@
 import 'dart:math';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_constants.dart';
+import '../constants/phone_countries.dart';
 
 /// Validation utilities
 class ValidationUtils {
@@ -43,16 +45,52 @@ class ValidationUtils {
     return null;
   }
 
-  /// Validate phone number (Indian format)
-  static String? validatePhoneNumber(String? phone) {
+  /// Input formatters for mobile fields (10 digits for India).
+  static List<TextInputFormatter> mobileInputFormatters({
+    String countryCode = PhoneCountries.defaultDialCode,
+  }) {
+    final maxLength = countryCode == PhoneCountries.defaultDialCode ? 10 : 15;
+    return [
+      FilteringTextInputFormatter.digitsOnly,
+      LengthLimitingTextInputFormatter(maxLength),
+    ];
+  }
+
+  /// Validate phone number with country code (India default).
+  static String? validatePhoneNumber(
+    String? phone, {
+    String countryCode = PhoneCountries.defaultDialCode,
+  }) {
     if (phone == null || phone.isEmpty) {
       return 'Mobile number is required';
     }
-    final phoneRegex = RegExp(r'^[6-9]\d{9}$');
-    if (!phoneRegex.hasMatch(phone.replaceAll(RegExp(r'\D'), ''))) {
-      return 'Please enter a valid 10-digit mobile number';
+    final cleaned = phone.replaceAll(RegExp(r'\D'), '');
+    if (countryCode == PhoneCountries.defaultDialCode) {
+      if (cleaned.length != 10) {
+        return 'Mobile number must be exactly 10 digits';
+      }
+      if (!RegExp(r'^[6-9]\d{9}$').hasMatch(cleaned)) {
+        return 'Please enter a valid 10-digit mobile number';
+      }
+      return null;
+    }
+    if (cleaned.length < 6 || cleaned.length > 15) {
+      return 'Please enter a valid mobile number';
     }
     return null;
+  }
+
+  /// Format mobile with country code for display.
+  static String formatInternationalPhone(
+    String phone, {
+    String countryCode = PhoneCountries.defaultDialCode,
+  }) {
+    final cleaned = phone.replaceAll(RegExp(r'\D'), '');
+    if (cleaned.isEmpty) return '';
+    if (countryCode == PhoneCountries.defaultDialCode && cleaned.length == 10) {
+      return '+$countryCode ${cleaned.substring(0, 3)} ${cleaned.substring(3, 6)} ${cleaned.substring(6)}';
+    }
+    return '+$countryCode $cleaned';
   }
 
   /// Validate name
@@ -237,12 +275,14 @@ class FormattingUtils {
   FormattingUtils._();
 
   /// Format phone number
-  static String formatPhoneNumber(String phone) {
-    final cleaned = phone.replaceAll(RegExp(r'\D'), '');
-    if (cleaned.length == 10) {
-      return '${cleaned.substring(0, 3)} ${cleaned.substring(3, 6)} ${cleaned.substring(6)}';
-    }
-    return phone;
+  static String formatPhoneNumber(
+    String phone, {
+    String countryCode = PhoneCountries.defaultDialCode,
+  }) {
+    return ValidationUtils.formatInternationalPhone(
+      phone,
+      countryCode: countryCode,
+    );
   }
 
   /// Format date

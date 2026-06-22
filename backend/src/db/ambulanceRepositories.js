@@ -61,6 +61,7 @@ async function upsertAmbulance(data) {
     ownerName: data.ownerName ?? existing?.ownerName,
     email: data.email ?? existing?.email,
     mobileNumber: data.mobileNumber ?? existing?.mobileNumber,
+    countryCode: data.countryCode ?? existing?.countryCode ?? '91',
     profilePicture: data.profilePicture ?? existing?.profilePicture,
     emergencyContact: data.emergencyContact ?? existing?.emergencyContact,
     licenseNumber: data.licenseNumber ?? existing?.licenseNumber,

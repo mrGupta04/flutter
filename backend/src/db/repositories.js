@@ -6,6 +6,7 @@ const {
   findDocumentsByDoctorId,
   upsertDocument,
   assertDoctorDocumentsVerified,
+  assertDocumentNotVerified,
 } = require('./documentVerification');
 
 const DOC_URL_FIELDS = {
@@ -58,6 +59,15 @@ async function upsertDoctor(data) {
   const id = data.id || uuidv4();
   const existing = await Doctor.findOne({ id });
 
+  for (const [documentType, field] of Object.entries(DOC_URL_FIELDS)) {
+    if (!(field in data) || data[field] == null) continue;
+    const newUrl = data[field];
+    const oldUrl = existing?.[field];
+    if (newUrl && newUrl !== oldUrl) {
+      await assertDocumentNotVerified({ doctorId: id, documentType });
+    }
+  }
+
   let passwordHash = existing?.passwordHash;
   if (data.password) {
     passwordHash = bcrypt.hashSync(data.password, 10);
@@ -71,6 +81,7 @@ async function upsertDoctor(data) {
       ? String(data.email).trim().toLowerCase()
       : existing?.email,
     mobileNumber: data.mobileNumber ?? existing?.mobileNumber,
+    countryCode: data.countryCode ?? existing?.countryCode ?? '91',
     passwordHash,
     profilePicture: data.profilePicture ?? existing?.profilePicture,
     gender: data.gender ?? existing?.gender,
@@ -146,6 +157,7 @@ async function upsertDoctor(data) {
 async function updateDoctorDocumentUrl(doctorId, documentType, url) {
   const field = DOC_URL_FIELDS[documentType];
   if (!field) return;
+  await assertDocumentNotVerified({ doctorId, documentType });
   await Doctor.updateOne({ id: doctorId }, { $set: { [field]: url } });
 }
 

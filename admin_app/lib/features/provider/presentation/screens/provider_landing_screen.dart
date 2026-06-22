@@ -28,7 +28,7 @@ class _ProviderLandingScreenState extends ConsumerState<ProviderLandingScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(providerAuthProvider.notifier).refreshSession();
-      await refreshProviderApplicationStatus(ref);
+      await refreshProviderApplicationStatus(ref, silent: true);
     });
   }
 

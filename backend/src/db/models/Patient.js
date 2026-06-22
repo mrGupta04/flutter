@@ -7,6 +7,7 @@ const patientSchema = new mongoose.Schema(
     lastName: String,
     email: { type: String, required: true, unique: true, index: true },
     mobileNumber: { type: String, required: true, index: true },
+    countryCode: { type: String, default: '91' },
     passwordHash: { type: String, required: true },
     age: { type: Number, required: true, min: 1, max: 120 },
     gender: { type: String, required: true },

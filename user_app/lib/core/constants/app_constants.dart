@@ -27,6 +27,9 @@ class AppConstants {
   static const String endpointDoctorLiveStatus = '/doctor/live-status';
   static const String endpointDoctorFeedback = '/doctor/feedback';
   static const String endpointDoctorBookableSlots = '/doctor/bookable-slots';
+  static const String endpointDoctorSlotHold = '/doctor/slot-hold';
+  static String endpointDoctorSlotHoldRelease(String holdId) =>
+      '/doctor/slot-hold/$holdId';
   static const String endpointOnlineConsultBook = '/doctor/online-consult';
   static const String endpointHospitalVisitBook = '/doctor/hospital-visit';
   static const String endpointPaymentCreateOrder = '/payments/create-order';

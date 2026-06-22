@@ -33,6 +33,7 @@ class DoctorModel {
   final String? lastName;
   final String? email;
   final String? mobileNumber;
+  final String? countryCode;
   final String? password;
   final String? profilePicture;
   final String? gender;
@@ -105,6 +106,7 @@ class DoctorModel {
     this.lastName,
     this.email,
     this.mobileNumber,
+    this.countryCode,
     this.password,
     this.profilePicture,
     this.gender,
@@ -257,6 +259,7 @@ class DoctorModel {
       lastName: json['lastName'] as String?,
       email: json['email'] as String?,
       mobileNumber: json['mobileNumber'] as String?,
+      countryCode: json['countryCode'] as String? ?? '91',
       password: json['password'] as String?,
       profilePicture: json['profilePicture'] as String?,
       gender: json['gender'] as String?,
@@ -322,6 +325,7 @@ class DoctorModel {
       'lastName': lastName,
       'email': email,
       'mobileNumber': mobileNumber,
+      'countryCode': countryCode ?? '91',
       'password': password,
       'profilePicture': profilePicture,
       'gender': gender,

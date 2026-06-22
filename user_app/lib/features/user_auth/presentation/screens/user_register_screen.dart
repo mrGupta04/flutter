@@ -8,9 +8,11 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/aadhaar_card_picker.dart';
+import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../provider/patient_auth_provider.dart';
 
@@ -39,6 +41,7 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
   Uint8List? _aadhaarCardBytes;
   String _aadhaarCardFileName = 'aadhaar.jpg';
   String? _gender;
+  String _countryCode = PhoneCountries.defaultDialCode;
 
   @override
   void dispose() {
@@ -79,6 +82,7 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
           lastName: lastName,
           email: _emailController.text.trim(),
           mobileNumber: _mobileController.text.trim(),
+          countryCode: _countryCode,
           password: _passwordController.text,
           age: int.parse(_ageController.text.trim()),
           gender: _gender!,
@@ -161,17 +165,11 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
                 validator: (v) => ValidationUtils.validateEmail(v ?? ''),
               ),
               const SizedBox(height: 12),
-              CustomTextField(
-                controller: _mobileController,
-                label: 'Mobile number',
-                prefixIcon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(10),
-                ],
-                validator: (v) =>
-                    ValidationUtils.validatePhoneNumber(v ?? ''),
+              MobileNumberField(
+                mobileController: _mobileController,
+                countryCode: _countryCode,
+                onCountryCodeChanged: (code) =>
+                    setState(() => _countryCode = code),
               ),
               const SizedBox(height: 12),
               CustomTextField(

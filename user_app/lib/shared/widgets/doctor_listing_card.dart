@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/media_url_utils.dart';
-import '../../core/utils/validation_utils.dart';
 import '../../data/models/consultation_type.dart';
 import '../../data/models/doctor_model.dart';
 import 'blinking_online_badge.dart';
@@ -39,7 +38,6 @@ class DoctorListingCard extends StatelessWidget {
     this.trailing,
     this.footerNote,
     this.showBottomDivider = true,
-    this.selectedConsultationType,
   });
 
   final DoctorModel doctor;
@@ -58,9 +56,6 @@ class DoctorListingCard extends StatelessWidget {
   final String? footerNote;
   final bool showBottomDivider;
 
-  /// When set (e.g. from Online / Clinic / Home filter), shows that type's fee.
-  final ConsultationType? selectedConsultationType;
-
   @override
   Widget build(BuildContext context) {
     final specialty = doctor.specializations?.isNotEmpty == true
@@ -73,13 +68,6 @@ class DoctorListingCard extends StatelessWidget {
     final languages = doctor.languagesSpoken ?? [];
     final city = doctor.city?.trim();
     final clinic = doctor.clinicName?.trim();
-    final selectedTypeFee = selectedConsultationType != null &&
-            doctor.offersConsultationType(selectedConsultationType!)
-        ? doctor.feeForConsultationType(selectedConsultationType!)
-        : null;
-    final selectedFeeLabel = selectedTypeFee != null
-        ? FormattingUtils.formatConsultationFee(selectedTypeFee)
-        : null;
     final displayName = doctor.fullName.isNotEmpty
         ? (doctor.fullName.startsWith('Dr.')
             ? doctor.fullName
@@ -197,8 +185,6 @@ class DoctorListingCard extends StatelessWidget {
                                         if (showVerifiedIcon && isVerified)
                                           const _VerifiedBadge(),
                                         _SpecialtyChip(label: specialty),
-                                        if (selectedFeeLabel != null)
-                                          _FeeChip(fee: selectedFeeLabel),
                                       ],
                                     ),
                                   ],
@@ -281,8 +267,6 @@ class DoctorListingCard extends StatelessWidget {
                                 doctor: doctor,
                                 fadeUnavailable:
                                     fadeUnavailableConsultationButtons,
-                                showButtonFees:
-                                    selectedConsultationType == null,
                                 onOnlineConsult: onOnlineConsultTap ?? onTap,
                                 onClinic: onClinicTap ?? onTap,
                                 onOpenMap: onOpenMapTap,
@@ -361,32 +345,6 @@ class _SpecialtyChip extends StatelessWidget {
         style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.primaryDark,
           fontWeight: FontWeight.w700,
-          fontSize: 10,
-        ),
-      ),
-    );
-  }
-}
-
-class _FeeChip extends StatelessWidget {
-  const _FeeChip({required this.fee});
-
-  final String fee;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.offerLight,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.offer.withValues(alpha: 0.25)),
-      ),
-      child: Text(
-        fee,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.offerDark,
-          fontWeight: FontWeight.w800,
           fontSize: 10,
         ),
       ),
@@ -519,7 +477,6 @@ class _PatientActionButtonRow extends StatelessWidget {
   const _PatientActionButtonRow({
     required this.doctor,
     this.fadeUnavailable = false,
-    this.showButtonFees = true,
     this.onOnlineConsult,
     this.onClinic,
     this.onOpenMap,
@@ -527,7 +484,6 @@ class _PatientActionButtonRow extends StatelessWidget {
 
   final DoctorModel doctor;
   final bool fadeUnavailable;
-  final bool showButtonFees;
   final VoidCallback? onOnlineConsult;
   final VoidCallback? onClinic;
   final VoidCallback? onOpenMap;
@@ -552,11 +508,6 @@ class _PatientActionButtonRow extends StatelessWidget {
           child: _ConsultationActionButton(
             icon: Icons.videocam_rounded,
             label: ConsultationType.onlineConsult.shortLabel,
-            fee: showButtonFees && doctor.offersOnlineConsult
-                ? doctor.feeForConsultationType(
-                    ConsultationType.onlineConsult,
-                  )
-                : null,
             available: doctor.offersOnlineConsult,
             fadeUnavailable: fadeUnavailable,
             onPressed: onOnlineConsult,
@@ -567,9 +518,6 @@ class _PatientActionButtonRow extends StatelessWidget {
           child: _ConsultationActionButton(
             icon: Icons.local_hospital_rounded,
             label: ConsultationType.visitSite.shortLabel,
-            fee: showButtonFees && doctor.offersVisitSite
-                ? doctor.feeForConsultationType(ConsultationType.visitSite)
-                : null,
             available: doctor.offersVisitSite,
             fadeUnavailable: fadeUnavailable,
             onPressed: onClinic,
@@ -596,13 +544,11 @@ class _ConsultationActionButton extends StatelessWidget {
     required this.label,
     required this.available,
     required this.fadeUnavailable,
-    this.fee,
     this.onPressed,
   });
 
   final IconData icon;
   final String label;
-  final int? fee;
   final bool available;
   final bool fadeUnavailable;
   final VoidCallback? onPressed;
@@ -613,7 +559,6 @@ class _ConsultationActionButton extends StatelessWidget {
     final child = _GradientActionButton(
       icon: icon,
       label: label,
-      fee: fee,
       onPressed: isEnabled ? onPressed : null,
       filled: available,
     );
@@ -630,23 +575,17 @@ class _GradientActionButton extends StatelessWidget {
   const _GradientActionButton({
     required this.icon,
     required this.label,
-    this.fee,
     this.onPressed,
     this.filled = true,
   });
 
   final IconData icon;
   final String label;
-  final int? fee;
   final VoidCallback? onPressed;
   final bool filled;
 
   @override
   Widget build(BuildContext context) {
-    final feeLabel = fee != null && fee! > 0
-        ? FormattingUtils.formatConsultationFee(fee!)
-        : null;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -694,22 +633,6 @@ class _GradientActionButton extends StatelessWidget {
                   ),
                 ],
               ),
-              if (feeLabel != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  feeLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: filled
-                        ? AppColors.white.withValues(alpha: 0.92)
-                        : AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 8,
-                    height: 1,
-                  ),
-                ),
-              ],
             ],
           ),
         ),

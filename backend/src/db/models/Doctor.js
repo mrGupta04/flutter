@@ -9,6 +9,7 @@ const doctorSchema = new mongoose.Schema(
     emailVerified: { type: Boolean, default: false },
     emailVerifiedAt: Date,
     mobileNumber: String,
+    countryCode: { type: String, default: '91' },
     phoneVerified: { type: Boolean, default: false },
     phoneVerifiedAt: Date,
     passwordHash: String,

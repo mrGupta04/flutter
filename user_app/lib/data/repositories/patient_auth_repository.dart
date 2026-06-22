@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/constants/phone_countries.dart';
 import '../../core/services/token_storage.dart';
 import '../models/api_response_model.dart';
 import '../models/patient_user_model.dart';
@@ -18,6 +19,7 @@ class PatientAuthRepository {
     String? lastName,
     required String email,
     required String mobileNumber,
+    String countryCode = PhoneCountries.defaultDialCode,
     required String password,
     required int age,
     required String gender,
@@ -35,6 +37,7 @@ class PatientAuthRepository {
           MapEntry('lastName', lastName),
         MapEntry('email', email),
         MapEntry('mobileNumber', mobileNumber),
+        MapEntry('countryCode', countryCode),
         MapEntry('password', password),
         MapEntry('age', age.toString()),
         MapEntry('gender', gender),

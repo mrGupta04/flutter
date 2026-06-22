@@ -75,6 +75,24 @@ async function findDocumentsByAmbulanceId(ambulanceId) {
   return docs.map(toDocument);
 }
 
+async function assertDocumentNotVerified({ doctorId, nurseId, ambulanceId, documentType }) {
+  if (!documentType) return;
+
+  const query = { documentType };
+  if (doctorId) query.doctorId = doctorId;
+  if (nurseId) query.nurseId = nurseId;
+  if (ambulanceId) query.ambulanceId = ambulanceId;
+
+  const existing = await Document.findOne(query).sort({ uploadedAt: -1 });
+  if (existing?.status === 'verified') {
+    const err = new Error(
+      'This document has been verified by admin and cannot be modified',
+    );
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
 async function upsertDocument({
   doctorId,
   nurseId,
@@ -98,6 +116,14 @@ async function upsertDocument({
 
   const existing = await Document.findOne(query).sort({ uploadedAt: -1 });
   if (existing) {
+    if (existing.status === 'verified') {
+      const err = new Error(
+        'This document has been verified by admin and cannot be modified',
+      );
+      err.statusCode = 403;
+      throw err;
+    }
+
     await Document.updateOne(
       { id: existing.id },
       {
@@ -372,6 +398,7 @@ module.exports = {
   findDocumentsByDoctorId,
   findDocumentsByNurseId,
   findDocumentsByAmbulanceId,
+  assertDocumentNotVerified,
   upsertDocument,
   verifyDocument,
   rejectDocument,

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/ambulance_constants.dart';
+import '../../../core/constants/phone_countries.dart';
 import '../../../data/models/ambulance_driver_model.dart';
 import '../../../data/models/ambulance_model.dart';
 import '../../../data/models/ambulance_vehicle_model.dart';
@@ -20,6 +21,7 @@ class AmbulanceRegistrationFormState {
   final String ownerName;
   final String email;
   final String mobileNumber;
+  final String countryCode;
   final String password;
   final String confirmPassword;
   final String emergencyContact;
@@ -57,6 +59,7 @@ class AmbulanceRegistrationFormState {
     this.ownerName = '',
     this.email = '',
     this.mobileNumber = '',
+    this.countryCode = PhoneCountries.defaultDialCode,
     this.password = '',
     this.confirmPassword = '',
     this.emergencyContact = '',
@@ -98,6 +101,7 @@ class AmbulanceRegistrationFormState {
     String? ownerName,
     String? email,
     String? mobileNumber,
+    String? countryCode,
     String? password,
     String? confirmPassword,
     String? emergencyContact,
@@ -135,6 +139,7 @@ class AmbulanceRegistrationFormState {
       ownerName: ownerName ?? this.ownerName,
       email: email ?? this.email,
       mobileNumber: mobileNumber ?? this.mobileNumber,
+      countryCode: countryCode ?? this.countryCode,
       password: password ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,
       emergencyContact: emergencyContact ?? this.emergencyContact,
@@ -178,6 +183,7 @@ class AmbulanceRegistrationFormState {
       ownerName: ownerName.trim(),
       email: email.trim(),
       mobileNumber: mobileNumber.trim(),
+      countryCode: countryCode,
       profilePicture: profilePictureUrl,
       emergencyContact: emergencyContact.trim(),
       licenseNumber: licenseNumber.trim(),
@@ -222,6 +228,7 @@ class AmbulanceRegistrationFormNotifier
     String? ownerName,
     String? email,
     String? mobileNumber,
+    String? countryCode,
     String? password,
     String? confirmPassword,
     String? emergencyContact,
@@ -236,6 +243,7 @@ class AmbulanceRegistrationFormNotifier
       ownerName: ownerName,
       email: email,
       mobileNumber: mobileNumber,
+      countryCode: countryCode,
       password: password,
       confirmPassword: confirmPassword,
       emergencyContact: emergencyContact,

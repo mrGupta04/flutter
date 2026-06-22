@@ -30,6 +30,8 @@ import '../core/models/provider_type.dart';
 import '../features/provider/presentation/screens/provider_landing_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
 import '../features/provider/presentation/screens/provider_profile_screen.dart';
+import '../features/auth/provider/provider_auth_provider.dart';
+import '../features/admin/provider/admin_auth_provider.dart';
 
 bool _isAdminProtectedRoute(String location) {
   return location.startsWith(AppConstants.routeAdminDashboard) ||
@@ -53,6 +55,9 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
 
       if (loc == AppConstants.routeDoctorDashboard ||
           loc == AppConstants.routeProviderProfile) {
+        if (ref.read(providerAuthProvider).isAuthenticated) {
+          return null;
+        }
         final token = await TokenStorage.instance.getToken();
         if (token == null || token.isEmpty) {
           return AppConstants.routeProviderLanding;
@@ -60,6 +65,9 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (_isAdminProtectedRoute(loc)) {
+        if (ref.read(adminAuthProvider).isAuthenticated) {
+          return null;
+        }
         final adminToken = await TokenStorage.instance.getAdminToken();
         if (adminToken == null || adminToken.isEmpty) {
           return AppConstants.routeAdminLogin;

@@ -32,6 +32,8 @@ const {
 } = require('../db/availabilityRepositories');
 const {
   getBookableSlots,
+  holdConsultationSlot,
+  releaseConsultationSlotHold,
   createOnlineConsultBooking,
   createHospitalVisitBooking,
   listDoctorBookings,
@@ -65,9 +67,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-function normalizeMobile(mobile) {
-  return String(mobile || '').replace(/\D/g, '').slice(-10);
-}
+const { normalizeMobile, validateMobile } = require('../utils/mobile');
 
 function mapBodyToDoctor(body) {
   return {
@@ -76,6 +76,7 @@ function mapBodyToDoctor(body) {
     lastName: body.lastName,
     email: body.email,
     mobileNumber: body.mobileNumber,
+    countryCode: body.countryCode,
     password: body.password,
     profilePicture: body.profilePicture,
     gender: body.gender,
@@ -331,6 +332,65 @@ router.get('/bookable-slots', async (req, res) => {
   }
 });
 
+// POST /doctor/slot-hold — temporarily reserve a slot while patient completes booking
+router.post('/slot-hold', authOptional, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const {
+      doctorId,
+      consultationType = 'online_consult',
+      dayOfWeek,
+      startHour,
+      slotStart,
+      holdId,
+    } = body;
+
+    if (!doctorId) {
+      return sendError(res, 'doctorId is required', 400);
+    }
+
+    const patientId =
+      req.auth?.type === 'patient' ? req.auth.patientId : undefined;
+
+    const data = await holdConsultationSlot({
+      doctorId,
+      consultationType,
+      dayOfWeek,
+      startHour,
+      slotStart,
+      patientId,
+      holdId,
+    });
+
+    return sendSuccess(res, {
+      statusCode: 201,
+      message: 'Slot reserved',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Could not reserve slot', status);
+  }
+});
+
+// DELETE /doctor/slot-hold/:holdId — release a temporary slot reservation
+router.delete('/slot-hold/:holdId', authOptional, async (req, res) => {
+  try {
+    const patientId =
+      req.auth?.type === 'patient' ? req.auth.patientId : undefined;
+    const data = await releaseConsultationSlotHold(req.params.holdId, patientId);
+    return sendSuccess(res, {
+      message: data.released ? 'Slot hold released' : 'No active hold found',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Could not release slot hold', status);
+  }
+});
+
 // POST /doctor/hospital-visit — book a hospital / clinic visit appointment
 router.post('/hospital-visit', authOptional, async (req, res) => {
   try {
@@ -442,7 +502,13 @@ router.post('/register', authOptional, async (req, res) => {
       return sendError(res, 'firstName, email, and mobileNumber are required');
     }
 
-    const mobile = normalizeMobile(data.mobileNumber);
+    const mobileCheck = validateMobile(data.mobileNumber, {
+      countryCode: data.countryCode,
+    });
+    if (!mobileCheck.valid) {
+      return sendError(res, mobileCheck.error, 400);
+    }
+    const mobile = mobileCheck.mobile;
     const normalizedEmail = String(data.email).trim().toLowerCase();
     const emailExists = await findDoctorByEmail(normalizedEmail, data.id || '');
     if (emailExists?.emailVerified && emailExists.id !== data.id) {
@@ -467,7 +533,12 @@ router.post('/register', authOptional, async (req, res) => {
     }
 
     const doctor = await submitDoctorForReview(
-      (await upsertDoctor({ ...data, email: normalizedEmail, mobileNumber: mobile })).id,
+      (await upsertDoctor({
+        ...data,
+        email: normalizedEmail,
+        mobileNumber: mobile,
+        countryCode: mobileCheck.countryCode,
+      })).id,
     );
 
     const token = signToken(
@@ -668,7 +739,8 @@ router.post('/upload-document', upload.single('file'), async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return sendError(res, err.message || 'Upload failed', 500);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Upload failed', status);
   }
 });
 

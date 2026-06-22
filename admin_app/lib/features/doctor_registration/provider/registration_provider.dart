@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/doctor_availability_constants.dart';
+import '../../../core/constants/phone_countries.dart';
 import '../../../core/services/token_storage.dart';
 import '../../../core/utils/input_sanitizer.dart';
 import '../../../core/utils/validation_utils.dart';
@@ -127,6 +128,7 @@ class RegistrationFormState {
   final Uint8List? profileImageBytes;
   final String? profileImageFileName;
   final String mobileNumber;
+  final String countryCode;
   final String aadhaarNumber;
   final bool emailVerified;
   final String verifiedEmail;
@@ -190,6 +192,7 @@ class RegistrationFormState {
     this.profileImageBytes,
     this.profileImageFileName,
     this.mobileNumber = '',
+    this.countryCode = PhoneCountries.defaultDialCode,
     this.aadhaarNumber = '',
     this.emailVerified = false,
     this.verifiedEmail = '',
@@ -284,6 +287,7 @@ class RegistrationFormState {
     Uint8List? profileImageBytes,
     String? profileImageFileName,
     String? mobileNumber,
+    String? countryCode,
     String? aadhaarNumber,
     bool? emailVerified,
     String? verifiedEmail,
@@ -341,6 +345,7 @@ class RegistrationFormState {
       profileImageBytes: profileImageBytes ?? this.profileImageBytes,
       profileImageFileName: profileImageFileName ?? this.profileImageFileName,
       mobileNumber: mobileNumber ?? this.mobileNumber,
+      countryCode: countryCode ?? this.countryCode,
       aadhaarNumber: aadhaarNumber ?? this.aadhaarNumber,
       emailVerified: emailVerified ?? this.emailVerified,
       verifiedEmail: verifiedEmail ?? this.verifiedEmail,
@@ -413,6 +418,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     String? fullName,
     String? email,
     String? mobileNumber,
+    String? countryCode,
     String? password,
     String? confirmPassword,
     String? gender,
@@ -434,6 +440,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
       fullName: fullName,
       email: normalizedEmail ?? email,
       mobileNumber: mobileNumber,
+      countryCode: countryCode,
       password: password,
       confirmPassword: confirmPassword,
       gender: gender,
@@ -950,6 +957,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
       lastName: lastName,
       email: InputSanitizer.sanitizeEmail(state.email),
       mobileNumber: InputSanitizer.sanitizePhone(state.mobileNumber),
+      countryCode: state.countryCode,
       password: state.password,
       profilePicture: state.profileImagePath,
       gender: state.gender,

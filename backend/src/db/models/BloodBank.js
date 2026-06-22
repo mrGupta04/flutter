@@ -8,6 +8,7 @@ const bloodBankSchema = new mongoose.Schema(
     contactPerson: String,
     email: { type: String, unique: true, sparse: true },
     mobileNumber: String,
+    countryCode: { type: String, default: '91' },
     passwordHash: String,
     profilePicture: String,
     emergencyContact: String,

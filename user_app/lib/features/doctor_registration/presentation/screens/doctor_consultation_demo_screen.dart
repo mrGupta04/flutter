@@ -149,7 +149,6 @@ class _CardsLayout extends ConsumerWidget {
         Expanded(
           child: _DoctorListBody(
             asyncDoctors: asyncDoctors,
-            selectedConsultationType: selected,
           ),
         ),
       ],
@@ -212,7 +211,6 @@ class _FilterLayout extends ConsumerWidget {
         Expanded(
           child: _DoctorListBody(
             asyncDoctors: asyncDoctors,
-            selectedConsultationType: selected,
           ),
         ),
       ],
@@ -224,12 +222,10 @@ class _DoctorListBody extends StatelessWidget {
   const _DoctorListBody({
     required this.asyncDoctors,
     this.fadeUnavailableButtons = false,
-    this.selectedConsultationType,
   });
 
   final AsyncValue<List<DoctorModel>> asyncDoctors;
   final bool fadeUnavailableButtons;
-  final ConsultationType? selectedConsultationType;
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +271,6 @@ class _DoctorListBody extends StatelessWidget {
               if (i > 0) const SizedBox(height: kDoctorCardSpacing),
               DoctorListingCard(
                 doctor: doctors[i],
-                selectedConsultationType: selectedConsultationType,
                 showBottomDivider: false,
                 fadeUnavailableConsultationButtons: fadeUnavailableButtons,
                 onTap: () => onDoctorCardTap(context, doctors[i]),

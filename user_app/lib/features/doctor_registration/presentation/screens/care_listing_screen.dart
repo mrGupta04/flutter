@@ -410,7 +410,6 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           if (i > 0) const SizedBox(height: kDoctorCardSpacing),
           DoctorListingCard(
             doctor: items[i],
-            selectedConsultationType: _doctorType,
             showBottomDivider: false,
             showVerifiedIcon: true,
             showActionButtons: items[i].offersOnlineConsult ||

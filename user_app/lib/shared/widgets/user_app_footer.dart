@@ -222,6 +222,7 @@ class _FooterLink extends StatelessWidget {
               Text(
                 label,
                 style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),

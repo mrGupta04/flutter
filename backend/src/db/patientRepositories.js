@@ -8,9 +8,7 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
-function normalizeMobile(mobile) {
-  return String(mobile || '').replace(/\D/g, '').slice(-10);
-}
+const { normalizeMobile, validateMobile } = require('../utils/mobile');
 
 function normalizeAadhaar(value) {
   return String(value || '').replace(/\D/g, '').slice(0, 12);
@@ -25,6 +23,7 @@ function toPatient(doc) {
     lastName: d.lastName,
     email: d.email,
     mobileNumber: d.mobileNumber,
+    countryCode: d.countryCode || '91',
     age: d.age,
     gender: d.gender,
     aadhaarLast4: d.aadhaarLast4,
@@ -50,7 +49,16 @@ async function findPatientById(id) {
 function validateRegistrationInput(data) {
   const firstName = String(data.firstName || '').trim();
   const email = normalizeEmail(data.email);
-  const mobile = normalizeMobile(data.mobileNumber);
+  const mobileCheck = validateMobile(data.mobileNumber, {
+    countryCode: data.countryCode,
+  });
+  if (!mobileCheck.valid) {
+    const err = new Error(mobileCheck.error);
+    err.statusCode = 400;
+    throw err;
+  }
+  const mobile = mobileCheck.mobile;
+  const mobileCountryCode = mobileCheck.countryCode;
   const password = String(data.password || '');
   const gender = String(data.gender || '').trim();
   const aadhaar = normalizeAadhaar(data.aadhaarNumber);
@@ -65,11 +73,6 @@ function validateRegistrationInput(data) {
   }
   if (!email) {
     const err = new Error('Email is required');
-    err.statusCode = 400;
-    throw err;
-  }
-  if (mobile.length !== 10) {
-    const err = new Error('A valid 10-digit mobile number is required');
     err.statusCode = 400;
     throw err;
   }
@@ -114,6 +117,7 @@ function validateRegistrationInput(data) {
     lastName: data.lastName ? String(data.lastName).trim() : '',
     email,
     mobile,
+    countryCode: mobileCountryCode,
     password,
     gender,
     aadhaar,
@@ -135,6 +139,7 @@ async function registerPatient(data) {
 
   const existingMobile = await Patient.findOne({
     mobileNumber: validated.mobile,
+    countryCode: validated.countryCode,
   });
   if (existingMobile) {
     const err = new Error('Mobile number is already registered');
@@ -158,6 +163,7 @@ async function registerPatient(data) {
     lastName: validated.lastName,
     email: validated.email,
     mobileNumber: validated.mobile,
+    countryCode: validated.countryCode,
     passwordHash: hashPassword(validated.password),
     age: validated.age,
     gender: validated.gender,
@@ -211,12 +217,15 @@ async function updatePatient(patientId, data) {
   }
 
   if (data.mobileNumber != null) {
-    const mobile = normalizeMobile(data.mobileNumber);
-    if (mobile.length !== 10) {
-      const err = new Error('A valid 10-digit mobile number is required');
+    const mobileCheck = validateMobile(data.mobileNumber, {
+      countryCode: data.countryCode,
+    });
+    if (!mobileCheck.valid) {
+      const err = new Error(mobileCheck.error);
       err.statusCode = 400;
       throw err;
     }
+    const mobile = mobileCheck.mobile;
     const existingMobile = await Patient.findOne({
       mobileNumber: mobile,
       id: { $ne: patientId },
@@ -227,6 +236,7 @@ async function updatePatient(patientId, data) {
       throw err;
     }
     updates.mobileNumber = mobile;
+    updates.countryCode = mobileCheck.countryCode;
   }
 
   if (data.age != null) {

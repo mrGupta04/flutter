@@ -23,6 +23,28 @@ async function findPrescriptionsByBookingIds(bookingIds) {
   return new Map(rows.map((row) => [row.bookingId, row]));
 }
 
+async function findBookingsDueForAutoPrescription() {
+  const now = new Date();
+  const bookings = await ConsultationBooking.find({
+    consultationType: 'online_consult',
+    status: 'confirmed',
+    slotEnd: { $lte: now },
+  }).lean();
+
+  if (!bookings.length) return [];
+
+  const bookingIds = bookings.map((b) => b.id);
+  const finalized = await Prescription.find({
+    bookingId: { $in: bookingIds },
+    status: 'finalized',
+  })
+    .select('bookingId')
+    .lean();
+
+  const finalizedIds = new Set(finalized.map((row) => row.bookingId));
+  return bookings.filter((b) => !finalizedIds.has(b.id));
+}
+
 async function assertBookingForDoctor(bookingId, doctorId) {
   const booking = await ConsultationBooking.findOne({ id: bookingId }).lean();
   if (!booking) {
@@ -127,20 +149,36 @@ async function finalizePrescription({ bookingId, pdfUrl, pdfFileName }) {
   return Prescription.findOne({ bookingId }).lean();
 }
 
-function prescriptionFieldsForBooking(prescription) {
-  if (!prescription || prescription.status !== 'finalized') {
+function prescriptionFieldsForBooking(booking, prescription, now = new Date()) {
+  const isOnlineConsult = booking?.consultationType === 'online_consult';
+  const finalized = prescription?.status === 'finalized';
+  const slotStart = booking?.slotStart ? new Date(booking.slotStart) : null;
+  const slotEnd = booking?.slotEnd ? new Date(booking.slotEnd) : null;
+  const slotStarted = Boolean(slotStart && slotStart <= now);
+  const slotEnded = Boolean(slotEnd && slotEnd <= now);
+  const prescriptionPending = Boolean(
+    isOnlineConsult && !finalized && slotStarted,
+  );
+  const prescriptionProcessing = Boolean(prescriptionPending && slotEnded);
+
+  if (!finalized) {
     return {
       hasPrescription: false,
       prescriptionPdfUrl: null,
       prescriptionFileName: null,
       prescriptionCreatedAt: null,
+      prescriptionPending,
+      prescriptionProcessing,
     };
   }
+
   return {
     hasPrescription: true,
     prescriptionPdfUrl: prescription.pdfUrl,
     prescriptionFileName: prescription.pdfFileName,
     prescriptionCreatedAt: prescription.updatedAt || prescription.createdAt,
+    prescriptionPending: false,
+    prescriptionProcessing: false,
   };
 }
 
@@ -148,6 +186,7 @@ module.exports = {
   bookingSymptoms,
   findPrescriptionByBookingId,
   findPrescriptionsByBookingIds,
+  findBookingsDueForAutoPrescription,
   assertBookingForDoctor,
   upsertPrescriptionDraft,
   finalizePrescription,

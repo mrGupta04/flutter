@@ -230,6 +230,54 @@ class MockApi {
       }
     }
 
+    if (path == AppConstants.endpointDoctorSlotHold && method == 'POST') {
+      try {
+        final doctorId = data?['doctorId'] as String? ?? '';
+        final consultationType =
+            data?['consultationType'] as String? ?? 'online_consult';
+        final dayOfWeek = (data?['dayOfWeek'] as num?)?.toInt() ?? 0;
+        final startHour = (data?['startHour'] as num?)?.toInt() ?? 8;
+        final slotStart = DateTime.tryParse(data?['slotStart'] as String? ?? '') ??
+            DateTime.now().add(const Duration(days: 1));
+        final hold = _db.holdSlot(
+          doctorId: doctorId,
+          consultationType: consultationType,
+          dayOfWeek: dayOfWeek,
+          startHour: startHour,
+          slotStart: slotStart,
+          holdId: data?['holdId'] as String?,
+        );
+        return _ok(
+          path,
+          method,
+          {
+            'success': true,
+            'statusCode': 201,
+            'message': 'Slot reserved',
+            'data': hold,
+          },
+        );
+      } catch (e) {
+        return _error(path, method, e.toString(), 409);
+      }
+    }
+
+    if (path.startsWith('${AppConstants.endpointDoctorSlotHold}/') &&
+        method == 'DELETE') {
+      final holdId = path.split('/').last;
+      _db.releaseSlotHold(holdId);
+      return _ok(
+        path,
+        method,
+        {
+          'success': true,
+          'statusCode': 200,
+          'message': 'Slot hold released',
+          'data': {'released': true},
+        },
+      );
+    }
+
     if (path == AppConstants.endpointOnlineConsultBook && method == 'POST') {
       final doctorId = data?['doctorId'] as String? ?? '';
       try {

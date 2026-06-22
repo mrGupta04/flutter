@@ -5,7 +5,7 @@ import '../../core/theme/app_text_styles.dart';
 /// Red accent for doctors currently live in the app.
 const Color kLiveOnlineColor = AppColors.error;
 
-/// Eye-catching pulsing "Online now" badge for doctors currently using the app.
+/// Eye-catching color-blinking "Online now" badge for doctors currently using the app.
 class BlinkingOnlineBadge extends StatefulWidget {
   const BlinkingOnlineBadge({super.key, this.compact = false});
 
@@ -44,49 +44,39 @@ class _BlinkingOnlineBadgeState extends State<BlinkingOnlineBadge>
       animation: _pulse,
       builder: (context, child) {
         final glow = _pulse.value;
-        return Opacity(
-          opacity: 0.72 + (glow * 0.28),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.compact ? 7 : 9,
-              vertical: widget.compact ? 3 : 4,
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.compact ? 7 : 9,
+            vertical: widget.compact ? 3 : 4,
+          ),
+          decoration: BoxDecoration(
+            color: kLiveOnlineColor.withValues(alpha: 0.1 + glow * 0.16),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: kLiveOnlineColor.withValues(alpha: 0.45 + glow * 0.55),
+              width: 1.2,
             ),
-            decoration: BoxDecoration(
-              color: kLiveOnlineColor.withValues(alpha: 0.1 + glow * 0.16),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: kLiveOnlineColor.withValues(alpha: 0.45 + glow * 0.55),
-                width: 1.2 + (glow * 0.4),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: kLiveOnlineColor.withValues(alpha: 0.22 * glow),
-                  blurRadius: 8 + (8 * glow),
-                  spreadRadius: 0.6 * glow,
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                BlinkingOnlineDot(size: widget.compact ? 6 : 7, pulse: glow),
-                const SizedBox(width: 5),
-                Text(
-                  'Online now',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: Color.lerp(
-                      kLiveOnlineColor.withValues(alpha: 0.7),
-                      kLiveOnlineColor,
-                      glow,
-                    ),
-                    fontWeight: FontWeight.w800,
-                    fontSize: widget.compact ? 9 : 10,
-                    height: 1,
-                    letterSpacing: 0.2,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BlinkingOnlineDot(size: widget.compact ? 6 : 7, pulse: glow),
+              const SizedBox(width: 5),
+              Text(
+                'Online now',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: Color.lerp(
+                    kLiveOnlineColor.withValues(alpha: 0.7),
+                    kLiveOnlineColor,
+                    glow,
                   ),
+                  fontWeight: FontWeight.w800,
+                  fontSize: widget.compact ? 9 : 10,
+                  height: 1,
+                  letterSpacing: 0.2,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -159,15 +149,6 @@ class _BlinkingOnlineDotState extends State<BlinkingOnlineDot>
           kLiveOnlineColor,
           glow,
         ),
-        boxShadow: widget.showRing
-            ? [
-                BoxShadow(
-                  color: kLiveOnlineColor.withValues(alpha: 0.4 * glow),
-                  blurRadius: widget.size * 0.9,
-                  spreadRadius: widget.size * 0.18 * glow,
-                ),
-              ]
-            : null,
         border: widget.showRing
             ? Border.all(
                 color: AppColors.white.withValues(alpha: 0.9),
@@ -232,15 +213,8 @@ class _BlinkingLiveAvatarBorderState extends State<BlinkingLiveAvatarBorder>
             shape: BoxShape.circle,
             border: Border.all(
               color: kLiveOnlineColor.withValues(alpha: 0.55 + glow * 0.45),
-              width: widget.borderWidth + (glow * 0.9),
+              width: widget.borderWidth,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: kLiveOnlineColor.withValues(alpha: 0.28 * glow),
-                blurRadius: 10 + (12 * glow),
-                spreadRadius: 1.2 * glow,
-              ),
-            ],
           ),
           child: child,
         );

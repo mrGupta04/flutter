@@ -121,8 +121,21 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
         (key == 'bloodbank' ? ProviderType.bloodBank : null);
   }
 
-  Future<void> loadAll() async {
-    state = state.copyWith(isLoading: true, error: null);
+  Future<void> loadAll({bool silent = false}) async {
+    final hasCachedProfile = state.doctor != null ||
+        state.nurse != null ||
+        state.ambulance != null ||
+        state.bloodBank != null;
+
+    if (!silent || !hasCachedProfile) {
+      state = state.copyWith(
+        isLoading: !hasCachedProfile,
+        error: null,
+      );
+    } else {
+      state = state.copyWith(error: null);
+    }
+
     final type = await _resolveType();
     if (type == null) {
       state = state.copyWith(
@@ -136,31 +149,6 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
       if (type == ProviderType.doctor) {
         final res = await _doctorRepo.getDoctorProfile();
         if (res.success && res.data != null) {
-          AvailabilityReminder? reminder;
-          try {
-            final raw = await _dio.get(
-              AppConstants.endpointGetProfile,
-              queryParameters: {
-                'doctorId': res.data!.id,
-              },
-            );
-            final data = (raw.data as Map<String, dynamic>)['data']
-                as Map<String, dynamic>?;
-            reminder = AvailabilityReminder.fromJson(
-              data?['availabilityReminder'] as Map<String, dynamic>?,
-            );
-          } catch (_) {
-            reminder = const AvailabilityReminder(needsUpdate: false);
-          }
-          final availRes = await _doctorRepo.getAvailability(
-            doctorId: res.data!.id,
-          );
-          if (availRes.data?.needsUpdate == true) {
-            reminder = AvailabilityReminder(
-              needsUpdate: true,
-              message: availRes.data?.reminderMessage ?? availRes.message,
-            );
-          }
           final doctor = res.data!;
           if (doctor.id != null && doctor.id!.isNotEmpty) {
             await TokenStorage.instance.saveDoctorId(doctor.id!);
@@ -168,9 +156,14 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
           state = ProviderProfileState(
             providerType: type,
             doctor: doctor,
-            availabilityReminder: reminder,
+            bookings: state.bookings,
+            availabilityReminder: state.availabilityReminder,
             isLoading: false,
           );
+          await Future.wait([
+            _loadDoctorExtras(doctor),
+            loadBookings(),
+          ]);
         } else {
           state = state.copyWith(
             isLoading: false,
@@ -183,8 +176,10 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
           state = ProviderProfileState(
             providerType: type,
             nurse: res.data,
+            bookings: state.bookings,
             isLoading: false,
           );
+          await loadBookings();
         } else {
           state = state.copyWith(
             isLoading: false,
@@ -197,8 +192,10 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
           state = ProviderProfileState(
             providerType: type,
             ambulance: res.data,
+            bookings: state.bookings,
             isLoading: false,
           );
+          await loadBookings();
         } else {
           state = state.copyWith(
             isLoading: false,
@@ -211,8 +208,10 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
           state = ProviderProfileState(
             providerType: type,
             bloodBank: res.data,
+            bookings: state.bookings,
             isLoading: false,
           );
+          await loadBookings();
         } else {
           state = state.copyWith(
             isLoading: false,
@@ -220,11 +219,33 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
           );
         }
       }
-      await loadBookings();
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
         error: AppConstants.errorSomethingWentWrong,
+      );
+    }
+  }
+
+  Future<void> _loadDoctorExtras(DoctorModel doctor) async {
+    final doctorId = doctor.id;
+    if (doctorId == null || doctorId.isEmpty) return;
+
+    try {
+      final availRes = await _doctorRepo.getAvailability(doctorId: doctorId);
+      AvailabilityReminder? reminder;
+      if (availRes.data?.needsUpdate == true) {
+        reminder = AvailabilityReminder(
+          needsUpdate: true,
+          message: availRes.data?.reminderMessage ?? availRes.message,
+        );
+      } else {
+        reminder = const AvailabilityReminder(needsUpdate: false);
+      }
+      state = state.copyWith(availabilityReminder: reminder);
+    } catch (_) {
+      state = state.copyWith(
+        availabilityReminder: const AvailabilityReminder(needsUpdate: false),
       );
     }
   }

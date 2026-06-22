@@ -18,10 +18,9 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     final value = prefs.getString(_key);
+    // Admin UI is built for light surfaces; avoid system dark mode on other devices.
     state = switch (value) {
       'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      'system' => ThemeMode.system,
       _ => ThemeMode.light,
     };
   }

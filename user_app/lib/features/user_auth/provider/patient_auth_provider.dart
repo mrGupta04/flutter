@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/constants/phone_countries.dart';
 import '../../../core/services/token_storage.dart';
 import '../../../data/models/patient_user_model.dart';
 import '../../../data/repositories/patient_auth_repository.dart';
@@ -117,6 +118,7 @@ class PatientAuthNotifier extends StateNotifier<PatientAuthState> {
     String? lastName,
     required String email,
     required String mobileNumber,
+    String countryCode = PhoneCountries.defaultDialCode,
     required String password,
     required int age,
     required String gender,
@@ -132,6 +134,7 @@ class PatientAuthNotifier extends StateNotifier<PatientAuthState> {
       lastName: lastName,
       email: email,
       mobileNumber: mobileNumber,
+      countryCode: countryCode,
       password: password,
       age: age,
       gender: gender,

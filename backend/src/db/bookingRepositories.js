@@ -171,12 +171,14 @@ function bookingPaymentFields(booking) {
   };
 }
 
+const SLOT_HOLD_MINUTES = parseInt(process.env.SLOT_HOLD_MINUTES || '10', 10);
+
 async function expirePendingBookings(doctorId) {
   const now = new Date();
   await ConsultationBooking.updateMany(
     {
       ...(doctorId ? { doctorId } : {}),
-      status: 'pending',
+      status: { $in: ['pending', 'held'] },
       paymentExpiresAt: { $lte: now },
     },
     {
@@ -193,6 +195,22 @@ function isActivePendingBooking(booking, now = new Date()) {
     booking.status === 'pending' &&
     booking.paymentExpiresAt &&
     new Date(booking.paymentExpiresAt) > now
+  );
+}
+
+function isActiveHeldBooking(booking, now = new Date()) {
+  return (
+    booking.status === 'held' &&
+    booking.paymentExpiresAt &&
+    new Date(booking.paymentExpiresAt) > now
+  );
+}
+
+function isSlotReserved(booking, now = new Date()) {
+  return (
+    booking.status === 'confirmed' ||
+    isActivePendingBooking(booking, now) ||
+    isActiveHeldBooking(booking, now)
   );
 }
 
@@ -234,18 +252,17 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
   const reserved = await ConsultationBooking.find({
     doctorId,
     consultationType,
-    status: { $in: ['confirmed', 'pending'] },
+    status: { $in: ['confirmed', 'pending', 'held'] },
     slotStart: { $gte: weekStart, $lte: weekEnd },
   }).lean();
 
-  const bookedKeys = new Set(
-    reserved
-      .filter(
-        (b) =>
-          b.status === 'confirmed' || isActivePendingBooking(b, now),
-      )
-      .map((b) => `${b.dayOfWeek}_${b.startHour}`),
-  );
+  const bookedKeys = new Set();
+  const bookedSlotStarts = new Set();
+  for (const booking of reserved) {
+    if (!isSlotReserved(booking, now)) continue;
+    bookedKeys.add(`${booking.dayOfWeek}_${booking.startHour}`);
+    bookedSlotStarts.add(new Date(booking.slotStart).getTime());
+  }
 
   const slotMap = new Map();
   (availability.slots || []).forEach((s) => {
@@ -262,6 +279,7 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
       const slotStart = slotDateTime(weekStart, day, hour);
       const slotEnd = slotEndDateTime(weekStart, day, hour);
       if (slotStart <= now) continue;
+      if (bookedSlotStarts.has(slotStart.getTime())) continue;
 
       bookable.push({
         dayOfWeek: day,
@@ -418,12 +436,9 @@ async function validateBookingPayload(payload, consultationType) {
     doctorId,
     slotStart,
     consultationType,
-    status: { $in: ['confirmed', 'pending'] },
+    status: { $in: ['confirmed', 'pending', 'held'] },
   });
-  if (
-    existing &&
-    (existing.status === 'confirmed' || isActivePendingBooking(existing))
-  ) {
+  if (existing && isSlotReserved(existing)) {
     const err = new Error('This slot was just booked. Please choose another time.');
     err.statusCode = 409;
     throw err;
@@ -508,6 +523,38 @@ async function createPendingBookingForPayment(payload, holdMinutes = 15) {
   } = validated;
 
   const paymentExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000);
+
+  const existingHold = await ConsultationBooking.findOne({
+    doctorId: payload.doctorId,
+    slotStart,
+    consultationType,
+    status: 'held',
+    paymentExpiresAt: { $gt: new Date() },
+  });
+
+  if (existingHold) {
+    if (patientId && existingHold.patientId && existingHold.patientId !== patientId) {
+      const err = new Error('This slot was just booked. Please choose another time.');
+      err.statusCode = 409;
+      throw err;
+    }
+    existingHold.status = 'pending';
+    existingHold.patientId = patientId ? String(patientId) : existingHold.patientId;
+    existingHold.patientName = name;
+    existingHold.patientMobile = mobile;
+    existingHold.patientEmail = patientEmail ? String(patientEmail).trim() : undefined;
+    existingHold.patientNotes = patientNotes ? String(patientNotes).trim() : undefined;
+    existingHold.patientAddress = patientAddress ? String(patientAddress).trim() : undefined;
+    existingHold.patientCity = patientCity ? String(patientCity).trim() : undefined;
+    existingHold.patientState = patientState ? String(patientState).trim() : undefined;
+    existingHold.patientPincode = patientPincode ? String(patientPincode).trim() : undefined;
+    existingHold.visitReason = visitReason ? String(visitReason).trim() : undefined;
+    existingHold.paymentExpiresAt = paymentExpiresAt;
+    existingHold.paymentStatus = 'pending';
+    await existingHold.save();
+    const doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
+    return { booking: existingHold, doctorName };
+  }
 
   const booking = await ConsultationBooking.create({
     id: uuidv4(),
@@ -622,6 +669,174 @@ async function createSlotBooking(payload, consultationType) {
   );
   err.statusCode = 402;
   throw err;
+}
+
+async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
+  const consultationType = payload.consultationType || 'online_consult';
+  const {
+    doctorId,
+    dayOfWeek,
+    startHour,
+    slotStart: slotStartRaw,
+    patientId,
+    holdId,
+  } = payload;
+
+  if (!doctorId) {
+    const err = new Error('doctorId is required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  await expirePendingBookings(doctorId);
+
+  if (holdId) {
+    const existing = await ConsultationBooking.findOne({ id: holdId });
+    if (
+      existing &&
+      existing.status === 'held' &&
+      (!patientId || !existing.patientId || existing.patientId === patientId)
+    ) {
+      existing.status = 'cancelled';
+      existing.paymentStatus = 'failed';
+      await existing.save();
+    }
+  }
+
+  const doctor = await findDoctorById(doctorId);
+  if (!doctor) {
+    const err = new Error('Doctor not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  const typeCheck = consultationTypeChecks(doctor, consultationType);
+  if (typeCheck) {
+    const err = new Error(typeCheck.error);
+    err.statusCode = typeCheck.status;
+    throw err;
+  }
+
+  const availResult = await getActiveAvailabilityForBooking(
+    doctorId,
+    consultationType,
+  );
+  if (availResult.error) {
+    const err = new Error(availResult.error);
+    err.statusCode = availResult.status;
+    throw err;
+  }
+
+  const availability = availResult.availability;
+  const weekStart = availability.weekStartDate;
+  const d = Number(dayOfWeek);
+  const h = Number(startHour);
+  const slotStart = slotStartRaw
+    ? new Date(slotStartRaw)
+    : slotDateTime(weekStart, d, h);
+  const slotEnd = slotEndDateTime(weekStart, d, h);
+
+  const slotDef = (availability.slots || []).find(
+    (s) => s.dayOfWeek === d && s.startHour === h,
+  );
+  if (!slotDef?.available) {
+    const err = new Error('Selected time slot is not available');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  if (slotStart <= new Date()) {
+    const err = new Error('Cannot hold a past time slot');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const existing = await ConsultationBooking.findOne({
+    doctorId,
+    slotStart,
+    consultationType,
+    status: { $in: ['confirmed', 'pending', 'held'] },
+  });
+
+  if (existing && isSlotReserved(existing)) {
+    if (
+      existing.status === 'held' &&
+      patientId &&
+      existing.patientId === patientId
+    ) {
+      existing.paymentExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000);
+      await existing.save();
+      return {
+        holdId: existing.id,
+        expiresAt: existing.paymentExpiresAt,
+      };
+    }
+    const err = new Error('This slot was just booked. Please choose another time.');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  if (patientId) {
+    await ConsultationBooking.updateMany(
+      {
+        doctorId,
+        consultationType,
+        patientId,
+        status: 'held',
+      },
+      {
+        $set: {
+          status: 'cancelled',
+          paymentStatus: 'failed',
+        },
+      },
+    );
+  }
+
+  const paymentExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000);
+  const booking = await ConsultationBooking.create({
+    id: uuidv4(),
+    doctorId,
+    patientId: patientId ? String(patientId) : undefined,
+    consultationType,
+    patientName: 'Slot hold',
+    patientMobile: '0000000000',
+    dayOfWeek: d,
+    startHour: h,
+    slotStart,
+    slotEnd,
+    weekStartDate: weekStart,
+    consultationFee: getConsultationFeeForType(doctor, consultationType),
+    status: 'held',
+    paymentStatus: 'pending',
+    paymentExpiresAt,
+  });
+
+  return {
+    holdId: booking.id,
+    expiresAt: booking.paymentExpiresAt,
+  };
+}
+
+async function releaseConsultationSlotHold(holdId, patientId) {
+  const booking = await ConsultationBooking.findOne({ id: holdId });
+  if (!booking || booking.status !== 'held') {
+    return { released: false };
+  }
+
+  if (
+    patientId &&
+    booking.patientId &&
+    booking.patientId !== patientId
+  ) {
+    const err = new Error('You are not allowed to release this slot hold');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  booking.status = 'cancelled';
+  booking.paymentStatus = 'failed';
+  await booking.save();
+  return { released: true };
 }
 
 async function verifyClinicAppointment(doctorId, appointmentCode) {
@@ -772,7 +987,7 @@ async function listPatientBookings(patientId, mobileNumber) {
       ...videoJoinFields(b, now),
       ...feedbackFieldsForBooking(b, feedbackMap, now),
       ...bookingPreviousReportsFields(b),
-      ...prescriptionFieldsForBooking(prescriptionMap.get(b.id)),
+      ...prescriptionFieldsForBooking(b, prescriptionMap.get(b.id), now),
     });
   }
 
@@ -789,6 +1004,10 @@ async function listDoctorBookings(doctorId) {
     .lean();
 
   const now = new Date();
+  const prescriptionMap = await findPrescriptionsByBookingIds(
+    bookings.map((b) => b.id),
+  );
+
   return bookings.map((b) => {
     const slotStart = new Date(b.slotStart);
     const slotEnd = new Date(b.slotEnd);
@@ -829,12 +1048,15 @@ async function listDoctorBookings(doctorId) {
       ...bookingAppointmentFields(b),
       ...videoJoinFields(b, now),
       ...bookingPreviousReportsFields(b),
+      ...prescriptionFieldsForBooking(b, prescriptionMap.get(b.id), now),
     };
   });
 }
 
 module.exports = {
   getBookableSlots,
+  holdConsultationSlot,
+  releaseConsultationSlotHold,
   createOnlineConsultBooking,
   createHospitalVisitBooking,
   createPendingBookingForPayment,

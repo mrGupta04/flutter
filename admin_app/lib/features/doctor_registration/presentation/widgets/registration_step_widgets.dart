@@ -13,6 +13,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/models.dart';
 import '../../../../shared/widgets/app_shell.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../provider/registration_provider.dart';
 import 'weekly_availability_picker.dart';
 
@@ -172,6 +173,7 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final formState = ref.watch(registrationFormProvider);
 
     return registrationStepScroll(
       child: Form(
@@ -189,13 +191,14 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
             validator: ValidationUtils.validateName,
           ),
           const SizedBox(height: 16),
-          CustomTextField(
-            controller: _mobileController,
+          MobileNumberField(
+            mobileController: _mobileController,
+            countryCode: formState.countryCode,
+            onCountryCodeChanged: (code) => ref
+                .read(registrationFormProvider.notifier)
+                .updatePersonalInfo(countryCode: code),
             label: 'Mobile number',
             hint: '10-digit mobile number',
-            prefixIcon: Icons.phone_android_rounded,
-            keyboardType: TextInputType.phone,
-            validator: ValidationUtils.validatePhoneNumber,
           ),
           const SizedBox(height: 16),
           CustomTextField(
@@ -631,7 +634,6 @@ class _Step2ProfessionalDetailsState
           _SearchableMultiSelectPicker(
             label: 'Languages spoken',
             hint: 'Search language',
-            prefixIcon: Icons.translate_rounded,
             helperText: 'Search and tap to add. You can select more than one.',
             options: AppLists.languages,
             selected: formState.languagesSpoken,
@@ -1481,7 +1483,7 @@ class _AvailabilityTypeHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppTextStyles.titleSmall.copyWith(
+                style: AppTextStyles.titleMedium.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1530,7 +1532,13 @@ class Step7ReviewSubmit extends ConsumerWidget {
             onEdit: () => onEdit(1),
             items: [
               _ReviewItem('Full Name', formState.fullName),
-              _ReviewItem('Mobile', formState.mobileNumber),
+              _ReviewItem(
+                'Mobile',
+                ValidationUtils.formatInternationalPhone(
+                  formState.mobileNumber,
+                  countryCode: formState.countryCode,
+                ),
+              ),
               _ReviewItem('Aadhaar', formState.aadhaarMaskedDisplay),
               _ReviewItem('Email', formState.email),
               _ReviewItem(

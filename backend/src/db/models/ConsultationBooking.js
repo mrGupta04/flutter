@@ -28,7 +28,7 @@ const consultationBookingSchema = new mongoose.Schema(
     status: {
       type: String,
       default: 'pending',
-      enum: ['pending', 'confirmed', 'cancelled'],
+      enum: ['held', 'pending', 'confirmed', 'cancelled'],
       index: true,
     },
     paymentStatus: {
@@ -74,7 +74,7 @@ consultationBookingSchema.index(
   { doctorId: 1, slotStart: 1 },
   {
     unique: true,
-    partialFilterExpression: { status: { $in: ['confirmed', 'pending'] } },
+    partialFilterExpression: { status: { $in: ['confirmed', 'pending', 'held'] } },
   },
 );
 

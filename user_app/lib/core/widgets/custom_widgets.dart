@@ -72,7 +72,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       textInputAction: widget.textInputAction,
       onChanged: (_) => widget.onChanged?.call(),
       onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
-      style: AppTextStyles.bodyLarge,
+      style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: widget.label,
         hintText: widget.hint,

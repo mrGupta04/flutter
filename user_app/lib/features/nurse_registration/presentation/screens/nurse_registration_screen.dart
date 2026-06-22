@@ -1,14 +1,17 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/nurse_model.dart';
+import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
 import '../../provider/nurse_registration_provider.dart';
@@ -38,6 +41,7 @@ class _NurseRegistrationScreenState
   final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _shiftController = TextEditingController();
+  String _countryCode = PhoneCountries.defaultDialCode;
   bool _availableForHomeVisit = false;
   double? _latitude;
   double? _longitude;
@@ -133,13 +137,12 @@ class _NurseRegistrationScreenState
                 validator: _emailValidator,
               ),
               const SizedBox(height: 12),
-              CustomTextField(
-                controller: _mobileController,
+              MobileNumberField(
+                mobileController: _mobileController,
+                countryCode: _countryCode,
+                onCountryCodeChanged: (code) =>
+                    setState(() => _countryCode = code),
                 label: 'Mobile Number',
-                hint: '10-digit mobile number',
-                prefixIcon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                validator: _mobileValidator,
               ),
               const SizedBox(height: 18),
               _sectionTitle('Professional details'),
@@ -300,12 +303,6 @@ class _NurseRegistrationScreenState
     return null;
   }
 
-  String? _mobileValidator(String? value) {
-    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 10) return 'Enter a valid 10-digit number';
-    return null;
-  }
-
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -328,6 +325,7 @@ class _NurseRegistrationScreenState
       lastName: _lastNameController.text.trim(),
       email: _emailController.text.trim(),
       mobileNumber: _mobileController.text.trim(),
+      countryCode: _countryCode,
       qualification: _qualificationController.text.trim(),
       registrationNumber: _registrationController.text.trim(),
       nursingCouncil: _councilController.text.trim(),

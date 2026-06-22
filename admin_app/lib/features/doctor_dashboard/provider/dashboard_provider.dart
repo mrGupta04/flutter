@@ -4,6 +4,7 @@ import '../../../data/models/models.dart';
 import '../../../data/repositories/repositories.dart';
 import '../../auth/provider/provider_auth_provider.dart';
 import '../../doctor_registration/provider/registration_provider.dart';
+import '../../provider/provider/provider_profile_provider.dart';
 
 /// Provider for doctor dashboard
 final doctorDashboardRepositoryProvider = Provider((ref) {
@@ -127,7 +128,14 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
   }
 
   Future<void> loadProfile() async {
-    final doctorId = await _resolveDoctorId();
+    final cachedDoctor = state.doctor ??
+        _ref.read(doctorRegistrationProvider).doctor ??
+        _ref.read(providerProfileProvider).doctor;
+    if (cachedDoctor != null) {
+      state = state.copyWith(doctor: cachedDoctor, isLoading: false);
+    }
+
+    final doctorId = cachedDoctor?.id ?? await _resolveDoctorId();
 
     if (doctorId == null || doctorId.isEmpty) {
       state = state.copyWith(
@@ -137,7 +145,7 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: cachedDoctor == null, error: null);
 
     try {
       final response = await repository.getDoctorProfile(doctorId: doctorId);
@@ -163,7 +171,7 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'An error occurred',
+        error: cachedDoctor != null ? null : 'An error occurred',
       );
     }
   }

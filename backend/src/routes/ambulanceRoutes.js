@@ -24,9 +24,7 @@ const { toAmbulance } = require('../db/ambulanceMappers');
 
 const router = express.Router();
 
-function normalizeMobile(mobile) {
-  return String(mobile || '').replace(/\D/g, '').slice(-10);
-}
+const { normalizeMobile, validateMobile } = require('../utils/mobile');
 
 function parseVehicleTypes(body, existing) {
   if (Array.isArray(body.vehicleTypes)) return body.vehicleTypes;
@@ -39,7 +37,7 @@ function parseVehicleTypes(body, existing) {
   return existing?.vehicleTypes ?? [];
 }
 
-function buildAmbulancePayload(body, existing, ambulanceId, mobile) {
+function buildAmbulancePayload(body, existing, ambulanceId, mobile, countryCode = '91') {
   const vehicles = Array.isArray(body.vehicles)
     ? body.vehicles
     : existing?.vehicles ?? [];
@@ -53,6 +51,7 @@ function buildAmbulancePayload(body, existing, ambulanceId, mobile) {
     ownerName: body.ownerName?.trim(),
     email: body.email?.trim().toLowerCase(),
     mobileNumber: mobile || body.mobileNumber,
+    countryCode: countryCode || body.countryCode || '91',
     profilePicture: body.profilePicture?.trim(),
     emergencyContact:
       normalizeMobile(body.emergencyContact) || body.emergencyContact,
@@ -306,7 +305,22 @@ router.post('/register', async (req, res) => {
   try {
     const body = req.body || {};
     const ambulanceId = body.id || uuidv4();
-    const mobile = normalizeMobile(body.mobileNumber);
+    const mobileCheck = validateMobile(body.mobileNumber, {
+      countryCode: body.countryCode,
+    });
+    if (!mobileCheck.valid) {
+      return sendError(res, mobileCheck.error, 400);
+    }
+    const mobile = mobileCheck.mobile;
+
+    if (body.emergencyContact) {
+      const emergencyCheck = validateMobile(body.emergencyContact, {
+        countryCode: body.emergencyCountryCode || body.countryCode,
+      });
+      if (!emergencyCheck.valid) {
+        return sendError(res, `Emergency contact: ${emergencyCheck.error}`, 400);
+      }
+    }
 
     if (body.email) {
       const emailTaken = await findAmbulanceByEmail(
@@ -321,7 +335,7 @@ router.post('/register', async (req, res) => {
     const ambulance = await submitAmbulanceForReview(
       (
         await upsertAmbulance(
-          buildAmbulancePayload(body, null, ambulanceId, mobile),
+          buildAmbulancePayload(body, null, ambulanceId, mobile, mobileCheck.countryCode),
         )
       ).id,
     );

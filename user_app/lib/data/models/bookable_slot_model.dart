@@ -179,3 +179,20 @@ DateTime? _parseDate(dynamic value) {
   if (value is String) return DateTime.tryParse(value);
   return null;
 }
+
+class SlotHoldResult {
+  final String holdId;
+  final DateTime? expiresAt;
+
+  const SlotHoldResult({
+    required this.holdId,
+    this.expiresAt,
+  });
+
+  factory SlotHoldResult.fromJson(Map<String, dynamic> json) {
+    return SlotHoldResult(
+      holdId: json['holdId'] as String? ?? '',
+      expiresAt: _parseDate(json['expiresAt']),
+    );
+  }
+}

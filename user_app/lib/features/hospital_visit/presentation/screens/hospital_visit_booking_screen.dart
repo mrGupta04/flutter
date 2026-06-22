@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +16,7 @@ import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/appointment_code_display.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
+import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
@@ -43,11 +46,20 @@ class _HospitalVisitBookingScreenState
   final _pincodeController = TextEditingController();
   final _reasonController = TextEditingController();
   String? _selectedDateKey;
+  Timer? _slotsRefreshTimer;
+
+  BookableSlotsQuery get _slotsQuery => BookableSlotsQuery(
+        doctorId: widget.doctorId,
+        consultationType: 'visit_site',
+      );
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _ensureAuthAndPrefill());
+    _slotsRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.invalidate(bookableSlotsProvider(_slotsQuery));
+    });
   }
 
   Future<void> _ensureAuthAndPrefill() async {
@@ -71,6 +83,7 @@ class _HospitalVisitBookingScreenState
 
   @override
   void dispose() {
+    _slotsRefreshTimer?.cancel();
     _nameController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
@@ -177,6 +190,7 @@ class _HospitalVisitBookingScreenState
         ),
       );
       if (booking != null) {
+        ref.invalidate(bookableSlotsProvider(_slotsQuery));
         ref
             .read(upcomingMeetingTimerProvider.notifier)
             .registerConsultationResult(booking);
@@ -202,6 +216,25 @@ class _HospitalVisitBookingScreenState
     final bookingState =
         ref.watch(hospitalVisitBookingProvider(widget.doctorId));
 
+    ref.listen(bookableSlotsProvider(_slotsQuery), (previous, next) {
+      final selected = bookingState.selectedSlot;
+      if (selected == null) return;
+      next.whenData((slotsData) {
+        final stillAvailable = slotsData.slots.any(
+          (slot) => slot.slotKey == selected.slotKey,
+        );
+        if (!stillAvailable && mounted) {
+          ref
+              .read(hospitalVisitBookingProvider(widget.doctorId).notifier)
+              .selectSlot(null);
+          SnackBarHelper.showError(
+            context,
+            'Your selected slot is no longer available. Please choose another.',
+          );
+        }
+      });
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -218,10 +251,8 @@ class _HospitalVisitBookingScreenState
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(bookableSlotsForVisitProvider(widget.doctorId));
-                  await ref.read(
-                    bookableSlotsForVisitProvider(widget.doctorId).future,
-                  );
+                  ref.invalidate(bookableSlotsProvider(_slotsQuery));
+                  await ref.read(bookableSlotsProvider(_slotsQuery).future);
                 },
                 child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -234,6 +265,11 @@ class _HospitalVisitBookingScreenState
                       _DoctorClinicHeader(
                         doctor: doctor,
                         slotsData: slotsAsync.asData?.value,
+                      ),
+                      const SizedBox(height: 12),
+                      DoctorConsultationFeesBanner(
+                        doctor: doctor,
+                        highlightedType: ConsultationType.visitSite,
                       ),
                       const SizedBox(height: 20),
                       Text(
@@ -266,6 +302,7 @@ class _HospitalVisitBookingScreenState
                           slotsData: slotsData,
                           selectedSlot: bookingState.selectedSlot,
                           selectedDateKey: _selectedDateKey,
+                          isSlotSelectionBusy: bookingState.isReservingSlot,
                           onDateSelected: (dateKey) {
                             setState(() => _selectedDateKey = dateKey);
                             if (bookingState.selectedSlot?.dateKey != dateKey) {
@@ -278,12 +315,22 @@ class _HospitalVisitBookingScreenState
                                   .selectSlot(null);
                             }
                           },
-                          onSlotSelected: (slot) => ref
-                              .read(
-                                hospitalVisitBookingProvider(widget.doctorId)
-                                    .notifier,
-                              )
-                              .selectSlot(slot),
+                          onSlotSelected: (slot) async {
+                            await ref
+                                .read(
+                                  hospitalVisitBookingProvider(widget.doctorId)
+                                      .notifier,
+                                )
+                                .selectSlot(slot);
+                            if (!mounted) return;
+                            ref.invalidate(bookableSlotsProvider(_slotsQuery));
+                            final err = ref
+                                .read(hospitalVisitBookingProvider(widget.doctorId))
+                                .error;
+                            if (err != null && mounted) {
+                              SnackBarHelper.showError(context, err);
+                            }
+                          },
                           emptyMessage:
                               'This doctor has not set clinic visit hours yet, '
                               'or all slots are booked. Try online consult or another doctor.',
@@ -420,8 +467,10 @@ class _HospitalVisitBookingScreenState
                       )
                     : 'Select appointment time',
                 icon: Icons.payments_rounded,
-                isEnabled: bookingState.selectedSlot != null,
-                isLoading: bookingState.isSubmitting,
+                isEnabled: bookingState.selectedSlot != null &&
+                    !bookingState.isReservingSlot,
+                isLoading:
+                    bookingState.isSubmitting || bookingState.isReservingSlot,
                 onPressed: () => _submit(doctor),
               ),
             ),
@@ -458,9 +507,6 @@ class _DoctorClinicHeader extends StatelessWidget {
           doctor.state,
           doctor.pincode,
         ].where((e) => e != null && e.toString().trim().isNotEmpty).join(', ');
-    final fee = doctor.feeForConsultationType(ConsultationType.visitSite) != null
-        ? 'Consultation fee: ₹${doctor.feeForConsultationType(ConsultationType.visitSite)}'
-        : null;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -573,16 +619,6 @@ class _DoctorClinicHeader extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                ],
-                if (fee != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    fee,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
                   ),
                 ],
               ],

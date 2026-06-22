@@ -52,7 +52,7 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
               children: [
                 Text(
                   DoctorAvailabilityConstants.dayNames[day],
-                  style: AppTextStyles.titleSmall.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -76,7 +76,7 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
                         return FilterChip(
                           label: Text(
                             DoctorAvailabilityConstants.formatHourRange(hour),
-                            style: AppTextStyles.labelSmall.copyWith(
+                            style: AppTextStyles.labelLarge.copyWith(
                               fontWeight: FontWeight.w600,
                               color: selected
                                   ? AppColors.white
@@ -92,8 +92,8 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
                             color: selected ? selectedColor : AppColors.divider,
                           ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 0,
+                            horizontal: 6,
+                            vertical: 2,
                           ),
                         );
                       })

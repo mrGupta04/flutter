@@ -102,7 +102,6 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
                           applyLiveStatus(doctors[i], liveMap);
                       return DoctorListingCard(
                         doctor: doctor,
-                        selectedConsultationType: _selected,
                         showBottomDivider: false,
                         showVerifiedIcon: true,
                         showActionButtons: doctor.offersOnlineConsult ||

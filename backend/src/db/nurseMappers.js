@@ -12,6 +12,7 @@ function toNurse(doc) {
     lastName: d.lastName,
     email: d.email,
     mobileNumber: d.mobileNumber,
+    countryCode: d.countryCode || '91',
     profilePicture: d.profilePicture,
     qualification: d.qualification,
     registrationNumber: d.registrationNumber,

@@ -54,6 +54,7 @@ const ambulanceSchema = new mongoose.Schema(
     ownerName: String,
     email: { type: String, unique: true, sparse: true },
     mobileNumber: String,
+    countryCode: { type: String, default: '91' },
     passwordHash: String,
     profilePicture: String,
     emergencyContact: String,

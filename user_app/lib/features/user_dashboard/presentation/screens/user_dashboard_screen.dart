@@ -10,7 +10,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/patient_booking_model.dart';
 import '../../../../shared/widgets/appointment_code_display.dart';
-import '../../../../shared/widgets/horizontal_filter_chips.dart';
+import '../../../../shared/widgets/booking_category_filter_dropdown.dart';
 import '../../../../data/models/patient_user_model.dart';
 import '../../../user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
@@ -68,17 +68,19 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 252,
             pinned: true,
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.white,
-            title: Text(
-              user?.fullName ?? 'My account',
-              style: AppTextStyles.titleMedium.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            title: innerBoxIsScrolled
+                ? Text(
+                    user?.fullName ?? 'My account',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  )
+                : null,
             actions: [
               IconButton(
                 tooltip: 'Edit profile',
@@ -113,6 +115,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.parallax,
               background: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -121,23 +124,72 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: SafeArea(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (user != null)
-                        PatientHeaderAvatar(user: user, size: 80),
-                      const SizedBox(height: 8),
-                      if (user?.email != null)
-                        Text(
-                          user!.email,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.9),
-                          ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.18),
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.12),
+                          ],
                         ),
-                      const SizedBox(height: 12),
-                    ],
-                  ),
+                      ),
+                    ),
+                    SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 60),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (user != null) ...[
+                              PatientHeaderAvatar(user: user, size: 72),
+                              const SizedBox(height: 10),
+                              Text(
+                                user.fullName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.titleMedium.copyWith(
+                                  color: AppColors.white,
+                                  fontWeight: FontWeight.w800,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withValues(alpha: 0.28),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (user.email.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  user.email,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.white.withValues(alpha: 0.95),
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -167,7 +219,20 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
               onRefresh: () =>
                   ref.read(patientDashboardProvider.notifier).loadBookings(),
             ),
-            _ProfileTab(user: user),
+            _ProfileTab(
+              user: user,
+              prescriptions: dash.bookings
+                  .where((b) => b.hasPrescription && b.isOnlineConsult)
+                  .toList(),
+              pendingPrescriptions: dash.bookings
+                  .where(
+                    (b) =>
+                        b.isOnlineConsult &&
+                        b.prescriptionPending &&
+                        !b.hasPrescription,
+                  )
+                  .toList(),
+            ),
           ],
         ),
       ),
@@ -176,9 +241,33 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
 }
 
 class _ProfileTab extends StatelessWidget {
-  const _ProfileTab({required this.user});
+  const _ProfileTab({
+    required this.user,
+    required this.prescriptions,
+    required this.pendingPrescriptions,
+  });
 
   final PatientUserModel? user;
+  final List<PatientBookingModel> prescriptions;
+  final List<PatientBookingModel> pendingPrescriptions;
+
+  Future<void> _openPrescriptionPdf(BuildContext context, String? url) async {
+    final resolved = MediaUrlUtils.resolve(url);
+    if (resolved.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prescription file is not available yet.')),
+      );
+      return;
+    }
+    final uri = Uri.parse(resolved);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the prescription PDF.')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -187,10 +276,100 @@ class _ProfileTab extends StatelessWidget {
     }
 
     final u = user!;
+    final dateFmt = DateFormat('EEE, dd MMM yyyy');
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
       children: [
+        if (pendingPrescriptions.isNotEmpty) ...[
+          _InfoCard(
+            title: 'Pending prescriptions',
+            children: [
+              ...pendingPrescriptions.map(
+                (booking) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _PrescriptionPendingBanner(
+                    doctorName: booking.doctorName,
+                    processing: booking.prescriptionProcessing,
+                    slotLabel: booking.label,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (prescriptions.isNotEmpty) ...[
+          _InfoCard(
+            title: 'My prescriptions',
+            children: [
+              Text(
+                'Prescriptions from your online consultations appear here and are also emailed to you.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...prescriptions.map((booking) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.grey50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.grey200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          booking.doctorName,
+                          style: AppTextStyles.labelLarge.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          booking.label,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          dateFmt.format(booking.slotStart),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () => _openPrescriptionPdf(
+                              context,
+                              booking.prescriptionPdfUrl,
+                            ),
+                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                            label: Text(
+                              booking.prescriptionFileName != null &&
+                                      booking.prescriptionFileName!.isNotEmpty
+                                  ? 'View prescription'
+                                  : 'View prescription PDF',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
         _InfoCard(
           title: 'Personal details',
           children: [
@@ -262,25 +441,18 @@ class _CurrentBookingsTab extends StatefulWidget {
 }
 
 class _CurrentBookingsTabState extends State<_CurrentBookingsTab> {
-  PatientBookingCategory _category = PatientBookingCategory.all;
+  Set<PatientBookingCategory> _categories = {PatientBookingCategory.all};
 
   @override
   Widget build(BuildContext context) {
     return _FilteredBookingsTab(
       dash: widget.dash,
       onRefresh: widget.onRefresh,
-      category: _category,
-      onCategoryChanged: (value) {
-        setState(() {
-          _category = PatientBookingCategory.values.firstWhere(
-            (c) => c.label == value,
-            orElse: () => PatientBookingCategory.all,
-          );
-        });
-      },
-      bookings: widget.dash.filterByCategory(
+      categories: _categories,
+      onCategoriesChanged: (value) => setState(() => _categories = value),
+      bookings: filterBookingsByCategories(
         widget.dash.upcomingBookings,
-        _category,
+        _categories,
       ),
       isUpcoming: true,
       emptyTitle: 'No upcoming bookings',
@@ -301,25 +473,18 @@ class _PastBookingsTab extends StatefulWidget {
 }
 
 class _PastBookingsTabState extends State<_PastBookingsTab> {
-  PatientBookingCategory _category = PatientBookingCategory.all;
+  Set<PatientBookingCategory> _categories = {PatientBookingCategory.all};
 
   @override
   Widget build(BuildContext context) {
     return _FilteredBookingsTab(
       dash: widget.dash,
       onRefresh: widget.onRefresh,
-      category: _category,
-      onCategoryChanged: (value) {
-        setState(() {
-          _category = PatientBookingCategory.values.firstWhere(
-            (c) => c.label == value,
-            orElse: () => PatientBookingCategory.all,
-          );
-        });
-      },
-      bookings: widget.dash.filterByCategory(
+      categories: _categories,
+      onCategoriesChanged: (value) => setState(() => _categories = value),
+      bookings: filterBookingsByCategories(
         widget.dash.pastBookings,
-        _category,
+        _categories,
       ),
       isUpcoming: false,
       emptyTitle: 'No past bookings',
@@ -332,8 +497,8 @@ class _FilteredBookingsTab extends StatelessWidget {
   const _FilteredBookingsTab({
     required this.dash,
     required this.onRefresh,
-    required this.category,
-    required this.onCategoryChanged,
+    required this.categories,
+    required this.onCategoriesChanged,
     required this.bookings,
     required this.isUpcoming,
     required this.emptyTitle,
@@ -342,8 +507,8 @@ class _FilteredBookingsTab extends StatelessWidget {
 
   final PatientDashboardState dash;
   final Future<void> Function() onRefresh;
-  final PatientBookingCategory category;
-  final ValueChanged<String> onCategoryChanged;
+  final Set<PatientBookingCategory> categories;
+  final ValueChanged<Set<PatientBookingCategory>> onCategoriesChanged;
   final List<PatientBookingModel> bookings;
   final bool isUpcoming;
   final String emptyTitle;
@@ -355,19 +520,15 @@ class _FilteredBookingsTab extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final filterLabels =
-        PatientBookingCategory.values.map((c) => c.label).toList();
-
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
-        padding: const EdgeInsets.only(top: 12, bottom: 16),
+        padding: const EdgeInsets.only(top: 20, bottom: 16),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          HorizontalFilterChips(
-            labels: filterLabels,
-            selected: category.label,
-            onSelected: onCategoryChanged,
+          BookingCategoryFilterDropdown(
+            selected: categories,
+            onChanged: onCategoriesChanged,
           ),
           const SizedBox(height: 12),
           Padding(
@@ -623,6 +784,17 @@ class _BookingCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (booking.isOnlineConsult &&
+                      !booking.hasPrescription &&
+                      (booking.prescriptionPending ||
+                          (isUpcoming && booking.canJoinVideo))) ...[
+                    const SizedBox(height: 12),
+                    _PrescriptionPendingBanner(
+                      doctorName: booking.doctorName,
+                      processing: booking.prescriptionProcessing,
+                      slotLabel: booking.label,
+                    ),
+                  ],
                   if (!isUpcoming && booking.canRequestFeedback) ...[
                     const SizedBox(height: 12),
                     SizedBox(
@@ -762,6 +934,91 @@ class _StatChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PrescriptionPendingBanner extends StatelessWidget {
+  const _PrescriptionPendingBanner({
+    required this.doctorName,
+    required this.processing,
+    this.slotLabel,
+  });
+
+  final String doctorName;
+  final bool processing;
+  final String? slotLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = processing ? AppColors.warning : AppColors.primary;
+    final title = processing
+        ? 'Prescription being prepared'
+        : 'Prescription pending';
+    final message = processing
+        ? 'Your prescription from this consultation will appear here shortly. A copy will also be emailed to you.'
+        : 'Dr. $doctorName will share your prescription after the consultation. It will appear here and be emailed to you.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (processing)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: color,
+                ),
+              ),
+            )
+          else
+            Icon(Icons.hourglass_top_rounded, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (slotLabel != null && slotLabel!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    slotLabel!,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textPrimary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

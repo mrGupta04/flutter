@@ -29,7 +29,12 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(providerProfileProvider.notifier).loadAll();
+      final existing = ref.read(providerProfileProvider);
+      final hasProfile = existing.doctor != null ||
+          existing.nurse != null ||
+          existing.ambulance != null ||
+          existing.bloodBank != null;
+      ref.read(providerProfileProvider.notifier).loadAll(silent: hasProfile);
     });
   }
 
@@ -80,7 +85,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                       ref.read(providerProfileProvider.notifier).loadAll(),
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -447,8 +452,6 @@ class _ProfileHeader extends StatelessWidget {
     final statusLabel = status == VerificationStatus.verified
         ? 'Verified'
         : 'Under review';
-    final statusColor =
-        status == VerificationStatus.verified ? AppColors.success : AppColors.warning;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -456,47 +459,80 @@ class _ProfileHeader extends StatelessWidget {
         gradient: const LinearGradient(colors: AppColors.gradientHero),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: AppColors.white,
-            backgroundImage: profilePicture != null && profilePicture!.startsWith('http')
-                ? NetworkImage(profilePicture!)
-                : null,
-            child: profilePicture == null
-                ? const Icon(Icons.person_rounded, color: AppColors.primary, size: 36)
-                : null,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: AppTextStyles.titleLarge.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.14),
+                    Colors.transparent,
+                  ],
                 ),
-                if (email != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    email!,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                VerificationBadge(
-                  status: statusLabel,
-                  backgroundColor: statusColor,
-                  textColor: statusColor,
-                ),
-              ],
+              ),
             ),
+          ),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 36,
+                backgroundColor: AppColors.white,
+                backgroundImage: profilePicture != null && profilePicture!.startsWith('http')
+                    ? NetworkImage(profilePicture!)
+                    : null,
+                child: profilePicture == null
+                    ? const Icon(Icons.person_rounded, color: AppColors.primary, size: 36)
+                    : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: AppTextStyles.titleLarge.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w800,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (email != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        email!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.white.withValues(alpha: 0.95),
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    VerificationBadge(
+                      status: statusLabel,
+                      backgroundColor: AppColors.white,
+                      textColor: AppColors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

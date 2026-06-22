@@ -30,18 +30,43 @@ final doctorForBookingProvider =
 });
 
 final bookableSlotsProvider =
-    FutureProvider.family<BookableSlotsResponse, String>((ref, doctorId) async {
+    FutureProvider.family<BookableSlotsResponse, BookableSlotsQuery>((ref, query) async {
   final repo = ref.watch(onlineConsultRepositoryProvider);
-  final res = await repo.getBookableSlots(doctorId: doctorId);
+  final res = await repo.getBookableSlots(
+    doctorId: query.doctorId,
+    consultationType: query.consultationType,
+  );
   if (!res.success || res.data == null) {
     throw Exception(res.error ?? 'Could not load available slots');
   }
   return res.data!;
 });
 
+class BookableSlotsQuery {
+  const BookableSlotsQuery({
+    required this.doctorId,
+    this.consultationType = 'online_consult',
+  });
+
+  final String doctorId;
+  final String consultationType;
+
+  @override
+  bool operator ==(Object other) {
+    return other is BookableSlotsQuery &&
+        other.doctorId == doctorId &&
+        other.consultationType == consultationType;
+  }
+
+  @override
+  int get hashCode => Object.hash(doctorId, consultationType);
+}
+
 class OnlineConsultBookingState {
   const OnlineConsultBookingState({
     this.selectedSlot,
+    this.slotHoldId,
+    this.isReservingSlot = false,
     this.pendingReports = const [],
     this.isSubmitting = false,
     this.error,
@@ -49,6 +74,8 @@ class OnlineConsultBookingState {
   });
 
   final BookableSlot? selectedSlot;
+  final String? slotHoldId;
+  final bool isReservingSlot;
   final List<PendingPreviousReport> pendingReports;
   final bool isSubmitting;
   final String? error;
@@ -56,14 +83,19 @@ class OnlineConsultBookingState {
 
   OnlineConsultBookingState copyWith({
     BookableSlot? selectedSlot,
+    String? slotHoldId,
+    bool? isReservingSlot,
     List<PendingPreviousReport>? pendingReports,
     bool? isSubmitting,
     String? error,
     ConsultationBookingResult? booking,
     bool clearSlot = false,
+    bool clearHold = false,
   }) {
     return OnlineConsultBookingState(
       selectedSlot: clearSlot ? null : (selectedSlot ?? this.selectedSlot),
+      slotHoldId: clearHold ? null : (slotHoldId ?? this.slotHoldId),
+      isReservingSlot: isReservingSlot ?? this.isReservingSlot,
       pendingReports: pendingReports ?? this.pendingReports,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: error,
@@ -73,17 +105,56 @@ class OnlineConsultBookingState {
 }
 
 class OnlineConsultBookingNotifier extends StateNotifier<OnlineConsultBookingState> {
-  OnlineConsultBookingNotifier(this._paymentFlow)
-      : super(const OnlineConsultBookingState());
+  OnlineConsultBookingNotifier(
+    this._paymentFlow,
+    this._repository,
+    this._doctorId,
+  ) : super(const OnlineConsultBookingState());
 
   final BookingPaymentFlow _paymentFlow;
+  final OnlineConsultRepository _repository;
+  final String _doctorId;
 
-  void selectSlot(BookableSlot? slot) {
+  Future<void> selectSlot(BookableSlot? slot) async {
     if (slot == null) {
-      state = state.copyWith(clearSlot: true, error: null);
-    } else {
-      state = state.copyWith(selectedSlot: slot, error: null);
+      await releaseHold();
+      state = state.copyWith(clearSlot: true, clearHold: true, error: null);
+      return;
     }
+
+    state = state.copyWith(isReservingSlot: true, error: null);
+    final response = await _repository.holdSlot(
+      doctorId: _doctorId,
+      consultationType: 'online_consult',
+      dayOfWeek: slot.dayOfWeek,
+      startHour: slot.startHour,
+      slotStart: slot.slotStart,
+      holdId: state.slotHoldId,
+    );
+
+    if (!response.success || response.data == null) {
+      state = state.copyWith(
+        isReservingSlot: false,
+        clearSlot: true,
+        clearHold: true,
+        error: response.error ?? 'This slot is no longer available',
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      selectedSlot: slot,
+      slotHoldId: response.data!.holdId,
+      isReservingSlot: false,
+      error: null,
+    );
+  }
+
+  Future<void> releaseHold() async {
+    final holdId = state.slotHoldId;
+    if (holdId == null || holdId.isEmpty) return;
+    await _repository.releaseSlotHold(holdId: holdId);
+    state = state.copyWith(clearHold: true);
   }
 
   void setPendingReports(List<PendingPreviousReport> reports) {
@@ -142,6 +213,14 @@ class OnlineConsultBookingNotifier extends StateNotifier<OnlineConsultBookingSta
 final onlineConsultBookingProvider = StateNotifierProvider.autoDispose
     .family<OnlineConsultBookingNotifier, OnlineConsultBookingState, String>(
   (ref, doctorId) {
-    return OnlineConsultBookingNotifier(ref.watch(bookingPaymentFlowProvider));
+    final notifier = OnlineConsultBookingNotifier(
+      ref.watch(bookingPaymentFlowProvider),
+      ref.watch(onlineConsultRepositoryProvider),
+      doctorId,
+    );
+    ref.onDispose(() {
+      notifier.releaseHold();
+    });
+    return notifier;
   },
 );

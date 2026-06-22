@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +15,7 @@ import '../../../../data/models/bookable_slot_model.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
+import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/previous_reports_picker.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
@@ -38,11 +41,20 @@ class _OnlineConsultBookingScreenState
   final _notesController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   String? _selectedDateKey;
+  Timer? _slotsRefreshTimer;
+
+  BookableSlotsQuery get _slotsQuery => BookableSlotsQuery(
+        doctorId: widget.doctorId,
+        consultationType: 'online_consult',
+      );
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _ensureAuthAndPrefill());
+    _slotsRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.invalidate(bookableSlotsProvider(_slotsQuery));
+    });
   }
 
   Future<void> _ensureAuthAndPrefill() async {
@@ -66,6 +78,7 @@ class _OnlineConsultBookingScreenState
 
   @override
   void dispose() {
+    _slotsRefreshTimer?.cancel();
     _nameController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
@@ -113,6 +126,7 @@ class _OnlineConsultBookingScreenState
         ),
       );
       if (booking != null) {
+        ref.invalidate(bookableSlotsProvider(_slotsQuery));
         ref
             .read(upcomingMeetingTimerProvider.notifier)
             .registerConsultationResult(booking);
@@ -134,9 +148,28 @@ class _OnlineConsultBookingScreenState
   @override
   Widget build(BuildContext context) {
     final doctorAsync = ref.watch(doctorForBookingProvider(widget.doctorId));
-    final slotsAsync = ref.watch(bookableSlotsProvider(widget.doctorId));
+    final slotsAsync = ref.watch(bookableSlotsProvider(_slotsQuery));
     final bookingState =
         ref.watch(onlineConsultBookingProvider(widget.doctorId));
+
+    ref.listen(bookableSlotsProvider(_slotsQuery), (previous, next) {
+      final selected = bookingState.selectedSlot;
+      if (selected == null) return;
+      next.whenData((slotsData) {
+        final stillAvailable = slotsData.slots.any(
+          (slot) => slot.slotKey == selected.slotKey,
+        );
+        if (!stillAvailable && mounted) {
+          ref
+              .read(onlineConsultBookingProvider(widget.doctorId).notifier)
+              .selectSlot(null);
+          SnackBarHelper.showError(
+            context,
+            'Your selected slot is no longer available. Please choose another.',
+          );
+        }
+      });
+    });
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -154,8 +187,8 @@ class _OnlineConsultBookingScreenState
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(bookableSlotsProvider(widget.doctorId));
-                  await ref.read(bookableSlotsProvider(widget.doctorId).future);
+                  ref.invalidate(bookableSlotsProvider(_slotsQuery));
+                  await ref.read(bookableSlotsProvider(_slotsQuery).future);
                 },
                 child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -164,6 +197,11 @@ class _OnlineConsultBookingScreenState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _DoctorHeader(doctor: doctor),
+                    const SizedBox(height: 12),
+                    DoctorConsultationFeesBanner(
+                      doctor: doctor,
+                      highlightedType: ConsultationType.onlineConsult,
+                    ),
                     const SizedBox(height: 20),
                     Text(
                       'Choose a time slot',
@@ -187,13 +225,14 @@ class _OnlineConsultBookingScreenState
                       error: (e, _) => AppErrorWidget(
                         message: e.toString().replaceFirst('Exception: ', ''),
                         onRetry: () => ref.invalidate(
-                          bookableSlotsProvider(widget.doctorId),
+                          bookableSlotsProvider(_slotsQuery),
                         ),
                       ),
                       data: (slotsData) => BookableSlotsSection(
                         slotsData: slotsData,
                         selectedSlot: bookingState.selectedSlot,
                         selectedDateKey: _selectedDateKey,
+                        isSlotSelectionBusy: bookingState.isReservingSlot,
                         onDateSelected: (dateKey) {
                           setState(() => _selectedDateKey = dateKey);
                           if (bookingState.selectedSlot?.dateKey != dateKey) {
@@ -205,12 +244,22 @@ class _OnlineConsultBookingScreenState
                                 .selectSlot(null);
                           }
                         },
-                        onSlotSelected: (slot) => ref
-                            .read(
-                              onlineConsultBookingProvider(widget.doctorId)
-                                  .notifier,
-                            )
-                            .selectSlot(slot),
+                        onSlotSelected: (slot) async {
+                          await ref
+                              .read(
+                                onlineConsultBookingProvider(widget.doctorId)
+                                    .notifier,
+                              )
+                              .selectSlot(slot);
+                          if (!mounted) return;
+                          ref.invalidate(bookableSlotsProvider(_slotsQuery));
+                          final err = ref
+                              .read(onlineConsultBookingProvider(widget.doctorId))
+                              .error;
+                          if (err != null && mounted) {
+                            SnackBarHelper.showError(context, err);
+                          }
+                        },
                         emptyMessage:
                             'This doctor has no online consult slots open right now. '
                             'Try another time or doctor.',
@@ -294,8 +343,9 @@ class _OnlineConsultBookingScreenState
                       )
                     : 'Select a time slot',
                 icon: Icons.payments_rounded,
-                isEnabled: bookingState.selectedSlot != null,
-                isLoading: bookingState.isSubmitting,
+                isEnabled:
+                    bookingState.selectedSlot != null && !bookingState.isReservingSlot,
+                isLoading: bookingState.isSubmitting || bookingState.isReservingSlot,
                 onPressed: () => _submit(doctor),
               ),
             ),
@@ -319,10 +369,6 @@ class _DoctorHeader extends StatelessWidget {
             ? doctor.fullName
             : 'Dr. ${doctor.fullName}')
         : 'Doctor';
-    final fee = doctor.feeForConsultationType(ConsultationType.onlineConsult) !=
-            null
-        ? '₹${doctor.feeForConsultationType(ConsultationType.onlineConsult)} consult fee'
-        : null;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -359,16 +405,6 @@ class _DoctorHeader extends StatelessWidget {
                       color: AppColors.textSecondary,
                     ),
                   ),
-                if (fee != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    fee,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

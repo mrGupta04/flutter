@@ -105,8 +105,8 @@ class ProviderDocumentStatusSection extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               onReuploadDocument != null
-                  ? 'If a document is rejected, read the admin message and tap re-upload to submit a corrected file.'
-                  : 'If a document is rejected, read the admin message and re-upload the corrected file from your profile.',
+                  ? 'Verified documents are locked. If a document is rejected, read the admin message and tap re-upload to submit a corrected file.'
+                  : 'Verified documents are locked. If a document is rejected, read the admin message and re-upload the corrected file from your profile.',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),

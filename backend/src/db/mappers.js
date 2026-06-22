@@ -23,6 +23,7 @@ function toDoctor(doc) {
     emailVerified: Boolean(d.emailVerified),
     emailVerifiedAt: d.emailVerifiedAt,
     mobileNumber: d.mobileNumber,
+    countryCode: d.countryCode || '91',
     phoneVerified: Boolean(d.phoneVerified),
     phoneVerifiedAt: d.phoneVerifiedAt,
     profilePicture: d.profilePicture,

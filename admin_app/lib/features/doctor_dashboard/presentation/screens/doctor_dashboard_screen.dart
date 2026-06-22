@@ -23,6 +23,7 @@ import '../../../../shared/widgets/provider_document_status_section.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../doctor_registration/presentation/widgets/weekly_availability_picker.dart';
 import '../../../video_consult/presentation/widgets/join_video_consult_button.dart';
+import '../../../video_consult/presentation/widgets/prescription_sheet.dart';
 import '../../provider/dashboard_provider.dart';
 
 class DoctorDashboardScreen extends ConsumerStatefulWidget {
@@ -55,6 +56,11 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
         doctor?.verificationStatus == VerificationStatus.verified;
     final showPendingBanner =
         doctor != null && !isVerified && !dashboard.isLoading;
+    final hasRejectedDocuments = ref.watch(doctorDocumentsProvider).maybeWhen(
+          data: (docs) =>
+              docs.any((d) => d.status == DocumentStatus.rejected),
+          orElse: () => false,
+        );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -170,6 +176,7 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                           onVerifyClinicVisit: _showVerifyAppointmentDialog,
                           onUpload: _uploadDocument,
                           onReuploadDocuments: _showRejectedDocumentsSheet,
+                          hasRejectedDocuments: hasRejectedDocuments,
                           onEditProfile: () =>
                               _showEditProfileSheet(doctor),
                           onUpdateAvailability: () =>
@@ -650,6 +657,7 @@ class _DashboardContent extends StatelessWidget {
     this.onVerifyClinicVisit,
     required this.onUpload,
     required this.onReuploadDocuments,
+    this.hasRejectedDocuments = false,
     required this.onEditProfile,
     required this.onUpdateAvailability,
   });
@@ -676,6 +684,7 @@ class _DashboardContent extends StatelessWidget {
   final VoidCallback? onVerifyClinicVisit;
   final Future<void> Function(DocumentType) onUpload;
   final VoidCallback onReuploadDocuments;
+  final bool hasRejectedDocuments;
   final VoidCallback onEditProfile;
   final VoidCallback onUpdateAvailability;
 
@@ -692,11 +701,10 @@ class _DashboardContent extends StatelessWidget {
     final isVerified =
         doctor!.verificationStatus == VerificationStatus.verified;
     final statusLabel = isVerified ? 'Verified doctor' : 'Under review';
-    final statusColor = isVerified ? AppColors.success : AppColors.warning;
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -707,58 +715,91 @@ class _DashboardContent extends StatelessWidget {
               borderRadius: AppDecorations.borderRadiusXl,
               boxShadow: AppDecorations.softShadow(opacity: 0.1),
             ),
-            child: Row(
+            child: Stack(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.white.withValues(alpha: 0.6),
-                      width: 2,
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: AppDecorations.borderRadiusXl,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.14),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
-                  child: CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppColors.white,
-                    backgroundImage: doctor!.profilePicture != null &&
-                            doctor!.profilePicture!.startsWith('http')
-                        ? NetworkImage(doctor!.profilePicture!)
-                        : null,
-                    child: doctor!.profilePicture == null
-                        ? const Icon(Icons.person_rounded,
-                            color: AppColors.primary, size: 36)
-                        : null,
-                  ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        doctor!.fullName,
-                        style: AppTextStyles.titleLarge.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w800,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.white.withValues(alpha: 0.6),
+                          width: 2,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        doctor!.specializations?.join(', ') ??
-                            'General Medicine',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.white.withValues(alpha: 0.9),
-                        ),
+                      child: CircleAvatar(
+                        radius: 36,
+                        backgroundColor: AppColors.white,
+                        backgroundImage: doctor!.profilePicture != null &&
+                                doctor!.profilePicture!.startsWith('http')
+                            ? NetworkImage(doctor!.profilePicture!)
+                            : null,
+                        child: doctor!.profilePicture == null
+                            ? const Icon(Icons.person_rounded,
+                                color: AppColors.primary, size: 36)
+                            : null,
                       ),
-                      const SizedBox(height: 8),
-                      VerificationBadge(
-                        status: statusLabel,
-                        backgroundColor: statusColor,
-                        textColor: statusColor,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            doctor!.fullName,
+                            style: AppTextStyles.titleLarge.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w800,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            doctor!.specializations?.join(', ') ??
+                                'General Medicine',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.95),
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          VerificationBadge(
+                            status: statusLabel,
+                            backgroundColor: AppColors.white,
+                            textColor: AppColors.white,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -882,18 +923,16 @@ class _DashboardContent extends StatelessWidget {
             color: AppColors.primary,
             onTap: onEditProfile,
           ),
-          const SizedBox(height: 10),
-          ServiceBenefitCard(
-            icon: Icons.upload_file_rounded,
-            title: 'Re-upload documents',
-            subtitle: isVerified
-                ? 'Update certificates & clinic proof'
-                : 'Fix rejected documents for admin review',
-            color: AppColors.primary,
-            onTap: isVerified
-                ? () => onUpload(DocumentType.degreeCertificate)
-                : onReuploadDocuments,
-          ),
+          if (hasRejectedDocuments) ...[
+            const SizedBox(height: 10),
+            ServiceBenefitCard(
+              icon: Icons.upload_file_rounded,
+              title: 'Re-upload documents',
+              subtitle: 'Fix rejected documents for admin review',
+              color: AppColors.primary,
+              onTap: onReuploadDocuments,
+            ),
+          ],
           const SizedBox(height: 10),
           ServiceBenefitCard(
             icon: Icons.settings_rounded,
@@ -964,31 +1003,35 @@ class _PracticeInsightsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _InsightTile(
-                  icon: Icons.work_history_outlined,
-                  label: 'Experience',
-                  value: '$experience yrs',
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _InsightTile(
+                    icon: Icons.work_history_outlined,
+                    label: 'Experience',
+                    value: '$experience yrs',
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _InsightTile(
-                  label: 'Languages',
-                  value: '$languagesCount',
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _InsightTile(
+                    icon: Icons.translate_rounded,
+                    label: 'Languages',
+                    value: '$languagesCount',
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _InsightTile(
-                  icon: Icons.local_hospital_outlined,
-                  label: 'Specialties',
-                  value: '$specializationsCount',
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _InsightTile(
+                    icon: Icons.local_hospital_outlined,
+                    label: 'Specialties',
+                    value: '$specializationsCount',
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -998,39 +1041,43 @@ class _PracticeInsightsSection extends StatelessWidget {
 
 class _InsightTile extends StatelessWidget {
   const _InsightTile({
-    this.icon,
+    required this.icon,
     required this.label,
     required this.value,
   });
 
-  final IconData? icon;
+  final IconData icon;
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
         color: AppColors.grey50,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.grey100),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(height: 6),
-          ],
+          Icon(icon, size: 18, color: AppColors.primary),
+          const SizedBox(height: 6),
           Text(
             value,
+            textAlign: TextAlign.center,
             style: AppTextStyles.labelLarge.copyWith(
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTextStyles.labelSmall.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -2166,6 +2213,54 @@ class _BookingCard extends StatelessWidget {
               videoStartsInMinutes: booking.videoStartsInMinutes,
               onReturned: onVideoEnded,
             ),
+          ],
+          if (booking.isOnlineConsult) ...[
+            const SizedBox(height: 12),
+            if (booking.hasPrescription)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline_rounded,
+                      size: 18,
+                      color: AppColors.success,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Prescription sent to patient',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final saved = await PrescriptionSheet.show(
+                      context,
+                      bookingId: booking.id,
+                    );
+                    if (saved == true) {
+                      await onVideoEnded?.call();
+                    }
+                  },
+                  icon: const Icon(Icons.medication_rounded, size: 18),
+                  label: const Text('Write & send prescription'),
+                ),
+              ),
           ],
         ],
       ),

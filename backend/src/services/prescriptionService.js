@@ -12,6 +12,9 @@ const { formatSlotLabel } = require('../utils/slotDateTime');
 const { generatePrescriptionPdf } = require('./prescriptionPdfService');
 const { sendPrescriptionEmail } = require('./prescriptionNotificationService');
 
+const DEFAULT_AUTO_PRESCRIPTION_ADVICE =
+  'Thank you for your consultation. Please follow any instructions discussed during your visit. Contact your doctor or seek urgent care if symptoms worsen.';
+
 function normalizeMobile(mobile) {
   return String(mobile || '').replace(/\D/g, '').slice(-10);
 }
@@ -113,41 +116,24 @@ async function getPrescriptionContext(bookingId, auth) {
   };
 }
 
-async function saveAndFinalizePrescription(bookingId, auth, body, publicBaseUrl) {
-  if (auth?.type !== 'doctor' || !auth.doctorId) {
-    const err = new Error('Doctor authentication required');
-    err.statusCode = 401;
-    throw err;
-  }
+function prescriptionHasContent(prescription) {
+  return Boolean(
+    prescription?.diagnosis ||
+      (prescription?.medicines && prescription.medicines.length > 0) ||
+      (prescription?.tests && prescription.tests.length > 0) ||
+      prescription?.advice,
+  );
+}
 
-  const booking = await assertBookingForDoctor(bookingId, auth.doctorId);
-  const doctor = await findDoctorById(booking.doctorId);
+async function finalizeAndDeliverPrescription({
+  booking,
+  doctor,
+  draft,
+  publicBaseUrl,
+}) {
   const doctorName = doctor
     ? `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim()
     : 'Doctor';
-
-  const draft = await upsertPrescriptionDraft({
-    bookingId,
-    doctorId: auth.doctorId,
-    diagnosis: body?.diagnosis,
-    medicines: body?.medicines,
-    tests: body?.tests,
-    advice: body?.advice,
-  });
-
-  const hasContent =
-    draft.diagnosis ||
-    (draft.medicines && draft.medicines.length > 0) ||
-    (draft.tests && draft.tests.length > 0) ||
-    draft.advice;
-
-  if (!hasContent) {
-    const err = new Error(
-      'Add at least a diagnosis, medicine, test, or advice before saving the prescription',
-    );
-    err.statusCode = 400;
-    throw err;
-  }
 
   const pdf = await generatePrescriptionPdf({
     prescription: draft,
@@ -159,7 +145,7 @@ async function saveAndFinalizePrescription(bookingId, auth, body, publicBaseUrl)
 
   const pdfUrl = `${String(publicBaseUrl || '').replace(/\/$/, '')}${pdf.publicPath}`;
   const finalized = await finalizePrescription({
-    bookingId,
+    bookingId: booking.id,
     pdfUrl,
     pdfFileName: pdf.fileName,
   });
@@ -188,6 +174,73 @@ async function saveAndFinalizePrescription(bookingId, auth, body, publicBaseUrl)
   };
 }
 
+async function saveAndFinalizePrescription(bookingId, auth, body, publicBaseUrl) {
+  if (auth?.type !== 'doctor' || !auth.doctorId) {
+    const err = new Error('Doctor authentication required');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const booking = await assertBookingForDoctor(bookingId, auth.doctorId);
+  const doctor = await findDoctorById(booking.doctorId);
+
+  const draft = await upsertPrescriptionDraft({
+    bookingId,
+    doctorId: auth.doctorId,
+    diagnosis: body?.diagnosis,
+    medicines: body?.medicines,
+    tests: body?.tests,
+    advice: body?.advice,
+  });
+
+  if (!prescriptionHasContent(draft)) {
+    const err = new Error(
+      'Add at least a diagnosis, medicine, test, or advice before saving the prescription',
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return finalizeAndDeliverPrescription({
+    booking,
+    doctor,
+    draft,
+    publicBaseUrl,
+  });
+}
+
+async function autoFinalizePrescriptionForBooking(bookingId, publicBaseUrl) {
+  const booking = await ConsultationBooking.findOne({ id: bookingId }).lean();
+  if (!booking) return null;
+  if (booking.consultationType !== 'online_consult') return null;
+  if (booking.status !== 'confirmed') return null;
+  if (new Date(booking.slotEnd) > new Date()) return null;
+
+  const existing = await findPrescriptionByBookingId(bookingId);
+  if (existing?.status === 'finalized') return null;
+
+  const doctor = await findDoctorById(booking.doctorId);
+  let draft = existing;
+
+  if (!prescriptionHasContent(draft)) {
+    draft = await upsertPrescriptionDraft({
+      bookingId,
+      doctorId: booking.doctorId,
+      diagnosis: draft?.diagnosis,
+      medicines: draft?.medicines || [],
+      tests: draft?.tests || [],
+      advice: draft?.advice || DEFAULT_AUTO_PRESCRIPTION_ADVICE,
+    });
+  }
+
+  return finalizeAndDeliverPrescription({
+    booking,
+    doctor,
+    draft,
+    publicBaseUrl,
+  });
+}
+
 async function getPrescription(bookingId, auth) {
   const booking = await findBookingForPrescription(bookingId);
   await assertBookingPrescriptionAccess(auth, booking);
@@ -206,5 +259,6 @@ async function getPrescription(bookingId, auth) {
 module.exports = {
   getPrescriptionContext,
   saveAndFinalizePrescription,
+  autoFinalizePrescriptionForBooking,
   getPrescription,
 };

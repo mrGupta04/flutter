@@ -59,6 +59,7 @@ function toAmbulance(doc) {
     ownerName: d.ownerName,
     email: d.email,
     mobileNumber: d.mobileNumber,
+    countryCode: d.countryCode || '91',
     profilePicture: d.profilePicture,
     emergencyContact: d.emergencyContact,
     licenseNumber: d.licenseNumber,

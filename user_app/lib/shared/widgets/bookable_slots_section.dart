@@ -18,6 +18,7 @@ class BookableSlotsSection extends StatelessWidget {
     required this.onDateSelected,
     required this.onSlotSelected,
     this.emptyMessage,
+    this.isSlotSelectionBusy = false,
   });
 
   final BookableSlotsResponse slotsData;
@@ -26,6 +27,7 @@ class BookableSlotsSection extends StatelessWidget {
   final ValueChanged<String> onDateSelected;
   final ValueChanged<BookableSlot?> onSlotSelected;
   final String? emptyMessage;
+  final bool isSlotSelectionBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -170,10 +172,12 @@ class BookableSlotsSection extends StatelessWidget {
                         ),
                       ),
                       selected: isSelected,
-                      onSelected: (value) {
-                        onDateSelected(dateKey);
-                        onSlotSelected(value ? slot : null);
-                      },
+                      onSelected: isSlotSelectionBusy
+                          ? null
+                          : (value) {
+                              onDateSelected(dateKey);
+                              onSlotSelected(value ? slot : null);
+                            },
                       selectedColor: AppColors.primary,
                       checkmarkColor: AppColors.white,
                       backgroundColor: AppColors.white,

@@ -26,6 +26,9 @@ class DoctorBookingModel {
     this.createdAt,
     this.canJoinVideo = false,
     this.videoStartsInMinutes,
+    this.hasPrescription = false,
+    this.prescriptionPdfUrl,
+    this.prescriptionFileName,
     this.previousReports = const [],
   });
 
@@ -53,6 +56,9 @@ class DoctorBookingModel {
   final DateTime? createdAt;
   final bool canJoinVideo;
   final int? videoStartsInMinutes;
+  final bool hasPrescription;
+  final String? prescriptionPdfUrl;
+  final String? prescriptionFileName;
   final List<PreviousReportModel> previousReports;
 
   bool get isOnlineConsult => consultationType == 'online_consult';
@@ -105,6 +111,9 @@ class DoctorBookingModel {
       createdAt: _parseDate(json['createdAt']),
       canJoinVideo: json['canJoinVideo'] as bool? ?? false,
       videoStartsInMinutes: (json['videoStartsInMinutes'] as num?)?.toInt(),
+      hasPrescription: json['hasPrescription'] as bool? ?? false,
+      prescriptionPdfUrl: json['prescriptionPdfUrl'] as String?,
+      prescriptionFileName: json['prescriptionFileName'] as String?,
       previousReports: (json['previousReports'] as List<dynamic>? ?? [])
           .map((e) => PreviousReportModel.fromJson(e as Map<String, dynamic>))
           .toList(),

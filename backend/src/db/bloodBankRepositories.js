@@ -52,6 +52,7 @@ async function upsertBloodBank(data) {
     contactPerson: data.contactPerson ?? existing?.contactPerson,
     email: data.email ?? existing?.email,
     mobileNumber: data.mobileNumber ?? existing?.mobileNumber,
+    countryCode: data.countryCode ?? existing?.countryCode ?? '91',
     profilePicture: data.profilePicture ?? existing?.profilePicture,
     emergencyContact: data.emergencyContact ?? existing?.emergencyContact,
     address: data.address ?? existing?.address,

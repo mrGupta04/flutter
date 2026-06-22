@@ -55,6 +55,56 @@ class OnlineConsultRepository {
     }
   }
 
+  Future<ApiResponse<SlotHoldResult>> holdSlot({
+    required String doctorId,
+    required String consultationType,
+    required int dayOfWeek,
+    required int startHour,
+    required DateTime slotStart,
+    String? holdId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        AppConstants.endpointDoctorSlotHold,
+        data: {
+          'doctorId': doctorId,
+          'consultationType': consultationType,
+          'dayOfWeek': dayOfWeek,
+          'startHour': startHour,
+          'slotStart': slotStart.toIso8601String(),
+          if (holdId != null && holdId.isNotEmpty) 'holdId': holdId,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        statusCode: body['statusCode'] as int? ?? 201,
+        data: SlotHoldResult.fromJson(data),
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> releaseSlotHold({required String holdId}) async {
+    try {
+      final response = await _dio.delete(
+        AppConstants.endpointDoctorSlotHoldRelease(holdId),
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        statusCode: body['statusCode'] as int? ?? 200,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   Future<ApiResponse<ConsultationBookingResult>> bookHospitalVisit({
     required String doctorId,
     required String patientName,

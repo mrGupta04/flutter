@@ -214,8 +214,8 @@ class MockDatabase {
         .where(
           (b) =>
               b['doctorId'] == doctorId &&
-              b['status'] == 'confirmed' &&
-              b['weekStartDate'] == weekStart.toIso8601String(),
+              b['consultationType'] == consultationType &&
+              _isActiveReservation(b),
         )
         .map((b) => '${b['dayOfWeek']}_${b['startHour']}')
         .toSet();
@@ -268,6 +268,72 @@ class MockDatabase {
     return data;
   }
 
+  bool _isActiveReservation(Map<String, dynamic> booking) {
+    final status = booking['status'] as String? ?? '';
+    if (status == 'confirmed') return true;
+    if (status == 'held' || status == 'pending') {
+      final expiresAt = DateTime.tryParse(
+        booking['paymentExpiresAt'] as String? ?? '',
+      );
+      return expiresAt == null || expiresAt.isAfter(DateTime.now());
+    }
+    return false;
+  }
+
+  Map<String, dynamic> holdSlot({
+    required String doctorId,
+    required String consultationType,
+    required int dayOfWeek,
+    required int startHour,
+    required DateTime slotStart,
+    String? holdId,
+  }) {
+    if (holdId != null) {
+      _consultationBookings.removeWhere(
+        (b) => b['id'] == holdId && b['status'] == 'held',
+      );
+    }
+
+    final key = '${dayOfWeek}_$startHour';
+    final duplicate = _consultationBookings.any(
+      (b) =>
+          b['doctorId'] == doctorId &&
+          b['consultationType'] == consultationType &&
+          '${b['dayOfWeek']}_${b['startHour']}' == key &&
+          _isActiveReservation(b),
+    );
+    if (duplicate) {
+      throw Exception('This slot was just booked. Please choose another time.');
+    }
+
+    final weekStart = _weekStart(DateTime.now());
+    final slotEnd = slotStart.add(const Duration(hours: 1));
+    final hold = {
+      'id': 'mock-hold-${_uuid.v4()}',
+      'doctorId': doctorId,
+      'consultationType': consultationType,
+      'dayOfWeek': dayOfWeek,
+      'startHour': startHour,
+      'slotStart': slotStart.toIso8601String(),
+      'slotEnd': slotEnd.toIso8601String(),
+      'weekStartDate': weekStart.toIso8601String(),
+      'status': 'held',
+      'paymentExpiresAt':
+          DateTime.now().add(const Duration(minutes: 10)).toIso8601String(),
+    };
+    _consultationBookings.add(hold);
+    return {
+      'holdId': hold['id'],
+      'expiresAt': hold['paymentExpiresAt'],
+    };
+  }
+
+  void releaseSlotHold(String holdId) {
+    _consultationBookings.removeWhere(
+      (b) => b['id'] == holdId && b['status'] == 'held',
+    );
+  }
+
   Map<String, dynamic> createBooking({
     required String doctorId,
     required String consultationType,
@@ -289,12 +355,21 @@ class MockDatabase {
     final duplicate = _consultationBookings.any(
       (b) =>
           b['doctorId'] == doctorId &&
-          b['status'] == 'confirmed' &&
-          '${b['dayOfWeek']}_${b['startHour']}' == key,
+          b['consultationType'] == consultationType &&
+          '${b['dayOfWeek']}_${b['startHour']}' == key &&
+          _isActiveReservation(b),
     );
     if (duplicate) {
       throw Exception('This slot was just booked. Please choose another time.');
     }
+
+    _consultationBookings.removeWhere(
+      (b) =>
+          b['doctorId'] == doctorId &&
+          b['consultationType'] == consultationType &&
+          '${b['dayOfWeek']}_${b['startHour']}' == key &&
+          b['status'] == 'held',
+    );
 
     final appointmentCode = consultationType == 'visit_site'
         ? (1000 + DateTime.now().millisecondsSinceEpoch % 9000).toString()

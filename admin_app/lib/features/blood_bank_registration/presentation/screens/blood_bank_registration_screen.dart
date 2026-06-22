@@ -1,15 +1,18 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/blood_bank_model.dart';
+import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
 import '../../provider/blood_bank_registration_provider.dart';
@@ -33,6 +36,7 @@ class _BloodBankRegistrationScreenState
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _emergencyController = TextEditingController();
+  String _countryCode = PhoneCountries.defaultDialCode;
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
@@ -143,13 +147,12 @@ class _BloodBankRegistrationScreenState
                 validator: _emailValidator,
               ),
               const SizedBox(height: 12),
-              CustomTextField(
-                controller: _mobileController,
+              MobileNumberField(
+                mobileController: _mobileController,
+                countryCode: _countryCode,
+                onCountryCodeChanged: (code) =>
+                    setState(() => _countryCode = code),
                 label: 'Mobile Number',
-                hint: '10-digit mobile number',
-                prefixIcon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                validator: _mobileValidator,
               ),
               const SizedBox(height: 12),
               CustomTextField(
@@ -173,13 +176,13 @@ class _BloodBankRegistrationScreenState
                 ),
               ),
               const SizedBox(height: 12),
-              CustomTextField(
-                controller: _emergencyController,
+              MobileNumberField(
+                mobileController: _emergencyController,
+                countryCode: _countryCode,
+                onCountryCodeChanged: (code) =>
+                    setState(() => _countryCode = code),
                 label: 'Emergency Contact',
                 hint: '24x7 helpline',
-                prefixIcon: Icons.emergency_outlined,
-                keyboardType: TextInputType.phone,
-                validator: _mobileValidator,
               ),
               const SizedBox(height: 18),
               _sectionTitle('Location'),
@@ -304,12 +307,6 @@ class _BloodBankRegistrationScreenState
     return null;
   }
 
-  String? _mobileValidator(String? value) {
-    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 10) return 'Enter a valid 10-digit number';
-    return null;
-  }
-
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -339,6 +336,7 @@ class _BloodBankRegistrationScreenState
       contactPerson: _contactPersonController.text.trim(),
       email: _emailController.text.trim(),
       mobileNumber: _mobileController.text.trim(),
+      countryCode: _countryCode,
       emergencyContact: _emergencyController.text.trim(),
       address: _addressController.text.trim(),
       city: _cityController.text.trim(),

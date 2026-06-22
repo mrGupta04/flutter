@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/ambulance_constants.dart';
@@ -9,9 +10,12 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/constants/phone_countries.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/ambulance_driver_model.dart';
 import '../../../../data/models/ambulance_vehicle_model.dart';
+import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
 import '../../provider/ambulance_registration_provider.dart';
@@ -47,6 +51,7 @@ class _AmbulanceStep1ServiceOwnerState
   late final TextEditingController _companyReg;
   Uint8List? _profileBytes;
   String? _profileFileName;
+  String _countryCode = PhoneCountries.defaultDialCode;
 
   @override
   bool get wantKeepAlive => true;
@@ -59,6 +64,7 @@ class _AmbulanceStep1ServiceOwnerState
     _ownerName = TextEditingController(text: s.ownerName);
     _email = TextEditingController(text: s.email);
     _mobile = TextEditingController(text: s.mobileNumber);
+    _countryCode = s.countryCode;
     _emergency = TextEditingController(text: s.emergencyContact);
     _license = TextEditingController(text: s.licenseNumber);
     _registration = TextEditingController(text: s.registrationNumber);
@@ -83,6 +89,7 @@ class _AmbulanceStep1ServiceOwnerState
           ownerName: _ownerName.text,
           email: _email.text,
           mobileNumber: _mobile.text,
+          countryCode: _countryCode,
           emergencyContact: _emergency.text,
           licenseNumber: _license.text,
           registrationNumber: _registration.text,
@@ -198,22 +205,25 @@ class _AmbulanceStep1ServiceOwnerState
               validator: _emailValidator,
             ),
             const SizedBox(height: 12),
-            CustomTextField(
-              controller: _mobile,
+            MobileNumberField(
+              mobileController: _mobile,
+              countryCode: _countryCode,
+              onCountryCodeChanged: (code) {
+                setState(() => _countryCode = code);
+                _syncToProvider();
+              },
               label: 'Mobile Number',
-              hint: '10-digit mobile number',
-              prefixIcon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: _mobileValidator,
             ),
             const SizedBox(height: 12),
-            CustomTextField(
-              controller: _emergency,
+            MobileNumberField(
+              mobileController: _emergency,
+              countryCode: _countryCode,
+              onCountryCodeChanged: (code) {
+                setState(() => _countryCode = code);
+                _syncToProvider();
+              },
               label: '24x7 Dispatch Number',
               hint: 'Emergency dispatch line',
-              prefixIcon: Icons.emergency_outlined,
-              keyboardType: TextInputType.phone,
-              validator: _mobileValidator,
             ),
           ],
         ),
@@ -228,12 +238,6 @@ class _AmbulanceStep1ServiceOwnerState
     final email = v?.trim() ?? '';
     if (email.isEmpty) return 'Email is required';
     if (!email.contains('@')) return 'Enter a valid email';
-    return null;
-  }
-
-  String? _mobileValidator(String? v) {
-    final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 10) return 'Enter a valid 10-digit number';
     return null;
   }
 }
@@ -704,11 +708,8 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
                 hint: '10-digit number',
                 prefixIcon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
-                validator: (v) {
-                  final d = (v ?? '').replaceAll(RegExp(r'\D'), '');
-                  if (d.length != 10) return 'Invalid mobile';
-                  return null;
-                },
+                inputFormatters: ValidationUtils.mobileInputFormatters(),
+                validator: ValidationUtils.validatePhoneNumber,
               ),
               const SizedBox(height: 12),
               CustomTextField(

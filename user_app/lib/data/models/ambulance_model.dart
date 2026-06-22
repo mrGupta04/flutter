@@ -2,12 +2,15 @@ import 'ambulance_driver_model.dart';
 import 'ambulance_vehicle_model.dart';
 import 'doctor_model.dart';
 
+import '../../core/constants/phone_countries.dart';
+
 class AmbulanceModel {
   final String? id;
   final String? serviceName;
   final String? ownerName;
   final String? email;
   final String? mobileNumber;
+  final String? countryCode;
   final String? profilePicture;
   final String? emergencyContact;
   final String? licenseNumber;
@@ -49,6 +52,7 @@ class AmbulanceModel {
     this.ownerName,
     this.email,
     this.mobileNumber,
+    this.countryCode,
     this.profilePicture,
     this.emergencyContact,
     this.licenseNumber,
@@ -92,6 +96,7 @@ class AmbulanceModel {
       ownerName: json['ownerName'] as String?,
       email: json['email'] as String?,
       mobileNumber: json['mobileNumber'] as String?,
+      countryCode: json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
       profilePicture: json['profilePicture'] as String?,
       emergencyContact: json['emergencyContact'] as String?,
       licenseNumber: json['licenseNumber'] as String?,
@@ -152,6 +157,7 @@ class AmbulanceModel {
       if (ownerName != null) 'ownerName': ownerName,
       if (email != null) 'email': email,
       if (mobileNumber != null) 'mobileNumber': mobileNumber,
+      if (countryCode != null) 'countryCode': countryCode,
       if (profilePicture != null) 'profilePicture': profilePicture,
       if (emergencyContact != null) 'emergencyContact': emergencyContact,
       if (licenseNumber != null) 'licenseNumber': licenseNumber,

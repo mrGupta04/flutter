@@ -1,11 +1,14 @@
 import 'doctor_model.dart';
 
+import '../../core/constants/phone_countries.dart';
+
 class NurseModel {
   final String? id;
   final String? firstName;
   final String? lastName;
   final String? email;
   final String? mobileNumber;
+  final String? countryCode;
   final String? profilePicture;
   final String? qualification;
   final String? registrationNumber;
@@ -28,6 +31,7 @@ class NurseModel {
     this.lastName,
     this.email,
     this.mobileNumber,
+    this.countryCode,
     this.profilePicture,
     this.qualification,
     this.registrationNumber,
@@ -57,6 +61,7 @@ class NurseModel {
       lastName: json['lastName'] as String?,
       email: json['email'] as String?,
       mobileNumber: json['mobileNumber'] as String?,
+      countryCode: json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
       profilePicture: json['profilePicture'] as String?,
       qualification: json['qualification'] as String?,
       registrationNumber: json['registrationNumber'] as String?,
@@ -82,6 +87,7 @@ class NurseModel {
       if (lastName != null) 'lastName': lastName,
       if (email != null) 'email': email,
       if (mobileNumber != null) 'mobileNumber': mobileNumber,
+      if (countryCode != null) 'countryCode': countryCode,
       if (profilePicture != null) 'profilePicture': profilePicture,
       if (qualification != null) 'qualification': qualification,
       if (registrationNumber != null) 'registrationNumber': registrationNumber,

@@ -1,5 +1,7 @@
 import 'doctor_model.dart';
 
+import '../../core/constants/phone_countries.dart';
+
 class BloodBankModel {
   final String? id;
   final String? institutionName;
@@ -7,6 +9,7 @@ class BloodBankModel {
   final String? contactPerson;
   final String? email;
   final String? mobileNumber;
+  final String? countryCode;
   final String? profilePicture;
   final String? emergencyContact;
   final String? address;
@@ -33,6 +36,7 @@ class BloodBankModel {
     this.contactPerson,
     this.email,
     this.mobileNumber,
+    this.countryCode,
     this.profilePicture,
     this.emergencyContact,
     this.address,
@@ -61,6 +65,7 @@ class BloodBankModel {
       contactPerson: json['contactPerson'] as String?,
       email: json['email'] as String?,
       mobileNumber: json['mobileNumber'] as String?,
+      countryCode: json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
       profilePicture: json['profilePicture'] as String?,
       emergencyContact: json['emergencyContact'] as String?,
       address: json['address'] as String?,
@@ -98,6 +103,7 @@ class BloodBankModel {
       if (contactPerson != null) 'contactPerson': contactPerson,
       if (email != null) 'email': email,
       if (mobileNumber != null) 'mobileNumber': mobileNumber,
+      if (countryCode != null) 'countryCode': countryCode,
       if (profilePicture != null) 'profilePicture': profilePicture,
       if (emergencyContact != null) 'emergencyContact': emergencyContact,
       if (address != null) 'address': address,

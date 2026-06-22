@@ -13,6 +13,7 @@ function toBloodBank(doc) {
     contactPerson: d.contactPerson,
     email: d.email,
     mobileNumber: d.mobileNumber,
+    countryCode: d.countryCode || '91',
     profilePicture: d.profilePicture,
     emergencyContact: d.emergencyContact,
     address: d.address,

@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/providers/theme_provider.dart';
 import 'core/services/doctor_presence_lifecycle.dart';
 import 'core/theme/app_theme.dart';
 import 'router/admin_router.dart';
@@ -17,14 +16,13 @@ class AdminApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(adminRouterProvider);
-    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: '1mg Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
+      darkTheme: AppTheme.lightTheme,
+      themeMode: ThemeMode.light,
       routerConfig: router,
     );
   }

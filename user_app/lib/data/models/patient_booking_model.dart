@@ -88,6 +88,8 @@ class PatientBookingModel {
   final bool hasPrescription;
   final String? prescriptionPdfUrl;
   final String? prescriptionFileName;
+  final bool prescriptionPending;
+  final bool prescriptionProcessing;
   final List<PreviousReportModel> previousReports;
 
   const PatientBookingModel({
@@ -120,6 +122,8 @@ class PatientBookingModel {
     this.hasPrescription = false,
     this.prescriptionPdfUrl,
     this.prescriptionFileName,
+    this.prescriptionPending = false,
+    this.prescriptionProcessing = false,
     this.previousReports = const [],
   });
 
@@ -164,6 +168,8 @@ class PatientBookingModel {
       hasPrescription: json['hasPrescription'] as bool? ?? false,
       prescriptionPdfUrl: json['prescriptionPdfUrl'] as String?,
       prescriptionFileName: json['prescriptionFileName'] as String?,
+      prescriptionPending: json['prescriptionPending'] as bool? ?? false,
+      prescriptionProcessing: json['prescriptionProcessing'] as bool? ?? false,
       previousReports: (json['previousReports'] as List<dynamic>? ?? [])
           .map((e) => PreviousReportModel.fromJson(e as Map<String, dynamic>))
           .toList(),

@@ -7,6 +7,7 @@ const nurseSchema = new mongoose.Schema(
     lastName: String,
     email: { type: String, unique: true, sparse: true },
     mobileNumber: String,
+    countryCode: { type: String, default: '91' },
     passwordHash: String,
     profilePicture: String,
     qualification: String,

@@ -1,9 +1,13 @@
+import '../../core/constants/phone_countries.dart';
+import '../../core/utils/validation_utils.dart';
+
 class PatientUserModel {
   final String id;
   final String firstName;
   final String? lastName;
   final String email;
   final String mobileNumber;
+  final String countryCode;
   final int? age;
   final String? gender;
   final String? aadhaarLast4;
@@ -16,6 +20,7 @@ class PatientUserModel {
     this.lastName,
     required this.email,
     required this.mobileNumber,
+    this.countryCode = PhoneCountries.defaultDialCode,
     this.age,
     this.gender,
     this.aadhaarLast4,
@@ -52,6 +57,7 @@ class PatientUserModel {
       lastName: json['lastName'] as String?,
       email: json['email'] as String? ?? '',
       mobileNumber: json['mobileNumber'] as String? ?? '',
+      countryCode: json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
       age: json['age'] is int
           ? json['age'] as int
           : int.tryParse('${json['age']}'),
@@ -61,4 +67,9 @@ class PatientUserModel {
       aadhaarCardUrl: json['aadhaarCardUrl'] as String?,
     );
   }
+
+  String get formattedMobile => ValidationUtils.formatInternationalPhone(
+        mobileNumber,
+        countryCode: countryCode,
+      );
 }

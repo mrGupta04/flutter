@@ -268,6 +268,7 @@ class _QuickAction extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,
                   height: 1.2,
                 ),
@@ -325,6 +326,7 @@ class OneMgCategoryGrid extends StatelessWidget {
                       Text(
                         item.$2,
                         style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.textPrimary,
                           fontWeight: FontWeight.w600,
                         ),
                         textAlign: TextAlign.center,
@@ -575,6 +577,7 @@ class MarketplaceSectionTitle extends StatelessWidget {
             child: Text(
               title,
               style: AppTextStyles.titleMedium.copyWith(
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -678,7 +681,12 @@ class FormStepHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Text(title, style: AppTextStyles.titleSmall),
+          Text(
+            title,
+            style: AppTextStyles.titleSmall.copyWith(
+              color: AppColors.textPrimary,
+            ),
+          ),
           Text(
             subtitle,
             style: AppTextStyles.bodySmall.copyWith(
