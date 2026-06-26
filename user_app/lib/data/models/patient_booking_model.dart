@@ -6,6 +6,7 @@ enum PatientBookingCategory {
   all('All'),
   onlineConsult('Online book'),
   hospitalVisit('Hospital visit'),
+  homeVisit('Home visit'),
   nurse('Nurse'),
   ambulance('Ambulance'),
   bloodBank('Blood bank');
@@ -22,6 +23,8 @@ enum PatientBookingCategory {
         return booking.isOnlineConsult;
       case PatientBookingCategory.hospitalVisit:
         return booking.isClinicVisit;
+      case PatientBookingCategory.homeVisit:
+        return booking.isHomeVisit;
       case PatientBookingCategory.nurse:
         return booking.serviceType == 'nurse';
       case PatientBookingCategory.ambulance:
@@ -128,6 +131,8 @@ class PatientBookingModel {
   });
 
   bool get isClinicVisit => consultationType == 'visit_site';
+
+  bool get isHomeVisit => consultationType == 'book_home';
 
   bool get isOnlineConsult => consultationType == 'online_consult';
 

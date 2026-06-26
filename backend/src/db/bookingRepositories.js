@@ -41,6 +41,10 @@ function consultationTypeChecks(doctor, consultationType) {
     if (!doctor.offersVisitSite) {
       return { error: 'This doctor does not offer hospital visits', status: 400 };
     }
+  } else if (consultationType === 'book_home') {
+    if (!doctor.offersBookHome) {
+      return { error: 'This doctor does not offer home visits', status: 400 };
+    }
   } else if (!doctor.offersOnlineConsult) {
     return { error: 'This doctor does not offer online consultation', status: 400 };
   }
@@ -458,12 +462,16 @@ async function validateBookingPayload(payload, consultationType) {
     throw err;
   }
 
-  if (consultationType === 'visit_site') {
+  if (consultationType === 'visit_site' || consultationType === 'book_home') {
     const address = String(patientAddress || '').trim();
     const city = String(patientCity || '').trim();
     const pincode = String(patientPincode || '').trim();
+    const addressError =
+      consultationType === 'book_home'
+        ? 'Your home address is required for the doctor to visit you'
+        : 'Your address is required for hospital visit';
     if (address.length < 5) {
-      const err = new Error('Your address is required for hospital visit');
+      const err = new Error(addressError);
       err.statusCode = 400;
       throw err;
     }
@@ -909,6 +917,10 @@ async function createHospitalVisitBooking(payload) {
   return createSlotBooking(payload, 'visit_site');
 }
 
+async function createHomeVisitBooking(payload) {
+  return createSlotBooking(payload, 'book_home');
+}
+
 async function listPatientBookings(patientId, mobileNumber) {
   const mobile = String(mobileNumber || '').replace(/\D/g, '').slice(-10);
   const orConditions = [{ patientId }];
@@ -1059,6 +1071,7 @@ module.exports = {
   releaseConsultationSlotHold,
   createOnlineConsultBooking,
   createHospitalVisitBooking,
+  createHomeVisitBooking,
   createPendingBookingForPayment,
   confirmBookingAfterPayment,
   verifyClinicAppointment,

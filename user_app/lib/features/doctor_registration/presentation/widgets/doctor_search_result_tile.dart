@@ -23,10 +23,12 @@ class DoctorSearchResultTile extends StatelessWidget {
       showBottomDivider: showBottomDivider,
       showActionButtons: doctor.offersOnlineConsult ||
           doctor.offersVisitSite ||
+          doctor.offersBookHome ||
           doctorHasMapLocation(doctor),
       onTap: () => onDoctorCardTap(context, doctor),
       onOnlineConsultTap: () => openOnlineConsultBooking(context, doctor),
       onClinicTap: () => openHospitalVisitBooking(context, doctor),
+      onHomeVisitTap: () => openHomeVisitBooking(context, doctor),
       onOpenMapTap: () => openDoctorInGoogleMaps(context, doctor),
     );
   }

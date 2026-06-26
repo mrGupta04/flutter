@@ -56,6 +56,31 @@ Future<void> openHospitalVisitBooking(
   );
 }
 
+/// Opens home visit booking when the doctor offers home consultations.
+Future<void> openHomeVisitBooking(
+  BuildContext context,
+  DoctorModel doctor,
+) async {
+  if (doctor.id == null || doctor.id!.isEmpty) return;
+
+  if (!await ensureUserLoggedIn(context)) return;
+
+  if (!context.mounted) return;
+
+  if (!doctor.offersConsultationType(ConsultationType.bookHome)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('This doctor does not offer home visits.'),
+      ),
+    );
+    return;
+  }
+
+  context.push(
+    '${AppConstants.routeHomeVisitBooking}?doctorId=${Uri.encodeComponent(doctor.id!)}',
+  );
+}
+
 /// Card tap: open doctor profile (photos, details, then book).
 Future<void> onDoctorCardTap(BuildContext context, DoctorModel doctor) async {
   openDoctorProfile(context, doctor);

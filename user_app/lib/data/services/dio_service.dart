@@ -129,6 +129,7 @@ class DioService {
   bool _usesPatientAuth(String path) {
     return path.contains('online-consult') ||
         path.contains('hospital-visit') ||
+        path.contains('home-visit') ||
         path.contains('payments/') ||
         path.contains('consultations/');
   }

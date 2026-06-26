@@ -1364,7 +1364,20 @@ class Step6WeeklyAvailability extends ConsumerWidget {
         'Week of ${_formatShortDate(weekStart)} – ${_formatShortDate(weekStart.add(const Duration(days: 6)))}';
     final showOnline = formState.offersOnlineConsult;
     final showClinic = formState.offersVisitSite;
-    final showAnyPicker = showOnline || showClinic;
+    final showHome = formState.offersBookHome;
+    final showAnyPicker = showOnline || showClinic || showHome;
+    final blockedForOnline = {
+      ...formState.selectedClinicAvailabilitySlots,
+      ...formState.selectedHomeAvailabilitySlots,
+    };
+    final blockedForClinic = {
+      ...formState.selectedOnlineAvailabilitySlots,
+      ...formState.selectedHomeAvailabilitySlots,
+    };
+    final blockedForHome = {
+      ...formState.selectedOnlineAvailabilitySlots,
+      ...formState.selectedClinicAvailabilitySlots,
+    };
 
     return registrationStepScroll(
       child: Column(
@@ -1373,7 +1386,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
           const SectionHeader(
             title: 'Weekly availability',
             subtitle:
-                'Set separate schedules for online consult and clinic visits (Sunday–Saturday, 8 AM–6 PM). The same hour cannot be used for both.',
+                'Set separate schedules for online consult, clinic visits, and home visits (Sunday–Saturday, 8 AM–6 PM). The same hour cannot be used for more than one type.',
           ),
           if (!showAnyPicker)
             Container(
@@ -1385,7 +1398,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
                 border: Border.all(color: AppColors.divider),
               ),
               child: Text(
-                'You selected home visits only. Weekly slot selection is not required for home visits yet.',
+                'Select at least one consultation option in the previous step to set your weekly schedule.',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.4,
@@ -1404,13 +1417,13 @@ class Step6WeeklyAvailability extends ConsumerWidget {
             WeeklyAvailabilityPicker(
               weekLabel: weekLabel,
               selectedSlots: formState.selectedOnlineAvailabilitySlots,
-              blockedSlots: formState.selectedClinicAvailabilitySlots,
+              blockedSlots: blockedForOnline,
               onToggle: (day, hour, selected) => ref
                   .read(registrationFormProvider.notifier)
                   .toggleOnlineAvailabilitySlot(day, hour, selected),
             ),
           ],
-          if (showOnline && showClinic) const SizedBox(height: 28),
+          if (showOnline && (showClinic || showHome)) const SizedBox(height: 28),
           if (showClinic) ...[
             _AvailabilityTypeHeader(
               icon: Icons.local_hospital_rounded,
@@ -1423,11 +1436,31 @@ class Step6WeeklyAvailability extends ConsumerWidget {
             WeeklyAvailabilityPicker(
               weekLabel: weekLabel,
               selectedSlots: formState.selectedClinicAvailabilitySlots,
-              blockedSlots: formState.selectedOnlineAvailabilitySlots,
+              blockedSlots: blockedForClinic,
               selectedColor: AppColors.accent,
               onToggle: (day, hour, selected) => ref
                   .read(registrationFormProvider.notifier)
                   .toggleClinicAvailabilitySlot(day, hour, selected),
+            ),
+          ],
+          if (showClinic && showHome) const SizedBox(height: 28),
+          if (showHome) ...[
+            _AvailabilityTypeHeader(
+              icon: Icons.home_rounded,
+              title: 'Home visit slots',
+              subtitle:
+                  'When you are available to visit patients at their home.',
+              color: AppColors.secondary,
+            ),
+            const SizedBox(height: 12),
+            WeeklyAvailabilityPicker(
+              weekLabel: weekLabel,
+              selectedSlots: formState.selectedHomeAvailabilitySlots,
+              blockedSlots: blockedForHome,
+              selectedColor: AppColors.secondary,
+              onToggle: (day, hour, selected) => ref
+                  .read(registrationFormProvider.notifier)
+                  .toggleHomeAvailabilitySlot(day, hour, selected),
             ),
           ],
         ],
@@ -1650,9 +1683,11 @@ class Step7ReviewSubmit extends ConsumerWidget {
                   'Clinic visit slots',
                   '${formState.selectedClinicAvailabilityCount} hour(s) this week',
                 ),
-              if (!formState.offersOnlineConsult &&
-                  !formState.offersVisitSite)
-                _ReviewItem('Weekly slots', 'Not required (home visits)'),
+              if (formState.offersBookHome)
+                _ReviewItem(
+                  'Home visit slots',
+                  '${formState.selectedHomeAvailabilityCount} hour(s) this week',
+                ),
             ],
           ),
           _ReviewSection(

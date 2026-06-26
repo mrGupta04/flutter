@@ -32,6 +32,7 @@ class AppConstants {
       '/doctor/slot-hold/$holdId';
   static const String endpointOnlineConsultBook = '/doctor/online-consult';
   static const String endpointHospitalVisitBook = '/doctor/hospital-visit';
+  static const String endpointHomeVisitBook = '/doctor/home-visit';
   static const String endpointPaymentCreateOrder = '/payments/create-order';
   static const String endpointPaymentVerify = '/payments/verify';
   static String endpointConsultationVideoSession(String bookingId) =>
@@ -155,6 +156,7 @@ class AppConstants {
   static const String routeConsultationDemo = '/consultation-demo';
   static const String routeOnlineConsultBooking = '/online-consult';
   static const String routeHospitalVisitBooking = '/hospital-visit';
+  static const String routeHomeVisitBooking = '/home-visit';
   static const String routeVideoConsult = '/video-consult';
   static const String routeRegistrationLanding = '/registration-landing';
   static const String routeRegistrationForm = '/registration-form';

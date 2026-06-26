@@ -27,6 +27,7 @@ class DoctorListingCard extends StatelessWidget {
     this.onTap,
     this.onOnlineConsultTap,
     this.onClinicTap,
+    this.onHomeVisitTap,
     this.onOpenMapTap,
     this.showActionButtons = true,
     this.fadeUnavailableConsultationButtons = false,
@@ -44,6 +45,7 @@ class DoctorListingCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onOnlineConsultTap;
   final VoidCallback? onClinicTap;
+  final VoidCallback? onHomeVisitTap;
   final VoidCallback? onOpenMapTap;
   final bool showActionButtons;
   final bool fadeUnavailableConsultationButtons;
@@ -269,6 +271,7 @@ class DoctorListingCard extends StatelessWidget {
                                     fadeUnavailableConsultationButtons,
                                 onOnlineConsult: onOnlineConsultTap ?? onTap,
                                 onClinic: onClinicTap ?? onTap,
+                                onHomeVisit: onHomeVisitTap ?? onTap,
                                 onOpenMap: onOpenMapTap,
                               )
                             else
@@ -479,6 +482,7 @@ class _PatientActionButtonRow extends StatelessWidget {
     this.fadeUnavailable = false,
     this.onOnlineConsult,
     this.onClinic,
+    this.onHomeVisit,
     this.onOpenMap,
   });
 
@@ -486,6 +490,7 @@ class _PatientActionButtonRow extends StatelessWidget {
   final bool fadeUnavailable;
   final VoidCallback? onOnlineConsult;
   final VoidCallback? onClinic;
+  final VoidCallback? onHomeVisit;
   final VoidCallback? onOpenMap;
 
   bool get _hasMapLocation =>
@@ -502,6 +507,18 @@ class _PatientActionButtonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final thirdIcon = doctor.offersBookHome
+        ? Icons.home_rounded
+        : Icons.map_rounded;
+    final thirdLabel = doctor.offersBookHome
+        ? ConsultationType.bookHome.shortLabel
+        : 'Map';
+    final thirdAvailable =
+        doctor.offersBookHome ? true : _hasMapLocation;
+    final thirdOnPressed = doctor.offersBookHome
+        ? onHomeVisit
+        : (_hasMapLocation ? onOpenMap : null);
+
     return Row(
       children: [
         Expanded(
@@ -526,11 +543,11 @@ class _PatientActionButtonRow extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: _ConsultationActionButton(
-            icon: Icons.map_rounded,
-            label: 'Map',
-            available: _hasMapLocation,
+            icon: thirdIcon,
+            label: thirdLabel,
+            available: thirdAvailable,
             fadeUnavailable: fadeUnavailable,
-            onPressed: _hasMapLocation ? onOpenMap : null,
+            onPressed: thirdOnPressed,
           ),
         ),
       ],

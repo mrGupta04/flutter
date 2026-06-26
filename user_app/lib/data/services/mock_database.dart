@@ -203,7 +203,10 @@ class MockDatabase {
     if (consultationType == 'visit_site' && !doctor.offersVisitSite) {
       throw Exception('This doctor does not offer hospital visits');
     }
-    if (consultationType != 'visit_site' && !doctor.offersOnlineConsult) {
+    if (consultationType == 'book_home' && !doctor.offersBookHome) {
+      throw Exception('This doctor does not offer home visits');
+    }
+    if (consultationType == 'online_consult' && !doctor.offersOnlineConsult) {
       throw Exception('This doctor does not offer online consultation');
     }
 

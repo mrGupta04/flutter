@@ -278,6 +278,8 @@ class _DoctorListBody extends StatelessWidget {
                     openOnlineConsultBooking(context, doctors[i]),
                 onClinicTap: () =>
                     openHospitalVisitBooking(context, doctors[i]),
+                onHomeVisitTap: () =>
+                    openHomeVisitBooking(context, doctors[i]),
               ),
             ],
           ],

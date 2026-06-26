@@ -428,11 +428,25 @@ class _DoctorProfileBody extends ConsumerWidget {
                     icon: Icons.local_hospital_rounded,
                     onPressed: () => openHospitalVisitBooking(context, doctor),
                   ),
-                if (!doctor.offersOnlineConsult && !doctor.offersVisitSite)
+                if ((doctor.offersOnlineConsult || doctor.offersVisitSite) &&
+                    doctor.offersBookHome)
+                  const SizedBox(height: 10),
+                if (doctor.offersBookHome)
+                  CustomButton(
+                    label: _bookingButtonLabel(
+                      'Book home visit',
+                      doctor.feeForConsultationType(
+                        ConsultationType.bookHome,
+                      ),
+                    ),
+                    icon: Icons.home_rounded,
+                    onPressed: () => openHomeVisitBooking(context, doctor),
+                  ),
+                if (!doctor.offersOnlineConsult &&
+                    !doctor.offersVisitSite &&
+                    !doctor.offersBookHome)
                   Text(
-                    doctor.offersBookHome
-                        ? 'Home visit booking is coming soon.'
-                        : 'No bookable consultation options for this doctor.',
+                    'No bookable consultation options for this doctor.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,

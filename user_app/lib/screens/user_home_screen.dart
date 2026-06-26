@@ -7,6 +7,7 @@ import '../core/theme/app_text_styles.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/hero_wallpaper_carousel.dart';
 import '../shared/widgets/user_app_footer.dart';
+import '../features/doctor_registration/presentation/widgets/home_visit_doctors_section.dart';
 import '../features/doctor_registration/presentation/widgets/verified_ambulances_section.dart';
 import '../features/doctor_registration/presentation/widgets/verified_blood_banks_section.dart';
 import '../features/doctor_registration/presentation/widgets/verified_doctors_section.dart';
@@ -146,6 +147,8 @@ class UserHomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            const HomeVisitDoctorsSection(),
             const SizedBox(height: 20),
             const VerifiedDoctorsSection(),
             const SizedBox(height: 20),

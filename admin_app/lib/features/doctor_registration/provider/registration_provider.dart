@@ -10,6 +10,8 @@ import '../../../core/utils/validation_utils.dart';
 import '../../../data/models/models.dart';
 import '../../../data/repositories/repositories.dart';
 
+enum _AvailabilitySlotType { online, clinic, home }
+
 /// Provider for DoctorRegistrationRepository
 final doctorRegistrationRepositoryProvider = Provider((ref) {
   return DoctorRegistrationRepository();
@@ -179,6 +181,7 @@ class RegistrationFormState {
   final String? submitError;
   final Set<String> selectedOnlineAvailabilitySlots;
   final Set<String> selectedClinicAvailabilitySlots;
+  final Set<String> selectedHomeAvailabilitySlots;
 
   RegistrationFormState({
     required this.draftId,
@@ -237,6 +240,7 @@ class RegistrationFormState {
     this.submitError,
     this.selectedOnlineAvailabilitySlots = const {},
     this.selectedClinicAvailabilitySlots = const {},
+    this.selectedHomeAvailabilitySlots = const {},
   });
 
   int get selectedOnlineAvailabilityCount =>
@@ -244,6 +248,9 @@ class RegistrationFormState {
 
   int get selectedClinicAvailabilityCount =>
       selectedClinicAvailabilitySlots.length;
+
+  int get selectedHomeAvailabilityCount =>
+      selectedHomeAvailabilitySlots.length;
 
   factory RegistrationFormState.initial() {
     return RegistrationFormState(draftId: const Uuid().v4());
@@ -332,6 +339,7 @@ class RegistrationFormState {
     String? submitError,
     Set<String>? selectedOnlineAvailabilitySlots,
     Set<String>? selectedClinicAvailabilitySlots,
+    Set<String>? selectedHomeAvailabilitySlots,
   }) {
     return RegistrationFormState(
       draftId: draftId ?? this.draftId,
@@ -395,6 +403,8 @@ class RegistrationFormState {
           this.selectedOnlineAvailabilitySlots,
       selectedClinicAvailabilitySlots: selectedClinicAvailabilitySlots ??
           this.selectedClinicAvailabilitySlots,
+      selectedHomeAvailabilitySlots: selectedHomeAvailabilitySlots ??
+          this.selectedHomeAvailabilitySlots,
     );
   }
 }
@@ -742,7 +752,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
 
   void toggleOnlineAvailabilitySlot(int dayOfWeek, int startHour, bool selected) {
     _toggleAvailabilitySlot(
-      isClinic: false,
+      slotType: _AvailabilitySlotType.online,
       dayOfWeek: dayOfWeek,
       startHour: startHour,
       selected: selected,
@@ -751,7 +761,16 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
 
   void toggleClinicAvailabilitySlot(int dayOfWeek, int startHour, bool selected) {
     _toggleAvailabilitySlot(
-      isClinic: true,
+      slotType: _AvailabilitySlotType.clinic,
+      dayOfWeek: dayOfWeek,
+      startHour: startHour,
+      selected: selected,
+    );
+  }
+
+  void toggleHomeAvailabilitySlot(int dayOfWeek, int startHour, bool selected) {
+    _toggleAvailabilitySlot(
+      slotType: _AvailabilitySlotType.home,
       dayOfWeek: dayOfWeek,
       startHour: startHour,
       selected: selected,
@@ -759,7 +778,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
   }
 
   void _toggleAvailabilitySlot({
-    required bool isClinic,
+    required _AvailabilitySlotType slotType,
     required int dayOfWeek,
     required int startHour,
     required bool selected,
@@ -767,26 +786,38 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     final key = DoctorAvailabilityConstants.slotKey(dayOfWeek, startHour);
     var online = Set<String>.from(state.selectedOnlineAvailabilitySlots);
     var clinic = Set<String>.from(state.selectedClinicAvailabilitySlots);
+    var home = Set<String>.from(state.selectedHomeAvailabilitySlots);
 
-    if (isClinic) {
-      if (selected) {
-        clinic.add(key);
-        online.remove(key);
-      } else {
-        clinic.remove(key);
+    if (selected) {
+      switch (slotType) {
+        case _AvailabilitySlotType.online:
+          online.add(key);
+          clinic.remove(key);
+          home.remove(key);
+        case _AvailabilitySlotType.clinic:
+          clinic.add(key);
+          online.remove(key);
+          home.remove(key);
+        case _AvailabilitySlotType.home:
+          home.add(key);
+          online.remove(key);
+          clinic.remove(key);
       }
     } else {
-      if (selected) {
-        online.add(key);
-        clinic.remove(key);
-      } else {
-        online.remove(key);
+      switch (slotType) {
+        case _AvailabilitySlotType.online:
+          online.remove(key);
+        case _AvailabilitySlotType.clinic:
+          clinic.remove(key);
+        case _AvailabilitySlotType.home:
+          home.remove(key);
       }
     }
 
     state = state.copyWith(
       selectedOnlineAvailabilitySlots: online,
       selectedClinicAvailabilitySlots: clinic,
+      selectedHomeAvailabilitySlots: home,
       submitError: null,
     );
   }
@@ -927,6 +958,22 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
           isSubmitting: false,
           submitError: availRes.error ??
               'Registration saved but clinic visit availability failed to save.',
+        );
+        return false;
+      }
+    }
+
+    if (state.offersBookHome) {
+      final availRes = await _repository.saveAvailability(
+        doctorId: doctorId,
+        selectedSlotKeys: state.selectedHomeAvailabilitySlots,
+        consultationType: 'book_home',
+      );
+      if (!availRes.success) {
+        state = state.copyWith(
+          isSubmitting: false,
+          submitError: availRes.error ??
+              'Registration saved but home visit availability failed to save.',
         );
         return false;
       }

@@ -36,6 +36,7 @@ const {
   releaseConsultationSlotHold,
   createOnlineConsultBooking,
   createHospitalVisitBooking,
+  createHomeVisitBooking,
   listDoctorBookings,
   verifyClinicAppointment,
 } = require('../db/bookingRepositories');
@@ -437,6 +438,62 @@ router.post('/hospital-visit', authOptional, async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Hospital visit appointment booked successfully',
+      statusCode: 201,
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Booking failed', status);
+  }
+});
+
+// POST /doctor/home-visit — book a home visit appointment
+router.post('/home-visit', authOptional, async (req, res) => {
+  try {
+    const {
+      doctorId,
+      patientName,
+      patientMobile,
+      patientEmail,
+      patientNotes,
+      patientAddress,
+      patientCity,
+      patientState,
+      patientPincode,
+      visitReason,
+      dayOfWeek,
+      startHour,
+      slotStart,
+    } = req.body || {};
+
+    if (!doctorId) {
+      return sendError(res, 'doctorId is required', 400);
+    }
+
+    const patientId =
+      req.auth?.type === 'patient' ? req.auth.patientId : undefined;
+
+    const data = await createHomeVisitBooking({
+      doctorId,
+      patientId,
+      patientName,
+      patientMobile,
+      patientEmail,
+      patientNotes,
+      patientAddress,
+      patientCity,
+      patientState,
+      patientPincode,
+      visitReason,
+      dayOfWeek,
+      startHour,
+      slotStart,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Home visit appointment booked successfully',
       statusCode: 201,
       data,
     });

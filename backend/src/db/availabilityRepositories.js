@@ -9,7 +9,7 @@ const {
   buildAllSlots,
 } = require('../utils/availabilityWeek');
 
-const VALID_CONSULTATION_TYPES = ['online_consult', 'visit_site'];
+const VALID_CONSULTATION_TYPES = ['online_consult', 'visit_site', 'book_home'];
 
 function normalizeConsultationType(type) {
   const value = String(type || 'online_consult').trim();
@@ -20,6 +20,7 @@ function requiredAvailabilityTypes(doctor) {
   const types = [];
   if (doctor?.offersOnlineConsult) types.push('online_consult');
   if (doctor?.offersVisitSite) types.push('visit_site');
+  if (doctor?.offersBookHome) types.push('book_home');
   return types;
 }
 
@@ -227,36 +228,39 @@ function availableSlotKeys(slots) {
   );
 }
 
-/** Remove slots from the other consultation type so the same hour is not bookable twice. */
+/** Remove slots from other consultation types so the same hour is not bookable twice. */
 async function clearConflictingSlotsFromOtherType(doctorId, weekStart, savedType, savedSlots) {
-  const otherType = savedType === 'online_consult' ? 'visit_site' : 'online_consult';
   const savedKeys = availableSlotKeys(savedSlots);
   if (savedKeys.size === 0) return;
 
-  const otherDoc = await DoctorAvailability.findOne({
-    doctorId,
-    weekStartDate: weekStart,
-    consultationType: otherType,
-  });
-  if (!otherDoc?.slots?.length) return;
+  const otherTypes = VALID_CONSULTATION_TYPES.filter((t) => t !== savedType);
 
-  let changed = false;
-  const updatedSlots = otherDoc.slots.map((slot) => {
-    const plain = slot.toObject ? slot.toObject() : slot;
-    const key = slotKey(plain.dayOfWeek, plain.startHour);
-    if (plain.available && savedKeys.has(key)) {
-      changed = true;
-      return { ...plain, available: false };
-    }
-    return plain;
-  });
+  for (const otherType of otherTypes) {
+    const otherDoc = await DoctorAvailability.findOne({
+      doctorId,
+      weekStartDate: weekStart,
+      consultationType: otherType,
+    });
+    if (!otherDoc?.slots?.length) continue;
 
-  if (!changed) return;
+    let changed = false;
+    const updatedSlots = otherDoc.slots.map((slot) => {
+      const plain = slot.toObject ? slot.toObject() : slot;
+      const key = slotKey(plain.dayOfWeek, plain.startHour);
+      if (plain.available && savedKeys.has(key)) {
+        changed = true;
+        return { ...plain, available: false };
+      }
+      return plain;
+    });
 
-  await DoctorAvailability.updateOne(
-    { doctorId, weekStartDate: weekStart, consultationType: otherType },
-    { $set: { slots: updatedSlots } },
-  );
+    if (!changed) continue;
+
+    await DoctorAvailability.updateOne(
+      { doctorId, weekStartDate: weekStart, consultationType: otherType },
+      { $set: { slots: updatedSlots } },
+    );
+  }
 }
 
 async function findAvailabilityDocForSave(doctorId, weekStart, consultationType) {

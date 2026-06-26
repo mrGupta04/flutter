@@ -48,9 +48,14 @@ CareRole careRoleFromValue(String? value) {
 }
 
 class CareListingScreen extends ConsumerStatefulWidget {
-  const CareListingScreen({super.key, required this.initialRole});
+  const CareListingScreen({
+    super.key,
+    required this.initialRole,
+    this.initialDoctorType,
+  });
 
   final CareRole initialRole;
+  final ConsultationType? initialDoctorType;
 
   @override
   ConsumerState<CareListingScreen> createState() => _CareListingScreenState();
@@ -73,6 +78,9 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
   void initState() {
     super.initState();
     _selectedRole = widget.initialRole;
+    if (widget.initialDoctorType != null) {
+      _doctorType = widget.initialDoctorType!;
+    }
   }
 
   @override
@@ -414,11 +422,13 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
             showVerifiedIcon: true,
             showActionButtons: items[i].offersOnlineConsult ||
                 items[i].offersVisitSite ||
+                items[i].offersBookHome ||
                 doctorHasMapLocation(items[i]),
             onTap: () => onDoctorCardTap(context, items[i]),
             onOnlineConsultTap: () =>
                 openOnlineConsultBooking(context, items[i]),
             onClinicTap: () => openHospitalVisitBooking(context, items[i]),
+            onHomeVisitTap: () => openHomeVisitBooking(context, items[i]),
             onOpenMapTap: () => openDoctorInGoogleMaps(context, items[i]),
           ),
         ],

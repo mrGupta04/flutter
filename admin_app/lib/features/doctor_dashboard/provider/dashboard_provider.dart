@@ -17,6 +17,7 @@ class DoctorDashboardState {
   final List<DoctorDocumentModel> documents;
   final DoctorAvailabilityModel? availability;
   final DoctorAvailabilityModel? clinicAvailability;
+  final DoctorAvailabilityModel? homeAvailability;
   final AvailabilityReminder? availabilityReminder;
   final List<DoctorBookingModel> bookings;
   final DoctorBookingStats bookingStats;
@@ -32,6 +33,7 @@ class DoctorDashboardState {
     this.documents = const [],
     this.availability,
     this.clinicAvailability,
+    this.homeAvailability,
     this.availabilityReminder,
     this.bookings = const [],
     this.bookingStats = const DoctorBookingStats(),
@@ -70,6 +72,7 @@ class DoctorDashboardState {
     List<DoctorDocumentModel>? documents,
     DoctorAvailabilityModel? availability,
     DoctorAvailabilityModel? clinicAvailability,
+    DoctorAvailabilityModel? homeAvailability,
     AvailabilityReminder? availabilityReminder,
     List<DoctorBookingModel>? bookings,
     DoctorBookingStats? bookingStats,
@@ -85,6 +88,7 @@ class DoctorDashboardState {
       documents: documents ?? this.documents,
       availability: availability ?? this.availability,
       clinicAvailability: clinicAvailability ?? this.clinicAvailability,
+      homeAvailability: homeAvailability ?? this.homeAvailability,
       availabilityReminder:
           availabilityReminder ?? this.availabilityReminder,
       bookings: bookings ?? this.bookings,
@@ -290,6 +294,7 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
       final doctor = state.doctor;
       DoctorAvailabilityModel? onlineAvail;
       DoctorAvailabilityModel? clinicAvail;
+      DoctorAvailabilityModel? homeAvail;
 
       if (doctor?.offersOnlineConsult != false) {
         final response = await repository.getAvailability(
@@ -311,16 +316,30 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
         }
       }
 
+      if (doctor?.offersBookHome == true) {
+        final response = await repository.getAvailability(
+          doctorId: doctorId,
+          consultationType: 'book_home',
+        );
+        if (response.success && response.data != null) {
+          homeAvail = response.data;
+        }
+      }
+
       final needsUpdate =
-          (onlineAvail?.needsUpdate ?? false) || (clinicAvail?.needsUpdate ?? false);
+          (onlineAvail?.needsUpdate ?? false) ||
+          (clinicAvail?.needsUpdate ?? false) ||
+          (homeAvail?.needsUpdate ?? false);
       final reminderMessage = [
         if (onlineAvail?.needsUpdate == true) onlineAvail?.reminderMessage,
         if (clinicAvail?.needsUpdate == true) clinicAvail?.reminderMessage,
+        if (homeAvail?.needsUpdate == true) homeAvail?.reminderMessage,
       ].whereType<String>().join(' ');
 
       state = state.copyWith(
         availability: onlineAvail,
         clinicAvailability: clinicAvail,
+        homeAvailability: homeAvail,
         availabilityReminder: needsUpdate
             ? AvailabilityReminder(
                 needsUpdate: true,
@@ -328,9 +347,11 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
                     ? reminderMessage
                     : 'Please update your availability for the next week.',
                 suggestedWeekStart: onlineAvail?.weekStartDate ??
-                    clinicAvail?.weekStartDate,
-                suggestedWeekEnd:
-                    onlineAvail?.weekEndDate ?? clinicAvail?.weekEndDate,
+                    clinicAvail?.weekStartDate ??
+                    homeAvail?.weekStartDate,
+                suggestedWeekEnd: onlineAvail?.weekEndDate ??
+                    clinicAvail?.weekEndDate ??
+                    homeAvail?.weekEndDate,
               )
             : const AvailabilityReminder(needsUpdate: false),
       );

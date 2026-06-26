@@ -14,7 +14,7 @@ const doctorAvailabilitySchema = new mongoose.Schema(
     doctorId: { type: String, required: true, index: true },
     consultationType: {
       type: String,
-      enum: ['online_consult', 'visit_site'],
+      enum: ['online_consult', 'visit_site', 'book_home'],
       default: 'online_consult',
     },
     weekStartDate: { type: Date, required: true, index: true },

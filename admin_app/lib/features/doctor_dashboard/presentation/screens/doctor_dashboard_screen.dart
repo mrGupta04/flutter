@@ -375,14 +375,19 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
     final doctor = dashboard.doctor;
     final showOnline = doctor?.offersOnlineConsult ?? true;
     final showClinic = doctor?.offersVisitSite ?? false;
+    final showHome = doctor?.offersBookHome ?? false;
     final onlineSelected = Set<String>.from(
       dashboard.availability?.selectedSlotKeys ?? const {},
     );
     final clinicSelected = Set<String>.from(
       dashboard.clinicAvailability?.selectedSlotKeys ?? const {},
     );
-    var savingOnline = showOnline;
-    if (!showOnline && showClinic) savingOnline = false;
+    final homeSelected = Set<String>.from(
+      dashboard.homeAvailability?.selectedSlotKeys ?? const {},
+    );
+    var activeType = showOnline
+        ? 'online_consult'
+        : (showClinic ? 'visit_site' : 'book_home');
 
     showModalBottomSheet<void>(
       context: context,
@@ -390,8 +395,37 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
       backgroundColor: AppColors.white,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          final activeOnline = savingOnline || !showClinic;
-          final activeSelected = activeOnline ? onlineSelected : clinicSelected;
+          Set<String> activeSelected() {
+            switch (activeType) {
+              case 'visit_site':
+                return clinicSelected;
+              case 'book_home':
+                return homeSelected;
+              case 'online_consult':
+              default:
+                return onlineSelected;
+            }
+          }
+
+          Set<String> blockedForActive() {
+            return {
+              ...onlineSelected,
+              ...clinicSelected,
+              ...homeSelected,
+            }..removeAll(activeSelected());
+          }
+
+          Color activeColor() {
+            switch (activeType) {
+              case 'visit_site':
+                return AppColors.accent;
+              case 'book_home':
+                return AppColors.secondary;
+              case 'online_consult':
+              default:
+                return AppColors.primary;
+            }
+          }
 
           return Padding(
             padding: EdgeInsets.only(
@@ -413,30 +447,43 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Set separate schedules for online consult and clinic visits.',
+                    'Set separate schedules for online, clinic, and home visits.',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  if (showOnline && showClinic) ...[
+                  if ([showOnline, showClinic, showHome].where((v) => v).length >
+                      1) ...[
                     const SizedBox(height: 16),
-                    SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(
-                          value: true,
-                          label: Text('Online'),
-                          icon: Icon(Icons.videocam_rounded, size: 18),
-                        ),
-                        ButtonSegment(
-                          value: false,
-                          label: Text('Clinic'),
-                          icon: Icon(Icons.local_hospital_rounded, size: 18),
-                        ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (showOnline)
+                          ChoiceChip(
+                            label: const Text('Online'),
+                            selected: activeType == 'online_consult',
+                            onSelected: (_) => setModalState(
+                              () => activeType = 'online_consult',
+                            ),
+                          ),
+                        if (showClinic)
+                          ChoiceChip(
+                            label: const Text('Clinic'),
+                            selected: activeType == 'visit_site',
+                            onSelected: (_) => setModalState(
+                              () => activeType = 'visit_site',
+                            ),
+                          ),
+                        if (showHome)
+                          ChoiceChip(
+                            label: const Text('Home'),
+                            selected: activeType == 'book_home',
+                            onSelected: (_) => setModalState(
+                              () => activeType = 'book_home',
+                            ),
+                          ),
                       ],
-                      selected: {savingOnline},
-                      onSelectionChanged: (value) {
-                        setModalState(() => savingOnline = value.first);
-                      },
                     ),
                   ],
                   if (dashboard.availabilityReminder?.suggestedWeekStart !=
@@ -453,27 +500,35 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                   ],
                   const SizedBox(height: 16),
                   WeeklyAvailabilityPicker(
-                    selectedSlots: activeSelected,
-                    blockedSlots: activeOnline ? clinicSelected : onlineSelected,
-                    selectedColor:
-                        activeOnline ? AppColors.primary : AppColors.accent,
+                    selectedSlots: activeSelected(),
+                    blockedSlots: blockedForActive(),
+                    selectedColor: activeColor(),
                     onToggle: (day, hour, isSelected) {
                       setModalState(() {
                         final key =
                             DoctorAvailabilityConstants.slotKey(day, hour);
-                        if (activeOnline) {
-                          if (isSelected) {
-                            onlineSelected.add(key);
-                            clinicSelected.remove(key);
-                          } else {
-                            onlineSelected.remove(key);
+                        if (isSelected) {
+                          onlineSelected.remove(key);
+                          clinicSelected.remove(key);
+                          homeSelected.remove(key);
+                          switch (activeType) {
+                            case 'visit_site':
+                              clinicSelected.add(key);
+                            case 'book_home':
+                              homeSelected.add(key);
+                            case 'online_consult':
+                            default:
+                              onlineSelected.add(key);
                           }
                         } else {
-                          if (isSelected) {
-                            clinicSelected.add(key);
-                            onlineSelected.remove(key);
-                          } else {
-                            clinicSelected.remove(key);
+                          switch (activeType) {
+                            case 'visit_site':
+                              clinicSelected.remove(key);
+                            case 'book_home':
+                              homeSelected.remove(key);
+                            case 'online_consult':
+                            default:
+                              onlineSelected.remove(key);
                           }
                         }
                       });
@@ -481,20 +536,20 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
-                    label: activeOnline
-                        ? 'Save online consult slots'
-                        : 'Save clinic visit slots',
+                    label: switch (activeType) {
+                      'visit_site' => 'Save clinic visit slots',
+                      'book_home' => 'Save home visit slots',
+                      _ => 'Save online consult slots',
+                    },
                     isLoading:
                         ref.read(doctorDashboardProvider).isSavingAvailability,
-                    isEnabled: activeSelected.isNotEmpty,
+                    isEnabled: activeSelected().isNotEmpty,
                     onPressed: () async {
                       final ok = await ref
                           .read(doctorDashboardProvider.notifier)
                           .saveAvailability(
-                            activeSelected,
-                            consultationType: activeOnline
-                                ? 'online_consult'
-                                : 'visit_site',
+                            activeSelected(),
+                            consultationType: activeType,
                           );
                       if (ctx.mounted) {
                         Navigator.pop(ctx);

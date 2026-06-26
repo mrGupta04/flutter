@@ -232,6 +232,14 @@ class _RegistrationFormScreenState
         );
         return false;
       }
+      if (formState.offersBookHome &&
+          formState.selectedHomeAvailabilitySlots.isEmpty) {
+        SnackBarHelper.showError(
+          context,
+          'Select at least one home visit slot for this week.',
+        );
+        return false;
+      }
     }
 
     if (step == AppConstants.totalRegistrationSteps) {

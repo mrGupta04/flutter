@@ -233,12 +233,15 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                           showVerifiedIcon: true,
                           showActionButtons: d.offersOnlineConsult ||
                               d.offersVisitSite ||
+                              d.offersBookHome ||
                               doctorHasMapLocation(d),
                           onTap: () => onDoctorCardTap(context, d),
                           onOnlineConsultTap: () =>
                               openOnlineConsultBooking(context, d),
                           onClinicTap: () =>
                               openHospitalVisitBooking(context, d),
+                          onHomeVisitTap: () =>
+                              openHomeVisitBooking(context, d),
                           onOpenMapTap: () =>
                               openDoctorInGoogleMaps(context, d),
                         ),

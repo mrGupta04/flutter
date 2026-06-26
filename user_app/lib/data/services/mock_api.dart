@@ -324,6 +324,29 @@ class MockApi {
       }
     }
 
+    if (path == AppConstants.endpointHomeVisitBook && method == 'POST') {
+      final doctorId = data?['doctorId'] as String? ?? '';
+      try {
+        final booking = _db.createBooking(
+          doctorId: doctorId,
+          consultationType: 'book_home',
+          payload: data ?? {},
+        );
+        return _ok(
+          path,
+          method,
+          {
+            'success': true,
+            'message': 'Home visit booked',
+            'statusCode': 201,
+            'data': booking,
+          },
+        );
+      } catch (e) {
+        return _error(path, method, e.toString(), 409);
+      }
+    }
+
     if (path == AppConstants.endpointPatientBookings && method == 'GET') {
       final now = DateTime.now();
       final upcoming = now.add(const Duration(days: 2));

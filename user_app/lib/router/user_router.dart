@@ -9,6 +9,7 @@ import '../features/doctor_registration/presentation/screens/ambulance_search_sc
 import '../features/doctor_registration/presentation/screens/blood_bank_search_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_search_screen.dart';
 import '../features/hospital_visit/presentation/screens/hospital_visit_booking_screen.dart';
+import '../features/home_visit/presentation/screens/home_visit_booking_screen.dart';
 import '../features/online_consult/presentation/screens/online_consult_booking_screen.dart';
 import '../features/doctor_registration/presentation/screens/global_search_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_profile_screen.dart';
@@ -167,9 +168,21 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         name: 'careListing',
         pageBuilder: (context, state) {
           final roleValue = state.uri.queryParameters['role'];
+          final typeValue = state.uri.queryParameters['type'];
+          ConsultationType? doctorType;
+          if (typeValue == 'home') {
+            doctorType = ConsultationType.bookHome;
+          } else if (typeValue == 'online') {
+            doctorType = ConsultationType.onlineConsult;
+          } else if (typeValue == 'clinic' || typeValue == 'visit') {
+            doctorType = ConsultationType.visitSite;
+          }
           return slidePage(
             state,
-            CareListingScreen(initialRole: careRoleFromValue(roleValue)),
+            CareListingScreen(
+              initialRole: careRoleFromValue(roleValue),
+              initialDoctorType: doctorType,
+            ),
           );
         },
       ),
@@ -190,6 +203,17 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             initialQuery: state.uri.queryParameters['q'],
           ),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeHomeVisitBooking,
+        name: 'homeVisitBooking',
+        pageBuilder: (context, state) {
+          final doctorId = state.uri.queryParameters['doctorId'] ?? '';
+          return slidePage(
+            state,
+            HomeVisitBookingScreen(doctorId: doctorId),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeHospitalVisitBooking,

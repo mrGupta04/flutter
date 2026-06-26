@@ -11,7 +11,7 @@ extension ConsultationTypeX on ConsultationType {
       case ConsultationType.onlineConsult:
         return 'Online Consult';
       case ConsultationType.bookHome:
-        return 'Book Home';
+        return 'Home visit';
       case ConsultationType.visitSite:
         return 'Clinic visit';
     }
