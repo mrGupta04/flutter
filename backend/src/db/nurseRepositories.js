@@ -68,8 +68,13 @@ async function upsertNurse(data) {
     pincode: data.pincode ?? existing?.pincode,
     latitude: data.latitude ?? existing?.latitude,
     longitude: data.longitude ?? existing?.longitude,
-    availableForHomeVisit: data.availableForHomeVisit ?? existing?.availableForHomeVisit ?? false,
+    availableForHomeVisit: data.availableForHomeVisit ?? existing?.availableForHomeVisit ?? true,
+    homeVisitFee: data.homeVisitFee ?? existing?.homeVisitFee,
     shiftAvailability: data.shiftAvailability ?? existing?.shiftAvailability,
+    bankAccountHolderName: data.bankAccountHolderName ?? existing?.bankAccountHolderName,
+    bankAccountNumber: data.bankAccountNumber ?? existing?.bankAccountNumber,
+    ifscCode: data.ifscCode ?? existing?.ifscCode,
+    bankName: data.bankName ?? existing?.bankName,
     verificationStatus: (() => {
       const current = existing?.verificationStatus || 'pending';
       if (current === 'verified' || current === 'rejected') {

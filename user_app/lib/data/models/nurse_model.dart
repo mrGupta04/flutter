@@ -22,6 +22,7 @@ class NurseModel {
   final double? latitude;
   final double? longitude;
   final bool? availableForHomeVisit;
+  final int? homeVisitFee;
   final String? shiftAvailability;
   final VerificationStatus? verificationStatus;
 
@@ -45,6 +46,7 @@ class NurseModel {
     this.latitude,
     this.longitude,
     this.availableForHomeVisit,
+    this.homeVisitFee,
     this.shiftAvailability,
     this.verificationStatus,
   });
@@ -74,7 +76,8 @@ class NurseModel {
       pincode: json['pincode'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
-      availableForHomeVisit: json['availableForHomeVisit'] as bool?,
+      availableForHomeVisit: json['availableForHomeVisit'] as bool? ?? true,
+      homeVisitFee: _parseInt(json['homeVisitFee']),
       shiftAvailability: json['shiftAvailability'] as String?,
       verificationStatus: _parseStatus(json['verificationStatus'] as String?),
     );

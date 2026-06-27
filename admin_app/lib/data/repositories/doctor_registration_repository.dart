@@ -409,6 +409,52 @@ class DoctorRegistrationRepository {
     }
   }
 
+  Future<ApiResponse<DoctorBookingModel>> approveHomeVisitRequest({
+    required String bookingId,
+    String? doctorId,
+  }) async {
+    try {
+      final id = doctorId ?? await TokenStorage.instance.getDoctorId();
+      final response = await _dioService.post(
+        AppConstants.endpointDoctorApproveHomeVisit(bookingId),
+        data: id != null ? {'doctorId': id} : <String, dynamic>{},
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        statusCode: body['statusCode'] as int? ?? 200,
+        message: body['message'] as String?,
+        data: DoctorBookingModel.fromJson(data),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<DoctorBookingModel>> rejectHomeVisitRequest({
+    required String bookingId,
+    String? doctorId,
+  }) async {
+    try {
+      final id = doctorId ?? await TokenStorage.instance.getDoctorId();
+      final response = await _dioService.post(
+        AppConstants.endpointDoctorRejectHomeVisit(bookingId),
+        data: id != null ? {'doctorId': id} : <String, dynamic>{},
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        statusCode: body['statusCode'] as int? ?? 200,
+        message: body['message'] as String?,
+        data: DoctorBookingModel.fromJson(data),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   /// Get weekly availability (Sunday–Saturday, hourly slots).
   Future<ApiResponse<DoctorAvailabilityModel>> getAvailability({
     String? doctorId,

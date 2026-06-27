@@ -17,6 +17,16 @@ const {
 } = require('./prescriptionRepositories');
 const { buildRoomId } = require('../services/videoConsultService');
 const { notifyBookingConfirmed } = require('../services/bookingNotificationService');
+const { distanceKm } = require('../utils/geoDistance');
+
+const HOME_VISIT_APPROVAL_HOURS = parseInt(
+  process.env.HOME_VISIT_APPROVAL_HOURS || '48',
+  10,
+);
+const HOME_VISIT_PAYMENT_HOURS = parseInt(
+  process.env.HOME_VISIT_PAYMENT_HOURS || '24',
+  10,
+);
 
 function normalizeMobile(mobile) {
   return String(mobile || '').replace(/\D/g, '').slice(-10);
@@ -192,6 +202,32 @@ async function expirePendingBookings(doctorId) {
       },
     },
   );
+  await ConsultationBooking.updateMany(
+    {
+      ...(doctorId ? { doctorId } : {}),
+      status: 'awaiting_doctor_approval',
+      approvalExpiresAt: { $lte: now },
+    },
+    {
+      $set: {
+        status: 'cancelled',
+        paymentStatus: 'failed',
+      },
+    },
+  );
+  await ConsultationBooking.updateMany(
+    {
+      ...(doctorId ? { doctorId } : {}),
+      status: 'approved_pending_payment',
+      paymentExpiresAt: { $lte: now },
+    },
+    {
+      $set: {
+        status: 'cancelled',
+        paymentStatus: 'failed',
+      },
+    },
+  );
 }
 
 function isActivePendingBooking(booking, now = new Date()) {
@@ -210,9 +246,26 @@ function isActiveHeldBooking(booking, now = new Date()) {
   );
 }
 
+function isActiveAwaitingApproval(booking, now = new Date()) {
+  return (
+    booking.status === 'awaiting_doctor_approval' &&
+    (!booking.approvalExpiresAt || new Date(booking.approvalExpiresAt) > now)
+  );
+}
+
+function isActiveApprovedPendingPayment(booking, now = new Date()) {
+  return (
+    booking.status === 'approved_pending_payment' &&
+    booking.paymentExpiresAt &&
+    new Date(booking.paymentExpiresAt) > now
+  );
+}
+
 function isSlotReserved(booking, now = new Date()) {
   return (
     booking.status === 'confirmed' ||
+    isActiveAwaitingApproval(booking, now) ||
+    isActiveApprovedPendingPayment(booking, now) ||
     isActivePendingBooking(booking, now) ||
     isActiveHeldBooking(booking, now)
   );
@@ -256,7 +309,15 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
   const reserved = await ConsultationBooking.find({
     doctorId,
     consultationType,
-    status: { $in: ['confirmed', 'pending', 'held'] },
+    status: {
+      $in: [
+        'confirmed',
+        'pending',
+        'held',
+        'awaiting_doctor_approval',
+        'approved_pending_payment',
+      ],
+    },
     slotStart: { $gte: weekStart, $lte: weekEnd },
   }).lean();
 
@@ -342,6 +403,10 @@ function formatBookingResponse(booking, doctor) {
     patientState: booking.patientState,
     patientPincode: booking.patientPincode,
     visitReason: booking.visitReason,
+    patientLatitude: booking.patientLatitude ?? null,
+    patientLongitude: booking.patientLongitude ?? null,
+    distanceKm: booking.distanceKm ?? null,
+    doctorApprovedAt: booking.doctorApprovedAt ?? null,
     dayOfWeek: booking.dayOfWeek,
     startHour: booking.startHour,
     slotStart: booking.slotStart,
@@ -440,7 +505,15 @@ async function validateBookingPayload(payload, consultationType) {
     doctorId,
     slotStart,
     consultationType,
-    status: { $in: ['confirmed', 'pending', 'held'] },
+    status: {
+      $in: [
+        'confirmed',
+        'pending',
+        'held',
+        'awaiting_doctor_approval',
+        'approved_pending_payment',
+      ],
+    },
   });
   if (existing && isSlotReserved(existing)) {
     const err = new Error('This slot was just booked. Please choose another time.');
@@ -613,7 +686,7 @@ async function confirmBookingAfterPayment({
     return formatBookingResponse(booking, doctor);
   }
 
-  if (booking.status !== 'pending') {
+  if (booking.status !== 'pending' && booking.status !== 'approved_pending_payment') {
     const err = new Error('This booking is no longer available for payment');
     err.statusCode = 409;
     throw err;
@@ -762,7 +835,15 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
     doctorId,
     slotStart,
     consultationType,
-    status: { $in: ['confirmed', 'pending', 'held'] },
+    status: {
+      $in: [
+        'confirmed',
+        'pending',
+        'held',
+        'awaiting_doctor_approval',
+        'approved_pending_payment',
+      ],
+    },
   });
 
   if (existing && isSlotReserved(existing)) {
@@ -921,6 +1002,234 @@ async function createHomeVisitBooking(payload) {
   return createSlotBooking(payload, 'book_home');
 }
 
+function resolvePatientDistance(doctor, patientLatitude, patientLongitude) {
+  const lat = Number(patientLatitude);
+  const lon = Number(patientLongitude);
+  const doctorLat = doctor.latitude != null ? Number(doctor.latitude) : null;
+  const doctorLon = doctor.longitude != null ? Number(doctor.longitude) : null;
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon) ||
+    !Number.isFinite(doctorLat) ||
+    !Number.isFinite(doctorLon)
+  ) {
+    return null;
+  }
+  return distanceKm(doctorLat, doctorLon, lat, lon);
+}
+
+async function createHomeVisitRequest(payload) {
+  const consultationType = 'book_home';
+  const validated = await validateBookingPayload(payload, consultationType);
+  const {
+    doctor,
+    weekStart,
+    slotStart,
+    slotEnd,
+    d,
+    h,
+    mobile,
+    name,
+    patientId,
+    patientEmail,
+    patientNotes,
+    patientAddress,
+    patientCity,
+    patientState,
+    patientPincode,
+    visitReason,
+  } = validated;
+
+  const patientLatitude = payload.patientLatitude;
+  const patientLongitude = payload.patientLongitude;
+  const distance = resolvePatientDistance(
+    doctor,
+    patientLatitude,
+    patientLongitude,
+  );
+  const approvalExpiresAt = new Date(
+    Date.now() + HOME_VISIT_APPROVAL_HOURS * 60 * 60 * 1000,
+  );
+
+  const existingHold = await ConsultationBooking.findOne({
+    doctorId: payload.doctorId,
+    slotStart,
+    consultationType,
+    status: 'held',
+    paymentExpiresAt: { $gt: new Date() },
+  });
+
+  if (existingHold) {
+    if (patientId && existingHold.patientId && existingHold.patientId !== patientId) {
+      const err = new Error('This slot was just booked. Please choose another time.');
+      err.statusCode = 409;
+      throw err;
+    }
+    existingHold.status = 'awaiting_doctor_approval';
+    existingHold.patientId = patientId ? String(patientId) : existingHold.patientId;
+    existingHold.patientName = name;
+    existingHold.patientMobile = mobile;
+    existingHold.patientEmail = patientEmail ? String(patientEmail).trim() : undefined;
+    existingHold.patientNotes = patientNotes ? String(patientNotes).trim() : undefined;
+    existingHold.patientAddress = patientAddress ? String(patientAddress).trim() : undefined;
+    existingHold.patientCity = patientCity ? String(patientCity).trim() : undefined;
+    existingHold.patientState = patientState ? String(patientState).trim() : undefined;
+    existingHold.patientPincode = patientPincode ? String(patientPincode).trim() : undefined;
+    existingHold.visitReason = visitReason ? String(visitReason).trim() : undefined;
+    existingHold.patientLatitude = Number.isFinite(Number(patientLatitude))
+      ? Number(patientLatitude)
+      : undefined;
+    existingHold.patientLongitude = Number.isFinite(Number(patientLongitude))
+      ? Number(patientLongitude)
+      : undefined;
+    existingHold.distanceKm = distance ?? undefined;
+    existingHold.approvalExpiresAt = approvalExpiresAt;
+    existingHold.paymentStatus = 'pending';
+    await existingHold.save();
+    const doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
+    return formatBookingResponse(existingHold, doctor);
+  }
+
+  const booking = await ConsultationBooking.create({
+    id: uuidv4(),
+    doctorId: payload.doctorId,
+    patientId: patientId ? String(patientId) : undefined,
+    consultationType,
+    patientName: name,
+    patientMobile: mobile,
+    patientEmail: patientEmail ? String(patientEmail).trim() : undefined,
+    patientNotes: patientNotes ? String(patientNotes).trim() : undefined,
+    patientAddress: patientAddress ? String(patientAddress).trim() : undefined,
+    patientCity: patientCity ? String(patientCity).trim() : undefined,
+    patientState: patientState ? String(patientState).trim() : undefined,
+    patientPincode: patientPincode ? String(patientPincode).trim() : undefined,
+    visitReason: visitReason ? String(visitReason).trim() : undefined,
+    patientLatitude: Number.isFinite(Number(patientLatitude))
+      ? Number(patientLatitude)
+      : undefined,
+    patientLongitude: Number.isFinite(Number(patientLongitude))
+      ? Number(patientLongitude)
+      : undefined,
+    distanceKm: distance ?? undefined,
+    dayOfWeek: d,
+    startHour: h,
+    slotStart,
+    slotEnd,
+    weekStartDate: weekStart,
+    consultationFee: getConsultationFeeForType(doctor, consultationType),
+    status: 'awaiting_doctor_approval',
+    paymentStatus: 'pending',
+    paymentProvider: 'razorpay',
+    currency: 'INR',
+    approvalExpiresAt,
+  });
+
+  return formatBookingResponse(booking, doctor);
+}
+
+async function approveHomeVisitRequest(bookingId, doctorId) {
+  const booking = await ConsultationBooking.findOne({ id: bookingId });
+  if (!booking) {
+    const err = new Error('Booking not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (booking.doctorId !== doctorId) {
+    const err = new Error('You are not allowed to approve this booking');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (booking.consultationType !== 'book_home') {
+    const err = new Error('Only home visit requests can be approved here');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (booking.status !== 'awaiting_doctor_approval') {
+    const err = new Error('This request is no longer awaiting approval');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  booking.status = 'approved_pending_payment';
+  booking.doctorApprovedAt = new Date();
+  booking.paymentExpiresAt = new Date(
+    Date.now() + HOME_VISIT_PAYMENT_HOURS * 60 * 60 * 1000,
+  );
+  await booking.save();
+
+  const doctor = await findDoctorById(doctorId);
+  return formatBookingResponse(booking, doctor);
+}
+
+async function rejectHomeVisitRequest(bookingId, doctorId) {
+  const booking = await ConsultationBooking.findOne({ id: bookingId });
+  if (!booking) {
+    const err = new Error('Booking not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (booking.doctorId !== doctorId) {
+    const err = new Error('You are not allowed to reject this booking');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (booking.consultationType !== 'book_home') {
+    const err = new Error('Only home visit requests can be rejected here');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (booking.status !== 'awaiting_doctor_approval') {
+    const err = new Error('This request is no longer awaiting approval');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  booking.status = 'cancelled';
+  booking.paymentStatus = 'failed';
+  booking.doctorRejectedAt = new Date();
+  await booking.save();
+
+  const doctor = await findDoctorById(doctorId);
+  return formatBookingResponse(booking, doctor);
+}
+
+async function createPaymentOrderForBooking(bookingId) {
+  const booking = await ConsultationBooking.findOne({ id: bookingId });
+  if (!booking) {
+    const err = new Error('Booking not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (booking.status === 'pending' && booking.razorpayOrderId) {
+    const doctor = await findDoctorById(booking.doctorId);
+    const doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
+    return { booking, doctorName };
+  }
+
+  if (booking.status !== 'approved_pending_payment') {
+    const err = new Error('This booking is not ready for payment');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  if (booking.paymentExpiresAt && booking.paymentExpiresAt <= new Date()) {
+    booking.status = 'cancelled';
+    booking.paymentStatus = 'failed';
+    await booking.save();
+    const err = new Error('Payment window expired. Please request again.');
+    err.statusCode = 410;
+    throw err;
+  }
+
+  booking.status = 'pending';
+  await booking.save();
+
+  const doctor = await findDoctorById(booking.doctorId);
+  const doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
+  return { booking, doctorName };
+}
+
 async function listPatientBookings(patientId, mobileNumber) {
   const mobile = String(mobileNumber || '').replace(/\D/g, '').slice(-10);
   const orConditions = [{ patientId }];
@@ -936,8 +1245,24 @@ async function listPatientBookings(patientId, mobileNumber) {
   }
 
   const bookings = await ConsultationBooking.find({
-    status: 'confirmed',
-    $or: orConditions,
+    $and: [
+      { $or: orConditions },
+      {
+        $or: [
+          { status: 'confirmed' },
+          {
+            consultationType: 'book_home',
+            status: {
+              $in: [
+                'awaiting_doctor_approval',
+                'approved_pending_payment',
+                'pending',
+              ],
+            },
+          },
+        ],
+      },
+    ],
   })
     .sort({ slotStart: -1 })
     .limit(100)
@@ -991,6 +1316,8 @@ async function listPatientBookings(patientId, mobileNumber) {
       label: slotLabel,
       consultationFee: b.consultationFee,
       status: b.status,
+      paymentStatus: b.paymentStatus,
+      distanceKm: b.distanceKm ?? null,
       clinicName: doctor?.clinicName,
       clinicAddress: doctor ? buildClinicAddress(doctor) : undefined,
       createdAt: b.createdAt,
@@ -1009,7 +1336,14 @@ async function listPatientBookings(patientId, mobileNumber) {
 async function listDoctorBookings(doctorId) {
   const bookings = await ConsultationBooking.find({
     doctorId,
-    status: 'confirmed',
+    status: {
+      $in: [
+        'confirmed',
+        'awaiting_doctor_approval',
+        'approved_pending_payment',
+        'pending',
+      ],
+    },
   })
     .sort({ slotStart: 1 })
     .limit(50)
@@ -1041,6 +1375,7 @@ async function listDoctorBookings(doctorId) {
       title,
       subtitle: slotLabel,
       status: b.status,
+      paymentStatus: b.paymentStatus,
       slotStart: b.slotStart,
       slotEnd: b.slotEnd,
       patientName: b.patientName,
@@ -1056,6 +1391,10 @@ async function listDoctorBookings(doctorId) {
       typeLabel,
       consultationFee: b.consultationFee,
       isUpcoming: slotStart >= now,
+      patientLatitude: b.patientLatitude ?? null,
+      patientLongitude: b.patientLongitude ?? null,
+      distanceKm: b.distanceKm ?? null,
+      doctorApprovedAt: b.doctorApprovedAt ?? null,
       createdAt: b.createdAt,
       ...bookingAppointmentFields(b),
       ...videoJoinFields(b, now),
@@ -1072,6 +1411,10 @@ module.exports = {
   createOnlineConsultBooking,
   createHospitalVisitBooking,
   createHomeVisitBooking,
+  createHomeVisitRequest,
+  approveHomeVisitRequest,
+  rejectHomeVisitRequest,
+  createPaymentOrderForBooking,
   createPendingBookingForPayment,
   confirmBookingAfterPayment,
   verifyClinicAppointment,

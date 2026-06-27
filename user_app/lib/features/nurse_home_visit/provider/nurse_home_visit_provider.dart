@@ -1,20 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../data/models/bookable_slot_model.dart';
-import '../../../data/repositories/online_consult_repository.dart';
-import '../../online_consult/provider/online_consult_provider.dart';
+import '../../../data/repositories/nurse_home_visit_repository.dart';
 
-final bookableSlotsForHomeVisitProvider =
-    FutureProvider.family<BookableSlotsResponse, String>((ref, doctorId) async {
-  return ref.watch(
-    bookableSlotsProvider(
-      BookableSlotsQuery(doctorId: doctorId, consultationType: 'book_home'),
-    ).future,
-  );
+final nurseHomeVisitRepositoryProvider = Provider(
+  (ref) => NurseHomeVisitRepository(),
+);
+
+final nurseBookableSlotsProvider =
+    FutureProvider.family<BookableSlotsResponse, String>((ref, nurseId) async {
+  final repo = ref.watch(nurseHomeVisitRepositoryProvider);
+  final res = await repo.getBookableSlots(nurseId: nurseId);
+  if (!res.success || res.data == null) {
+    throw Exception(res.error ?? 'Could not load available slots');
+  }
+  return res.data!;
 });
 
-class HomeVisitBookingState {
-  const HomeVisitBookingState({
+class NurseHomeVisitBookingState {
+  const NurseHomeVisitBookingState({
     this.selectedSlot,
     this.slotHoldId,
     this.isReservingSlot = false,
@@ -30,7 +33,7 @@ class HomeVisitBookingState {
   final String? error;
   final ConsultationBookingResult? booking;
 
-  HomeVisitBookingState copyWith({
+  NurseHomeVisitBookingState copyWith({
     BookableSlot? selectedSlot,
     String? slotHoldId,
     bool? isReservingSlot,
@@ -40,7 +43,7 @@ class HomeVisitBookingState {
     bool clearSlot = false,
     bool clearHold = false,
   }) {
-    return HomeVisitBookingState(
+    return NurseHomeVisitBookingState(
       selectedSlot: clearSlot ? null : (selectedSlot ?? this.selectedSlot),
       slotHoldId: clearHold ? null : (slotHoldId ?? this.slotHoldId),
       isReservingSlot: isReservingSlot ?? this.isReservingSlot,
@@ -51,14 +54,13 @@ class HomeVisitBookingState {
   }
 }
 
-class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
-  HomeVisitBookingNotifier(
-    this._repository,
-    this._doctorId,
-  ) : super(const HomeVisitBookingState());
+class NurseHomeVisitBookingNotifier
+    extends StateNotifier<NurseHomeVisitBookingState> {
+  NurseHomeVisitBookingNotifier(this._repository, this._nurseId)
+      : super(const NurseHomeVisitBookingState());
 
-  final OnlineConsultRepository _repository;
-  final String _doctorId;
+  final NurseHomeVisitRepository _repository;
+  final String _nurseId;
 
   Future<void> selectSlot(BookableSlot? slot) async {
     if (slot == null) {
@@ -69,8 +71,7 @@ class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
 
     state = state.copyWith(isReservingSlot: true, error: null);
     final response = await _repository.holdSlot(
-      doctorId: _doctorId,
-      consultationType: 'book_home',
+      nurseId: _nurseId,
       dayOfWeek: slot.dayOfWeek,
       startHour: slot.startHour,
       slotStart: slot.slotStart,
@@ -103,7 +104,6 @@ class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
   }
 
   Future<bool> submit({
-    required String doctorId,
     required String patientName,
     required String patientMobile,
     required String patientAddress,
@@ -112,7 +112,6 @@ class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
     String? patientEmail,
     String? patientState,
     String? visitReason,
-    String? patientNotes,
     double? patientLatitude,
     double? patientLongitude,
   }) async {
@@ -125,11 +124,10 @@ class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
       final response = await _repository.requestHomeVisit(
-        doctorId: doctorId,
+        nurseId: _nurseId,
         patientName: patientName,
         patientMobile: patientMobile,
         patientEmail: patientEmail,
-        patientNotes: patientNotes,
         patientAddress: patientAddress,
         patientCity: patientCity,
         patientState: patientState,
@@ -143,7 +141,7 @@ class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
       );
 
       if (response.success && response.data != null) {
-        state = HomeVisitBookingState(booking: response.data);
+        state = NurseHomeVisitBookingState(booking: response.data);
         return true;
       }
 
@@ -162,12 +160,12 @@ class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
   }
 }
 
-final homeVisitBookingProvider = StateNotifierProvider.autoDispose
-    .family<HomeVisitBookingNotifier, HomeVisitBookingState, String>(
-  (ref, doctorId) {
-    final notifier = HomeVisitBookingNotifier(
-      ref.watch(onlineConsultRepositoryProvider),
-      doctorId,
+final nurseHomeVisitBookingProvider = StateNotifierProvider.autoDispose
+    .family<NurseHomeVisitBookingNotifier, NurseHomeVisitBookingState, String>(
+  (ref, nurseId) {
+    final notifier = NurseHomeVisitBookingNotifier(
+      ref.watch(nurseHomeVisitRepositoryProvider),
+      nurseId,
     );
     ref.onDispose(() {
       notifier.releaseHold();

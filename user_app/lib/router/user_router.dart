@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/constants/app_constants.dart';
 import '../core/router/router_transitions.dart';
+import '../data/models/consultation_type.dart';
 import '../features/doctor_registration/presentation/screens/care_listing_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_consultation_demo_screen.dart';
 import '../features/doctor_registration/presentation/screens/ambulance_search_screen.dart';
 import '../features/doctor_registration/presentation/screens/blood_bank_search_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_search_screen.dart';
 import '../features/hospital_visit/presentation/screens/hospital_visit_booking_screen.dart';
+import '../features/nurse_home_visit/presentation/screens/nurse_home_visit_booking_screen.dart';
 import '../features/home_visit/presentation/screens/home_visit_booking_screen.dart';
 import '../features/online_consult/presentation/screens/online_consult_booking_screen.dart';
 import '../features/doctor_registration/presentation/screens/global_search_screen.dart';
@@ -19,8 +21,6 @@ import '../features/ambulance_registration/presentation/screens/ambulance_applic
 import '../features/ambulance_registration/presentation/screens/ambulance_registration_screen.dart';
 import '../features/blood_bank_registration/presentation/screens/blood_bank_application_submitted_screen.dart';
 import '../features/blood_bank_registration/presentation/screens/blood_bank_registration_screen.dart';
-import '../features/nurse_registration/presentation/screens/nurse_application_submitted_screen.dart';
-import '../features/nurse_registration/presentation/screens/nurse_registration_screen.dart';
 import '../features/provider/presentation/screens/provider_landing_screen.dart';
 import '../features/user_auth/presentation/screens/user_login_screen.dart';
 import '../features/user_auth/presentation/screens/user_register_screen.dart';
@@ -116,22 +116,6 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: AppConstants.routeNurseRegistration,
-        name: 'nurseRegistration',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const NurseRegistrationScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppConstants.routeNurseApplicationSubmitted,
-        name: 'nurseApplicationSubmitted',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const NurseApplicationSubmittedScreen(),
-        ),
-      ),
-      GoRoute(
         path: AppConstants.routeAmbulanceRegistration,
         name: 'ambulanceRegistration',
         pageBuilder: (context, state) => slidePage(
@@ -203,6 +187,17 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             initialQuery: state.uri.queryParameters['q'],
           ),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeNurseHomeVisitBooking,
+        name: 'nurseHomeVisitBooking',
+        pageBuilder: (context, state) {
+          final nurseId = state.uri.queryParameters['nurseId'] ?? '';
+          return slidePage(
+            state,
+            NurseHomeVisitBookingScreen(nurseId: nurseId),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeHomeVisitBooking,

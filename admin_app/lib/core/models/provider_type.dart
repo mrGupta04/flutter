@@ -49,6 +49,7 @@ enum ProviderType {
       case ProviderType.doctor:
         return '/doctor-dashboard';
       case ProviderType.nurse:
+        return '/nurse-dashboard';
       case ProviderType.ambulance:
       case ProviderType.bloodBank:
         return '/provider-profile';

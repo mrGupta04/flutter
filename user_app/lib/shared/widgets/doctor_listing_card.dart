@@ -32,6 +32,7 @@ class DoctorListingCard extends StatelessWidget {
     this.showActionButtons = true,
     this.fadeUnavailableConsultationButtons = false,
     this.actionStyle = DoctorCardActionStyle.patient,
+    this.consultationFilter,
     this.adminActionLabel = 'Review application',
     this.adminActionSubtitle = 'View profile & documents',
     this.onAdminActionTap,
@@ -50,6 +51,7 @@ class DoctorListingCard extends StatelessWidget {
   final bool showActionButtons;
   final bool fadeUnavailableConsultationButtons;
   final DoctorCardActionStyle actionStyle;
+  final ConsultationType? consultationFilter;
   final String adminActionLabel;
   final String adminActionSubtitle;
   final VoidCallback? onAdminActionTap;
@@ -265,7 +267,17 @@ class DoctorListingCard extends StatelessWidget {
                           if (showActionButtons) ...[
                             const SizedBox(height: 12),
                             if (actionStyle == DoctorCardActionStyle.patient)
-                              _PatientActionButtonRow(
+                              consultationFilter != null
+                                  ? _FilteredActionButtonRow(
+                                      doctor: doctor,
+                                      filter: consultationFilter!,
+                                      onOnlineConsult:
+                                          onOnlineConsultTap ?? onTap,
+                                      onClinic: onClinicTap ?? onTap,
+                                      onHomeVisit: onHomeVisitTap ?? onTap,
+                                      onOpenMap: onOpenMapTap,
+                                    )
+                                  : _PatientActionButtonRow(
                                 doctor: doctor,
                                 fadeUnavailable:
                                     fadeUnavailableConsultationButtons,
@@ -472,6 +484,98 @@ class _ServicePill extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FilteredActionButtonRow extends StatelessWidget {
+  const _FilteredActionButtonRow({
+    required this.doctor,
+    required this.filter,
+    this.onOnlineConsult,
+    this.onClinic,
+    this.onHomeVisit,
+    this.onOpenMap,
+  });
+
+  final DoctorModel doctor;
+  final ConsultationType filter;
+  final VoidCallback? onOnlineConsult;
+  final VoidCallback? onClinic;
+  final VoidCallback? onHomeVisit;
+  final VoidCallback? onOpenMap;
+
+  bool get _hasMapLocation =>
+      doctor.latitude != null && doctor.longitude != null ||
+      [
+        doctor.address,
+        doctor.city,
+        doctor.clinicName,
+      ].any((part) => part != null && part.trim().isNotEmpty);
+
+  IconData get _bookIcon {
+    switch (filter) {
+      case ConsultationType.onlineConsult:
+        return Icons.videocam_rounded;
+      case ConsultationType.bookHome:
+        return Icons.home_rounded;
+      case ConsultationType.visitSite:
+        return Icons.local_hospital_rounded;
+    }
+  }
+
+  bool get _bookAvailable {
+    switch (filter) {
+      case ConsultationType.onlineConsult:
+        return doctor.offersOnlineConsult;
+      case ConsultationType.bookHome:
+        return doctor.offersBookHome;
+      case ConsultationType.visitSite:
+        return doctor.offersVisitSite;
+    }
+  }
+
+  VoidCallback? get _bookOnPressed {
+    switch (filter) {
+      case ConsultationType.onlineConsult:
+        return onOnlineConsult;
+      case ConsultationType.bookHome:
+        return onHomeVisit;
+      case ConsultationType.visitSite:
+        return onClinic;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bookButton = _ConsultationActionButton(
+      icon: _bookIcon,
+      label: 'Book',
+      available: _bookAvailable,
+      fadeUnavailable: false,
+      onPressed: _bookOnPressed,
+    );
+
+    if (filter != ConsultationType.visitSite) {
+      return bookButton;
+    }
+
+    return Row(
+      children: [
+        Expanded(child: bookButton),
+        if (_hasMapLocation) ...[
+          const SizedBox(width: 6),
+          Expanded(
+            child: _ConsultationActionButton(
+              icon: Icons.map_rounded,
+              label: 'Map',
+              available: true,
+              fadeUnavailable: false,
+              onPressed: onOpenMap,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

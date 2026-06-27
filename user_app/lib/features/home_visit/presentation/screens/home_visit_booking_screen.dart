@@ -19,9 +19,9 @@ import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../../../core/services/location_service.dart';
 import '../../../../core/utils/user_auth_guard.dart';
 import '../../provider/home_visit_provider.dart';
-import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 
 class HomeVisitBookingScreen extends ConsumerStatefulWidget {
   const HomeVisitBookingScreen({super.key, required this.doctorId});
@@ -45,6 +45,9 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
   final _reasonController = TextEditingController();
   String? _selectedDateKey;
   Timer? _slotsRefreshTimer;
+  double? _patientLatitude;
+  double? _patientLongitude;
+  bool _isFetchingLocation = false;
 
   BookableSlotsQuery get _slotsQuery => BookableSlotsQuery(
         doctorId: widget.doctorId,
@@ -93,6 +96,26 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
     super.dispose();
   }
 
+  Future<void> _useMyLocation() async {
+    setState(() => _isFetchingLocation = true);
+    try {
+      final position = await LocationService.getCurrentPosition();
+      if (!mounted) return;
+      setState(() {
+        _patientLatitude = position.latitude;
+        _patientLongitude = position.longitude;
+      });
+      SnackBarHelper.showSuccess(
+        context,
+        'Location captured. Add your address details below.',
+      );
+    } on LocationFailure catch (e) {
+      if (mounted) SnackBarHelper.showError(context, e.message);
+    } finally {
+      if (mounted) setState(() => _isFetchingLocation = false);
+    }
+  }
+
   Future<void> _submit(DoctorModel doctor) async {
     if (!await ensureUserLoggedIn(context)) return;
     if (!_formKey.currentState!.validate()) return;
@@ -109,6 +132,8 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
           patientPincode: _pincodeController.text.trim(),
           patientState: _stateController.text.trim(),
           visitReason: _reasonController.text.trim(),
+          patientLatitude: _patientLatitude,
+          patientLongitude: _patientLongitude,
         );
 
     if (!mounted) return;
@@ -126,20 +151,29 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          title: const Text('Payment successful'),
+          title: const Text('Request sent'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Dr. ${booking?.doctorName ?? doctor.fullName} will visit your home at the scheduled time.',
+                  'Your home visit request was sent to Dr. ${booking?.doctorName ?? doctor.fullName}.',
                   style: AppTextStyles.bodyMedium,
                 ),
-                if (booking?.consultationFee != null) ...[
-                  const SizedBox(height: 8),
+                const SizedBox(height: 8),
+                Text(
+                  'The doctor will review your address and distance. '
+                  'You will be notified when they approve — then you can pay to confirm.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                if (booking?.distanceKm != null) ...[
+                  const SizedBox(height: 12),
                   Text(
-                    'Amount paid: ₹${booking!.consultationFee}',
+                    'Approx. distance: ${booking!.distanceKm} km',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
@@ -215,21 +249,15 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
       );
       if (booking != null) {
         ref.invalidate(bookableSlotsProvider(_slotsQuery));
-        ref
-            .read(upcomingMeetingTimerProvider.notifier)
-            .registerConsultationResult(booking);
       }
     } else {
       final err = ref.read(homeVisitBookingProvider(widget.doctorId)).error;
-      SnackBarHelper.showError(context, err ?? 'Booking failed');
+      SnackBarHelper.showError(context, err ?? 'Request failed');
     }
   }
 
-  String _payButtonLabel(int? fee) {
-    if (fee != null && fee > 0) {
-      return 'Pay ₹$fee & book home visit';
-    }
-    return 'Pay & book home visit';
+  String _submitButtonLabel() {
+    return 'Request home visit';
   }
 
   @override
@@ -371,6 +399,25 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                           ),
                         ),
                         const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed:
+                              _isFetchingLocation ? null : _useMyLocation,
+                          icon: _isFetchingLocation
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.my_location_rounded),
+                          label: Text(
+                            _patientLatitude != null
+                                ? 'Location captured'
+                                : 'Use my live location',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         CustomTextField(
                           controller: _nameController,
                           label: 'Full name',
@@ -484,14 +531,9 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
             BottomCtaBar(
               child: CustomButton(
                 label: bookingState.selectedSlot != null
-                    ? _payButtonLabel(
-                        slotsAsync.valueOrNull?.consultationFee ??
-                            doctor.feeForConsultationType(
-                              ConsultationType.bookHome,
-                            ),
-                      )
+                    ? _submitButtonLabel()
                     : 'Select visit time',
-                icon: Icons.payments_rounded,
+                icon: Icons.send_rounded,
                 isEnabled: bookingState.selectedSlot != null &&
                     !bookingState.isReservingSlot,
                 isLoading:

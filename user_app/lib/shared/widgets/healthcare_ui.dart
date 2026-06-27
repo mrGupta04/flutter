@@ -180,12 +180,10 @@ class OneMgQuickActions extends StatelessWidget {
   const OneMgQuickActions({
     super.key,
     this.onDoctorRegistration,
-    this.onNurseRegistration,
     this.onRegisterPractice,
   });
 
   final VoidCallback? onDoctorRegistration;
-  final VoidCallback? onNurseRegistration;
   final VoidCallback? onRegisterPractice;
 
   @override
@@ -200,15 +198,6 @@ class OneMgQuickActions extends StatelessWidget {
               label: 'Doctor\nRegistration',
               color: AppColors.primary,
               onTap: onDoctorRegistration,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _QuickAction(
-              icon: Icons.health_and_safety_rounded,
-              label: 'Nurse\nRegistration',
-              color: AppColors.secondary,
-              onTap: onNurseRegistration,
             ),
           ),
           const SizedBox(width: 10),

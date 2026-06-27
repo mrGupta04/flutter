@@ -57,7 +57,11 @@ class DoctorDashboardState {
       .toList(growable: false);
 
   List<DoctorBookingModel> get upcomingHomeBookings => bookings
-      .where((b) => b.isUpcoming && b.isHomeVisit)
+      .where((b) => b.isUpcoming && b.isHomeVisit && b.status == 'confirmed')
+      .toList(growable: false);
+
+  List<DoctorBookingModel> get pendingHomeVisitRequests => bookings
+      .where((b) => b.isHomeVisit && b.isAwaitingDoctorApproval)
       .toList(growable: false);
 
   List<DoctorBookingModel> get pastBookings =>
@@ -427,6 +431,54 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
       state = state.copyWith(
         isSavingAvailability: false,
         error: 'An error occurred',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> approveHomeVisitRequest(String bookingId) async {
+    state = state.copyWith(isUpdating: true, error: null);
+    try {
+      final response =
+          await repository.approveHomeVisitRequest(bookingId: bookingId);
+      if (response.success) {
+        await loadBookings();
+        state = state.copyWith(isUpdating: false, error: null);
+        return true;
+      }
+      state = state.copyWith(
+        isUpdating: false,
+        error: response.error ?? 'Could not approve request',
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isUpdating: false,
+        error: 'Could not approve request',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> rejectHomeVisitRequest(String bookingId) async {
+    state = state.copyWith(isUpdating: true, error: null);
+    try {
+      final response =
+          await repository.rejectHomeVisitRequest(bookingId: bookingId);
+      if (response.success) {
+        await loadBookings();
+        state = state.copyWith(isUpdating: false, error: null);
+        return true;
+      }
+      state = state.copyWith(
+        isUpdating: false,
+        error: response.error ?? 'Could not decline request',
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isUpdating: false,
+        error: 'Could not decline request',
       );
       return false;
     }

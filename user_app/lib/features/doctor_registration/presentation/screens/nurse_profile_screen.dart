@@ -13,6 +13,7 @@ import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../provider/nurse_profile_provider.dart';
 
 class NurseProfileScreen extends ConsumerWidget {
@@ -142,31 +143,33 @@ class _NurseProfileBody extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const MarketplaceSectionTitle(title: 'Location & availability'),
+          const MarketplaceSectionTitle(title: 'Home visit nursing'),
           _InfoCard(
             children: [
               if (_locationLine(nurse).isNotEmpty)
                 _InfoRow(
                   icon: Icons.location_on_outlined,
-                  label: 'Location',
+                  label: 'Base location',
                   value: _locationLine(nurse),
                 ),
-              _InfoRow(
-                icon: Icons.home_outlined,
-                label: 'Home visit',
-                value: nurse.availableForHomeVisit == true ? 'Available' : 'Not listed',
-              ),
-              if (nurse.shiftAvailability != null &&
-                  nurse.shiftAvailability!.trim().isNotEmpty)
+              if (nurse.homeVisitFee != null)
                 _InfoRow(
-                  icon: Icons.schedule_outlined,
-                  label: 'Shift / availability',
-                  value: nurse.shiftAvailability!.trim(),
+                  icon: Icons.currency_rupee_rounded,
+                  label: 'Home visit fee',
+                  value: '₹${nurse.homeVisitFee}',
                 ),
             ],
           ),
+          const SizedBox(height: 24),
+          CustomButton(
+            label: nurse.homeVisitFee != null
+                ? 'Book home visit • ₹${nurse.homeVisitFee}'
+                : 'Book home visit',
+            icon: Icons.home_rounded,
+            onPressed: () => openNurseHomeVisitBooking(context, nurse),
+          ),
           if (nurse.mobileNumber != null && nurse.mobileNumber!.isNotEmpty) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
             CustomButton(
               label: 'Call ${nurse.mobileNumber}',
               icon: Icons.phone_rounded,

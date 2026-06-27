@@ -23,6 +23,7 @@ import '../features/doctor_dashboard/presentation/screens/doctor_dashboard_scree
 import '../features/doctor_registration/presentation/screens/application_submitted_screen.dart';
 import '../features/doctor_registration/presentation/screens/registration_form_screen.dart';
 import '../features/nurse_registration/presentation/screens/nurse_application_submitted_screen.dart';
+import '../features/nurse_dashboard/presentation/screens/nurse_dashboard_screen.dart';
 import '../features/nurse_registration/presentation/screens/nurse_registration_screen.dart';
 import '../features/auth/presentation/screens/provider_auth_gate_screen.dart';
 import '../features/auth/presentation/screens/provider_login_screen.dart';
@@ -54,6 +55,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
 
       if (loc == AppConstants.routeDoctorDashboard ||
+          loc == AppConstants.routeNurseDashboard ||
           loc == AppConstants.routeProviderProfile) {
         if (ref.read(providerAuthProvider).isAuthenticated) {
           return null;
@@ -205,6 +207,14 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadePage(
           state,
           const DoctorDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeNurseDashboard,
+        name: 'nurseDashboard',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          const NurseDashboardScreen(),
         ),
       ),
       GoRoute(

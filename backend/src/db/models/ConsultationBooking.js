@@ -3,7 +3,13 @@ const mongoose = require('mongoose');
 const consultationBookingSchema = new mongoose.Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
-    doctorId: { type: String, required: true, index: true },
+    doctorId: { type: String, index: true },
+    nurseId: { type: String, index: true },
+    providerType: {
+      type: String,
+      enum: ['doctor', 'nurse'],
+      default: 'doctor',
+    },
     patientId: { type: String, index: true },
     consultationType: {
       type: String,
@@ -19,6 +25,12 @@ const consultationBookingSchema = new mongoose.Schema(
     patientState: String,
     patientPincode: String,
     visitReason: String,
+    patientLatitude: Number,
+    patientLongitude: Number,
+    distanceKm: Number,
+    doctorApprovedAt: Date,
+    doctorRejectedAt: Date,
+    approvalExpiresAt: { type: Date, index: true },
     dayOfWeek: { type: Number, required: true, min: 0, max: 6 },
     startHour: { type: Number, required: true, min: 8, max: 17 },
     slotStart: { type: Date, required: true, index: true },
@@ -28,7 +40,14 @@ const consultationBookingSchema = new mongoose.Schema(
     status: {
       type: String,
       default: 'pending',
-      enum: ['held', 'pending', 'confirmed', 'cancelled'],
+      enum: [
+        'held',
+        'pending',
+        'awaiting_doctor_approval',
+        'approved_pending_payment',
+        'confirmed',
+        'cancelled',
+      ],
       index: true,
     },
     paymentStatus: {
@@ -70,11 +89,35 @@ const consultationBookingSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+const activeBookingStatuses = {
+  $in: [
+    'confirmed',
+    'pending',
+    'held',
+    'awaiting_doctor_approval',
+    'approved_pending_payment',
+  ],
+};
+
 consultationBookingSchema.index(
   { doctorId: 1, slotStart: 1 },
   {
     unique: true,
-    partialFilterExpression: { status: { $in: ['confirmed', 'pending', 'held'] } },
+    partialFilterExpression: {
+      doctorId: { $exists: true, $type: 'string', $ne: '' },
+      status: activeBookingStatuses,
+    },
+  },
+);
+
+consultationBookingSchema.index(
+  { nurseId: 1, slotStart: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      nurseId: { $exists: true, $type: 'string', $ne: '' },
+      status: activeBookingStatuses,
+    },
   },
 );
 

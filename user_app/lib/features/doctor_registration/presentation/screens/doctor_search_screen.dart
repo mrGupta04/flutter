@@ -3,18 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/consultation_type_cards.dart';
-import '../../../../shared/widgets/horizontal_filter_chips.dart';
+import '../../../../shared/widgets/doctor_listing_card.dart';
+import '../../../../shared/widgets/searchable_filter_dropdown.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../../shared/widgets/user_app_footer.dart';
+import '../../provider/care_filter_constants.dart';
 import '../../provider/doctor_search_provider.dart';
 import '../../provider/doctor_live_status_provider.dart';
-import '../../../../shared/widgets/doctor_listing_card.dart';
-import '../../../../shared/widgets/user_app_footer.dart';
 import '../widgets/doctor_search_result_tile.dart';
 
 class DoctorSearchScreen extends ConsumerStatefulWidget {
@@ -39,17 +41,8 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
   String? _query;
   String? _city;
   String? _specialization;
+  int? _minYearsExperience;
   ConsultationType _consultationType = ConsultationType.onlineConsult;
-
-  static const _popularCities = [
-    'Mumbai',
-    'Delhi',
-    'Bangalore',
-    'Hyderabad',
-    'Chennai',
-    'Pune',
-    'Kolkata',
-  ];
 
   @override
   void initState() {
@@ -57,12 +50,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
     _query = widget.initialQuery;
     _city = widget.initialCity;
     _specialization = widget.initialSpecialization;
-    _controller = TextEditingController(
-      text: widget.initialQuery ??
-          widget.initialCity ??
-          widget.initialSpecialization ??
-          '',
-    );
+    _controller = TextEditingController(text: widget.initialQuery ?? '');
     _controller.addListener(_onTextChanged);
   }
 
@@ -82,27 +70,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
         _query = _controller.text.trim().isEmpty
             ? null
             : _controller.text.trim();
-        _city = null;
-        _specialization = null;
       });
-    });
-  }
-
-  void _applyCityFilter(String city) {
-    setState(() {
-      _city = city;
-      _specialization = null;
-      _query = null;
-      _controller.text = city;
-    });
-  }
-
-  void _applySpecializationFilter(String specialization) {
-    setState(() {
-      _specialization = specialization;
-      _city = null;
-      _query = null;
-      _controller.text = specialization;
     });
   }
 
@@ -111,6 +79,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
       _query = null;
       _city = null;
       _specialization = null;
+      _minYearsExperience = null;
       _controller.clear();
     });
   }
@@ -119,16 +88,12 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
         query: _query,
         city: _city,
         specialization: _specialization,
+        minYearsExperience: _minYearsExperience,
         consultationType: _consultationType,
       );
 
-  String? get _selectedCategoryLabel {
-    if (_specialization == null) return null;
-    for (final entry in categorySpecializationMap.entries) {
-      if (entry.value == _specialization) return entry.key;
-    }
-    return null;
-  }
+  bool get _hasActiveFilters =>
+      _params.hasTextFilters || _controller.text.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -155,9 +120,9 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
                   widget.initialCity == null &&
                   widget.initialSpecialization == null,
               decoration: InputDecoration(
-                hintText: 'Search by name, city, specialty, clinic...',
+                hintText: 'Search by name, clinic, keyword...',
                 prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _params.hasTextFilters
+                suffixIcon: _hasActiveFilters
                     ? IconButton(
                         icon: const Icon(Icons.clear_rounded),
                         onPressed: _clearFilters,
@@ -177,9 +142,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
               textInputAction: TextInputAction.search,
               onSubmitted: (value) {
                 setState(() {
-                  _query = value.trim();
-                  _city = null;
-                  _specialization = null;
+                  _query = value.trim().isEmpty ? null : value.trim();
                 });
               },
             ),
@@ -201,17 +164,41 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          HorizontalFilterChips(
-            labels: _popularCities,
-            selected: _city,
-            onSelected: _applyCityFilter,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SearchableFilterDropdown(
+              label: 'City',
+              value: _city,
+              allLabel: 'All cities',
+              searchHint: 'Search city...',
+              options: doctorSearchCities,
+              onChanged: (city) => setState(() => _city = city),
+            ),
           ),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: categorySpecializationMap.keys.toList(),
-            selected: _selectedCategoryLabel,
-            onSelected: (key) =>
-                _applySpecializationFilter(categorySpecializationMap[key]!),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SearchableFilterDropdown(
+              label: 'Specialization',
+              value: _specialization,
+              allLabel: 'All specializations',
+              searchHint: 'Search specialization...',
+              options: AppLists.specializations,
+              onChanged: (specialization) =>
+                  setState(() => _specialization = specialization),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FilterDropdown<int?>(
+              label: 'Years of experience',
+              value: _minYearsExperience,
+              items: doctorMinExperienceOptions,
+              itemLabel: doctorMinExperienceLabel,
+              onChanged: (years) =>
+                  setState(() => _minYearsExperience = years),
+            ),
           ),
           const SizedBox(height: 12),
           Expanded(
@@ -252,7 +239,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Try another consultation type, city, specialty, or keyword',
+                    'Try another consultation type, city, specialty, experience, or keyword',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),

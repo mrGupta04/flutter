@@ -9,6 +9,45 @@ const popularCareCities = [
   'Kolkata',
 ];
 
+/// Cities available in doctor search dropdown (searchable).
+const doctorSearchCities = [
+  ...popularCareCities,
+  'Ahmedabad',
+  'Jaipur',
+  'Lucknow',
+  'Chandigarh',
+  'Coimbatore',
+  'Indore',
+  'Bhopal',
+  'Nagpur',
+  'Visakhapatnam',
+  'Kochi',
+  'Surat',
+  'Noida',
+  'Gurgaon',
+  'Thiruvananthapuram',
+  'Mysore',
+  'Vadodara',
+  'Patna',
+  'Guwahati',
+  'Varanasi',
+  'Dehradun',
+  'Ranchi',
+  'Raipur',
+  'Bhubaneswar',
+  'Mangalore',
+  'Agra',
+  'Ludhiana',
+];
+
+/// Minimum years of experience filter values for doctor search.
+const doctorMinExperienceOptions = <int?>[null, 1, 3, 5, 10, 15];
+
+String doctorMinExperienceLabel(int? years) {
+  if (years == null) return 'Any experience';
+  return '$years+ years';
+}
+
 /// Nurse specialization filter chips.
 const nurseSpecializationFilters = [
   'Geriatric',

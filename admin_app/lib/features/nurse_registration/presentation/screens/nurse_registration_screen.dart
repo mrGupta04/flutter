@@ -1,21 +1,13 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/nurse_constants.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/constants/phone_countries.dart';
-import '../../../../core/utils/validation_utils.dart';
-import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../core/widgets/custom_widgets.dart';
-import '../../../../data/models/nurse_model.dart';
-import '../../../../shared/widgets/profile_picture_picker.dart';
-import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../provider/nurse_registration_provider.dart';
+import '../widgets/nurse_registration_step_widgets.dart';
 
 class NurseRegistrationScreen extends ConsumerStatefulWidget {
   const NurseRegistrationScreen({super.key});
@@ -27,361 +19,236 @@ class NurseRegistrationScreen extends ConsumerStatefulWidget {
 
 class _NurseRegistrationScreenState
     extends ConsumerState<NurseRegistrationScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _mobileController = TextEditingController();
-  final _registrationController = TextEditingController();
-  final _councilController = TextEditingController();
-  final _experienceController = TextEditingController();
-  final _qualificationController = TextEditingController();
-  final _specializationController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _stateController = TextEditingController();
-  final _pincodeController = TextEditingController();
-  final _shiftController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  String _countryCode = PhoneCountries.defaultDialCode;
-  bool _availableForHomeVisit = false;
-  double? _latitude;
-  double? _longitude;
-  Uint8List? _profileImageBytes;
-  String? _profileImageFileName;
+  late PageController _pageController;
+  late List<GlobalKey<FormState>> _formKeys;
+
+  static const _stepTitles = [
+    ('Personal details', 'Name, contact & profile photo'),
+    ('Professional info', 'License, specialty & home visit fee'),
+    ('Base location', 'Address & map pin'),
+    ('Upload documents', 'License, ID & certificates'),
+    ('Payout details', 'Bank account & cancelled cheque'),
+    ('Weekly availability', 'Home visit slots (Sun–Sat, 8 AM–6 PM)'),
+    ('Review & submit', 'Confirm before admin verification'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0);
+    _formKeys = List.generate(4, (_) => GlobalKey<FormState>());
+  }
 
   @override
   void dispose() {
-    for (final c in [
-      _firstNameController,
-      _lastNameController,
-      _emailController,
-      _mobileController,
-      _registrationController,
-      _councilController,
-      _experienceController,
-      _qualificationController,
-      _specializationController,
-      _addressController,
-      _cityController,
-      _stateController,
-      _pincodeController,
-      _shiftController,
-      _passwordController,
-      _confirmPasswordController,
-    ]) {
-      c.dispose();
-    }
+    _pageController.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(nurseRegistrationProvider);
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Nurse registration')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Join as Nurse',
-                style: AppTextStyles.titleLarge.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Submit your details for admin verification. After approval, '
-                'you will appear in the user app.',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 18),
-              ProfilePicturePicker(
-                imageBytes: _profileImageBytes,
-                onImagePicked: (bytes, fileName) {
-                  setState(() {
-                    _profileImageBytes = bytes;
-                    _profileImageFileName = fileName;
-                  });
-                },
-                onError: (msg) => SnackBarHelper.showError(context, msg),
-              ),
-              const SizedBox(height: 18),
-              _sectionTitle('Personal details'),
-              CustomTextField(
-                controller: _firstNameController,
-                label: 'First Name',
-                hint: 'Enter first name',
-                prefixIcon: Icons.person_outline_rounded,
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _lastNameController,
-                label: 'Last Name',
-                hint: 'Enter last name',
-                prefixIcon: Icons.person_outline_rounded,
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _emailController,
-                label: 'Email',
-                hint: 'example@email.com',
-                prefixIcon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-                validator: _emailValidator,
-              ),
-              const SizedBox(height: 12),
-              MobileNumberField(
-                mobileController: _mobileController,
-                countryCode: _countryCode,
-                onCountryCodeChanged: (code) =>
-                    setState(() => _countryCode = code),
-                label: 'Mobile Number',
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _passwordController,
-                label: 'Password',
-                hint: 'Create a strong password',
-                prefixIcon: Icons.lock_outline_rounded,
-                obscureText: true,
-                validator: ValidationUtils.validatePassword,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _confirmPasswordController,
-                label: 'Confirm Password',
-                hint: 'Re-enter password',
-                prefixIcon: Icons.lock_outline_rounded,
-                obscureText: true,
-                validator: (v) => ValidationUtils.validatePasswordMatch(
-                  _passwordController.text,
-                  v,
-                ),
-              ),
-              const SizedBox(height: 18),
-              _sectionTitle('Professional details'),
-              CustomTextField(
-                controller: _qualificationController,
-                label: 'Qualification',
-                hint: 'GNM / B.Sc Nursing / ANM',
-                prefixIcon: Icons.school_outlined,
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _registrationController,
-                label: 'Registration Number',
-                hint: 'Nursing council registration no.',
-                prefixIcon: Icons.badge_outlined,
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _councilController,
-                label: 'Nursing Council',
-                hint: 'State nursing council',
-                prefixIcon: Icons.account_balance_outlined,
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _experienceController,
-                label: 'Years of Experience',
-                hint: 'e.g. 3',
-                prefixIcon: Icons.work_outline_rounded,
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  final parsed = int.tryParse((value ?? '').trim());
-                  if (parsed == null || parsed < 0) {
-                    return 'Enter valid experience';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _specializationController,
-                label: 'Specialization',
-                hint: 'ICU, Pediatric, Home care, etc.',
-                prefixIcon: Icons.medical_information_outlined,
-                validator: _required,
-              ),
-              const SizedBox(height: 18),
-              _sectionTitle('Location'),
-              CustomTextField(
-                controller: _addressController,
-                label: 'Address',
-                hint: 'Full address',
-                prefixIcon: Icons.home_outlined,
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _cityController,
-                label: 'City',
-                hint: 'Your city',
-                prefixIcon: Icons.location_city_outlined,
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _stateController,
-                label: 'State',
-                hint: 'Your state',
-                prefixIcon: Icons.map_outlined,
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _pincodeController,
-                label: 'Pincode',
-                hint: '6-digit pincode',
-                prefixIcon: Icons.pin_drop_outlined,
-                keyboardType: TextInputType.number,
-                validator: (v) {
-                  if ((v ?? '').trim().length != 6) return 'Enter valid pincode';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              Text('Map Location', style: AppTextStyles.titleMedium),
-              const SizedBox(height: 8),
-              RegistrationMapPicker(
-                addressController: _addressController,
-                cityController: _cityController,
-                stateController: _stateController,
-                pincodeController: _pincodeController,
-                initialLatitude: _latitude,
-                initialLongitude: _longitude,
-                onLocationChanged: (lat, lng) => setState(() {
-                  _latitude = lat;
-                  _longitude = lng;
-                }),
-                emptyHint:
-                    'Tap the map or use current location to pin your work location.',
-                webTitle: 'Work location',
-              ),
-              const SizedBox(height: 18),
-              _sectionTitle('Availability'),
-              CustomTextField(
-                controller: _shiftController,
-                label: 'Shift Availability',
-                hint: 'Day / Night / Both',
-                prefixIcon: Icons.schedule_outlined,
-                validator: _required,
-              ),
-              const SizedBox(height: 8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Available for home visit'),
-                value: _availableForHomeVisit,
-                onChanged: (v) => setState(() => _availableForHomeVisit = v),
-              ),
-              if (state.error != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  state.error!,
-                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
-                ),
-              ],
-              const SizedBox(height: 18),
-              CustomButton(
-                label: 'Submit Nurse Registration',
-                isLoading: state.isSubmitting,
-                onPressed: _submit,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _nextStep() {
+    final currentStep = ref.read(currentNurseStepProvider);
+    if (!_validateStep(currentStep)) return;
+    if (currentStep < totalNurseRegistrationSteps) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+      ref.read(currentNurseStepProvider.notifier).state = currentStep + 1;
+    }
   }
 
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        title,
-        style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
-      ),
-    );
+  void _previousStep() {
+    final currentStep = ref.read(currentNurseStepProvider);
+    if (currentStep > 1) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+      ref.read(currentNurseStepProvider.notifier).state = currentStep - 1;
+    }
   }
 
-  String? _required(String? value) =>
-      (value == null || value.trim().isEmpty) ? 'This field is required' : null;
-
-  String? _emailValidator(String? value) {
-    final email = value?.trim() ?? '';
-    if (email.isEmpty) return 'Email is required';
-    if (!email.contains('@')) return 'Enter a valid email';
-    return null;
+  void _goToStep(int step) {
+    _pageController.jumpToPage(step - 1);
+    ref.read(currentNurseStepProvider.notifier).state = step;
   }
 
   Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    if (_profileImageBytes == null) {
-      SnackBarHelper.showError(context, 'Please upload a profile picture.');
-      return;
-    }
-
-    if (_latitude == null || _longitude == null) {
-      SnackBarHelper.showError(
-        context,
-        'Please select your location on the map.',
-      );
-      return;
-    }
-
-    final nurse = NurseModel(
-      id: const Uuid().v4(),
-      firstName: _firstNameController.text.trim(),
-      lastName: _lastNameController.text.trim(),
-      email: _emailController.text.trim(),
-      mobileNumber: _mobileController.text.trim(),
-      countryCode: _countryCode,
-      qualification: _qualificationController.text.trim(),
-      registrationNumber: _registrationController.text.trim(),
-      nursingCouncil: _councilController.text.trim(),
-      yearsOfExperience: int.parse(_experienceController.text.trim()),
-      specialization: _specializationController.text.trim(),
-      address: _addressController.text.trim(),
-      city: _cityController.text.trim(),
-      state: _stateController.text.trim(),
-      pincode: _pincodeController.text.trim(),
-      latitude: _latitude,
-      longitude: _longitude,
-      availableForHomeVisit: _availableForHomeVisit,
-      shiftAvailability: _shiftController.text.trim(),
-    );
-
-    final ok = await ref.read(nurseRegistrationProvider.notifier).submit(
-          nurse,
-          password: _passwordController.text,
-          profileImageBytes: _profileImageBytes,
-          profileImageFileName: _profileImageFileName,
-        );
-
+    if (!_validateStep(totalNurseRegistrationSteps)) return;
+    final ok = await ref
+        .read(nurseRegistrationFormProvider.notifier)
+        .submitRegistration();
     if (!mounted) return;
     if (ok) {
       context.go(AppConstants.routeNurseApplicationSubmitted);
     } else {
       SnackBarHelper.showError(
         context,
-        ref.read(nurseRegistrationProvider).error ?? 'Registration failed',
+        ref.read(nurseRegistrationFormProvider).submitError ??
+            'Registration failed',
       );
     }
+  }
+
+  bool _validateStep(int step) {
+    final form = ref.read(nurseRegistrationFormProvider);
+
+    if (step == 1) {
+      if (!(_formKeys[0].currentState?.validate() ?? false)) return false;
+      if (!form.hasProfileImage) {
+        SnackBarHelper.showError(context, 'Please upload a profile picture.');
+        return false;
+      }
+    }
+
+    if (step == 2) {
+      if (!(_formKeys[1].currentState?.validate() ?? false)) return false;
+    }
+
+    if (step == 3) {
+      if (!(_formKeys[2].currentState?.validate() ?? false)) return false;
+      if (form.latitude == null || form.longitude == null) {
+        SnackBarHelper.showError(
+          context,
+          'Please select your location on the map.',
+        );
+        return false;
+      }
+    }
+
+    if (step == 4) {
+      final required = [
+        NurseDocumentType.nursingLicense,
+        NurseDocumentType.degreeCertificate,
+        NurseDocumentType.aadhaarCard,
+      ];
+      for (final doc in required) {
+        if (!form.documentUrls.containsKey(doc) &&
+            !form.documentBytes.containsKey(doc)) {
+          SnackBarHelper.showError(context, 'Please upload: ${doc.label}');
+          return false;
+        }
+      }
+    }
+
+    if (step == 5) {
+      if (!(_formKeys[3].currentState?.validate() ?? false)) return false;
+      final cheque = NurseDocumentType.cancelledCheque;
+      if (!form.documentUrls.containsKey(cheque) &&
+          !form.documentBytes.containsKey(cheque)) {
+        SnackBarHelper.showError(
+          context,
+          'Please upload a cancelled cheque photo.',
+        );
+        return false;
+      }
+    }
+
+    if (step == 6) {
+      if (form.selectedHomeAvailabilitySlots.isEmpty) {
+        SnackBarHelper.showError(
+          context,
+          'Select at least one home visit time slot.',
+        );
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentStep = ref.watch(currentNurseStepProvider);
+    final form = ref.watch(nurseRegistrationFormProvider);
+    final stepMeta = _stepTitles[currentStep - 1];
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Nurse onboarding'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: currentStep > 1 ? _previousStep : () => context.pop(),
+        ),
+      ),
+      body: Column(
+        children: [
+          FormStepHeader(
+            step: currentStep,
+            total: totalNurseRegistrationSteps,
+            title: stepMeta.$1,
+            subtitle: stepMeta.$2,
+          ),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                NurseStep1Personal(formKey: _formKeys[0]),
+                NurseStep2Professional(formKey: _formKeys[1]),
+                NurseStep3Location(formKey: _formKeys[2]),
+                const NurseStep4Documents(),
+                NurseStep5Bank(formKey: _formKeys[3]),
+                const NurseStep6Availability(),
+                NurseStep7Review(onEditStep: _goToStep),
+              ],
+            ),
+          ),
+          if (currentStep < totalNurseRegistrationSteps)
+            BottomCtaBar(
+              child: Row(
+                children: [
+                  if (currentStep > 1) ...[
+                    Expanded(
+                      child: CustomOutlineButton(
+                        label: 'Back',
+                        onPressed: _previousStep,
+                        height: 50,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    flex: currentStep > 1 ? 2 : 1,
+                    child: CustomButton(
+                      label: currentStep == totalNurseRegistrationSteps - 1
+                          ? 'Review'
+                          : 'Continue',
+                      icon: Icons.arrow_forward_rounded,
+                      onPressed: _nextStep,
+                      height: 50,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            BottomCtaBar(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CustomOutlineButton(
+                      label: 'Back',
+                      onPressed: _previousStep,
+                      height: 50,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: CustomButton(
+                      label: 'Submit for verification',
+                      isLoading: form.isSubmitting,
+                      onPressed: _submit,
+                      height: 50,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

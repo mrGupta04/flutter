@@ -30,7 +30,12 @@ class DoctorBookingModel {
     this.prescriptionPdfUrl,
     this.prescriptionFileName,
     this.previousReports = const [],
+    this.distanceKm,
+    this.paymentStatus,
   });
+
+  final double? distanceKm;
+  final String? paymentStatus;
 
   final String id;
   final String title;
@@ -66,6 +71,20 @@ class DoctorBookingModel {
   bool get isAppointmentVerified => appointmentVerifiedAt != null;
   bool get isHomeVisit => consultationType == 'book_home';
 
+  bool get isAwaitingDoctorApproval =>
+      status == 'awaiting_doctor_approval';
+
+  bool get isApprovedPendingPayment =>
+      status == 'approved_pending_payment';
+
+  String get displayStatusLabel {
+    if (isAwaitingDoctorApproval) return 'Awaiting your approval';
+    if (isApprovedPendingPayment) return 'Awaiting patient payment';
+    if (status == 'confirmed') return 'Confirmed';
+    if (status == 'cancelled') return 'Cancelled';
+    return status.toUpperCase();
+  }
+
   String get displayTypeLabel {
     if (typeLabel != null && typeLabel!.isNotEmpty) return typeLabel!;
     if (isOnlineConsult) return 'Online consult';
@@ -91,6 +110,7 @@ class DoctorBookingModel {
       title: json['title']?.toString() ?? 'Booking',
       subtitle: json['subtitle']?.toString() ?? '',
       status: json['status']?.toString() ?? 'confirmed',
+      paymentStatus: json['paymentStatus'] as String?,
       consultationType: json['consultationType'] as String?,
       typeLabel: json['typeLabel'] as String?,
       patientName: json['patientName'] as String?,
@@ -117,6 +137,7 @@ class DoctorBookingModel {
       previousReports: (json['previousReports'] as List<dynamic>? ?? [])
           .map((e) => PreviousReportModel.fromJson(e as Map<String, dynamic>))
           .toList(),
+      distanceKm: (json['distanceKm'] as num?)?.toDouble(),
     );
   }
 }

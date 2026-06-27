@@ -74,6 +74,8 @@ class PatientBookingModel {
   final String label;
   final int? consultationFee;
   final String status;
+  final String? paymentStatus;
+  final double? distanceKm;
   final String? clinicName;
   final String? clinicAddress;
   final String? visitReason;
@@ -108,6 +110,8 @@ class PatientBookingModel {
     required this.label,
     this.consultationFee,
     required this.status,
+    this.paymentStatus,
+    this.distanceKm,
     this.clinicName,
     this.clinicAddress,
     this.visitReason,
@@ -136,6 +140,27 @@ class PatientBookingModel {
 
   bool get isOnlineConsult => consultationType == 'online_consult';
 
+  bool get isAwaitingDoctorApproval =>
+      status == 'awaiting_doctor_approval';
+
+  bool get isApprovedPendingPayment =>
+      status == 'approved_pending_payment';
+
+  bool get needsHomeVisitPayment =>
+      isHomeVisit && isApprovedPendingPayment;
+
+  String get statusLabel {
+    if (isAwaitingDoctorApproval) {
+      return 'Waiting for doctor approval';
+    }
+    if (isApprovedPendingPayment) {
+      return 'Approved — pay to confirm';
+    }
+    if (status == 'confirmed') return 'Confirmed';
+    if (status == 'cancelled') return 'Cancelled';
+    return status;
+  }
+
   bool get isAppointmentVerified => appointmentVerifiedAt != null;
 
   factory PatientBookingModel.fromJson(Map<String, dynamic> json) {
@@ -152,6 +177,8 @@ class PatientBookingModel {
       label: json['label'] as String? ?? '',
       consultationFee: (json['consultationFee'] as num?)?.toInt(),
       status: json['status'] as String? ?? 'confirmed',
+      paymentStatus: json['paymentStatus'] as String?,
+      distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       clinicName: json['clinicName'] as String?,
       clinicAddress: json['clinicAddress'] as String?,
       visitReason: json['visitReason'] as String?,

@@ -164,6 +164,8 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                           upcomingClinicBookings:
                               dashboard.upcomingClinicBookings,
                           upcomingHomeBookings: dashboard.upcomingHomeBookings,
+                          pendingHomeVisitRequests:
+                              dashboard.pendingHomeVisitRequests,
                           pastBookings: dashboard.pastBookings,
                           isLoadingBookings: dashboard.isLoadingBookings,
                           bookingsError: dashboard.bookingsError,
@@ -174,6 +176,8 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                               .read(doctorDashboardProvider.notifier)
                               .loadBookings(),
                           onVerifyClinicVisit: _showVerifyAppointmentDialog,
+                          onApproveHomeVisit: _approveHomeVisit,
+                          onRejectHomeVisit: _rejectHomeVisit,
                           onUpload: _uploadDocument,
                           onReuploadDocuments: _showRejectedDocumentsSheet,
                           hasRejectedDocuments: hasRejectedDocuments,
@@ -187,6 +191,44 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                   ],
                 ),
     );
+  }
+
+  Future<void> _approveHomeVisit(String bookingId) async {
+    final ok = await ref
+        .read(doctorDashboardProvider.notifier)
+        .approveHomeVisitRequest(bookingId);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Home visit approved. Patient will be asked to pay to confirm.',
+          ),
+        ),
+      );
+    } else {
+      final err = ref.read(doctorDashboardProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err ?? 'Could not approve request')),
+      );
+    }
+  }
+
+  Future<void> _rejectHomeVisit(String bookingId) async {
+    final ok = await ref
+        .read(doctorDashboardProvider.notifier)
+        .rejectHomeVisitRequest(bookingId);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Home visit request declined.')),
+      );
+    } else {
+      final err = ref.read(doctorDashboardProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err ?? 'Could not decline request')),
+      );
+    }
   }
 
   Future<void> _showVerifyAppointmentDialog() async {
@@ -704,12 +746,15 @@ class _DashboardContent extends StatelessWidget {
     this.upcomingOnlineBookings = const [],
     this.upcomingClinicBookings = const [],
     this.upcomingHomeBookings = const [],
+    this.pendingHomeVisitRequests = const [],
     this.pastBookings = const [],
     this.isLoadingBookings = false,
     this.bookingsError,
     this.onRetryBookings,
     this.onRefreshBookings,
     this.onVerifyClinicVisit,
+    this.onApproveHomeVisit,
+    this.onRejectHomeVisit,
     required this.onUpload,
     required this.onReuploadDocuments,
     this.hasRejectedDocuments = false,
@@ -731,12 +776,15 @@ class _DashboardContent extends StatelessWidget {
   final List<DoctorBookingModel> upcomingOnlineBookings;
   final List<DoctorBookingModel> upcomingClinicBookings;
   final List<DoctorBookingModel> upcomingHomeBookings;
+  final List<DoctorBookingModel> pendingHomeVisitRequests;
   final List<DoctorBookingModel> pastBookings;
   final bool isLoadingBookings;
   final String? bookingsError;
   final VoidCallback? onRetryBookings;
   final Future<void> Function()? onRefreshBookings;
   final VoidCallback? onVerifyClinicVisit;
+  final Future<void> Function(String bookingId)? onApproveHomeVisit;
+  final Future<void> Function(String bookingId)? onRejectHomeVisit;
   final Future<void> Function(DocumentType) onUpload;
   final VoidCallback onReuploadDocuments;
   final bool hasRejectedDocuments;
@@ -888,6 +936,7 @@ class _DashboardContent extends StatelessWidget {
             upcomingOnlineBookings: upcomingOnlineBookings,
             upcomingClinicBookings: upcomingClinicBookings,
             upcomingHomeBookings: upcomingHomeBookings,
+            pendingHomeVisitRequests: pendingHomeVisitRequests,
             pastBookings: pastBookings,
             isLoading: isLoadingBookings,
             error: bookingsError,
@@ -897,6 +946,8 @@ class _DashboardContent extends StatelessWidget {
             offersVisitSite: offersVisitSite,
             offersBookHome: doctor!.offersBookHome,
             onVerifyClinicVisit: onVerifyClinicVisit,
+            onApproveHomeVisit: onApproveHomeVisit,
+            onRejectHomeVisit: onRejectHomeVisit,
             onVideoEnded: onRefreshBookings,
           ),
           if (needsAvailabilityUpdate) ...[
@@ -1863,6 +1914,7 @@ class _AppointmentsSection extends StatelessWidget {
     required this.upcomingOnlineBookings,
     required this.upcomingClinicBookings,
     required this.upcomingHomeBookings,
+    this.pendingHomeVisitRequests = const [],
     required this.pastBookings,
     required this.isLoading,
     this.error,
@@ -1873,12 +1925,15 @@ class _AppointmentsSection extends StatelessWidget {
     required this.offersBookHome,
     this.onVerifyClinicVisit,
     this.onVideoEnded,
+    this.onApproveHomeVisit,
+    this.onRejectHomeVisit,
   });
 
   final List<DoctorBookingModel> bookings;
   final List<DoctorBookingModel> upcomingOnlineBookings;
   final List<DoctorBookingModel> upcomingClinicBookings;
   final List<DoctorBookingModel> upcomingHomeBookings;
+  final List<DoctorBookingModel> pendingHomeVisitRequests;
   final List<DoctorBookingModel> pastBookings;
   final bool isLoading;
   final String? error;
@@ -1889,6 +1944,8 @@ class _AppointmentsSection extends StatelessWidget {
   final bool offersBookHome;
   final VoidCallback? onVerifyClinicVisit;
   final Future<void> Function()? onVideoEnded;
+  final Future<void> Function(String bookingId)? onApproveHomeVisit;
+  final Future<void> Function(String bookingId)? onRejectHomeVisit;
 
   @override
   Widget build(BuildContext context) {
@@ -1952,6 +2009,14 @@ class _AppointmentsSection extends StatelessWidget {
             ),
           )
         else ...[
+          if (offersBookHome && pendingHomeVisitRequests.isNotEmpty) ...[
+            _PendingHomeVisitRequestsSection(
+              bookings: pendingHomeVisitRequests,
+              onApprove: onApproveHomeVisit,
+              onReject: onRejectHomeVisit,
+            ),
+            const SizedBox(height: 12),
+          ],
           if (offersOnlineConsult) ...[
             _BookingTypeSection(
               title: 'Upcoming online consults',
@@ -1994,6 +2059,178 @@ class _AppointmentsSection extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _PendingHomeVisitRequestsSection extends StatelessWidget {
+  const _PendingHomeVisitRequestsSection({
+    required this.bookings,
+    this.onApprove,
+    this.onReject,
+  });
+
+  final List<DoctorBookingModel> bookings;
+  final Future<void> Function(String bookingId)? onApprove;
+  final Future<void> Function(String bookingId)? onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: AppDecorations.borderRadiusLg,
+        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notifications_active_rounded,
+                  size: 20, color: AppColors.secondary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'New home visit requests',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${bookings.length}',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...bookings.map(
+            (booking) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _PendingHomeVisitRequestCard(
+                booking: booking,
+                onApprove: onApprove,
+                onReject: onReject,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingHomeVisitRequestCard extends StatelessWidget {
+  const _PendingHomeVisitRequestCard({
+    required this.booking,
+    this.onApprove,
+    this.onReject,
+  });
+
+  final DoctorBookingModel booking;
+  final Future<void> Function(String bookingId)? onApprove;
+  final Future<void> Function(String bookingId)? onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    final slot = booking.slotStart;
+    final slotText = slot != null
+        ? '${FormattingUtils.formatDateWithDay(slot)} · ${FormattingUtils.formatTime(slot)}'
+        : booking.subtitle;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.secondaryLight.withValues(alpha: 0.2),
+        borderRadius: AppDecorations.borderRadiusMd,
+        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            booking.patientName ?? 'Patient',
+            style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            slotText,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (booking.patientLocationLine != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              booking.patientLocationLine!,
+              style: AppTextStyles.bodySmall,
+            ),
+          ],
+          if (booking.distanceKm != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Distance: ${booking.distanceKm} km',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (booking.visitReason != null &&
+              booking.visitReason!.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Reason: ${booking.visitReason!.trim()}',
+              style: AppTextStyles.bodySmall,
+            ),
+          ],
+          if (booking.consultationFee != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Fee if approved: ${FormattingUtils.formatConsultationFee(booking.consultationFee!)}',
+              style: AppTextStyles.labelSmall.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onReject == null
+                      ? null
+                      : () => onReject!(booking.id),
+                  child: const Text('Decline'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: onApprove == null
+                      ? null
+                      : () => onApprove!(booking.id),
+                  child: const Text('Approve & request payment'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2195,6 +2432,11 @@ class _BookingCard extends StatelessWidget {
               icon: Icons.location_on_outlined,
               text: booking.patientLocationLine!,
             ),
+          if (booking.distanceKm != null && booking.isHomeVisit)
+            _BookingDetailRow(
+              icon: Icons.social_distance_rounded,
+              text: '${booking.distanceKm} km from you',
+            ),
           if (booking.visitReason != null &&
               booking.visitReason!.trim().isNotEmpty)
             _BookingDetailRow(
@@ -2215,7 +2457,7 @@ class _BookingCard extends StatelessWidget {
           Row(
             children: [
               _StatusPill(
-                label: booking.status.toUpperCase(),
+                label: booking.displayStatusLabel,
                 color: isPast ? AppColors.grey600 : AppColors.success,
               ),
               if (booking.isClinicVisit && booking.isAppointmentVerified) ...[

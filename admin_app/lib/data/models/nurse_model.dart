@@ -23,7 +23,12 @@ class NurseModel {
   final double? latitude;
   final double? longitude;
   final bool? availableForHomeVisit;
+  final int? homeVisitFee;
   final String? shiftAvailability;
+  final String? bankAccountHolderName;
+  final String? bankAccountNumber;
+  final String? ifscCode;
+  final String? bankName;
   final VerificationStatus? verificationStatus;
   final String? rejectionReason;
   final DateTime? createdAt;
@@ -51,7 +56,12 @@ class NurseModel {
     this.latitude,
     this.longitude,
     this.availableForHomeVisit,
+    this.homeVisitFee,
     this.shiftAvailability,
+    this.bankAccountHolderName,
+    this.bankAccountNumber,
+    this.ifscCode,
+    this.bankName,
     this.verificationStatus,
     this.rejectionReason,
     this.createdAt,
@@ -85,8 +95,13 @@ class NurseModel {
       pincode: json['pincode'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
-      availableForHomeVisit: json['availableForHomeVisit'] as bool?,
+      availableForHomeVisit: json['availableForHomeVisit'] as bool? ?? true,
+      homeVisitFee: (json['homeVisitFee'] as num?)?.toInt(),
       shiftAvailability: json['shiftAvailability'] as String?,
+      bankAccountHolderName: json['bankAccountHolderName'] as String?,
+      bankAccountNumber: json['bankAccountNumber'] as String?,
+      ifscCode: json['ifscCode'] as String?,
+      bankName: json['bankName'] as String?,
       verificationStatus: json['isApproved'] == true
           ? VerificationStatus.verified
           : _parseStatus(json['verificationStatus'] as String?),
@@ -124,7 +139,13 @@ class NurseModel {
       if (longitude != null) 'longitude': longitude,
       if (availableForHomeVisit != null)
         'availableForHomeVisit': availableForHomeVisit,
+      if (homeVisitFee != null) 'homeVisitFee': homeVisitFee,
       if (shiftAvailability != null) 'shiftAvailability': shiftAvailability,
+      if (bankAccountHolderName != null)
+        'bankAccountHolderName': bankAccountHolderName,
+      if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+      if (ifscCode != null) 'ifscCode': ifscCode,
+      if (bankName != null) 'bankName': bankName,
     };
   }
 
@@ -162,7 +183,12 @@ class NurseModel {
     double? latitude,
     double? longitude,
     bool? availableForHomeVisit,
+    int? homeVisitFee,
     String? shiftAvailability,
+    String? bankAccountHolderName,
+    String? bankAccountNumber,
+    String? ifscCode,
+    String? bankName,
     VerificationStatus? verificationStatus,
     String? rejectionReason,
     DateTime? createdAt,
@@ -190,7 +216,13 @@ class NurseModel {
       longitude: longitude ?? this.longitude,
       availableForHomeVisit:
           availableForHomeVisit ?? this.availableForHomeVisit,
+      homeVisitFee: homeVisitFee ?? this.homeVisitFee,
       shiftAvailability: shiftAvailability ?? this.shiftAvailability,
+      bankAccountHolderName:
+          bankAccountHolderName ?? this.bankAccountHolderName,
+      bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      ifscCode: ifscCode ?? this.ifscCode,
+      bankName: bankName ?? this.bankName,
       verificationStatus: verificationStatus ?? this.verificationStatus,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       createdAt: createdAt ?? this.createdAt,

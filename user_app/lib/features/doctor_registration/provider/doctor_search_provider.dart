@@ -9,18 +9,21 @@ class DoctorSearchParams {
     this.query,
     this.city,
     this.specialization,
+    this.minYearsExperience,
     required this.consultationType,
   });
 
   final String? query;
   final String? city;
   final String? specialization;
+  final int? minYearsExperience;
   final ConsultationType consultationType;
 
   bool get hasTextFilters =>
       (query != null && query!.trim().isNotEmpty) ||
       (city != null && city!.trim().isNotEmpty) ||
-      (specialization != null && specialization!.trim().isNotEmpty);
+      (specialization != null && specialization!.trim().isNotEmpty) ||
+      minYearsExperience != null;
 
   @override
   bool operator ==(Object other) {
@@ -29,11 +32,18 @@ class DoctorSearchParams {
         other.query == query &&
         other.city == city &&
         other.specialization == specialization &&
+        other.minYearsExperience == minYearsExperience &&
         other.consultationType == consultationType;
   }
 
   @override
-  int get hashCode => Object.hash(query, city, specialization, consultationType);
+  int get hashCode => Object.hash(
+        query,
+        city,
+        specialization,
+        minYearsExperience,
+        consultationType,
+      );
 }
 
 /// Maps category labels on home to API specialization search terms.
@@ -63,7 +73,18 @@ final doctorSearchProvider =
     );
 
     if (response.success && response.data != null) {
-      return response.data!;
+      var doctors = response.data!;
+      final minYears = params.minYearsExperience;
+      if (minYears != null) {
+        doctors = doctors
+            .where(
+              (doctor) =>
+                  doctor.yearsOfExperience != null &&
+                  doctor.yearsOfExperience! >= minYears,
+            )
+            .toList();
+      }
+      return doctors;
     }
 
     throw Exception(response.error ?? 'Search failed');

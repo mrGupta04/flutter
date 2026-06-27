@@ -69,6 +69,29 @@ class PaymentRepository {
     }
   }
 
+  Future<ApiResponse<PaymentOrderResponse>> createOrderForBooking({
+    required String bookingId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        AppConstants.endpointPaymentCreateOrder,
+        data: {'bookingId': bookingId},
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        statusCode: body['statusCode'] as int? ?? 201,
+        data: PaymentOrderResponse.fromJson(data),
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   Future<ApiResponse<ConsultationBookingResult>> verifyPayment(
     PaymentVerifyRequest request,
   ) async {

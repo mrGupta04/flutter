@@ -4,6 +4,7 @@ const { authOptional } = require('../middleware/auth');
 const {
   createPendingBookingForPayment,
   confirmBookingAfterPayment,
+  createPaymentOrderForBooking,
 } = require('../db/bookingRepositories');
 const {
   createOrder,
@@ -20,6 +21,7 @@ router.post('/create-order', authOptional, async (req, res) => {
   try {
     const body = req.body || {};
     const {
+      bookingId,
       doctorId,
       consultationType = 'online_consult',
       patientName,
@@ -36,33 +38,44 @@ router.post('/create-order', authOptional, async (req, res) => {
       slotStart,
     } = body;
 
-    if (!doctorId) {
-      return sendError(res, 'doctorId is required', 400);
+    let booking;
+    let doctorName;
+
+    if (bookingId) {
+      const result = await createPaymentOrderForBooking(bookingId);
+      booking = result.booking;
+      doctorName = result.doctorName;
+    } else {
+      if (!doctorId) {
+        return sendError(res, 'doctorId is required', 400);
+      }
+
+      const patientId =
+        req.auth?.type === 'patient' ? req.auth.patientId : undefined;
+
+      const result = await createPendingBookingForPayment(
+        {
+          doctorId,
+          patientId,
+          consultationType,
+          patientName,
+          patientMobile,
+          patientEmail,
+          patientNotes,
+          patientAddress,
+          patientCity,
+          patientState,
+          patientPincode,
+          visitReason,
+          dayOfWeek,
+          startHour,
+          slotStart,
+        },
+        PAYMENT_HOLD_MINUTES,
+      );
+      booking = result.booking;
+      doctorName = result.doctorName;
     }
-
-    const patientId =
-      req.auth?.type === 'patient' ? req.auth.patientId : undefined;
-
-    const { booking, doctorName } = await createPendingBookingForPayment(
-      {
-        doctorId,
-        patientId,
-        consultationType,
-        patientName,
-        patientMobile,
-        patientEmail,
-        patientNotes,
-        patientAddress,
-        patientCity,
-        patientState,
-        patientPincode,
-        visitReason,
-        dayOfWeek,
-        startHour,
-        slotStart,
-      },
-      PAYMENT_HOLD_MINUTES,
-    );
 
     const amountInPaise = Math.round((booking.consultationFee || 0) * 100);
     if (amountInPaise < 100) {

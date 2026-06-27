@@ -420,6 +420,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
             doctor: items[i],
             showBottomDivider: false,
             showVerifiedIcon: true,
+            consultationFilter: _doctorType,
             showActionButtons: items[i].offersOnlineConsult ||
                 items[i].offersVisitSite ||
                 items[i].offersBookHome ||

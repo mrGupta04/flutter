@@ -17,6 +17,14 @@ class AppConstants {
   static const String endpointAmbulanceLogin = '/ambulance/login';
   static const String endpointBloodBankLogin = '/blood-bank/login';
   static const String endpointDoctorBookings = '/doctor/bookings';
+  static String endpointDoctorApproveHomeVisit(String bookingId) =>
+      '/doctor/bookings/$bookingId/approve-home-visit';
+  static String endpointDoctorRejectHomeVisit(String bookingId) =>
+      '/doctor/bookings/$bookingId/reject-home-visit';
+  static String endpointNurseApproveHomeVisit(String bookingId) =>
+      '/nurse/bookings/$bookingId/approve-home-visit';
+  static String endpointNurseRejectHomeVisit(String bookingId) =>
+      '/nurse/bookings/$bookingId/reject-home-visit';
   static const String endpointDoctorVerifyAppointment = '/doctor/verify-appointment';
   static String endpointConsultationVideoSession(String bookingId) =>
       '/consultations/$bookingId/video-session';
@@ -50,9 +58,16 @@ class AppConstants {
   // Nurse API Endpoints
   static const String endpointRegisterNurse = '/nurse/register';
   static const String endpointNurseUploadProfile = '/nurse/upload-profile';
+  static const String endpointNurseUploadDocument = '/nurse/upload-document';
   static const String endpointGetNurseProfile = '/nurse/profile';
   static const String endpointUpdateNurseProfile = '/nurse/profile';
   static const String endpointVerifiedNurses = '/nurse/verified';
+  static const String endpointNurseAvailability = '/nurse/availability';
+  static const String endpointNurseBookableSlots = '/nurse/bookable-slots';
+  static const String endpointNurseSlotHold = '/nurse/slot-hold';
+  static String endpointNurseSlotHoldRelease(String holdId) =>
+      '/nurse/slot-hold/$holdId';
+  static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
 
   // Ambulance API Endpoints
   static const String endpointRegisterAmbulance = '/ambulance/register';
@@ -190,6 +205,7 @@ class AppConstants {
   static const String routeBloodBankApplicationSubmitted =
       '/blood-bank-application-submitted';
   static const String routeDoctorDashboard = '/doctor-dashboard';
+  static const String routeNurseDashboard = '/nurse-dashboard';
   static const String routeVideoConsult = '/video-consult';
   static const String routeAdminLogin = '/admin-login';
   static const String routeAdminDashboard = '/admin-dashboard';

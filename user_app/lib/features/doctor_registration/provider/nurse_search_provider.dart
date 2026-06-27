@@ -2,11 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/nurse_model.dart';
 import '../../../data/repositories/nurse_registration_repository.dart';
 
-/// Nurse listing filter: all, home visit only, or shift/on-site care.
+/// Nurse listing filter — home visit nurses only.
 enum NurseCareFilter {
   all('All nurses'),
-  homeVisit('Home visit'),
-  shiftCare('Shift / on-site');
+  homeVisit('Home visit');
 
   const NurseCareFilter(this.label);
   final String label;
@@ -66,13 +65,7 @@ final nurseSearchProvider =
     );
 
     if (response.success && response.data != null) {
-      var nurses = response.data!;
-      if (params.careFilter == NurseCareFilter.shiftCare) {
-        nurses = nurses
-            .where((n) => n.availableForHomeVisit != true)
-            .toList(growable: false);
-      }
-      return nurses;
+      return response.data!;
     }
 
     throw Exception(response.error ?? 'Search failed');

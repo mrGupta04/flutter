@@ -6,7 +6,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 
-/// Provider registration — nurse, ambulance, and blood bank onboarding.
+/// Provider registration — ambulance and blood bank onboarding.
 class ProviderLandingScreen extends StatelessWidget {
   const ProviderLandingScreen({super.key});
 
@@ -41,15 +41,6 @@ class ProviderLandingScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 children: [
-                  _RegistrationCard(
-                    title: 'Nurse',
-                    subtitle: 'Profile photo, qualification & experience',
-                    icon: Icons.health_and_safety_rounded,
-                    color: AppColors.secondary,
-                    onTap: () =>
-                        context.push(AppConstants.routeNurseRegistration),
-                  ),
-                  const SizedBox(height: 10),
                   _RegistrationCard(
                     title: 'Ambulance',
                     subtitle: 'Fleet details, license & service area',

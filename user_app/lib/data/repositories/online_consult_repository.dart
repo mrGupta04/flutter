@@ -201,6 +201,64 @@ class OnlineConsultRepository {
     }
   }
 
+  Future<ApiResponse<ConsultationBookingResult>> requestHomeVisit({
+    required String doctorId,
+    required String patientName,
+    required String patientMobile,
+    required String patientAddress,
+    required String patientCity,
+    required String patientPincode,
+    String? patientEmail,
+    String? patientState,
+    String? visitReason,
+    String? patientNotes,
+    double? patientLatitude,
+    double? patientLongitude,
+    required int dayOfWeek,
+    required int startHour,
+    required DateTime slotStart,
+  }) async {
+    try {
+      final response = await _dio.post(
+        AppConstants.endpointHomeVisitRequest,
+        data: {
+          'doctorId': doctorId,
+          'patientName': patientName,
+          'patientMobile': patientMobile,
+          'patientAddress': patientAddress,
+          'patientCity': patientCity,
+          'patientPincode': patientPincode,
+          if (patientState != null && patientState.isNotEmpty)
+            'patientState': patientState,
+          if (patientEmail != null && patientEmail.isNotEmpty)
+            'patientEmail': patientEmail,
+          if (visitReason != null && visitReason.isNotEmpty)
+            'visitReason': visitReason,
+          if (patientNotes != null && patientNotes.isNotEmpty)
+            'patientNotes': patientNotes,
+          if (patientLatitude != null) 'patientLatitude': patientLatitude,
+          if (patientLongitude != null) 'patientLongitude': patientLongitude,
+          'dayOfWeek': dayOfWeek,
+          'startHour': startHour,
+          'slotStart': slotStart.toIso8601String(),
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 201,
+        data: ConsultationBookingResult.fromJson(data),
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   ApiResponse<T> _handleError<T>(DioException error) {
     String message = AppConstants.errorSomethingWentWrong;
     int statusCode = 500;

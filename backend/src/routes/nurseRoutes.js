@@ -22,6 +22,22 @@ const {
 } = require('../db/nurseRepositories');
 
 const {
+  getNurseAvailability,
+  getNurseAvailabilityStatus,
+  saveNurseAvailability,
+} = require('../db/nurseAvailabilityRepositories');
+
+const {
+  getNurseBookableSlots,
+  holdNurseSlot,
+  releaseNurseSlotHold,
+  createNurseHomeVisitRequest,
+  approveNurseHomeVisitRequest,
+  rejectNurseHomeVisitRequest,
+  listNurseBookings,
+} = require('../db/nurseBookingRepositories');
+
+const {
   upsertDocument,
   ensureNurseDocumentsFromProfile,
 } = require('../db/documentVerification');
@@ -204,15 +220,397 @@ router.post('/login', async (req, res) => {
 
 router.get('/bookings', authOptional, async (req, res) => {
 
-  const nurseId = req.query.nurseId || req.auth?.nurseId;
+  try {
 
-  if (!nurseId) {
+    const nurseId = req.query.nurseId || req.auth?.nurseId;
 
-    return sendError(res, 'nurseId is required', 400);
+    if (!nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const data = await listNurseBookings(nurseId);
+
+    return sendSuccess(res, { data });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return sendError(res, err.message || 'Failed to load bookings', 500);
 
   }
 
-  return sendSuccess(res, { data: [], message: 'No bookings yet' });
+});
+
+
+
+// GET /nurse/availability
+
+router.get('/availability', authOptional, async (req, res) => {
+
+  try {
+
+    const nurseId = req.query.nurseId || req.auth?.nurseId;
+
+    if (!nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const data = await getNurseAvailability(nurseId, {
+
+      forWeekStart: req.query.weekStart,
+
+    });
+
+    return sendSuccess(res, { data });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return sendError(res, err.message || 'Failed to load availability', 500);
+
+  }
+
+});
+
+
+
+// GET /nurse/availability/status
+
+router.get('/availability/status', authOptional, async (req, res) => {
+
+  try {
+
+    const nurseId = req.query.nurseId || req.auth?.nurseId;
+
+    if (!nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const data = await getNurseAvailabilityStatus(nurseId);
+
+    return sendSuccess(res, { data });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return sendError(res, err.message || 'Failed to load availability status', 500);
+
+  }
+
+});
+
+
+
+// PUT /nurse/availability
+
+router.put('/availability', authOptional, async (req, res) => {
+
+  try {
+
+    const body = req.body || {};
+
+    const nurseId = body.nurseId || req.auth?.nurseId;
+
+    if (!nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const data = await saveNurseAvailability(nurseId, {
+
+      slots: body.slots,
+
+      weekStartDate: body.weekStartDate,
+
+    });
+
+    return sendSuccess(res, {
+
+      message: 'Availability saved',
+
+      data,
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    const status = err.statusCode || 500;
+
+    return sendError(res, err.message || 'Failed to save availability', status);
+
+  }
+
+});
+
+
+
+// GET /nurse/bookable-slots
+
+router.get('/bookable-slots', async (req, res) => {
+
+  try {
+
+    const nurseId = req.query.nurseId;
+
+    if (!nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const result = await getNurseBookableSlots(nurseId);
+
+    if (result.error) {
+
+      return sendError(res, result.error, result.status);
+
+    }
+
+    return sendSuccess(res, { data: result.data });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return sendError(res, err.message || 'Failed to load bookable slots', 500);
+
+  }
+
+});
+
+
+
+// POST /nurse/slot-hold
+
+router.post('/slot-hold', authOptional, async (req, res) => {
+
+  try {
+
+    const body = req.body || {};
+
+    const { nurseId, dayOfWeek, startHour, slotStart, holdId } = body;
+
+    if (!nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const patientId =
+
+      req.auth?.type === 'patient' ? req.auth.patientId : undefined;
+
+    const data = await holdNurseSlot({
+
+      nurseId,
+
+      dayOfWeek,
+
+      startHour,
+
+      slotStart,
+
+      patientId,
+
+      holdId,
+
+    });
+
+    return sendSuccess(res, {
+
+      statusCode: 201,
+
+      message: 'Slot reserved',
+
+      data,
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    const status = err.statusCode || 500;
+
+    return sendError(res, err.message || 'Could not reserve slot', status);
+
+  }
+
+});
+
+
+
+// DELETE /nurse/slot-hold/:holdId
+
+router.delete('/slot-hold/:holdId', authOptional, async (req, res) => {
+
+  try {
+
+    const patientId =
+
+      req.auth?.type === 'patient' ? req.auth.patientId : undefined;
+
+    const data = await releaseNurseSlotHold(req.params.holdId, patientId);
+
+    return sendSuccess(res, {
+
+      message: data.released ? 'Slot hold released' : 'No active hold found',
+
+      data,
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    const status = err.statusCode || 500;
+
+    return sendError(res, err.message || 'Could not release slot hold', status);
+
+  }
+
+});
+
+
+
+// POST /nurse/home-visit/request
+
+router.post('/home-visit/request', authOptional, async (req, res) => {
+
+  try {
+
+    const body = req.body || {};
+
+    if (!body.nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const patientId =
+
+      req.auth?.type === 'patient' ? req.auth.patientId : undefined;
+
+    const data = await createNurseHomeVisitRequest({
+
+      ...body,
+
+      patientId: body.patientId || patientId,
+
+    });
+
+    return sendSuccess(res, {
+
+      statusCode: 201,
+
+      message: 'Home visit request sent. Nurse will review and approve.',
+
+      data,
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    const status = err.statusCode || 500;
+
+    return sendError(res, err.message || 'Request failed', status);
+
+  }
+
+});
+
+
+
+// POST /nurse/bookings/:bookingId/approve-home-visit
+
+router.post('/bookings/:bookingId/approve-home-visit', authOptional, async (req, res) => {
+
+  try {
+
+    const { bookingId } = req.params;
+
+    const nurseId = req.body?.nurseId || req.auth?.nurseId;
+
+    if (!nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const data = await approveNurseHomeVisitRequest(bookingId, nurseId);
+
+    return sendSuccess(res, {
+
+      message: 'Home visit approved. Patient can now pay to confirm.',
+
+      data,
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    const status = err.statusCode || 500;
+
+    return sendError(res, err.message || 'Approval failed', status);
+
+  }
+
+});
+
+
+
+// POST /nurse/bookings/:bookingId/reject-home-visit
+
+router.post('/bookings/:bookingId/reject-home-visit', authOptional, async (req, res) => {
+
+  try {
+
+    const { bookingId } = req.params;
+
+    const nurseId = req.body?.nurseId || req.auth?.nurseId;
+
+    if (!nurseId) {
+
+      return sendError(res, 'nurseId is required', 400);
+
+    }
+
+    const data = await rejectNurseHomeVisitRequest(bookingId, nurseId);
+
+    return sendSuccess(res, {
+
+      message: 'Home visit request declined',
+
+      data,
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    const status = err.statusCode || 500;
+
+    return sendError(res, err.message || 'Rejection failed', status);
+
+  }
 
 });
 
@@ -282,7 +680,21 @@ router.put('/profile', authOptional, async (req, res) => {
 
         : existing.availableForHomeVisit,
 
+      homeVisitFee: body.homeVisitFee != null
+
+        ? parseInt(body.homeVisitFee, 10)
+
+        : existing.homeVisitFee,
+
       shiftAvailability: body.shiftAvailability?.trim(),
+
+      bankAccountHolderName: body.bankAccountHolderName?.trim(),
+
+      bankAccountNumber: body.bankAccountNumber?.trim(),
+
+      ifscCode: body.ifscCode?.trim(),
+
+      bankName: body.bankName?.trim(),
 
     });
 
@@ -443,9 +855,23 @@ router.post('/register', async (req, res) => {
 
           pincode: body.pincode?.trim(),
 
-          availableForHomeVisit: Boolean(body.availableForHomeVisit),
+          availableForHomeVisit: body.availableForHomeVisit != null
+
+            ? Boolean(body.availableForHomeVisit)
+
+            : true,
+
+          homeVisitFee: parseInt(body.homeVisitFee, 10) || 0,
 
           shiftAvailability: body.shiftAvailability?.trim(),
+
+          bankAccountHolderName: body.bankAccountHolderName?.trim(),
+
+          bankAccountNumber: body.bankAccountNumber?.trim(),
+
+          ifscCode: body.ifscCode?.trim(),
+
+          bankName: body.bankName?.trim(),
 
           password: body.password,
 
@@ -486,6 +912,66 @@ router.post('/register', async (req, res) => {
     console.error(err);
 
     return sendError(res, err.message || 'Registration failed', 500);
+
+  }
+
+});
+
+
+
+// POST /nurse/upload-document
+
+router.post('/upload-document', upload.single('file'), async (req, res) => {
+
+  try {
+
+    if (!req.file) {
+
+      return sendError(res, 'File is required');
+
+    }
+
+    const { nurseId, documentType } = req.body || {};
+
+    if (!nurseId || !documentType) {
+
+      return sendError(res, 'nurseId and documentType are required');
+
+    }
+
+    await ensureNurseStub(nurseId, req.body.mobileNumber);
+
+    const fileUrl = filePublicUrl(req, req.file.filename);
+
+    const document = await upsertDocument({
+
+      nurseId,
+
+      documentType,
+
+      fileUrl,
+
+      fileName: req.file.originalname,
+
+      fileSize: req.file.size,
+
+      mimeType: req.file.mimetype,
+
+    });
+
+    return sendSuccess(res, {
+
+      message: 'Document uploaded',
+
+      data: document,
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return sendError(res, err.message || 'Upload failed', 500);
 
   }
 

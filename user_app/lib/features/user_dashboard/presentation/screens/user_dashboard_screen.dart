@@ -18,6 +18,8 @@ import '../../../video_consult/presentation/widgets/join_video_consult_button.da
 import '../../provider/patient_dashboard_provider.dart';
 import '../../../feedback/presentation/utils/feedback_prompt_helper.dart';
 import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart';
+import '../../../online_consult/provider/online_consult_provider.dart';
+import '../../../../core/widgets/custom_widgets.dart';
 
 class UserDashboardScreen extends ConsumerStatefulWidget {
   const UserDashboardScreen({super.key});
@@ -602,7 +604,7 @@ class _FilteredBookingsTab extends StatelessWidget {
   }
 }
 
-class _BookingCard extends StatelessWidget {
+class _BookingCard extends ConsumerWidget {
   const _BookingCard({
     required this.booking,
     required this.isUpcoming,
@@ -614,6 +616,28 @@ class _BookingCard extends StatelessWidget {
   final bool isUpcoming;
   final Future<void> Function()? onVideoEnded;
   final Future<void> Function()? onRefresh;
+
+  Future<void> _payForBooking(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(bookingPaymentFlowProvider).payForExistingBooking(
+            bookingId: booking.id,
+          );
+      if (context.mounted) {
+        SnackBarHelper.showSuccess(
+          context,
+          'Payment successful. Your home visit is confirmed.',
+        );
+      }
+      if (onRefresh != null) await onRefresh!();
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarHelper.showError(
+          context,
+          e.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
+  }
 
   Future<void> _openPrescriptionPdf(BuildContext context, String? url) async {
     final resolved = MediaUrlUtils.resolve(url);
@@ -634,7 +658,7 @@ class _BookingCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFmt = DateFormat('EEE, dd MMM yyyy');
     final imageUrl = MediaUrlUtils.resolve(booking.doctorProfilePicture);
 
@@ -715,6 +739,18 @@ class _BookingCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (booking.status != 'confirmed') ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      booking.statusLabel,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: booking.needsHomeVisitPayment
+                            ? AppColors.warning
+                            : AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                   if (booking.clinicName != null &&
                       booking.clinicName!.isNotEmpty) ...[
                     const SizedBox(height: 4),
@@ -739,6 +775,21 @@ class _BookingCard extends StatelessWidget {
                     Text(
                       'Reason: ${booking.visitReason}',
                       style: AppTextStyles.bodySmall,
+                    ),
+                  ],
+                  if (booking.needsHomeVisitPayment && isUpcoming) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _payForBooking(context, ref),
+                        icon: const Icon(Icons.payments_rounded, size: 18),
+                        label: Text(
+                          booking.consultationFee != null
+                              ? 'Pay ₹${booking.consultationFee} to confirm'
+                              : 'Pay to confirm booking',
+                        ),
+                      ),
                     ),
                   ],
                   if (booking.isClinicVisit &&

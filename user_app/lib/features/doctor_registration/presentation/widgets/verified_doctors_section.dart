@@ -104,6 +104,7 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
                         doctor: doctor,
                         showBottomDivider: false,
                         showVerifiedIcon: true,
+                        consultationFilter: _selected,
                         showActionButtons: doctor.offersOnlineConsult ||
                             doctor.offersVisitSite ||
                             doctor.offersBookHome ||

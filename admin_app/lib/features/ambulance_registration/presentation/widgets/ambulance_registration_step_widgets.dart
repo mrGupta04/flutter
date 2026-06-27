@@ -627,6 +627,7 @@ class AmbulanceStep3Drivers extends ConsumerWidget {
         index: index,
         existing: existing,
         vehicles: vehicles,
+        countryCode: ref.read(ambulanceRegistrationFormProvider).countryCode,
         onSave: (driver) {
           final notifier = ref.read(ambulanceRegistrationFormProvider.notifier);
           if (index != null) {
@@ -644,6 +645,7 @@ class _DriverFormSheet extends StatefulWidget {
   const _DriverFormSheet({
     required this.onSave,
     required this.vehicles,
+    required this.countryCode,
     this.index,
     this.existing,
   });
@@ -651,6 +653,7 @@ class _DriverFormSheet extends StatefulWidget {
   final int? index;
   final AmbulanceDriverModel? existing;
   final List<AmbulanceVehicleModel> vehicles;
+  final String countryCode;
   final void Function(AmbulanceDriverModel driver) onSave;
 
   @override
@@ -731,7 +734,7 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
               const SizedBox(height: 12),
               MobileNumberField(
                 mobileController: _mobile,
-                countryCode: ref.read(ambulanceRegistrationFormProvider).countryCode,
+                countryCode: widget.countryCode,
                 label: 'Mobile Number',
                 hint: '10-digit number',
               ),

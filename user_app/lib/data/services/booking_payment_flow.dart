@@ -110,6 +110,61 @@ class BookingPaymentFlow {
     return completer.future;
   }
 
+  Future<ConsultationBookingResult?> payForExistingBooking({
+    required String bookingId,
+  }) async {
+    final orderRes = await _paymentRepository.createOrderForBooking(
+      bookingId: bookingId,
+    );
+
+    if (!orderRes.success || orderRes.data == null) {
+      throw Exception(orderRes.error ?? 'Could not start payment');
+    }
+
+    final order = orderRes.data!;
+    final completer = Completer<ConsultationBookingResult?>();
+
+    await _checkoutService.openCheckout(
+      order: order,
+      onSuccess: ({
+        required String orderId,
+        required String paymentId,
+        required String signature,
+      }) async {
+        try {
+          final verifyRes = await _paymentRepository.verifyPayment(
+            PaymentVerifyRequest(
+              bookingId: order.bookingId,
+              razorpayOrderId: orderId,
+              razorpayPaymentId: paymentId,
+              razorpaySignature: signature,
+            ),
+          );
+          if (verifyRes.success && verifyRes.data != null) {
+            if (!completer.isCompleted) {
+              completer.complete(verifyRes.data);
+            }
+          } else if (!completer.isCompleted) {
+            completer.completeError(
+              Exception(verifyRes.error ?? 'Payment verification failed'),
+            );
+          }
+        } catch (e) {
+          if (!completer.isCompleted) {
+            completer.completeError(e);
+          }
+        }
+      },
+      onFailure: (message) {
+        if (!completer.isCompleted) {
+          completer.completeError(Exception(message));
+        }
+      },
+    );
+
+    return completer.future;
+  }
+
   Future<void> _uploadPreviousReports(
     String bookingId,
     List<PendingPreviousReport> reports,

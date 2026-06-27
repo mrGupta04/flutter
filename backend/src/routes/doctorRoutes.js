@@ -37,6 +37,9 @@ const {
   createOnlineConsultBooking,
   createHospitalVisitBooking,
   createHomeVisitBooking,
+  createHomeVisitRequest,
+  approveHomeVisitRequest,
+  rejectHomeVisitRequest,
   listDoctorBookings,
   verifyClinicAppointment,
 } = require('../db/bookingRepositories');
@@ -445,6 +448,109 @@ router.post('/hospital-visit', authOptional, async (req, res) => {
     console.error(err);
     const status = err.statusCode || 500;
     return sendError(res, err.message || 'Booking failed', status);
+  }
+});
+
+// POST /doctor/home-visit/request — submit home visit without payment (doctor approves first)
+router.post('/home-visit/request', authOptional, async (req, res) => {
+  try {
+    const {
+      doctorId,
+      patientName,
+      patientMobile,
+      patientEmail,
+      patientNotes,
+      patientAddress,
+      patientCity,
+      patientState,
+      patientPincode,
+      visitReason,
+      patientLatitude,
+      patientLongitude,
+      dayOfWeek,
+      startHour,
+      slotStart,
+    } = req.body || {};
+
+    if (!doctorId) {
+      return sendError(res, 'doctorId is required', 400);
+    }
+
+    const patientId =
+      req.auth?.type === 'patient' ? req.auth.patientId : undefined;
+
+    const data = await createHomeVisitRequest({
+      doctorId,
+      patientId,
+      patientName,
+      patientMobile,
+      patientEmail,
+      patientNotes,
+      patientAddress,
+      patientCity,
+      patientState,
+      patientPincode,
+      visitReason,
+      patientLatitude,
+      patientLongitude,
+      dayOfWeek,
+      startHour,
+      slotStart,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message:
+        'Home visit request sent to the doctor. You will be notified when they approve it.',
+      statusCode: 201,
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Could not submit home visit request', status);
+  }
+});
+
+// POST /doctor/bookings/:bookingId/approve-home-visit
+router.post('/bookings/:bookingId/approve-home-visit', authOptional, async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const doctorId = req.body?.doctorId || req.query.doctorId || req.auth?.doctorId;
+    if (!doctorId) {
+      return sendError(res, 'doctorId is required', 400);
+    }
+
+    const data = await approveHomeVisitRequest(bookingId, doctorId);
+    return sendSuccess(res, {
+      message: 'Home visit approved. Patient can now pay to confirm.',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Could not approve home visit', status);
+  }
+});
+
+// POST /doctor/bookings/:bookingId/reject-home-visit
+router.post('/bookings/:bookingId/reject-home-visit', authOptional, async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const doctorId = req.body?.doctorId || req.query.doctorId || req.auth?.doctorId;
+    if (!doctorId) {
+      return sendError(res, 'doctorId is required', 400);
+    }
+
+    const data = await rejectHomeVisitRequest(bookingId, doctorId);
+    return sendSuccess(res, {
+      message: 'Home visit request declined.',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Could not reject home visit', status);
   }
 });
 

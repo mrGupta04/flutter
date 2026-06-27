@@ -74,7 +74,7 @@ class BookableSlotsResponse {
         .map((e) => BookableSlot.fromJson(e as Map<String, dynamic>))
         .toList();
     return BookableSlotsResponse(
-      doctorId: json['doctorId'] as String? ?? '',
+      doctorId: (json['doctorId'] ?? json['nurseId']) as String? ?? '',
       consultationType: json['consultationType'] as String?,
       weekStartDate: _parseDate(json['weekStartDate']),
       weekEndDate: _parseDate(json['weekEndDate']),
@@ -114,6 +114,7 @@ class ConsultationBookingResult {
   final String? clinicAddress;
   final String? appointmentCode;
   final DateTime? appointmentVerifiedAt;
+  final double? distanceKm;
 
   const ConsultationBookingResult({
     required this.id,
@@ -138,6 +139,7 @@ class ConsultationBookingResult {
     this.clinicAddress,
     this.appointmentCode,
     this.appointmentVerifiedAt,
+    this.distanceKm,
   });
 
   bool get isClinicVisit => consultationType == 'visit_site';
@@ -147,9 +149,9 @@ class ConsultationBookingResult {
   factory ConsultationBookingResult.fromJson(Map<String, dynamic> json) {
     return ConsultationBookingResult(
       id: json['id'] as String,
-      doctorId: json['doctorId'] as String,
+      doctorId: (json['doctorId'] ?? json['nurseId']) as String? ?? '',
       consultationType: json['consultationType'] as String? ?? 'online_consult',
-      doctorName: json['doctorName'] as String?,
+      doctorName: (json['doctorName'] ?? json['nurseName']) as String?,
       patientName: json['patientName'] as String,
       patientMobile: json['patientMobile'] as String,
       patientEmail: json['patientEmail'] as String?,
@@ -168,6 +170,7 @@ class ConsultationBookingResult {
       clinicAddress: json['clinicAddress'] as String?,
       appointmentCode: json['appointmentCode'] as String?,
       appointmentVerifiedAt: _parseDate(json['appointmentVerifiedAt']),
+      distanceKm: (json['distanceKm'] as num?)?.toDouble(),
     );
   }
 }

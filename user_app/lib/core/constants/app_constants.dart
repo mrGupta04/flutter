@@ -33,6 +33,11 @@ class AppConstants {
   static const String endpointOnlineConsultBook = '/doctor/online-consult';
   static const String endpointHospitalVisitBook = '/doctor/hospital-visit';
   static const String endpointHomeVisitBook = '/doctor/home-visit';
+  static const String endpointHomeVisitRequest = '/doctor/home-visit/request';
+  static String endpointDoctorApproveHomeVisit(String bookingId) =>
+      '/doctor/bookings/$bookingId/approve-home-visit';
+  static String endpointDoctorRejectHomeVisit(String bookingId) =>
+      '/doctor/bookings/$bookingId/reject-home-visit';
   static const String endpointPaymentCreateOrder = '/payments/create-order';
   static const String endpointPaymentVerify = '/payments/verify';
   static String endpointConsultationVideoSession(String bookingId) =>
@@ -51,11 +56,14 @@ class AppConstants {
   static const String endpointAadhaarSendOtp = '/doctor/aadhaar/send-otp';
   static const String endpointAadhaarVerifyOtp = '/doctor/aadhaar/verify-otp';
 
-  // Nurse API Endpoints
-  static const String endpointRegisterNurse = '/nurse/register';
-  static const String endpointNurseUploadProfile = '/nurse/upload-profile';
+  // Nurse API Endpoints (patient discovery)
   static const String endpointGetNurseProfile = '/nurse/profile';
   static const String endpointVerifiedNurses = '/nurse/verified';
+  static const String endpointNurseBookableSlots = '/nurse/bookable-slots';
+  static const String endpointNurseSlotHold = '/nurse/slot-hold';
+  static String endpointNurseSlotHoldRelease(String holdId) =>
+      '/nurse/slot-hold/$holdId';
+  static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
 
   // Ambulance API Endpoints
   static const String endpointRegisterAmbulance = '/ambulance/register';
@@ -142,7 +150,6 @@ class AppConstants {
 
   // Routes — provider registration app
   static const String routeProviderLanding = '/provider-landing';
-  static const String routeNurseApplicationSubmitted = '/nurse-application-submitted';
 
   // Routes — shared / legacy
   static const String routeGlobalSearch = '/search';
@@ -157,10 +164,10 @@ class AppConstants {
   static const String routeOnlineConsultBooking = '/online-consult';
   static const String routeHospitalVisitBooking = '/hospital-visit';
   static const String routeHomeVisitBooking = '/home-visit';
+  static const String routeNurseHomeVisitBooking = '/nurse-home-visit';
   static const String routeVideoConsult = '/video-consult';
   static const String routeRegistrationLanding = '/registration-landing';
   static const String routeRegistrationForm = '/registration-form';
-  static const String routeNurseRegistration = '/nurse-registration';
   static const String routeAmbulanceRegistration = '/ambulance-registration';
   static const String routeBloodBankRegistration = '/blood-bank-registration';
   static const String routeAmbulanceApplicationSubmitted =
