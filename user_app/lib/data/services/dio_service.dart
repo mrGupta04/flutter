@@ -130,6 +130,7 @@ class DioService {
     return path.contains('online-consult') ||
         path.contains('hospital-visit') ||
         path.contains('home-visit') ||
+        path.contains('nurse/') ||
         path.contains('payments/') ||
         path.contains('consultations/');
   }

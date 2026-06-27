@@ -18,6 +18,7 @@ import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../doctor_registration/provider/nurse_profile_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 import '../../provider/nurse_home_visit_provider.dart';
 
 class NurseHomeVisitBookingScreen extends ConsumerStatefulWidget {
@@ -148,6 +149,11 @@ class _NurseHomeVisitBookingScreenState
         ),
       );
       ref.invalidate(nurseBookableSlotsProvider(widget.nurseId));
+      if (booking != null) {
+        ref
+            .read(upcomingMeetingTimerProvider.notifier)
+            .registerConsultationResult(booking);
+      }
     } else {
       final err =
           ref.read(nurseHomeVisitBookingProvider(widget.nurseId)).error;

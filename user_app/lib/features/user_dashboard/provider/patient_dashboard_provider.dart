@@ -26,10 +26,10 @@ class PatientDashboardState {
   final String? error;
 
   List<PatientBookingModel> get upcomingBookings =>
-      bookings.where((b) => b.isUpcoming).toList();
+      bookings.where((b) => b.isActiveOrUpcoming).toList();
 
   List<PatientBookingModel> get pastBookings =>
-      bookings.where((b) => !b.isUpcoming).toList();
+      bookings.where((b) => !b.isActiveOrUpcoming).toList();
 
   List<PatientBookingModel> filterByCategory(
     List<PatientBookingModel> list,
@@ -63,6 +63,16 @@ class PatientDashboardNotifier extends StateNotifier<PatientDashboardState> {
   final Ref _ref;
 
   Future<void> loadBookings() async {
+    if (!_ref.read(patientAuthProvider).isLoggedIn) {
+      state = state.copyWith(
+        bookings: const [],
+        stats: const PatientBookingStats(total: 0, upcoming: 0, past: 0),
+        isLoadingBookings: false,
+        error: 'Please sign in to view your bookings.',
+      );
+      return;
+    }
+
     state = state.copyWith(isLoadingBookings: true, clearError: true);
     try {
       final res = await _repo.fetchBookings();
@@ -74,7 +84,7 @@ class PatientDashboardNotifier extends StateNotifier<PatientDashboardState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingBookings: false,
-        error: e.toString(),
+        error: e.toString().replaceFirst('Exception: ', ''),
       );
     }
   }

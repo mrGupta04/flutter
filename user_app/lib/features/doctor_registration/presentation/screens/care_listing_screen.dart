@@ -98,7 +98,8 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
   }
 
   Widget _buildDoctorScaffold(BuildContext context) {
-    final asyncDoctors = ref.watch(verifiedDoctorsProvider);
+    final asyncDoctors =
+        ref.watch(verifiedDoctorsByConsultationProvider(_doctorType));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -119,8 +120,12 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(verifiedDoctorsProvider);
-                await ref.read(verifiedDoctorsProvider.future);
+                ref.invalidate(
+                  verifiedDoctorsByConsultationProvider(_doctorType),
+                );
+                await ref.read(
+                  verifiedDoctorsByConsultationProvider(_doctorType).future,
+                );
               },
               child: asyncDoctors.when(
                 loading: () => const Padding(
@@ -136,12 +141,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                     ),
                   ],
                 ),
-                data: (allDoctors) {
-                  final filtered =
-                      filterDoctorsByConsultation(allDoctors, _doctorType);
-                  final items = filtered.isNotEmpty ? filtered : allDoctors;
-                  return _buildDoctorList(items);
-                },
+                data: (doctors) => _buildDoctorList(doctors),
               ),
             ),
           ),
@@ -396,11 +396,11 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     if (items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
+        children: [
           Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Text(
-              'No verified doctors yet. Profiles appear here after admin approval.',
+              'No verified doctors offer ${_doctorType.label.toLowerCase()} yet.',
               textAlign: TextAlign.center,
             ),
           ),

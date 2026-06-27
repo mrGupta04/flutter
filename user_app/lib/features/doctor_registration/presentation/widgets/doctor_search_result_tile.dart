@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../core/utils/doctor_location_utils.dart';
 import '../../../../features/online_consult/online_consult_navigation.dart';
@@ -9,10 +10,12 @@ class DoctorSearchResultTile extends StatelessWidget {
   const DoctorSearchResultTile({
     super.key,
     required this.doctor,
+    this.consultationFilter,
     this.showBottomDivider = true,
   });
 
   final DoctorModel doctor;
+  final ConsultationType? consultationFilter;
   final bool showBottomDivider;
 
   @override
@@ -21,6 +24,7 @@ class DoctorSearchResultTile extends StatelessWidget {
       doctor: doctor,
       showVerifiedIcon: true,
       showBottomDivider: showBottomDivider,
+      consultationFilter: consultationFilter,
       showActionButtons: doctor.offersOnlineConsult ||
           doctor.offersVisitSite ||
           doctor.offersBookHome ||

@@ -265,6 +265,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
             final doctor = applyLiveStatus(doctors[index], liveMap);
             return DoctorSearchResultTile(
               doctor: doctor,
+              consultationFilter: _consultationType,
               showBottomDivider: false,
             );
           },

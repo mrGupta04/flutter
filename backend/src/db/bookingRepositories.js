@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const ConsultationBooking = require('./models/ConsultationBooking');
 const { findDoctorById, getConsultationFeeForType } = require('./repositories');
+const { findNurseById } = require('./nurseRepositories');
 const { normalizeUploadUrl } = require('../utils/uploadUrl');
 const { findAvailabilityForActiveWeek } = require('./availabilityRepositories');
 const { isWeekExpired } = require('../utils/availabilityWeek');
@@ -1230,37 +1231,61 @@ async function createPaymentOrderForBooking(bookingId) {
   return { booking, doctorName };
 }
 
+async function resolveBookingProviderForPatient(booking) {
+  const isNurse =
+    booking.providerType === 'nurse' ||
+    (!booking.doctorId && booking.nurseId);
+
+  if (isNurse) {
+    const nurse = await findNurseById(booking.nurseId);
+    const nurseName = nurse
+      ? `${nurse.firstName || ''} ${nurse.lastName || ''}`.trim()
+      : 'Nurse';
+    return {
+      serviceType: 'nurse',
+      doctorId: booking.nurseId || '',
+      nurseId: booking.nurseId || null,
+      doctorName: nurseName || 'Nurse',
+      doctorProfilePicture: normalizeUploadUrl(nurse?.profilePicture),
+      clinicName: undefined,
+      clinicAddress: undefined,
+    };
+  }
+
+  const doctor = await findDoctorById(booking.doctorId);
+  const doctorName = doctor
+    ? `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim()
+    : 'Doctor';
+  return {
+    serviceType: 'doctor',
+    doctorId: booking.doctorId || '',
+    nurseId: null,
+    doctorName: doctorName || 'Doctor',
+    doctorProfilePicture: normalizeUploadUrl(doctor?.profilePicture),
+    clinicName: doctor?.clinicName,
+    clinicAddress: doctor ? buildClinicAddress(doctor) : undefined,
+  };
+}
+
 async function listPatientBookings(patientId, mobileNumber) {
-  const mobile = String(mobileNumber || '').replace(/\D/g, '').slice(-10);
+  const mobile = normalizeMobile(mobileNumber);
   const orConditions = [{ patientId }];
   if (mobile.length === 10) {
-    orConditions.push({
-      patientMobile: mobile,
-      $or: [
-        { patientId: { $exists: false } },
-        { patientId: null },
-        { patientId: '' },
-      ],
-    });
+    orConditions.push({ patientMobile: mobile });
   }
 
   const bookings = await ConsultationBooking.find({
     $and: [
       { $or: orConditions },
       {
-        $or: [
-          { status: 'confirmed' },
-          {
-            consultationType: 'book_home',
-            status: {
-              $in: [
-                'awaiting_doctor_approval',
-                'approved_pending_payment',
-                'pending',
-              ],
-            },
-          },
-        ],
+        status: {
+          $in: [
+            'confirmed',
+            'awaiting_doctor_approval',
+            'approved_pending_payment',
+            'pending',
+          ],
+        },
       },
     ],
   })
@@ -1276,16 +1301,15 @@ async function listPatientBookings(patientId, mobileNumber) {
 
   const results = [];
   for (const b of bookings) {
-    const doctor = await findDoctorById(b.doctorId);
-    const doctorName = doctor
-      ? `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim()
-      : 'Doctor';
+    const provider = await resolveBookingProviderForPatient(b);
     const slotLabel = formatSlotLabel(
       new Date(b.slotStart),
       new Date(b.slotEnd),
     );
     let typeLabel = 'Consultation';
-    if (b.consultationType === 'online_consult') {
+    if (provider.serviceType === 'nurse') {
+      typeLabel = 'Nurse home visit';
+    } else if (b.consultationType === 'online_consult') {
       typeLabel = 'Online consult';
     } else if (b.consultationType === 'visit_site') {
       typeLabel = 'Clinic visit';
@@ -1295,9 +1319,11 @@ async function listPatientBookings(patientId, mobileNumber) {
 
     results.push({
       id: b.id,
-      doctorId: b.doctorId,
-      doctorName,
-      doctorProfilePicture: normalizeUploadUrl(doctor?.profilePicture),
+      doctorId: provider.doctorId,
+      nurseId: provider.nurseId,
+      serviceType: provider.serviceType,
+      doctorName: provider.doctorName,
+      doctorProfilePicture: provider.doctorProfilePicture,
       consultationType: b.consultationType,
       typeLabel,
       patientName: b.patientName,
@@ -1318,10 +1344,10 @@ async function listPatientBookings(patientId, mobileNumber) {
       status: b.status,
       paymentStatus: b.paymentStatus,
       distanceKm: b.distanceKm ?? null,
-      clinicName: doctor?.clinicName,
-      clinicAddress: doctor ? buildClinicAddress(doctor) : undefined,
+      clinicName: provider.clinicName,
+      clinicAddress: provider.clinicAddress,
       createdAt: b.createdAt,
-      isUpcoming: new Date(b.slotStart) >= now,
+      isUpcoming: new Date(b.slotEnd) >= now,
       ...bookingAppointmentFields(b),
       ...videoJoinFields(b, now),
       ...feedbackFieldsForBooking(b, feedbackMap, now),

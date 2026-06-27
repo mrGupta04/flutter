@@ -198,6 +198,7 @@ class UpcomingMeetingTimerNotifier extends StateNotifier<UpcomingMeetingTimerSta
       clearDismissed: true,
     );
     unawaited(refresh());
+    unawaited(_ref.read(patientDashboardProvider.notifier).loadBookings());
   }
 
   void registerConsultationResult(ConsultationBookingResult result) {

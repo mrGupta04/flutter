@@ -29,7 +29,8 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
 
   @override
   Widget build(BuildContext context) {
-    final asyncDoctors = ref.watch(verifiedDoctorsProvider);
+    final asyncDoctors =
+        ref.watch(verifiedDoctorsByConsultationProvider(_selected));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -59,11 +60,7 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
               ),
             ),
           ),
-          data: (allDoctors) {
-            final filtered =
-                filterDoctorsByConsultation(allDoctors, _selected);
-            final doctors = filtered.isNotEmpty ? filtered : allDoctors;
-            final usingFallback = filtered.isEmpty && allDoctors.isNotEmpty;
+          data: (doctors) {
             final liveMap =
                 ref.watch(doctorLiveStatusProvider(doctorIdsCacheKey(doctors))).valueOrNull ??
                     const <String, bool>{};
@@ -72,7 +69,7 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
-                  'No verified doctors yet. New providers appear here after admin approval.',
+                  'No verified doctors offer ${_selected.label.toLowerCase()} yet.',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -86,9 +83,7 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    usingFallback
-                        ? 'Showing all verified doctors'
-                        : 'Showing doctors for: ${_selected.label}',
+                    'Showing doctors for: ${_selected.label}',
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,

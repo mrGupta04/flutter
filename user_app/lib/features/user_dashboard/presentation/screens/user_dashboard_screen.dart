@@ -37,9 +37,16 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    Future.microtask(() {
-      ref.read(patientDashboardProvider.notifier).loadBookings();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadBookingsWhenReady());
+  }
+
+  Future<void> _loadBookingsWhenReady() async {
+    final auth = ref.read(patientAuthProvider);
+    if (!auth.isInitialized) {
+      await ref.read(patientAuthProvider.notifier).initialize();
+    }
+    if (!mounted) return;
+    await ref.read(patientDashboardProvider.notifier).loadBookings();
   }
 
   @override
@@ -52,6 +59,12 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
   Widget build(BuildContext context) {
     final user = ref.watch(patientAuthProvider).user;
     final dash = ref.watch(patientDashboardProvider);
+
+    ref.listen<PatientAuthState>(patientAuthProvider, (prev, next) {
+      if (next.isLoggedIn && prev?.isLoggedIn != true) {
+        ref.read(patientDashboardProvider.notifier).loadBookings();
+      }
+    });
 
     ref.listen<PatientDashboardState>(patientDashboardProvider, (prev, next) {
       if (prev?.isLoadingBookings == true &&

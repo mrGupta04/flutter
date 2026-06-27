@@ -21,7 +21,10 @@ final verifiedDoctorsByConsultationProvider =
     );
 
     if (response.success && response.data != null) {
-      return response.data!;
+      return filterDoctorsByConsultation(
+        response.data!,
+        consultationType,
+      );
     }
 
     throw Exception(response.error ?? 'Failed to load verified doctors');

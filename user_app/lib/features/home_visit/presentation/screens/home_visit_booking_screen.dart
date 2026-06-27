@@ -17,7 +17,7 @@ import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
-import '../../../online_consult/provider/online_consult_provider.dart';
+import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/utils/user_auth_guard.dart';
@@ -249,6 +249,9 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
       );
       if (booking != null) {
         ref.invalidate(bookableSlotsProvider(_slotsQuery));
+        ref
+            .read(upcomingMeetingTimerProvider.notifier)
+            .registerConsultationResult(booking);
       }
     } else {
       final err = ref.read(homeVisitBookingProvider(widget.doctorId)).error;

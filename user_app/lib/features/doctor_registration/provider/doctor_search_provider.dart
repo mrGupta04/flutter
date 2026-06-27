@@ -73,7 +73,9 @@ final doctorSearchProvider =
     );
 
     if (response.success && response.data != null) {
-      var doctors = response.data!;
+      var doctors = response.data!
+          .where((d) => d.offersConsultationType(params.consultationType))
+          .toList(growable: false);
       final minYears = params.minYearsExperience;
       if (minYears != null) {
         doctors = doctors

@@ -163,10 +163,15 @@ class PatientBookingModel {
 
   bool get isAppointmentVerified => appointmentVerifiedAt != null;
 
+  /// True while the appointment window has not ended yet.
+  bool get isActiveOrUpcoming => !DateTime.now().isAfter(slotEnd);
+
   factory PatientBookingModel.fromJson(Map<String, dynamic> json) {
     return PatientBookingModel(
       id: json['id'] as String,
-      doctorId: json['doctorId'] as String,
+      doctorId: (json['doctorId'] as String?) ??
+          (json['nurseId'] as String?) ??
+          '',
       doctorName: json['doctorName'] as String? ?? 'Doctor',
       doctorProfilePicture: json['doctorProfilePicture'] as String?,
       serviceType: json['serviceType'] as String? ?? 'doctor',
@@ -185,7 +190,8 @@ class PatientBookingModel {
       patientNotes: json['patientNotes'] as String?,
       patientAddress: json['patientAddress'] as String?,
       patientCity: json['patientCity'] as String?,
-      isUpcoming: json['isUpcoming'] as bool? ?? false,
+      isUpcoming: json['isUpcoming'] as bool? ??
+          !_parseDateTime(json['slotEnd']).isBefore(DateTime.now()),
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String)
           : null,
@@ -242,13 +248,19 @@ class PatientBookingsResponse {
   });
 
   factory PatientBookingsResponse.fromJson(Map<String, dynamic> json) {
-    final list = (json['bookings'] as List<dynamic>? ?? [])
-        .map((e) => PatientBookingModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final bookings = <PatientBookingModel>[];
+    for (final raw in json['bookings'] as List<dynamic>? ?? []) {
+      if (raw is! Map<String, dynamic>) continue;
+      try {
+        bookings.add(PatientBookingModel.fromJson(raw));
+      } catch (_) {
+        // Skip malformed rows so one bad booking does not hide the rest.
+      }
+    }
     final statsJson =
         json['stats'] as Map<String, dynamic>? ?? <String, dynamic>{};
     return PatientBookingsResponse(
-      bookings: list,
+      bookings: bookings,
       stats: PatientBookingStats.fromJson(statsJson),
     );
   }
