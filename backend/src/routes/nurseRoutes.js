@@ -757,7 +757,7 @@ router.post('/upload-profile', upload.single('file'), async (req, res) => {
     }
 
     await ensureNurseStub(nurseId, req.body.mobileNumber);
-    const fileUrl = filePublicUrl(req, req.file.filename);
+    const fileUrl = await filePublicUrl(req, req.file);
     await updateNurseProfilePicture(nurseId, fileUrl);
 
     const document = await upsertDocument({
@@ -941,7 +941,7 @@ router.post('/upload-document', upload.single('file'), async (req, res) => {
 
     await ensureNurseStub(nurseId, req.body.mobileNumber);
 
-    const fileUrl = filePublicUrl(req, req.file.filename);
+    const fileUrl = await filePublicUrl(req, req.file);
 
     const document = await upsertDocument({
 

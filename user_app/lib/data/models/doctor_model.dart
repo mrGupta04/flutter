@@ -143,6 +143,14 @@ class DoctorModel {
   /// Get full name
   String get fullName => '${firstName ?? ''} ${lastName ?? ''}'.trim();
 
+  /// Best portrait URL for cards — profile photo first, then hospital photos.
+  String? get primaryPortraitUrl {
+    for (final url in [profilePicture, ...hospitalPhotoUrls]) {
+      if (url != null && url.trim().isNotEmpty) return url.trim();
+    }
+    return null;
+  }
+
   bool offersConsultationType(ConsultationType type) {
     switch (type) {
       case ConsultationType.onlineConsult:

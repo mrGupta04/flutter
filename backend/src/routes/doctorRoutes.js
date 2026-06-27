@@ -1,8 +1,4 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
 const {
   findDoctorById,
   findDoctorByEmail,
@@ -53,25 +49,7 @@ router.use('/aadhaar', aadhaarRoutes);
 // Email verification — POST /doctor/email/send-otp, /doctor/email/verify-otp
 router.use('/email', emailRoutes);
 
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || '';
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
-
-const { normalizeMobile, validateMobile } = require('../utils/mobile');
+const { upload, filePublicUrl } = require('../middleware/multerUpload');
 
 function mapBodyToDoctor(body) {
   return {
@@ -124,8 +102,6 @@ function mapBodyToDoctor(body) {
     aadhaarCardUrl: body.aadhaarCardUrl,
   };
 }
-
-const { filePublicUrl } = require('../middleware/multerUpload');
 
 // GET /doctor/verified — public list for patients / home screen
 router.get('/verified', async (req, res) => {
@@ -883,7 +859,7 @@ router.post('/upload-document', upload.single('file'), async (req, res) => {
 
     await ensureDoctorStub(doctorId, req.body.mobileNumber);
 
-    const fileUrl = filePublicUrl(req, req.file.filename);
+    const fileUrl = await filePublicUrl(req, req.file);
 
     const document = await createDocument({
       doctorId,
@@ -920,7 +896,7 @@ router.post('/upload-profile', upload.single('file'), async (req, res) => {
     }
 
     await ensureDoctorStub(doctorId, req.body.mobileNumber);
-    const fileUrl = filePublicUrl(req, req.file.filename);
+    const fileUrl = await filePublicUrl(req, req.file);
     await updateDoctorDocumentUrl(doctorId, 'profile_picture', fileUrl);
 
     return sendSuccess(res, {
@@ -950,7 +926,7 @@ router.post('/upload-hospital-photo', upload.single('file'), async (req, res) =>
     }
 
     await ensureDoctorStub(doctorId, req.body.mobileNumber);
-    const fileUrl = filePublicUrl(req, req.file.filename);
+    const fileUrl = await filePublicUrl(req, req.file);
     await updateDoctorDocumentUrl(doctorId, `hospital_photo_${photoIndex}`, fileUrl);
 
     return sendSuccess(res, {

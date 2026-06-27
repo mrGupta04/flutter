@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -818,7 +819,7 @@ class _DoctorAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = MediaUrlUtils.resolve(doctor.profilePicture);
+    final imageUrl = MediaUrlUtils.resolve(doctor.primaryPortraitUrl);
     final hasImage = imageUrl.isNotEmpty;
 
     return Stack(
@@ -860,10 +861,11 @@ class _DoctorAvatar extends StatelessWidget {
         width: 64,
         height: 64,
         child: hasImage
-            ? Image.network(
-                imageUrl,
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _placeholder(),
+                placeholder: (_, __) => _placeholder(),
+                errorWidget: (_, __, ___) => _placeholder(),
               )
             : _placeholder(),
       ),

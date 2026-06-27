@@ -5,7 +5,10 @@ class MediaUrlUtils {
   MediaUrlUtils._();
 
   static String get _serverOrigin {
-    final base = ApiConfig.baseUrl;
+    final base = ApiConfig.baseUrl.trim();
+    if (base.endsWith('/api/v1/')) {
+      return base.substring(0, base.length - '/api/v1/'.length);
+    }
     if (base.endsWith('/api/v1')) {
       return base.substring(0, base.length - '/api/v1'.length);
     }
@@ -14,17 +17,20 @@ class MediaUrlUtils {
 
   static String resolve(String? url) {
     if (url == null || url.isEmpty) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      final uri = Uri.tryParse(url);
-      if (uri != null && uri.path.contains('/uploads/')) {
-        return '$_serverOrigin${uri.path}';
-      }
-      return url;
+    final trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
     }
-    if (url.startsWith('/')) {
-      return '$_serverOrigin$url';
+    if (trimmed.startsWith('/uploads/')) {
+      return '$_serverOrigin$trimmed';
     }
-    return '$_serverOrigin/uploads/$url';
+    if (trimmed.startsWith('uploads/')) {
+      return '$_serverOrigin/$trimmed';
+    }
+    if (trimmed.startsWith('/')) {
+      return '$_serverOrigin$trimmed';
+    }
+    return '$_serverOrigin/uploads/$trimmed';
   }
 
   static bool isPdfUrl(String? url, {String? mimeType}) {

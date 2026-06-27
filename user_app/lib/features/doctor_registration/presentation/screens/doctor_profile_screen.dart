@@ -156,7 +156,7 @@ class _DoctorProfileBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final imageUrl = MediaUrlUtils.resolve(doctor.profilePicture);
+    final imageUrl = MediaUrlUtils.resolve(doctor.primaryPortraitUrl);
     final hasImage = imageUrl.isNotEmpty;
     final isVerified =
         doctor.verificationStatus == VerificationStatus.verified;

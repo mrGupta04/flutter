@@ -207,7 +207,7 @@ router.post('/upload-profile', upload.single('file'), async (req, res) => {
     }
 
     await ensureAmbulanceStub(ambulanceId, req.body.mobileNumber);
-    const fileUrl = filePublicUrl(req, req.file.filename);
+    const fileUrl = await filePublicUrl(req, req.file);
     await updateAmbulanceProfilePicture(ambulanceId, fileUrl);
 
     return sendSuccess(res, {
@@ -255,7 +255,7 @@ router.post('/upload-document', upload.single('file'), async (req, res) => {
     }
 
     await ensureAmbulanceStub(ambulanceId, req.body.mobileNumber);
-    const fileUrl = filePublicUrl(req, req.file.filename);
+    const fileUrl = await filePublicUrl(req, req.file);
 
     let ambulance;
     if (vehicleId) {

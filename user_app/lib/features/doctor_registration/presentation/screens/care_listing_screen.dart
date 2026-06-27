@@ -17,7 +17,6 @@ import '../../../../shared/widgets/consultation_type_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
-import '../../../../shared/widgets/nurse_care_filter_cards.dart';
 import 'nurse_profile_screen.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
@@ -64,7 +63,6 @@ class CareListingScreen extends ConsumerStatefulWidget {
 class _CareListingScreenState extends ConsumerState<CareListingScreen> {
   late CareRole _selectedRole;
   ConsultationType _doctorType = ConsultationType.onlineConsult;
-  NurseCareFilter _nurseFilter = NurseCareFilter.all;
   String? _nurseCity;
   String? _nurseSpecialization;
   AmbulanceCareFilter _ambulanceFilter = AmbulanceCareFilter.all;
@@ -154,7 +152,6 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     final params = NurseSearchParams(
       city: _nurseCity,
       specialization: _nurseSpecialization,
-      careFilter: _nurseFilter,
     );
     final asyncNurses = ref.watch(nurseSearchProvider(params));
 
@@ -173,10 +170,6 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       body: Column(
         children: [
           ..._buildRoleHeader(),
-          NurseCareFilterCards(
-            selected: _nurseFilter,
-            onSelected: (f) => setState(() => _nurseFilter = f),
-          ),
           const SizedBox(height: 8),
           HorizontalFilterChips(
             labels: popularCareCities,

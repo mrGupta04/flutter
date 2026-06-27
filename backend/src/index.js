@@ -43,7 +43,8 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 const uploadsPath = path.join(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadsPath));
+const uploadRoutes = require('./routes/uploadRoutes');
+app.use('/uploads', uploadRoutes);
 
 app.get('/health', async (_req, res) => {
   try {

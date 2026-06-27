@@ -330,7 +330,7 @@ router.post('/upload-profile', upload.single('file'), async (req, res) => {
 
     await ensureBloodBankStub(bloodBankId, req.body.mobileNumber);
 
-    const fileUrl = filePublicUrl(req, req.file.filename);
+    const fileUrl = await filePublicUrl(req, req.file);
 
     await updateBloodBankProfilePicture(bloodBankId, fileUrl);
 

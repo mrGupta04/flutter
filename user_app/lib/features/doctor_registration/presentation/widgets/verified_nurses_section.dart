@@ -6,27 +6,18 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
-import '../../../../shared/widgets/nurse_care_filter_cards.dart';
 import '../../../../shared/widgets/home_provider_preview.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../provider/nurse_search_provider.dart';
 import '../screens/nurse_profile_screen.dart';
 
-class VerifiedNursesSection extends ConsumerStatefulWidget {
+class VerifiedNursesSection extends ConsumerWidget {
   const VerifiedNursesSection({super.key});
 
-  @override
-  ConsumerState<VerifiedNursesSection> createState() =>
-      _VerifiedNursesSectionState();
-}
-
-class _VerifiedNursesSectionState extends ConsumerState<VerifiedNursesSection> {
-  NurseCareFilter _selected = NurseCareFilter.all;
-
-  NurseSearchParams get _params => NurseSearchParams(careFilter: _selected);
+  static const _params = NurseSearchParams();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final asyncNurses = ref.watch(nurseSearchProvider(_params));
 
     return Column(
@@ -38,11 +29,6 @@ class _VerifiedNursesSectionState extends ConsumerState<VerifiedNursesSection> {
           onAction: () => context.push(AppConstants.routeNurseSearch),
         ),
         const SizedBox(height: 12),
-        NurseCareFilterCards(
-          selected: _selected,
-          onSelected: (filter) => setState(() => _selected = filter),
-        ),
-        const SizedBox(height: 8),
         asyncNurses.when(
           loading: () => const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
@@ -62,7 +48,7 @@ class _VerifiedNursesSectionState extends ConsumerState<VerifiedNursesSection> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
-                  'No verified nurses for ${_selected.label.toLowerCase()} yet.',
+                  'No verified nurses for home visits yet.',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -72,25 +58,12 @@ class _VerifiedNursesSectionState extends ConsumerState<VerifiedNursesSection> {
 
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Showing: ${_selected.label}',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  HomeProviderScrollList(
-                    itemCount: nurses.length,
-                    itemBuilder: (context, i) => NurseListingCard(
-                      nurse: nurses[i],
-                      onTap: () => openNurseProfile(context, nurses[i]),
-                    ),
-                  ),
-                ],
+              child: HomeProviderScrollList(
+                itemCount: nurses.length,
+                itemBuilder: (context, i) => NurseListingCard(
+                  nurse: nurses[i],
+                  onTap: () => openNurseProfile(context, nurses[i]),
+                ),
               ),
             );
           },

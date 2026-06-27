@@ -10,7 +10,6 @@ import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
-import '../../../../shared/widgets/nurse_care_filter_cards.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../provider/care_filter_constants.dart';
@@ -39,7 +38,6 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
   String? _query;
   String? _city;
   String? _specialization;
-  NurseCareFilter _careFilter = NurseCareFilter.all;
 
   @override
   void initState() {
@@ -80,7 +78,6 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
         query: _query,
         city: _city,
         specialization: _specialization,
-        careFilter: _careFilter,
       );
 
   @override
@@ -135,22 +132,6 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          NurseCareFilterCards(
-            selected: _careFilter,
-            onSelected: (f) => setState(() => _careFilter = f),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Showing: ${_careFilter.label}',
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
           HorizontalFilterChips(
             labels: popularCareCities,
             selected: _city,

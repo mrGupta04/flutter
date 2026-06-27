@@ -60,8 +60,8 @@ router.post(
         age,
         gender,
         aadhaarNumber,
-        profilePicture: filePublicUrl(req, profileFile.filename),
-        aadhaarCardUrl: filePublicUrl(req, aadhaarFile.filename),
+        profilePicture: await filePublicUrl(req, profileFile),
+        aadhaarCardUrl: await filePublicUrl(req, aadhaarFile),
       });
 
       const token = signToken(
@@ -158,10 +158,10 @@ router.put(
 
       const updateData = { ...body };
       if (profileFile) {
-        updateData.profilePicture = filePublicUrl(req, profileFile.filename);
+        updateData.profilePicture = await filePublicUrl(req, profileFile);
       }
       if (aadhaarFile) {
-        updateData.aadhaarCardUrl = filePublicUrl(req, aadhaarFile.filename);
+        updateData.aadhaarCardUrl = await filePublicUrl(req, aadhaarFile);
       }
 
       const patient = await updatePatient(patientId, updateData);
@@ -201,7 +201,7 @@ router.post(
         bookingId: req.params.bookingId,
         patientId,
         mobileNumber: patient.mobileNumber,
-        fileUrl: filePublicUrl(req, req.file.filename),
+        fileUrl: await filePublicUrl(req, req.file),
         fileName: req.file.originalname,
         mimeType: req.file.mimetype,
       });
