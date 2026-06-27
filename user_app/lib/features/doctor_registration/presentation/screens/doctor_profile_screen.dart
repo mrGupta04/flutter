@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
@@ -317,39 +318,6 @@ class _DoctorProfileBody extends ConsumerWidget {
                         label: 'Experience',
                         value: '${doctor.yearsOfExperience} years',
                       ),
-                    if (doctor.offersOnlineConsult &&
-                        doctor.feeForConsultationType(
-                              ConsultationType.onlineConsult,
-                            ) !=
-                            null)
-                      _InfoRow(
-                        icon: Icons.videocam_outlined,
-                        label: 'Online consult fee',
-                        value:
-                            '₹${doctor.feeForConsultationType(ConsultationType.onlineConsult)}',
-                      ),
-                    if (doctor.offersVisitSite &&
-                        doctor.feeForConsultationType(
-                              ConsultationType.visitSite,
-                            ) !=
-                            null)
-                      _InfoRow(
-                        icon: Icons.local_hospital_outlined,
-                        label: 'Hospital visit fee',
-                        value:
-                            '₹${doctor.feeForConsultationType(ConsultationType.visitSite)}',
-                      ),
-                    if (doctor.offersBookHome &&
-                        doctor.feeForConsultationType(
-                              ConsultationType.bookHome,
-                            ) !=
-                            null)
-                      _InfoRow(
-                        icon: Icons.home_outlined,
-                        label: 'Home visit fee',
-                        value:
-                            '₹${doctor.feeForConsultationType(ConsultationType.bookHome)}',
-                      ),
                     if (doctor.languagesSpoken?.isNotEmpty == true)
                       _InfoRow(
                         label: 'Languages',
@@ -363,28 +331,33 @@ class _DoctorProfileBody extends ConsumerWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                const MarketplaceSectionTitle(title: 'Clinic location'),
-                _InfoCard(
-                  children: [
-                    if (_locationLine.isNotEmpty)
+                if (doctor.availableConsultationTypes.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const MarketplaceSectionTitle(title: 'Consultation charges'),
+                  _InfoCard(
+                    children: [
+                      for (final type in doctor.availableConsultationTypes)
+                        _InfoRow(
+                          icon: _consultationTypeIcon(type),
+                          label: _consultationTypeLabel(type),
+                          value: _consultationFeeLabel(doctor, type),
+                        ),
+                    ],
+                  ),
+                ],
+                if (_locationLine.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const MarketplaceSectionTitle(title: 'Clinic location'),
+                  _InfoCard(
+                    children: [
                       _InfoRow(
                         icon: Icons.location_on_outlined,
                         label: 'Address',
                         value: _locationLine,
                       ),
-                    _InfoRow(
-                      icon: Icons.videocam_outlined,
-                      label: 'Online consult',
-                      value: doctor.offersOnlineConsult ? 'Available' : 'Not offered',
-                    ),
-                    _InfoRow(
-                      icon: Icons.local_hospital_outlined,
-                      label: 'Hospital visit',
-                      value: doctor.offersVisitSite ? 'Available' : 'Not offered',
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
                 if (hospitalPhotos.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   const MarketplaceSectionTitle(title: 'Hospital photos'),
@@ -401,57 +374,19 @@ class _DoctorProfileBody extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                DoctorConsultationFeesBanner(doctor: doctor),
-                if (doctor.offersOnlineConsult || doctor.offersVisitSite)
-                  const SizedBox(height: 12),
-                if (doctor.offersOnlineConsult)
-                  CustomButton(
-                    label: _bookingButtonLabel(
-                      'Book online consult',
-                      doctor.feeForConsultationType(
-                        ConsultationType.onlineConsult,
-                      ),
-                    ),
-                    icon: Icons.videocam_rounded,
-                    onPressed: () => openOnlineConsultBooking(context, doctor),
-                  ),
-                if (doctor.offersOnlineConsult && doctor.offersVisitSite)
-                  const SizedBox(height: 10),
-                if (doctor.offersVisitSite)
-                  CustomOutlineButton(
-                    label: _bookingButtonLabel(
-                      'Book hospital visit',
-                      doctor.feeForConsultationType(
-                        ConsultationType.visitSite,
-                      ),
-                    ),
-                    icon: Icons.local_hospital_rounded,
-                    onPressed: () => openHospitalVisitBooking(context, doctor),
-                  ),
-                if ((doctor.offersOnlineConsult || doctor.offersVisitSite) &&
-                    doctor.offersBookHome)
-                  const SizedBox(height: 10),
-                if (doctor.offersBookHome)
-                  CustomButton(
-                    label: _bookingButtonLabel(
-                      'Book home visit',
-                      doctor.feeForConsultationType(
-                        ConsultationType.bookHome,
-                      ),
-                    ),
-                    icon: Icons.home_rounded,
-                    onPressed: () => openHomeVisitBooking(context, doctor),
-                  ),
-                if (!doctor.offersOnlineConsult &&
-                    !doctor.offersVisitSite &&
-                    !doctor.offersBookHome)
+                if (doctor.availableConsultationTypes.isEmpty)
                   Text(
                     'No bookable consultation options for this doctor.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
-                  ),
+                  )
+                else ...[
+                  DoctorConsultationFeesBanner(doctor: doctor),
+                  const SizedBox(height: 12),
+                  ..._bookingActions(context, doctor),
+                ],
               ],
             ),
           ),
@@ -464,6 +399,71 @@ class _DoctorProfileBody extends ConsumerWidget {
 String _bookingButtonLabel(String action, int? fee) {
   if (fee == null || fee <= 0) return action;
   return '$action · ₹$fee';
+}
+
+String _consultationTypeLabel(ConsultationType type) {
+  switch (type) {
+    case ConsultationType.onlineConsult:
+      return 'Online consult';
+    case ConsultationType.visitSite:
+      return 'Hospital visit';
+    case ConsultationType.bookHome:
+      return 'Home visit';
+  }
+}
+
+IconData _consultationTypeIcon(ConsultationType type) {
+  switch (type) {
+    case ConsultationType.onlineConsult:
+      return Icons.videocam_outlined;
+    case ConsultationType.visitSite:
+      return Icons.local_hospital_outlined;
+    case ConsultationType.bookHome:
+      return Icons.home_outlined;
+  }
+}
+
+String _consultationFeeLabel(DoctorModel doctor, ConsultationType type) {
+  final fee = doctor.feeForConsultationType(type);
+  if (fee == null || fee <= 0) return 'Fee on request';
+  return FormattingUtils.formatConsultationFee(fee);
+}
+
+List<Widget> _bookingActions(BuildContext context, DoctorModel doctor) {
+  final actions = <Widget>[];
+  for (final type in doctor.availableConsultationTypes) {
+    if (actions.isNotEmpty) {
+      actions.add(const SizedBox(height: 10));
+    }
+
+    final label = _bookingButtonLabel(
+      'Book ${_consultationTypeLabel(type).toLowerCase()}',
+      doctor.feeForConsultationType(type),
+    );
+    final icon = switch (type) {
+      ConsultationType.onlineConsult => Icons.videocam_rounded,
+      ConsultationType.visitSite => Icons.local_hospital_rounded,
+      ConsultationType.bookHome => Icons.home_rounded,
+    };
+    final onPressed = switch (type) {
+      ConsultationType.onlineConsult =>
+        () => openOnlineConsultBooking(context, doctor),
+      ConsultationType.visitSite =>
+        () => openHospitalVisitBooking(context, doctor),
+      ConsultationType.bookHome => () => openHomeVisitBooking(context, doctor),
+    };
+
+    if (type == ConsultationType.visitSite) {
+      actions.add(
+        CustomOutlineButton(label: label, icon: icon, onPressed: onPressed),
+      );
+    } else {
+      actions.add(
+        CustomButton(label: label, icon: icon, onPressed: onPressed),
+      );
+    }
+  }
+  return actions;
 }
 
 class _HospitalPhotoGallery extends StatelessWidget {

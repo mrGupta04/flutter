@@ -16,11 +16,43 @@ class PatientDashboardRepository {
     try {
       final response = await _dio.get(AppConstants.endpointPatientBookings);
       final body = response.data as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>? ?? {};
-      return PatientBookingsResponse.fromJson(data);
+      if (body['success'] == false) {
+        throw Exception(
+          (body['error'] ?? body['message'] ?? 'Failed to load bookings')
+              as String,
+        );
+      }
+
+      return PatientBookingsResponse.fromJson(_extractBookingsPayload(body));
     } on DioException catch (e) {
       throw _messageFromDio(e);
     }
+  }
+
+  /// Supports `{ data: { bookings, stats } }` and accidental double nesting.
+  static Map<String, dynamic> _extractBookingsPayload(
+    Map<String, dynamic> body,
+  ) {
+    dynamic payload = body['data'];
+
+    if (payload is Map<String, dynamic>) {
+      if (payload['bookings'] is List) {
+        return payload;
+      }
+      final nested = payload['data'];
+      if (nested is Map<String, dynamic> && nested['bookings'] is List) {
+        return nested;
+      }
+    }
+
+    if (body['bookings'] is List) {
+      return {
+        'bookings': body['bookings'],
+        'stats': body['stats'] ?? <String, dynamic>{},
+      };
+    }
+
+    return <String, dynamic>{};
   }
 
   Future<PatientUserModel> updateProfile({

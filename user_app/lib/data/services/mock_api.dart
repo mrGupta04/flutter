@@ -9,6 +9,13 @@ class MockApi {
 
   static final MockDatabase _db = MockDatabase.instance;
 
+  static bool _pathMatches(String path, String endpoint) {
+    final normalized = path.startsWith('/') ? path.substring(1) : path;
+    final expected =
+        endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    return normalized == expected;
+  }
+
   static Future<Response> handleRequest({
     required String path,
     required String method,
@@ -347,7 +354,8 @@ class MockApi {
       }
     }
 
-    if (path == AppConstants.endpointPatientBookings && method == 'GET') {
+    if (_pathMatches(path, AppConstants.endpointPatientBookings) &&
+        method == 'GET') {
       final now = DateTime.now();
       final upcoming = now.add(const Duration(days: 2));
       final past = now.subtract(const Duration(days: 3));

@@ -1267,11 +1267,15 @@ async function resolveBookingProviderForPatient(booking) {
   };
 }
 
-async function listPatientBookings(patientId, mobileNumber) {
+async function listPatientBookings(patientId, mobileNumber, patientEmail) {
   const mobile = normalizeMobile(mobileNumber);
-  const orConditions = [{ patientId }];
+  const email = String(patientEmail || '').trim().toLowerCase();
+  const orConditions = [{ patientId: String(patientId) }];
   if (mobile.length === 10) {
     orConditions.push({ patientMobile: mobile });
+  }
+  if (email) {
+    orConditions.push({ patientEmail: email });
   }
 
   const bookings = await ConsultationBooking.find({
@@ -1284,6 +1288,7 @@ async function listPatientBookings(patientId, mobileNumber) {
             'awaiting_doctor_approval',
             'approved_pending_payment',
             'pending',
+            'cancelled',
           ],
         },
       },

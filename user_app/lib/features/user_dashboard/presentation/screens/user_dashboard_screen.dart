@@ -61,7 +61,13 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
     final dash = ref.watch(patientDashboardProvider);
 
     ref.listen<PatientAuthState>(patientAuthProvider, (prev, next) {
-      if (next.isLoggedIn && prev?.isLoggedIn != true) {
+      final becameLoggedIn =
+          next.isLoggedIn && prev?.isLoggedIn != true;
+      final authReadyWithUser =
+          next.isInitialized &&
+              next.isLoggedIn &&
+              prev?.isInitialized != true;
+      if (becameLoggedIn || authReadyWithUser) {
         ref.read(patientDashboardProvider.notifier).loadBookings();
       }
     });

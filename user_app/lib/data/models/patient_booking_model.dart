@@ -37,7 +37,10 @@ enum PatientBookingCategory {
 
 DateTime _parseDateTime(dynamic value) {
   if (value is DateTime) return value;
-  if (value is String) return DateTime.parse(value);
+  if (value is String && value.isNotEmpty) return DateTime.parse(value);
+  if (value is num) {
+    return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+  }
   throw FormatException('Invalid date: $value');
 }
 
@@ -167,8 +170,13 @@ class PatientBookingModel {
   bool get isActiveOrUpcoming => !DateTime.now().isAfter(slotEnd);
 
   factory PatientBookingModel.fromJson(Map<String, dynamic> json) {
+    final id = json['id']?.toString();
+    if (id == null || id.isEmpty) {
+      throw FormatException('Missing booking id');
+    }
+
     return PatientBookingModel(
-      id: json['id'] as String,
+      id: id,
       doctorId: (json['doctorId'] as String?) ??
           (json['nurseId'] as String?) ??
           '',

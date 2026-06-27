@@ -63,7 +63,14 @@ class PatientDashboardNotifier extends StateNotifier<PatientDashboardState> {
   final Ref _ref;
 
   Future<void> loadBookings() async {
-    if (!_ref.read(patientAuthProvider).isLoggedIn) {
+    final auth = _ref.read(patientAuthProvider);
+    if (!auth.isInitialized) {
+      await _ref.read(patientAuthProvider.notifier).initialize();
+    }
+
+    final hasSession = _ref.read(patientAuthProvider).isLoggedIn ||
+        await TokenStorage.instance.isPatientLoggedIn();
+    if (!hasSession) {
       state = state.copyWith(
         bookings: const [],
         stats: const PatientBookingStats(total: 0, upcoming: 0, past: 0),

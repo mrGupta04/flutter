@@ -19,6 +19,7 @@ import '../core/services/token_storage.dart';
 import '../features/doctor_registration/provider/verified_doctors_provider.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
+import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
 
 /// Patient marketplace home — verified providers only, no registration flows.
 class UserHomeScreen extends ConsumerWidget {
@@ -339,6 +340,7 @@ Future<void> _onProfileTap(BuildContext context, WidgetRef ref) async {
   if (!context.mounted) return;
 
   if (loggedIn) {
+    ref.invalidate(patientDashboardProvider);
     context.push(AppConstants.routeUserDashboard);
   } else {
     context.push(AppConstants.routeUserLogin);

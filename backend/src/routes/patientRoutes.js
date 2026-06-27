@@ -232,6 +232,7 @@ router.get('/bookings', authRequired, async (req, res) => {
     const bookings = await listPatientBookings(
       patientId,
       patient.mobileNumber,
+      patient.email,
     );
 
     const upcoming = bookings.filter((b) => b.isUpcoming).length;
