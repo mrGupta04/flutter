@@ -135,6 +135,11 @@ class ProviderAuthRepository {
           final bloodBankId = await TokenStorage.instance.getBloodBankId();
           query = {if (bloodBankId != null) 'bloodBankId': bloodBankId};
           break;
+        case ProviderType.lab:
+          endpoint = AppConstants.endpointGetLabProfile;
+          final labId = await TokenStorage.instance.getLabId();
+          query = {if (labId != null) 'labId': labId};
+          break;
       }
 
       final response = await _dioService.get(endpoint, queryParameters: query);
@@ -180,6 +185,8 @@ class ProviderAuthRepository {
             : (profile['ownerName'] as String?) ?? 'Ambulance';
       case ProviderType.bloodBank:
         return (profile['institutionName'] as String?) ?? 'Blood Bank';
+      case ProviderType.lab:
+        return (profile['labName'] as String?) ?? 'Diagnostic Lab';
     }
   }
 

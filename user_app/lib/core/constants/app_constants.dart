@@ -187,8 +187,6 @@ class AppConstants {
   static const String routeAdminNurseList = '/admin-nurse-list';
   static const String routeAdminNurseDetails = '/admin-nurse-details';
 
-  static const String endpointVerifiedBloodBanks = '/blood-bank/verified';
-
   // Lab API Endpoints
   static const String endpointRegisterLab = '/lab/register';
   static const String endpointLabUploadProfile = '/lab/upload-profile';

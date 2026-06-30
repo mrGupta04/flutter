@@ -230,6 +230,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
       ProviderType.nurse => AppConstants.routeNurseApplicationSubmitted,
       ProviderType.ambulance => AppConstants.routeAmbulanceApplicationSubmitted,
       ProviderType.bloodBank => AppConstants.routeBloodBankApplicationSubmitted,
+      ProviderType.lab => AppConstants.routeLabApplicationSubmitted,
     };
     context.push(route);
   }

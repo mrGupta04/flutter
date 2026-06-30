@@ -9,6 +9,7 @@ const nurseRoutes = require('./routes/nurseRoutes');
 const adminAuthRoutes = require('./routes/adminAuthRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const ambulanceRoutes = require('./routes/ambulanceRoutes');
+const bloodBankRoutes = require('./routes/bloodBankRoutes');
 const labRoutes = require('./routes/labRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
