@@ -9,7 +9,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
-import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
@@ -169,15 +168,12 @@ class _DoctorProfileBody extends ConsumerWidget {
         ? ref.watch(doctorFeedbackProvider(doctor.id!))
         : null;
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(colors: AppColors.gradientHero),
@@ -280,7 +276,7 @@ class _DoctorProfileBody extends ConsumerWidget {
                     ],
                   ),
                 ),
-                if (feedbackAsync != null) ...[
+          if (feedbackAsync != null) ...[
                   const SizedBox(height: 20),
                   feedbackAsync.when(
                     loading: () => const SizedBox(
@@ -300,10 +296,10 @@ class _DoctorProfileBody extends ConsumerWidget {
                       );
                     },
                   ),
-                ],
-                const SizedBox(height: 20),
-                const MarketplaceSectionTitle(title: 'Professional details'),
-                _InfoCard(
+          ],
+          const SizedBox(height: 20),
+          const MarketplaceSectionTitle(title: 'Professional details'),
+          _InfoCard(
                   children: [
                     if (doctor.qualification != null &&
                         doctor.qualification!.trim().isNotEmpty)
@@ -330,68 +326,42 @@ class _DoctorProfileBody extends ConsumerWidget {
                         value: doctor.bio!.trim(),
                       ),
                   ],
-                ),
-                if (doctor.availableConsultationTypes.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const MarketplaceSectionTitle(title: 'Consultation charges'),
-                  _InfoCard(
-                    children: [
-                      for (final type in doctor.availableConsultationTypes)
-                        _InfoRow(
-                          icon: _consultationTypeIcon(type),
-                          label: _consultationTypeLabel(type),
-                          value: _consultationFeeLabel(doctor, type),
-                        ),
-                    ],
-                  ),
-                ],
-                if (_locationLine.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const MarketplaceSectionTitle(title: 'Clinic location'),
-                  _InfoCard(
-                    children: [
-                      _InfoRow(
-                        icon: Icons.location_on_outlined,
-                        label: 'Address',
-                        value: _locationLine,
-                      ),
-                    ],
-                  ),
-                ],
-                if (hospitalPhotos.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const MarketplaceSectionTitle(title: 'Hospital photos'),
-                  _HospitalPhotoGallery(photoUrls: hospitalPhotos),
-                ],
-              ],
-            ),
           ),
-        ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          if (_locationLine.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const MarketplaceSectionTitle(title: 'Clinic location'),
+            _InfoCard(
               children: [
-                if (doctor.availableConsultationTypes.isEmpty)
-                  Text(
-                    'No bookable consultation options for this doctor.',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  )
-                else ...[
-                  DoctorConsultationFeesBanner(doctor: doctor),
-                  const SizedBox(height: 12),
-                  ..._bookingActions(context, doctor),
-                ],
+                _InfoRow(
+                  icon: Icons.location_on_outlined,
+                  label: 'Address',
+                  value: _locationLine,
+                ),
               ],
             ),
-          ),
-        ),
-      ],
+          ],
+          if (hospitalPhotos.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const MarketplaceSectionTitle(title: 'Hospital photos'),
+            _HospitalPhotoGallery(photoUrls: hospitalPhotos),
+          ],
+          if (doctor.availableConsultationTypes.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            DoctorConsultationFeesBanner(doctor: doctor),
+            const SizedBox(height: 12),
+            ..._bookingActions(context, doctor),
+          ] else ...[
+            const SizedBox(height: 20),
+            Text(
+              'No bookable consultation options for this doctor.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -410,23 +380,6 @@ String _consultationTypeLabel(ConsultationType type) {
     case ConsultationType.bookHome:
       return 'Home visit';
   }
-}
-
-IconData _consultationTypeIcon(ConsultationType type) {
-  switch (type) {
-    case ConsultationType.onlineConsult:
-      return Icons.videocam_outlined;
-    case ConsultationType.visitSite:
-      return Icons.local_hospital_outlined;
-    case ConsultationType.bookHome:
-      return Icons.home_outlined;
-  }
-}
-
-String _consultationFeeLabel(DoctorModel doctor, ConsultationType type) {
-  final fee = doctor.feeForConsultationType(type);
-  if (fee == null || fee <= 0) return 'Fee on request';
-  return FormattingUtils.formatConsultationFee(fee);
 }
 
 List<Widget> _bookingActions(BuildContext context, DoctorModel doctor) {

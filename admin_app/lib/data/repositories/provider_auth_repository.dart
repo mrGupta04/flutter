@@ -33,6 +33,8 @@ class ProviderAuthRepository {
         return AppConstants.endpointAmbulanceLogin;
       case ProviderType.bloodBank:
         return AppConstants.endpointBloodBankLogin;
+      case ProviderType.lab:
+        return AppConstants.endpointLabLogin;
     }
   }
 
@@ -42,7 +44,8 @@ class ProviderAuthRepository {
         profile['doctorId'] as String? ??
         profile['nurseId'] as String? ??
         profile['ambulanceId'] as String? ??
-        profile['bloodBankId'] as String?;
+        profile['bloodBankId'] as String? ??
+        profile['labId'] as String?;
     return id ?? '';
   }
 
@@ -56,6 +59,8 @@ class ProviderAuthRepository {
         return 'ambulance';
       case ProviderType.bloodBank:
         return 'blood-bank';
+      case ProviderType.lab:
+        return 'lab';
     }
   }
 

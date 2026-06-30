@@ -27,6 +27,11 @@ import '../features/user_auth/presentation/screens/user_register_screen.dart';
 import '../features/user_dashboard/presentation/screens/edit_patient_profile_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_dashboard_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
+import '../features/labs/presentation/screens/labs_screen.dart';
+import '../features/labs/presentation/screens/lab_search_screen.dart';
+import '../features/lab_registration/presentation/screens/lab_registration_screen.dart';
+import '../features/lab_registration/presentation/screens/lab_application_submitted_screen.dart';
+import '../features/labs/data/models/lab_test_model.dart';
 import '../screens/user_home_screen.dart';
 
 /// Patient marketplace - browse verified providers only.
@@ -298,6 +303,54 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             initialCity: state.uri.queryParameters['city'],
             initialVehicleType: state.uri.queryParameters['vehicleType'],
           ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeLabs,
+        name: 'labs',
+        pageBuilder: (context, state) {
+          final categoryId = state.uri.queryParameters['category'];
+          LabTestCategory? initialCategory;
+          if (categoryId != null) {
+            for (final c in LabTestCategory.values) {
+              if (c.id == categoryId) {
+                initialCategory = c;
+                break;
+              }
+            }
+          }
+          return slidePage(
+            state,
+            LabsScreen(initialCategory: initialCategory),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeLabSearch,
+        name: 'labSearch',
+        pageBuilder: (context, state) {
+          final testId = state.uri.queryParameters['testId'] ?? '';
+          final testName = state.uri.queryParameters['testName'] ?? 'Diagnostic test';
+          return slidePage(
+            state,
+            LabSearchScreen(testId: testId, testName: testName),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeLabRegistration,
+        name: 'labRegistration',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const LabRegistrationScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeLabApplicationSubmitted,
+        name: 'labApplicationSubmitted',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const LabApplicationSubmittedScreen(),
         ),
       ),
       GoRoute(

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -14,6 +15,8 @@ import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/searchable_filter_dropdown.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
+import '../../../../core/services/location_service.dart';
+import '../../../../core/utils/geo_distance_utils.dart';
 import '../../provider/care_filter_constants.dart';
 import '../../provider/doctor_search_provider.dart';
 import '../../provider/doctor_live_status_provider.dart';
@@ -43,6 +46,14 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
   String? _specialization;
   int? _minYearsExperience;
   ConsultationType _consultationType = ConsultationType.onlineConsult;
+  double? _nearbyLatitude;
+  double? _nearbyLongitude;
+  bool _nearbyActive = false;
+  bool _isFetchingNearby = false;
+
+  bool get _showsNearbyFilter =>
+      _consultationType == ConsultationType.visitSite ||
+      _consultationType == ConsultationType.bookHome;
 
   @override
   void initState() {
@@ -80,8 +91,163 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
       _city = null;
       _specialization = null;
       _minYearsExperience = null;
+      _nearbyActive = false;
+      _nearbyLatitude = null;
+      _nearbyLongitude = null;
       _controller.clear();
     });
+  }
+
+  Future<void> _getDoctorsNearby() async {
+    setState(() => _isFetchingNearby = true);
+    try {
+      final hasAccess = await _ensureLocationAccess();
+      if (!hasAccess || !mounted) return;
+
+      final position = await LocationService.getCurrentPosition(
+        requestPermissionIfNeeded: false,
+      );
+      if (!mounted) return;
+      setState(() {
+        _nearbyLatitude = position.latitude;
+        _nearbyLongitude = position.longitude;
+        _nearbyActive = true;
+      });
+      custom.SnackBarHelper.showSuccess(
+        context,
+        'Showing doctors nearest to you.',
+      );
+    } on LocationFailure catch (e) {
+      if (mounted) await _handleLocationFailure(e);
+    } finally {
+      if (mounted) setState(() => _isFetchingNearby = false);
+    }
+  }
+
+  Future<bool> _ensureLocationAccess() async {
+    if (!await LocationService.isServiceEnabled()) {
+      if (!mounted) return false;
+      final openSettings = await _showLocationPermissionDialog(
+        title: 'Turn on location',
+        message:
+            'Location services are off. Enable GPS or location to find doctors near you.',
+        confirmLabel: 'Open settings',
+      );
+      if (openSettings) {
+        await LocationService.openLocationSettings();
+      }
+      return false;
+    }
+
+    var permission = await LocationService.checkPermission();
+    if (LocationService.permissionGranted(permission)) {
+      return true;
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      if (!mounted) return false;
+      final openSettings = await _showLocationPermissionDialog(
+        title: 'Location access blocked',
+        message:
+            'Allow location access in app settings to find clinic and home-visit doctors near you.',
+        confirmLabel: 'Open settings',
+      );
+      if (openSettings) {
+        await LocationService.openAppSettings();
+      }
+      return false;
+    }
+
+    if (!mounted) return false;
+    final allow = await _showLocationPermissionDialog(
+      title: 'Allow location access',
+      message:
+          'We use your location to show clinic and home-visit doctors nearest to you. '
+          'Your exact location is only used to sort nearby results.',
+      confirmLabel: 'Allow location',
+      cancelLabel: 'Not now',
+    );
+    if (!allow) return false;
+
+    permission = await LocationService.requestPermission();
+    if (LocationService.permissionGranted(permission)) {
+      return true;
+    }
+
+    if (!mounted) return false;
+    if (permission == LocationPermission.deniedForever) {
+      final openSettings = await _showLocationPermissionDialog(
+        title: 'Location access blocked',
+        message:
+            'Allow location access in app settings to find doctors near you.',
+        confirmLabel: 'Open settings',
+      );
+      if (openSettings) {
+        await LocationService.openAppSettings();
+      }
+      return false;
+    }
+
+    custom.SnackBarHelper.showError(
+      context,
+      'Location permission denied. Allow access when prompted, then try again.',
+    );
+    return false;
+  }
+
+  Future<void> _handleLocationFailure(LocationFailure error) async {
+    final message = error.message.toLowerCase();
+    if (message.contains('blocked') || message.contains('denied')) {
+      final openSettings = await _showLocationPermissionDialog(
+        title: 'Location access needed',
+        message: error.message,
+        confirmLabel: 'Open settings',
+      );
+      if (openSettings) {
+        await LocationService.openAppSettings();
+      }
+      return;
+    }
+
+    if (message.contains('turned off') || message.contains('disabled')) {
+      final openSettings = await _showLocationPermissionDialog(
+        title: 'Turn on location',
+        message: error.message,
+        confirmLabel: 'Open settings',
+      );
+      if (openSettings) {
+        await LocationService.openLocationSettings();
+      }
+      return;
+    }
+
+    custom.SnackBarHelper.showError(context, error.message);
+  }
+
+  Future<bool> _showLocationPermissionDialog({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    String cancelLabel = 'Cancel',
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(cancelLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   DoctorSearchParams get _params => DoctorSearchParams(
@@ -150,7 +316,14 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
           const SizedBox(height: 12),
           ConsultationTypeCards(
             selected: _consultationType,
-            onSelected: (type) => setState(() => _consultationType = type),
+            onSelected: (type) => setState(() {
+              _consultationType = type;
+              if (type == ConsultationType.onlineConsult) {
+                _nearbyActive = false;
+                _nearbyLatitude = null;
+                _nearbyLongitude = null;
+              }
+            }),
           ),
           const SizedBox(height: 8),
           Padding(
@@ -163,6 +336,45 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
               ),
             ),
           ),
+          if (_showsNearbyFilter) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: OutlinedButton.icon(
+                onPressed: _isFetchingNearby ? null : _getDoctorsNearby,
+                icon: _isFetchingNearby
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        _nearbyActive
+                            ? Icons.near_me_rounded
+                            : Icons.my_location_rounded,
+                      ),
+                label: Text(
+                  _nearbyActive
+                      ? 'Doctors nearby (tap to refresh)'
+                      : 'Get doctors nearby',
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                  foregroundColor: _nearbyActive
+                      ? AppColors.primary
+                      : AppColors.textPrimary,
+                  side: BorderSide(
+                    color: _nearbyActive
+                        ? AppColors.primary.withValues(alpha: 0.55)
+                        : AppColors.border,
+                  ),
+                  backgroundColor: _nearbyActive
+                      ? AppColors.primary.withValues(alpha: 0.06)
+                      : AppColors.white,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -220,7 +432,17 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
         onRetry: () => ref.invalidate(doctorSearchProvider(_params)),
       ),
       data: (doctors) {
-        if (doctors.isEmpty) {
+        final sortedDoctors = _nearbyActive &&
+                _nearbyLatitude != null &&
+                _nearbyLongitude != null
+            ? sortDoctorsByDistance(
+                doctors,
+                _nearbyLatitude!,
+                _nearbyLongitude!,
+              )
+            : doctors;
+
+        if (sortedDoctors.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(32),
@@ -252,21 +474,31 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
         }
 
         final liveMap = ref
-                .watch(doctorLiveStatusProvider(doctorIdsCacheKey(doctors)))
+                .watch(doctorLiveStatusProvider(doctorIdsCacheKey(sortedDoctors)))
                 .valueOrNull ??
             const <String, bool>{};
 
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          itemCount: doctors.length,
+          itemCount: sortedDoctors.length,
           separatorBuilder: (context, index) =>
               const SizedBox(height: kDoctorCardSpacing),
           itemBuilder: (context, index) {
-            final doctor = applyLiveStatus(doctors[index], liveMap);
+            final doctor = applyLiveStatus(sortedDoctors[index], liveMap);
+            final distanceKm = _nearbyActive &&
+                    _nearbyLatitude != null &&
+                    _nearbyLongitude != null
+                ? doctorDistanceKm(
+                    doctor,
+                    _nearbyLatitude!,
+                    _nearbyLongitude!,
+                  )
+                : null;
             return DoctorSearchResultTile(
               doctor: doctor,
               consultationFilter: _consultationType,
               showBottomDivider: false,
+              distanceKm: distanceKm,
             );
           },
         );

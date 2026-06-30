@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../models/nurse_model.dart';
 import '../models/ambulance_model.dart';
 import '../models/blood_bank_model.dart';
+import '../models/lab_model.dart';
 import '../services/dio_service.dart';
 
 /// Admin repository — talks to REST API with admin JWT.
@@ -696,6 +697,131 @@ class AdminRepository {
         error: 'An unexpected error occurred',
         statusCode: 500,
       );
+    }
+  }
+
+  Future<ApiResponse<List<LabModel>>> getLabsForVerification({
+    int page = 1,
+    String? status,
+  }) async {
+    try {
+      final response = await _dioService.get(
+        AppConstants.endpointAdminLabs,
+        queryParameters: {
+          'page': page,
+          if (status != null) 'status': status,
+        },
+      );
+
+      final body = response.data as Map<String, dynamic>;
+      final list = (body['data'] as List?)
+              ?.map((e) => LabModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        data: list,
+        statusCode: body['statusCode'] as int? ?? 200,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<LabModel>> getLabDetails({required String labId}) async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointAdminLab(labId));
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => LabModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<LabModel>> approveLab({
+    required String labId,
+    String? approvalNotes,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminLabApprove(labId),
+        data: {if (approvalNotes != null) 'approvalNotes': approvalNotes},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => LabModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<LabModel>> rejectLab({
+    required String labId,
+    required String rejectionReason,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminLabReject(labId),
+        data: {'rejectionReason': rejectionReason},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => LabModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<LabModel>> suspendLab({
+    required String labId,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminLabSuspend(labId),
+        data: {if (reason != null) 'reason': reason},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => LabModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<LabModel>> requestLabDocuments({
+    required String labId,
+    required String note,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminLabRequestDocuments(labId),
+        data: {'note': note},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => LabModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
     }
   }
 

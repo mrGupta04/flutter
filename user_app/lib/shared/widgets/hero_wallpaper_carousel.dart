@@ -34,12 +34,6 @@ class _HeroWallpaperCarouselState extends State<HeroWallpaperCarousel> {
     ),
     _HeroSlide(
       imageUrl:
-          'https://images.unsplash.com/photo-1584982751601-97dcc096659c?w=1400&h=700&fit=crop',
-      title: 'Experienced nurses at your doorstep',
-      subtitle: 'Home care services with reliable support',
-    ),
-    _HeroSlide(
-      imageUrl:
           'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=1400&h=700&fit=crop',
       title: 'Multi-specialty healthcare network',
       subtitle: 'Discover providers across top departments',

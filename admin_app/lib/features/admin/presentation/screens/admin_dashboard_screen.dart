@@ -77,6 +77,14 @@ class AdminDashboardScreen extends ConsumerWidget {
                     onTap: () =>
                         context.push(AppConstants.routeAdminBloodBankList),
                   ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.biotech_rounded,
+                    title: 'Diagnostic lab applications',
+                    subtitle: 'Review documents · approve or suspend',
+                    color: AppColors.primary,
+                    onTap: () => context.push(AppConstants.routeAdminLabList),
+                  ),
                 ],
               ),
             ),

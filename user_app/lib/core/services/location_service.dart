@@ -14,30 +14,49 @@ class LocationFailure implements Exception {
 class LocationService {
   LocationService._();
 
-  static Future<({double latitude, double longitude})> getCurrentPosition() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
+  static Future<bool> isServiceEnabled() =>
+      Geolocator.isLocationServiceEnabled();
+
+  static Future<LocationPermission> checkPermission() =>
+      Geolocator.checkPermission();
+
+  static Future<LocationPermission> requestPermission() =>
+      Geolocator.requestPermission();
+
+  static Future<void> openLocationSettings() =>
+      Geolocator.openLocationSettings();
+
+  static Future<void> openAppSettings() => Geolocator.openAppSettings();
+
+  static bool permissionGranted(LocationPermission permission) =>
+      permission == LocationPermission.always ||
+      permission == LocationPermission.whileInUse;
+
+  /// Ensures location services are on and permission is granted.
+  /// Requests permission when currently denied and [requestIfDenied] is true.
+  static Future<LocationPermission> ensurePermission({
+    bool requestIfDenied = true,
+  }) async {
+    if (!await isServiceEnabled()) {
       throw LocationFailure(
         'Location services are turned off. Enable GPS or location in system settings.',
       );
     }
 
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+    var permission = await checkPermission();
+    if (permission == LocationPermission.denied && requestIfDenied) {
+      permission = await requestPermission();
     }
+    return permission;
+  }
 
-    if (permission == LocationPermission.denied) {
-      throw LocationFailure(
-        'Location permission denied. Allow location access when prompted, then try again.',
-      );
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      throw LocationFailure(
-        'Location permission blocked. Enable it in browser or app settings.',
-      );
-    }
+  static Future<({double latitude, double longitude})> getCurrentPosition({
+    bool requestPermissionIfNeeded = true,
+  }) async {
+    final permission = await ensurePermission(
+      requestIfDenied: requestPermissionIfNeeded,
+    );
+    _throwIfPermissionBlocked(permission);
 
     try {
       final position = await Geolocator.getCurrentPosition(
@@ -64,6 +83,19 @@ class LocationService {
       }
       throw LocationFailure(
         'Unable to read current location. Check permissions and try again.',
+      );
+    }
+  }
+
+  static void _throwIfPermissionBlocked(LocationPermission permission) {
+    if (permission == LocationPermission.denied) {
+      throw LocationFailure(
+        'Location permission denied. Allow location access when prompted, then try again.',
+      );
+    }
+    if (permission == LocationPermission.deniedForever) {
+      throw LocationFailure(
+        'Location permission blocked. Enable it in browser or app settings.',
       );
     }
   }

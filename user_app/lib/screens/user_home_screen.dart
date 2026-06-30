@@ -9,14 +9,10 @@ import '../shared/widgets/hero_wallpaper_carousel.dart';
 import '../shared/widgets/user_app_footer.dart';
 import '../features/doctor_registration/presentation/widgets/verified_ambulances_section.dart';
 import '../features/doctor_registration/presentation/widgets/verified_blood_banks_section.dart';
-import '../features/doctor_registration/presentation/widgets/verified_doctors_section.dart';
-import '../features/doctor_registration/presentation/widgets/verified_nurses_section.dart';
 import '../features/doctor_registration/provider/ambulance_search_provider.dart';
 import '../features/doctor_registration/provider/blood_bank_search_provider.dart';
 import '../features/doctor_registration/provider/doctor_search_provider.dart';
-import '../features/doctor_registration/provider/nurse_search_provider.dart';
 import '../core/services/token_storage.dart';
-import '../features/doctor_registration/provider/verified_doctors_provider.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
@@ -35,15 +31,9 @@ class UserHomeScreen extends ConsumerWidget {
       bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.home),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(verifiedDoctorsProvider);
-          ref.invalidate(nurseSearchProvider);
           ref.invalidate(ambulanceSearchProvider);
           ref.invalidate(bloodBankSearchProvider);
           await Future.wait([
-            ref.read(verifiedDoctorsProvider.future),
-            ref.read(
-              nurseSearchProvider(const NurseSearchParams()).future,
-            ),
             ref.read(
               ambulanceSearchProvider(const AmbulanceSearchParams()).future,
             ),
@@ -59,7 +49,7 @@ class UserHomeScreen extends ConsumerWidget {
             children: [
             OneMgHeader(
               locationLabel: 'Find care',
-              locationValue: 'Book verified doctors, nurses & more',
+              locationValue: 'Book verified doctors, nurses, ambulance & more',
               searchHint: 'Search specialties, cities...',
               onSearchTap: () => context.push(AppConstants.routeGlobalSearch),
               trailing: user != null
@@ -71,6 +61,18 @@ class UserHomeScreen extends ConsumerWidget {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: HeroWallpaperCarousel(),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ServiceBenefitCard(
+                icon: Icons.biotech_rounded,
+                title: 'Explore Labs',
+                subtitle:
+                    'Book diagnostic tests with home sample collection or lab visit',
+                color: AppColors.primary,
+                onTap: () => context.push(AppConstants.routeLabs),
+              ),
             ),
             const SizedBox(height: 16),
             const Padding(
@@ -97,9 +99,8 @@ class UserHomeScreen extends ConsumerWidget {
                           icon: Icons.medical_services_rounded,
                           backgroundImageUrl:
                               'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=900&h=600&fit=crop',
-                          onTap: () => context.push(
-                            '${AppConstants.routeCareListing}?role=doctor',
-                          ),
+                          onTap: () =>
+                              context.push(AppConstants.routeDoctorSearch),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -109,9 +110,8 @@ class UserHomeScreen extends ConsumerWidget {
                           icon: Icons.health_and_safety_rounded,
                           backgroundImageUrl:
                               'https://images.unsplash.com/photo-1584515933487-779824d29309?w=900&h=600&fit=crop',
-                          onTap: () => context.push(
-                            '${AppConstants.routeCareListing}?role=nurse',
-                          ),
+                          onTap: () =>
+                              context.push(AppConstants.routeNurseSearch),
                         ),
                       ),
                     ],
@@ -147,10 +147,6 @@ class UserHomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            const VerifiedDoctorsSection(),
-            const SizedBox(height: 20),
-            const VerifiedNursesSection(),
             const SizedBox(height: 20),
             const VerifiedAmbulancesSection(),
             const SizedBox(height: 20),
@@ -192,8 +188,7 @@ class UserHomeScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Register as ambulance or blood bank partner. '
-                                'Nurses register via the partner app.',
+                                'Register as ambulance or blood bank partner.',
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: AppColors.textSecondary,
                                   height: 1.4,

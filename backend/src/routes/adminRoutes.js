@@ -34,6 +34,14 @@ const {
   approveBloodBank,
   rejectBloodBank,
 } = require('../db/bloodBankRepositories');
+const {
+  findLabById,
+  listLabs,
+  approveLab,
+  rejectLab,
+  suspendLab,
+  requestLabDocuments,
+} = require('../db/labRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const { adminRequired } = require('../middleware/auth');
 
@@ -592,6 +600,134 @@ router.post('/blood-banks/:id/reject', adminRequired, async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to reject blood bank', 500);
+  }
+});
+
+// ——— Diagnostic lab applications (admin only) ———
+
+router.get('/labs', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const status = req.query.status;
+
+    const { labs, pagination } = await listLabs({ status, page, pageSize });
+
+    return sendSuccess(res, { data: labs, pagination });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list labs', 500);
+  }
+});
+
+router.get('/labs/:id', adminRequired, async (req, res) => {
+  try {
+    const lab = await findLabById(req.params.id);
+    if (!lab) {
+      return sendError(res, 'Lab not found', 404);
+    }
+    return sendSuccess(res, { data: lab });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch lab', 500);
+  }
+});
+
+router.post('/labs/:id/approve', adminRequired, async (req, res) => {
+  try {
+    const { approvalNotes } = req.body;
+    const existing = await findLabById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Lab not found', 404);
+    }
+
+    const lab = await approveLab(req.params.id, approvalNotes);
+
+    return sendSuccess(res, {
+      message: 'Lab approved successfully',
+      data: lab,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to approve lab', status);
+  }
+});
+
+router.post('/labs/:id/reject', adminRequired, async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    if (!rejectionReason?.trim()) {
+      return sendError(res, 'rejectionReason is required');
+    }
+
+    const existing = await findLabById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Lab not found', 404);
+    }
+
+    const allowed = ['pending', 'under_review', 'verifier_approved'];
+    if (!allowed.includes(existing.verificationStatus)) {
+      return sendError(
+        res,
+        `Cannot reject lab with status "${existing.verificationStatus}"`,
+        400,
+      );
+    }
+
+    const lab = await rejectLab(req.params.id, rejectionReason.trim());
+
+    return sendSuccess(res, {
+      message: 'Lab rejected successfully',
+      data: lab,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to reject lab', 500);
+  }
+});
+
+router.post('/labs/:id/suspend', adminRequired, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const existing = await findLabById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Lab not found', 404);
+    }
+
+    const lab = await suspendLab(req.params.id, reason?.trim());
+
+    return sendSuccess(res, {
+      message: 'Lab suspended successfully',
+      data: lab,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to suspend lab', 500);
+  }
+});
+
+router.post('/labs/:id/request-documents', adminRequired, async (req, res) => {
+  try {
+    const { note } = req.body;
+    if (!note?.trim()) {
+      return sendError(res, 'note is required');
+    }
+
+    const existing = await findLabById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Lab not found', 404);
+    }
+
+    const lab = await requestLabDocuments(req.params.id, note.trim());
+
+    return sendSuccess(res, {
+      message: 'Document request sent to lab',
+      data: lab,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to request documents', 500);
   }
 });
 

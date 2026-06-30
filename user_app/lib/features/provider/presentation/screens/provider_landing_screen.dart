@@ -58,6 +58,14 @@ class ProviderLandingScreen extends StatelessWidget {
                     onTap: () =>
                         context.push(AppConstants.routeBloodBankRegistration),
                   ),
+                  const SizedBox(height: 10),
+                  _RegistrationCard(
+                    title: 'Diagnostic Lab',
+                    subtitle: 'Configure tests, documents & home collection',
+                    icon: Icons.biotech_rounded,
+                    color: AppColors.primary,
+                    onTap: () => context.push(AppConstants.routeLabRegistration),
+                  ),
                 ],
               ),
             ),

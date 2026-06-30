@@ -44,6 +44,8 @@ class _ProviderLandingScreenState extends ConsumerState<ProviderLandingScreen> {
         return AppConstants.routeAmbulanceApplicationSubmitted;
       case ProviderType.bloodBank:
         return AppConstants.routeBloodBankApplicationSubmitted;
+      case ProviderType.lab:
+        return AppConstants.routeLabApplicationSubmitted;
     }
   }
 
@@ -196,6 +198,18 @@ class _ProviderLandingScreenState extends ConsumerState<ProviderLandingScreen> {
                         context,
                         ref,
                         ProviderType.bloodBank,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _RegistrationCard(
+                      title: 'Diagnostic Lab',
+                      subtitle: 'Register · configure tests & home collection',
+                      icon: Icons.biotech_rounded,
+                      color: AppColors.primary,
+                      onTap: () => openProviderFlow(
+                        context,
+                        ref,
+                        ProviderType.lab,
                       ),
                     ),
                   ],

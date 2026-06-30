@@ -160,6 +160,10 @@ class AppConstants {
   static const String routeAmbulanceSearch = '/ambulance-search';
   static const String routeBloodBankSearch = '/blood-bank-search';
   static const String routeCareListing = '/care-listing';
+  static const String routeLabs = '/labs';
+  static const String routeLabSearch = '/lab-search';
+  static const String routeLabRegistration = '/lab-registration';
+  static const String routeLabApplicationSubmitted = '/lab-application-submitted';
   static const String routeConsultationDemo = '/consultation-demo';
   static const String routeOnlineConsultBooking = '/online-consult';
   static const String routeHospitalVisitBooking = '/hospital-visit';
@@ -182,6 +186,16 @@ class AppConstants {
   static const String routeAdminDoctorDetails = '/admin-doctor-details';
   static const String routeAdminNurseList = '/admin-nurse-list';
   static const String routeAdminNurseDetails = '/admin-nurse-details';
+
+  static const String endpointVerifiedBloodBanks = '/blood-bank/verified';
+
+  // Lab API Endpoints
+  static const String endpointRegisterLab = '/lab/register';
+  static const String endpointLabUploadProfile = '/lab/upload-profile';
+  static const String endpointLabUploadDocument = '/lab/upload-document';
+  static const String endpointLabUploadImage = '/lab/upload-image';
+  static const String endpointGetLabProfile = '/lab/profile';
+  static const String endpointVerifiedLabs = '/lab/verified';
 
   static const String mockImageUrl =
       'https://images.unsplash.com/photo-1612349317228-cc624a92fc4d?w=400&h=400&fit=crop';

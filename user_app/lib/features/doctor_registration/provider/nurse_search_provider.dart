@@ -7,16 +7,19 @@ class NurseSearchParams {
     this.query,
     this.city,
     this.specialization,
+    this.minYearsExperience,
   });
 
   final String? query;
   final String? city;
   final String? specialization;
+  final int? minYearsExperience;
 
   bool get hasTextFilters =>
       (query != null && query!.trim().isNotEmpty) ||
       (city != null && city!.trim().isNotEmpty) ||
-      (specialization != null && specialization!.trim().isNotEmpty);
+      (specialization != null && specialization!.trim().isNotEmpty) ||
+      minYearsExperience != null;
 
   @override
   bool operator ==(Object other) {
@@ -24,11 +27,13 @@ class NurseSearchParams {
     return other is NurseSearchParams &&
         other.query == query &&
         other.city == city &&
-        other.specialization == specialization;
+        other.specialization == specialization &&
+        other.minYearsExperience == minYearsExperience;
   }
 
   @override
-  int get hashCode => Object.hash(query, city, specialization);
+  int get hashCode =>
+      Object.hash(query, city, specialization, minYearsExperience);
 }
 
 String? _trimOrNull(String? value) {
@@ -49,7 +54,18 @@ final nurseSearchProvider =
     );
 
     if (response.success && response.data != null) {
-      return response.data!;
+      var nurses = response.data!;
+      final minYears = params.minYearsExperience;
+      if (minYears != null) {
+        nurses = nurses
+            .where(
+              (nurse) =>
+                  nurse.yearsOfExperience != null &&
+                  nurse.yearsOfExperience! >= minYears,
+            )
+            .toList();
+      }
+      return nurses;
     }
 
     throw Exception(response.error ?? 'Search failed');

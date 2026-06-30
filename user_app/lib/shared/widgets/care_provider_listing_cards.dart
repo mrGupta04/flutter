@@ -13,11 +13,13 @@ class NurseListingCard extends StatelessWidget {
     required this.nurse,
     this.showBottomDivider = false,
     this.onTap,
+    this.distanceLabel,
   });
 
   final NurseModel nurse;
   final bool showBottomDivider;
   final VoidCallback? onTap;
+  final String? distanceLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -35,11 +37,15 @@ class NurseListingCard extends StatelessWidget {
       if (nurse.shiftAvailability != null && nurse.shiftAvailability!.isNotEmpty)
         nurse.shiftAvailability!,
     ];
+    final footerParts = <String>[
+      if (distanceLabel != null && distanceLabel!.isNotEmpty) distanceLabel!,
+      ...services,
+    ];
 
     return _CareListingShell(
       title: nurse.displayName,
       subtitle: subtitleParts.join(' · '),
-      footer: services.isEmpty ? null : services.join(' · '),
+      footer: footerParts.isEmpty ? null : footerParts.join(' · '),
       icon: Icons.health_and_safety_rounded,
       iconColor: AppColors.secondary,
       imageUrl: MediaUrlUtils.resolve(nurse.profilePicture),

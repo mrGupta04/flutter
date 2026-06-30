@@ -84,6 +84,16 @@ class AppConstants {
   static const String endpointUpdateBloodBankProfile = '/blood-bank/profile';
   static const String endpointVerifiedBloodBanks = '/blood-bank/verified';
 
+  // Lab API Endpoints
+  static const String endpointRegisterLab = '/lab/register';
+  static const String endpointLabLogin = '/lab/login';
+  static const String endpointLabUploadProfile = '/lab/upload-profile';
+  static const String endpointLabUploadDocument = '/lab/upload-document';
+  static const String endpointLabUploadImage = '/lab/upload-image';
+  static const String endpointGetLabProfile = '/lab/profile';
+  static const String endpointUpdateLabProfile = '/lab/profile';
+  static const String endpointVerifiedLabs = '/lab/verified';
+
   // Admin API Endpoints
   static const String endpointAdminLogin = '/admin/login';
   static const String endpointAdminDoctors = '/admin/doctors';
@@ -132,6 +142,13 @@ class AppConstants {
       '/admin/blood-banks/$id/approve';
   static String endpointAdminBloodBankReject(String id) =>
       '/admin/blood-banks/$id/reject';
+  static const String endpointAdminLabs = '/admin/labs';
+  static String endpointAdminLab(String id) => '/admin/labs/$id';
+  static String endpointAdminLabApprove(String id) => '/admin/labs/$id/approve';
+  static String endpointAdminLabReject(String id) => '/admin/labs/$id/reject';
+  static String endpointAdminLabSuspend(String id) => '/admin/labs/$id/suspend';
+  static String endpointAdminLabRequestDocuments(String id) =>
+      '/admin/labs/$id/request-documents';
 
   // Validation
   static const int minPasswordLength = 8;
@@ -204,6 +221,8 @@ class AppConstants {
       '/ambulance-application-submitted';
   static const String routeBloodBankApplicationSubmitted =
       '/blood-bank-application-submitted';
+  static const String routeLabRegistration = '/lab-registration';
+  static const String routeLabApplicationSubmitted = '/lab-application-submitted';
   static const String routeDoctorDashboard = '/doctor-dashboard';
   static const String routeNurseDashboard = '/nurse-dashboard';
   static const String routeVideoConsult = '/video-consult';
@@ -217,6 +236,8 @@ class AppConstants {
   static const String routeAdminAmbulanceDetails = '/admin-ambulance-details';
   static const String routeAdminBloodBankList = '/admin-blood-bank-list';
   static const String routeAdminBloodBankDetails = '/admin-blood-bank-details';
+  static const String routeAdminLabList = '/admin-lab-list';
+  static const String routeAdminLabDetails = '/admin-lab-details';
 
   static const String mockImageUrl =
       'https://images.unsplash.com/photo-1612349317228-cc624a92fc4d?w=400&h=400&fit=crop';

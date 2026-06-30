@@ -12,11 +12,20 @@ class DoctorSearchResultTile extends StatelessWidget {
     required this.doctor,
     this.consultationFilter,
     this.showBottomDivider = true,
+    this.distanceKm,
   });
 
   final DoctorModel doctor;
   final ConsultationType? consultationFilter;
   final bool showBottomDivider;
+  final double? distanceKm;
+
+  String? get _distanceLabel {
+    final km = distanceKm;
+    if (km == null) return null;
+    if (km < 1) return 'Less than 1 km away';
+    return '${km.toStringAsFixed(km < 10 ? 1 : 0)} km away';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +34,7 @@ class DoctorSearchResultTile extends StatelessWidget {
       showVerifiedIcon: true,
       showBottomDivider: showBottomDivider,
       consultationFilter: consultationFilter,
+      footerNote: _distanceLabel,
       showActionButtons: doctor.offersOnlineConsult ||
           doctor.offersVisitSite ||
           doctor.offersBookHome ||
