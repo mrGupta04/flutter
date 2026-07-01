@@ -34,23 +34,34 @@ class BloodBankRegistrationState {
 
 class BloodBankRegistrationNotifier
     extends StateNotifier<BloodBankRegistrationState> {
-  final BloodBankRegistrationRepository repository;
-
   BloodBankRegistrationNotifier(this.repository)
       : super(BloodBankRegistrationState());
+
+  final BloodBankRegistrationRepository repository;
 
   Future<bool> submit(
     BloodBankModel bloodBank, {
     String? password,
     Uint8List? profileImageBytes,
     String? profileImageFileName,
+    Uint8List? logoBytes,
+    String? logoFileName,
+    List<({Uint8List bytes, String filename, String type, String label})>?
+        pendingDocuments,
+    List<({Uint8List bytes, String filename})>? pendingGalleryImages,
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
 
     var model = bloodBank;
-    if (profileImageBytes != null && bloodBank.id != null) {
+    final bloodBankId = bloodBank.id;
+    if (bloodBankId == null) {
+      state = state.copyWith(isSubmitting: false, error: 'Blood bank id is required');
+      return false;
+    }
+
+    if (profileImageBytes != null) {
       final upload = await repository.uploadProfilePicture(
-        bloodBankId: bloodBank.id!,
+        bloodBankId: bloodBankId,
         bytes: profileImageBytes,
         filename: profileImageFileName ?? 'profile.jpg',
         mobileNumber: bloodBank.mobileNumber,
@@ -62,8 +73,48 @@ class BloodBankRegistrationNotifier
         );
         return false;
       }
-      model = bloodBank.copyWith(profilePicture: upload.data);
+      model = model.copyWith(profilePicture: upload.data);
     }
+
+    if (logoBytes != null) {
+      final upload = await repository.uploadLogo(
+        bloodBankId: bloodBankId,
+        bytes: logoBytes,
+        filename: logoFileName ?? 'logo.jpg',
+      );
+      if (upload.success && upload.data != null) {
+        model = model.copyWith(logoUrl: upload.data);
+      }
+    }
+
+    final docs = <BloodBankDocument>[...(model.documents ?? const [])];
+    for (final doc in pendingDocuments ?? const []) {
+      final upload = await repository.uploadDocument(
+        bloodBankId: bloodBankId,
+        bytes: doc.bytes,
+        type: doc.type,
+        label: doc.label,
+        filename: doc.filename,
+        mobileNumber: bloodBank.mobileNumber,
+      );
+      if (upload.success && upload.data != null) {
+        docs.add(upload.data!);
+      }
+    }
+
+    final images = <String>[...(model.galleryImages ?? const [])];
+    for (final img in pendingGalleryImages ?? const []) {
+      final upload = await repository.uploadGalleryImage(
+        bloodBankId: bloodBankId,
+        bytes: img.bytes,
+        filename: img.filename,
+      );
+      if (upload.success && upload.data != null) {
+        images.add(upload.data!);
+      }
+    }
+
+    model = model.copyWith(documents: docs, galleryImages: images);
 
     final response = await repository.register(model, password: password);
     if (response.success && response.data != null) {

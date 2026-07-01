@@ -520,7 +520,15 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
         const SizedBox(height: 8),
         for (var i = 0; i < items.length; i++) ...[
           if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-          BloodBankListingCard(bloodBank: items[i]),
+          BloodBankListingCard(
+            bloodBank: items[i],
+            onTap: () => context.push(
+              '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+            ),
+            onOrder: () => context.push(
+              '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+            ),
+          ),
         ],
         const UserScrollFooter(),
       ],

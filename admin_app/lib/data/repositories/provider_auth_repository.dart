@@ -35,6 +35,8 @@ class ProviderAuthRepository {
         return AppConstants.endpointBloodBankLogin;
       case ProviderType.lab:
         return AppConstants.endpointLabLogin;
+      case ProviderType.scanCenter:
+        return AppConstants.endpointScanLogin;
     }
   }
 
@@ -45,7 +47,8 @@ class ProviderAuthRepository {
         profile['nurseId'] as String? ??
         profile['ambulanceId'] as String? ??
         profile['bloodBankId'] as String? ??
-        profile['labId'] as String?;
+        profile['labId'] as String? ??
+        profile['scanCenterId'] as String?;
     return id ?? '';
   }
 
@@ -61,6 +64,8 @@ class ProviderAuthRepository {
         return 'blood-bank';
       case ProviderType.lab:
         return 'lab';
+      case ProviderType.scanCenter:
+        return 'scan-center';
     }
   }
 
@@ -140,6 +145,11 @@ class ProviderAuthRepository {
           final labId = await TokenStorage.instance.getLabId();
           query = {if (labId != null) 'labId': labId};
           break;
+        case ProviderType.scanCenter:
+          endpoint = AppConstants.endpointGetScanCenterProfile;
+          final scanCenterId = await TokenStorage.instance.getScanCenterId();
+          query = {if (scanCenterId != null) 'scanCenterId': scanCenterId};
+          break;
       }
 
       final response = await _dioService.get(endpoint, queryParameters: query);
@@ -187,6 +197,8 @@ class ProviderAuthRepository {
         return (profile['institutionName'] as String?) ?? 'Blood Bank';
       case ProviderType.lab:
         return (profile['labName'] as String?) ?? 'Diagnostic Lab';
+      case ProviderType.scanCenter:
+        return (profile['centerName'] as String?) ?? 'Scan Center';
     }
   }
 

@@ -4,7 +4,8 @@ enum ProviderType {
   nurse,
   ambulance,
   bloodBank,
-  lab;
+  lab,
+  scanCenter;
 
   String get routeParam {
     switch (this) {
@@ -18,6 +19,8 @@ enum ProviderType {
         return 'blood-bank';
       case ProviderType.lab:
         return 'lab';
+      case ProviderType.scanCenter:
+        return 'scan-center';
     }
   }
 
@@ -33,6 +36,8 @@ enum ProviderType {
         return 'Blood Bank';
       case ProviderType.lab:
         return 'Diagnostic Lab';
+      case ProviderType.scanCenter:
+        return 'Scan Center';
     }
   }
 
@@ -48,6 +53,8 @@ enum ProviderType {
         return '/blood-bank-registration';
       case ProviderType.lab:
         return '/lab-registration';
+      case ProviderType.scanCenter:
+        return '/scan-registration';
     }
   }
 
@@ -57,8 +64,11 @@ enum ProviderType {
         return '/doctor-dashboard';
       case ProviderType.nurse:
         return '/nurse-dashboard';
-      case ProviderType.ambulance:
+      case ProviderType.scanCenter:
+        return '/scan-dashboard';
       case ProviderType.bloodBank:
+        return '/blood-bank-dashboard';
+      case ProviderType.ambulance:
       case ProviderType.lab:
         return '/provider-profile';
     }
@@ -76,6 +86,9 @@ enum ProviderType {
         return ProviderType.bloodBank;
       case 'lab':
         return ProviderType.lab;
+      case 'scan-center':
+      case 'scan_center':
+        return ProviderType.scanCenter;
       default:
         return null;
     }

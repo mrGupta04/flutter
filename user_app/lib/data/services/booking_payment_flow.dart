@@ -69,7 +69,7 @@ class BookingPaymentFlow {
 
     final completer = Completer<ConsultationBookingResult?>();
 
-    await _checkoutService.openCheckout(
+    await _checkoutService.openCheckoutFromPaymentOrder(
       order: order,
       onSuccess: ({
         required String orderId,
@@ -124,7 +124,7 @@ class BookingPaymentFlow {
     final order = orderRes.data!;
     final completer = Completer<ConsultationBookingResult?>();
 
-    await _checkoutService.openCheckout(
+    await _checkoutService.openCheckoutFromPaymentOrder(
       order: order,
       onSuccess: ({
         required String orderId,

@@ -94,33 +94,218 @@ class BloodBankListingCard extends StatelessWidget {
     super.key,
     required this.bloodBank,
     this.showBottomDivider = false,
+    this.onTap,
+    this.onOrder,
+    this.distanceLabel,
   });
 
   final BloodBankModel bloodBank;
   final bool showBottomDivider;
+  final VoidCallback? onTap;
+  final VoidCallback? onOrder;
+  final String? distanceLabel;
 
   @override
   Widget build(BuildContext context) {
     final groups = bloodBank.bloodGroupsAvailable ?? [];
     final features = <String>[
-      if (bloodBank.available24x7 == true) '24x7',
-      if (bloodBank.hasApheresis == true) 'Apheresis',
-      if (bloodBank.hasComponentSeparation == true) 'Component separation',
+      if (bloodBank.available24x7 == true) '24×7',
+      if (bloodBank.emergencyBloodSupply == true) 'Emergency',
+      if (bloodBank.homeDeliveryAvailable == true) 'Home delivery',
     ];
     final subtitleParts = <String>[
-      if (bloodBank.city != null && bloodBank.city!.isNotEmpty) bloodBank.city!,
-      if (groups.isNotEmpty) groups.join(', '),
+      if (bloodBank.address != null && bloodBank.address!.isNotEmpty)
+        bloodBank.address!,
+      else if (bloodBank.city != null && bloodBank.city!.isNotEmpty)
+        bloodBank.city!,
+    ];
+    final distance = distanceLabel ??
+        (bloodBank.distanceKm != null
+            ? '${bloodBank.distanceKm!.toStringAsFixed(1)} km'
+            : null);
+    final footerParts = <String>[
+      if (distance != null) distance,
+      ...features,
+      if (bloodBank.startingPrice != null)
+        'From ₹${bloodBank.startingPrice}',
     ];
 
-    return _CareListingShell(
-      title: bloodBank.institutionName ?? 'Blood bank',
-      subtitle: subtitleParts.join(' · '),
-      footer: features.isEmpty ? null : features.join(' · '),
-      icon: Icons.bloodtype_rounded,
-      iconColor: const Color(0xFFB71C1C),
-      imageUrl: MediaUrlUtils.resolve(bloodBank.profilePicture),
-      showBottomDivider: showBottomDivider,
-      trailing: bloodBank.emergencyContact ?? bloodBank.mobileNumber,
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: const Color(0xFFB71C1C).withValues(alpha: 0.12),
+                    backgroundImage: MediaUrlUtils.resolve(
+                              bloodBank.logoUrl ?? bloodBank.profilePicture) !=
+                            null
+                        ? CachedNetworkImageProvider(
+                            MediaUrlUtils.resolve(
+                                bloodBank.logoUrl ?? bloodBank.profilePicture)!,
+                          )
+                        : null,
+                    child: bloodBank.logoUrl == null &&
+                            bloodBank.profilePicture == null
+                        ? const Icon(Icons.bloodtype_rounded,
+                            color: Color(0xFFB71C1C), size: 28)
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                bloodBank.institutionName ?? 'Blood bank',
+                                style: AppTextStyles.labelLarge.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.verified_rounded,
+                                color: AppColors.primary, size: 18),
+                          ],
+                        ),
+                        if (subtitleParts.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitleParts.join(' · '),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                color: Colors.amber, size: 14),
+                            Text(
+                              ' ${bloodBank.averageRating?.toStringAsFixed(1) ?? '4.5'}',
+                              style: AppTextStyles.labelSmall,
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: bloodBank.isOpenNow
+                                    ? const Color(0xFFE8F5E9)
+                                    : const Color(0xFFFFEBEE),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                bloodBank.isOpenNow ? 'Open' : 'Closed',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: bloodBank.isOpenNow
+                                      ? const Color(0xFF2E7D32)
+                                      : const Color(0xFFC62828),
+                                ),
+                              ),
+                            ),
+                            if (bloodBank.activeOffer != null) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.offerLight,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'Offer',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: AppColors.offer,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (groups.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: groups
+                      .take(6)
+                      .map((g) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.divider),
+                            ),
+                            child: Text(g,
+                                style: const TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.w700)),
+                          ))
+                      .toList(),
+                ),
+              ],
+              if (footerParts.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  footerParts.join(' · '),
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onTap,
+                      child: const Text('View details'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: onOrder ?? onTap,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB71C1C),
+                        foregroundColor: AppColors.white,
+                      ),
+                      child: const Text('Order blood'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

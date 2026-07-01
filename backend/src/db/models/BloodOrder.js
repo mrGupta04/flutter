@@ -1,0 +1,58 @@
+const mongoose = require('mongoose');
+
+const bloodOrderSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    bloodBankId: { type: String, required: true, index: true },
+    patientId: String,
+    patientName: String,
+    patientMobile: String,
+    patientEmail: String,
+    patientAge: Number,
+    patientGender: String,
+    hospitalName: String,
+    bloodGroup: { type: String, required: true },
+    componentType: { type: String, required: true },
+    units: { type: Number, required: true, min: 1 },
+    prescriptionUrl: String,
+    deliveryMethod: {
+      type: String,
+      enum: ['home_delivery', 'self_pickup', 'hospital_delivery'],
+      default: 'self_pickup',
+    },
+    deliveryAddress: String,
+    deliveryDate: Date,
+    deliveryTimeSlot: String,
+    couponCode: String,
+    discountAmount: { type: Number, default: 0 },
+    baseAmount: { type: Number, default: 0 },
+    totalAmount: { type: Number, default: 0 },
+    paymentMethod: { type: String, enum: ['online', 'cash'], default: 'online' },
+    paymentStatus: { type: String, default: 'pending' },
+    razorpayOrderId: String,
+    razorpayPaymentId: String,
+    paymentExpiresAt: Date,
+    status: {
+      type: String,
+      enum: [
+        'pending',
+        'accepted',
+        'rejected',
+        'blood_ready',
+        'out_for_delivery',
+        'delivered',
+        'cancelled',
+      ],
+      default: 'pending',
+      index: true,
+    },
+    rejectionReason: String,
+    isEmergency: { type: Boolean, default: false },
+    estimatedDeliveryTime: Date,
+    invoiceUrl: String,
+    notes: String,
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.model('BloodOrder', bloodOrderSchema);

@@ -8,6 +8,10 @@ import '../features/doctor_registration/presentation/screens/care_listing_screen
 import '../features/doctor_registration/presentation/screens/doctor_consultation_demo_screen.dart';
 import '../features/doctor_registration/presentation/screens/ambulance_search_screen.dart';
 import '../features/doctor_registration/presentation/screens/blood_bank_search_screen.dart';
+import '../features/blood_bank/presentation/screens/blood_banks_screen.dart';
+import '../features/blood_bank/presentation/screens/blood_bank_detail_screen.dart';
+import '../features/blood_bank/presentation/screens/emergency_blood_request_screen.dart';
+import '../features/blood_bank/presentation/screens/blood_order_confirmation_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_search_screen.dart';
 import '../features/hospital_visit/presentation/screens/hospital_visit_booking_screen.dart';
 import '../features/nurse_home_visit/presentation/screens/nurse_home_visit_booking_screen.dart';
@@ -29,6 +33,12 @@ import '../features/user_dashboard/presentation/screens/user_dashboard_screen.da
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
 import '../features/labs/presentation/screens/labs_screen.dart';
 import '../features/labs/presentation/screens/lab_search_screen.dart';
+import '../features/scans/presentation/screens/scans_screen.dart';
+import '../features/scans/presentation/screens/scan_search_screen.dart';
+import '../features/scans/presentation/screens/scan_center_detail_screen.dart';
+import '../features/scans/data/models/scan_procedure_model.dart';
+import '../features/scan_registration/presentation/screens/scan_registration_screen.dart';
+import '../features/scan_registration/presentation/screens/scan_application_submitted_screen.dart';
 import '../features/lab_registration/presentation/screens/lab_registration_screen.dart';
 import '../features/lab_registration/presentation/screens/lab_application_submitted_screen.dart';
 import '../features/labs/data/models/lab_test_model.dart';
@@ -326,6 +336,71 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: AppConstants.routeScans,
+        name: 'scans',
+        pageBuilder: (context, state) {
+          final categoryId = state.uri.queryParameters['category'];
+          ScanCategory? initialCategory;
+          if (categoryId != null) {
+            for (final c in ScanCategory.values) {
+              if (c.id == categoryId) {
+                initialCategory = c;
+                break;
+              }
+            }
+          }
+          return slidePage(
+            state,
+            ScansScreen(initialCategory: initialCategory),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeScanSearch,
+        name: 'scanSearch',
+        pageBuilder: (context, state) {
+          final scanId = state.uri.queryParameters['scanId'] ?? '';
+          final scanName = state.uri.queryParameters['scanName'] ?? 'Imaging scan';
+          final categoryId = state.uri.queryParameters['category'];
+          return slidePage(
+            state,
+            ScanSearchScreen(
+              scanId: scanId,
+              scanName: scanName,
+              categoryId: categoryId,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '${AppConstants.routeScanCenterDetail}/:centerId',
+        name: 'scanCenterDetail',
+        pageBuilder: (context, state) {
+          final centerId = state.pathParameters['centerId'] ?? '';
+          final scanId = state.uri.queryParameters['scanId'];
+          return slidePage(
+            state,
+            ScanCenterDetailScreen(centerId: centerId, scanId: scanId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeScanRegistration,
+        name: 'scanRegistration',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ScanRegistrationScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeScanApplicationSubmitted,
+        name: 'scanApplicationSubmitted',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ScanApplicationSubmittedScreen(),
+        ),
+      ),
+      GoRoute(
         path: AppConstants.routeLabSearch,
         name: 'labSearch',
         pageBuilder: (context, state) {
@@ -354,6 +429,16 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppConstants.routeBloodBanks,
+        name: 'bloodBanks',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          BloodBanksScreen(
+            initialBloodGroup: state.uri.queryParameters['bloodGroup'],
+          ),
+        ),
+      ),
+      GoRoute(
         path: AppConstants.routeBloodBankSearch,
         name: 'bloodBankSearch',
         pageBuilder: (context, state) => slidePage(
@@ -362,6 +447,36 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             initialQuery: state.uri.queryParameters['q'],
             initialCity: state.uri.queryParameters['city'],
             initialBloodGroup: state.uri.queryParameters['bloodGroup'],
+            initialComponentType: state.uri.queryParameters['componentType'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '${AppConstants.routeBloodBankDetail}/:bloodBankId',
+        name: 'bloodBankDetail',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          BloodBankDetailScreen(
+            bloodBankId: state.pathParameters['bloodBankId']!,
+            bloodGroup: state.uri.queryParameters['bloodGroup'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeEmergencyBloodRequest,
+        name: 'emergencyBloodRequest',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const EmergencyBloodRequestScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '${AppConstants.routeBloodOrderConfirmation}/:orderId',
+        name: 'bloodOrderConfirmation',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          BloodOrderConfirmationScreen(
+            orderId: state.pathParameters['orderId']!,
           ),
         ),
       ),

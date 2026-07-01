@@ -33,7 +33,13 @@ const {
   listBloodBanks,
   approveBloodBank,
   rejectBloodBank,
+  suspendBloodBank,
+  requestBloodBankDocuments,
+  getBloodBankDashboardStats,
 } = require('../db/bloodBankRepositories');
+const { listAllOrders } = require('../db/bloodOrderRepositories');
+const { listAllEmergencyRequests } = require('../db/emergencyBloodRequestRepositories');
+const { listInventoryByBloodBank } = require('../db/bloodInventoryRepositories');
 const {
   findLabById,
   listLabs,
@@ -42,6 +48,14 @@ const {
   suspendLab,
   requestLabDocuments,
 } = require('../db/labRepositories');
+const {
+  findScanCenterById,
+  listScanCenters,
+  approveScanCenter,
+  rejectScanCenter,
+  suspendScanCenter,
+  requestScanCenterDocuments,
+} = require('../db/scanCenterRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const { adminRequired } = require('../middleware/auth');
 
@@ -603,6 +617,84 @@ router.post('/blood-banks/:id/reject', adminRequired, async (req, res) => {
   }
 });
 
+router.post('/blood-banks/:id/suspend', adminRequired, async (req, res) => {
+  try {
+    const existing = await findBloodBankById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Blood bank not found', 404);
+    }
+
+    const bloodBank = await suspendBloodBank(req.params.id, req.body?.reason);
+    return sendSuccess(res, { message: 'Blood bank suspended', data: bloodBank });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to suspend blood bank', 500);
+  }
+});
+
+router.post('/blood-banks/:id/request-documents', adminRequired, async (req, res) => {
+  try {
+    const { note } = req.body;
+    if (!note?.trim()) {
+      return sendError(res, 'note is required');
+    }
+
+    const existing = await findBloodBankById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Blood bank not found', 404);
+    }
+
+    const bloodBank = await requestBloodBankDocuments(req.params.id, note.trim());
+    return sendSuccess(res, { message: 'Document request sent', data: bloodBank });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to request documents', 500);
+  }
+});
+
+router.get('/blood-banks/:id/stats', adminRequired, async (req, res) => {
+  try {
+    const stats = await getBloodBankDashboardStats(req.params.id);
+    const inventory = await listInventoryByBloodBank(req.params.id);
+    return sendSuccess(res, { data: { ...stats, inventory } });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch stats', 500);
+  }
+});
+
+router.get('/blood-orders', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const status = req.query.status;
+
+    const { orders, pagination } = await listAllOrders({ status, page, pageSize });
+    return sendSuccess(res, { data: orders, pagination });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list orders', 500);
+  }
+});
+
+router.get('/emergency-blood-requests', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const status = req.query.status;
+
+    const { requests, pagination } = await listAllEmergencyRequests({
+      status,
+      page,
+      pageSize,
+    });
+    return sendSuccess(res, { data: requests, pagination });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list emergency requests', 500);
+  }
+});
+
 // ——— Diagnostic lab applications (admin only) ———
 
 router.get('/labs', adminRequired, async (req, res) => {
@@ -724,6 +816,138 @@ router.post('/labs/:id/request-documents', adminRequired, async (req, res) => {
     return sendSuccess(res, {
       message: 'Document request sent to lab',
       data: lab,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to request documents', 500);
+  }
+});
+
+// ——— Scan center applications (admin only) ———
+
+router.get('/scan-centers', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const status = req.query.status;
+
+    const { scanCenters, pagination } = await listScanCenters({
+      status,
+      page,
+      pageSize,
+    });
+
+    return sendSuccess(res, { data: scanCenters, pagination });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list scan centers', 500);
+  }
+});
+
+router.get('/scan-centers/:id', adminRequired, async (req, res) => {
+  try {
+    const center = await findScanCenterById(req.params.id);
+    if (!center) {
+      return sendError(res, 'Scan center not found', 404);
+    }
+    return sendSuccess(res, { data: center });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to fetch scan center', 500);
+  }
+});
+
+router.post('/scan-centers/:id/approve', adminRequired, async (req, res) => {
+  try {
+    const { approvalNotes } = req.body;
+    const existing = await findScanCenterById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Scan center not found', 404);
+    }
+
+    const center = await approveScanCenter(req.params.id, approvalNotes);
+
+    return sendSuccess(res, {
+      message: 'Scan center approved successfully',
+      data: center,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to approve scan center', status);
+  }
+});
+
+router.post('/scan-centers/:id/reject', adminRequired, async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    if (!rejectionReason?.trim()) {
+      return sendError(res, 'rejectionReason is required');
+    }
+
+    const existing = await findScanCenterById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Scan center not found', 404);
+    }
+
+    const allowed = ['pending', 'under_review', 'verifier_approved'];
+    if (!allowed.includes(existing.verificationStatus)) {
+      return sendError(
+        res,
+        `Cannot reject scan center with status "${existing.verificationStatus}"`,
+        400,
+      );
+    }
+
+    const center = await rejectScanCenter(req.params.id, rejectionReason.trim());
+
+    return sendSuccess(res, {
+      message: 'Scan center rejected successfully',
+      data: center,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to reject scan center', 500);
+  }
+});
+
+router.post('/scan-centers/:id/suspend', adminRequired, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const existing = await findScanCenterById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Scan center not found', 404);
+    }
+
+    const center = await suspendScanCenter(req.params.id, reason?.trim());
+
+    return sendSuccess(res, {
+      message: 'Scan center suspended successfully',
+      data: center,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to suspend scan center', 500);
+  }
+});
+
+router.post('/scan-centers/:id/request-documents', adminRequired, async (req, res) => {
+  try {
+    const { note } = req.body;
+    if (!note?.trim()) {
+      return sendError(res, 'note is required');
+    }
+
+    const existing = await findScanCenterById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Scan center not found', 404);
+    }
+
+    const center = await requestScanCenterDocuments(req.params.id, note.trim());
+
+    return sendSuccess(res, {
+      message: 'Document request sent to scan center',
+      data: center,
     });
   } catch (err) {
     console.error(err);

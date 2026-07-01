@@ -86,8 +86,15 @@ class _VerifiedBloodBanksSectionState
                   const SizedBox(height: 8),
                   HomeProviderScrollList(
                     itemCount: items.length,
-                    itemBuilder: (context, i) =>
-                        BloodBankListingCard(bloodBank: items[i]),
+                    itemBuilder: (context, i) => BloodBankListingCard(
+                      bloodBank: items[i],
+                      onTap: () => context.push(
+                        '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+                      ),
+                      onOrder: () => context.push(
+                        '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+                      ),
+                    ),
                   ),
                 ],
               ),

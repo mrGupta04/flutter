@@ -19,10 +19,16 @@ import '../features/ambulance_registration/presentation/screens/ambulance_applic
 import '../features/ambulance_registration/presentation/screens/ambulance_registration_screen.dart';
 import '../features/admin/presentation/screens/admin_lab_details_screen.dart';
 import '../features/admin/presentation/screens/admin_lab_list_screen.dart';
+import '../features/admin/presentation/screens/admin_scan_details_screen.dart';
+import '../features/admin/presentation/screens/admin_scan_list_screen.dart';
 import '../features/blood_bank_registration/presentation/screens/blood_bank_application_submitted_screen.dart';
 import '../features/blood_bank_registration/presentation/screens/blood_bank_registration_screen.dart';
 import '../features/lab_registration/presentation/screens/lab_application_submitted_screen.dart';
 import '../features/lab_registration/presentation/screens/lab_registration_screen.dart';
+import '../features/scan_registration/presentation/screens/scan_application_submitted_screen.dart';
+import '../features/scan_registration/presentation/screens/scan_registration_screen.dart';
+import '../features/scan_dashboard/presentation/screens/scan_dashboard_screen.dart';
+import '../features/blood_bank_dashboard/presentation/screens/blood_bank_dashboard_screen.dart';
 import '../features/doctor_dashboard/presentation/screens/doctor_dashboard_screen.dart';
 import '../features/doctor_registration/presentation/screens/application_submitted_screen.dart';
 import '../features/doctor_registration/presentation/screens/registration_form_screen.dart';
@@ -49,7 +55,9 @@ bool _isAdminProtectedRoute(String location) {
       location.startsWith(AppConstants.routeAdminBloodBankList) ||
       location.startsWith(AppConstants.routeAdminBloodBankDetails) ||
       location.startsWith(AppConstants.routeAdminLabList) ||
-      location.startsWith(AppConstants.routeAdminLabDetails);
+      location.startsWith(AppConstants.routeAdminLabDetails) ||
+      location.startsWith(AppConstants.routeAdminScanList) ||
+      location.startsWith(AppConstants.routeAdminScanDetails);
 }
 
 /// Admin app — provider registration + admin verification.
@@ -62,6 +70,8 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
 
       if (loc == AppConstants.routeDoctorDashboard ||
           loc == AppConstants.routeNurseDashboard ||
+          loc == AppConstants.routeScanDashboard ||
+          loc == AppConstants.routeBloodBankDashboard ||
           loc == AppConstants.routeProviderProfile) {
         if (ref.read(providerAuthProvider).isAuthenticated) {
           return null;
@@ -164,6 +174,14 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppConstants.routeScanRegistration,
+        name: 'scanRegistration',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ScanRegistrationScreen(),
+        ),
+      ),
+      GoRoute(
         path: AppConstants.routeApplicationSubmitted,
         name: 'applicationSubmitted',
         pageBuilder: (context, state) => fadePage(
@@ -204,6 +222,14 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppConstants.routeScanApplicationSubmitted,
+        name: 'scanApplicationSubmitted',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          const ScanApplicationSubmittedScreen(),
+        ),
+      ),
+      GoRoute(
         path: AppConstants.routeVideoConsult,
         name: 'videoConsult',
         pageBuilder: (context, state) {
@@ -237,6 +263,22 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadePage(
           state,
           const NurseDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeScanDashboard,
+        name: 'scanDashboard',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          const ScanDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBloodBankDashboard,
+        name: 'bloodBankDashboard',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          const BloodBankDashboardScreen(),
         ),
       ),
       GoRoute(
@@ -353,6 +395,25 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           return slidePage(
             state,
             AdminLabDetailsScreen(labId: labId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminScanList,
+        name: 'adminScanList',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminScanListScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '${AppConstants.routeAdminScanDetails}/:scanCenterId',
+        name: 'adminScanDetails',
+        pageBuilder: (context, state) {
+          final scanCenterId = state.pathParameters['scanCenterId'] ?? '';
+          return slidePage(
+            state,
+            AdminScanDetailsScreen(scanCenterId: scanCenterId),
           );
         },
       ),

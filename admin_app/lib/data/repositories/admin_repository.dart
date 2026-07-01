@@ -5,6 +5,7 @@ import '../models/nurse_model.dart';
 import '../models/ambulance_model.dart';
 import '../models/blood_bank_model.dart';
 import '../models/lab_model.dart';
+import '../models/scan_center_model.dart';
 import '../services/dio_service.dart';
 
 /// Admin repository — talks to REST API with admin JWT.
@@ -700,6 +701,31 @@ class AdminRepository {
     }
   }
 
+  Future<ApiResponse<BloodBankModel>> suspendBloodBank({
+    required String bloodBankId,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminBloodBankSuspend(bloodBankId),
+        data: {if (reason != null) 'reason': reason},
+      );
+
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => BloodBankModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
+    }
+  }
+
   Future<ApiResponse<List<LabModel>>> getLabsForVerification({
     int page = 1,
     String? status,
@@ -817,6 +843,134 @@ class AdminRepository {
       return ApiResponse.fromJson(
         response.data as Map<String, dynamic>,
         (json) => LabModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<List<ScanCenterModel>>> getScanCentersForVerification({
+    int page = 1,
+    String? status,
+  }) async {
+    try {
+      final response = await _dioService.get(
+        AppConstants.endpointAdminScanCenters,
+        queryParameters: {
+          'page': page,
+          if (status != null) 'status': status,
+        },
+      );
+
+      final body = response.data as Map<String, dynamic>;
+      final list = (body['data'] as List?)
+              ?.map((e) => ScanCenterModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        data: list,
+        statusCode: body['statusCode'] as int? ?? 200,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<ScanCenterModel>> getScanCenterDetails({
+    required String scanCenterId,
+  }) async {
+    try {
+      final response =
+          await _dioService.get(AppConstants.endpointAdminScanCenter(scanCenterId));
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => ScanCenterModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<ScanCenterModel>> approveScanCenter({
+    required String scanCenterId,
+    String? approvalNotes,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminScanCenterApprove(scanCenterId),
+        data: {if (approvalNotes != null) 'approvalNotes': approvalNotes},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => ScanCenterModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<ScanCenterModel>> rejectScanCenter({
+    required String scanCenterId,
+    required String rejectionReason,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminScanCenterReject(scanCenterId),
+        data: {'rejectionReason': rejectionReason},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => ScanCenterModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<ScanCenterModel>> suspendScanCenter({
+    required String scanCenterId,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminScanCenterSuspend(scanCenterId),
+        data: {if (reason != null) 'reason': reason},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => ScanCenterModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<ScanCenterModel>> requestScanCenterDocuments({
+    required String scanCenterId,
+    required String note,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminScanCenterRequestDocuments(scanCenterId),
+        data: {'note': note},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => ScanCenterModel.fromJson(json as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       return _handleError(e);

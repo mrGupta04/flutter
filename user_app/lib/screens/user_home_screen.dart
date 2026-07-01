@@ -137,9 +137,31 @@ class UserHomeScreen extends ConsumerWidget {
                           icon: Icons.bloodtype_rounded,
                           backgroundImageUrl:
                               'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=900&h=600&fit=crop',
-                          onTap: () => context.push(
-                            '${AppConstants.routeCareListing}?role=blood-bank',
-                          ),
+                          onTap: () => context.push(AppConstants.routeBloodBanks),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _RoleEntryCard(
+                          label: 'Lab',
+                          icon: Icons.biotech_rounded,
+                          backgroundImageUrl:
+                              'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=900&h=600&fit=crop',
+                          onTap: () => context.push(AppConstants.routeLabs),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _RoleEntryCard(
+                          label: 'Scan',
+                          icon: Icons.radar_rounded,
+                          backgroundImageUrl:
+                              'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=900&h=600&fit=crop',
+                          onTap: () => context.push(AppConstants.routeScans),
                         ),
                       ),
                     ],

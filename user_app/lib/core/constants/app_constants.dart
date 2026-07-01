@@ -77,6 +77,12 @@ class AppConstants {
   static const String endpointBloodBankUploadProfile = '/blood-bank/upload-profile';
   static const String endpointGetBloodBankProfile = '/blood-bank/profile';
   static const String endpointVerifiedBloodBanks = '/blood-bank/verified';
+  static const String endpointBloodBankBookings = '/blood-bank/bookings';
+  static const String endpointBloodBankReviews = '/blood-bank/reviews';
+  static const String endpointBloodBankEmergency = '/blood-bank/emergency';
+  static const String endpointBloodBankCatalog = '/blood-bank/catalog';
+  static const String endpointBloodBankPaymentCreateOrder = '/blood-bank/payments/create-order';
+  static const String endpointBloodBankPaymentVerify = '/blood-bank/payments/verify';
 
   // Admin API Endpoints
   static const String endpointAdminLogin = '/admin/login';
@@ -159,8 +165,17 @@ class AppConstants {
   static const String routeNurseProfile = '/nurse-profile';
   static const String routeAmbulanceSearch = '/ambulance-search';
   static const String routeBloodBankSearch = '/blood-bank-search';
+  static const String routeBloodBanks = '/blood-banks';
+  static const String routeBloodBankDetail = '/blood-bank';
+  static const String routeEmergencyBloodRequest = '/emergency-blood-request';
+  static const String routeBloodOrderConfirmation = '/blood-order';
   static const String routeCareListing = '/care-listing';
   static const String routeLabs = '/labs';
+  static const String routeScans = '/scans';
+  static const String routeScanSearch = '/scan-search';
+  static const String routeScanCenterDetail = '/scan-center';
+  static const String routeScanRegistration = '/scan-registration';
+  static const String routeScanApplicationSubmitted = '/scan-application-submitted';
   static const String routeLabSearch = '/lab-search';
   static const String routeLabRegistration = '/lab-registration';
   static const String routeLabApplicationSubmitted = '/lab-application-submitted';
@@ -194,6 +209,14 @@ class AppConstants {
   static const String endpointLabUploadImage = '/lab/upload-image';
   static const String endpointGetLabProfile = '/lab/profile';
   static const String endpointVerifiedLabs = '/lab/verified';
+
+  // Scan API Endpoints
+  static const String endpointRegisterScanCenter = '/scan/register';
+  static const String endpointScanUploadProfile = '/scan/upload-profile';
+  static const String endpointScanUploadDocument = '/scan/upload-document';
+  static const String endpointScanUploadImage = '/scan/upload-image';
+  static const String endpointGetScanCenterProfile = '/scan/profile';
+  static const String endpointVerifiedScanCenters = '/scan/verified';
 
   static const String mockImageUrl =
       'https://images.unsplash.com/photo-1612349317228-cc624a92fc4d?w=400&h=400&fit=crop';

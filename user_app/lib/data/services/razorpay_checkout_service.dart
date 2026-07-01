@@ -31,18 +31,26 @@ class RazorpayCheckoutService {
   }
 
   Future<void> openCheckout({
-    required PaymentOrderResponse order,
+    required String orderId,
+    required int amount,
+    required String currency,
+    String? keyId,
+    bool mock = false,
+    String? businessName,
+    String? description,
+    String? prefillName,
+    String? prefillEmail,
+    String? prefillContact,
     required PaymentSuccessHandler onSuccess,
     required PaymentFailureHandler onFailure,
   }) async {
     _onSuccess = onSuccess;
     _onFailure = onFailure;
 
-    if (order.mock) {
-      // Simulated checkout — no Razorpay keys required until env is configured.
+    if (mock) {
       await Future.delayed(const Duration(milliseconds: 400));
       onSuccess(
-        orderId: order.orderId,
+        orderId: orderId,
         paymentId: 'pay_mock_${DateTime.now().millisecondsSinceEpoch}',
         signature: 'mock_signature',
       );
@@ -56,7 +64,6 @@ class RazorpayCheckoutService {
       return;
     }
 
-    final keyId = order.keyId;
     if (keyId == null || keyId.isEmpty) {
       onFailure('Payment gateway is not configured on the server.');
       return;
@@ -69,20 +76,63 @@ class RazorpayCheckoutService {
 
     final options = <String, dynamic>{
       'key': keyId,
-      'amount': order.amount,
-      'currency': order.currency,
-      'name': order.doctorName ?? 'MedConnect Doctors',
-      'description': 'Doctor consultation booking',
-      'order_id': order.orderId,
+      'amount': amount,
+      'currency': currency,
+      'name': businessName ?? 'MedConnect',
+      'description': description ?? 'Payment',
+      'order_id': orderId,
       'prefill': {
-        'name': order.prefillName,
-        'email': order.prefillEmail,
-        'contact': order.prefillContact,
+        'name': prefillName,
+        'email': prefillEmail,
+        'contact': prefillContact,
       },
-      'theme': {'color': '#0066CC'},
+      'theme': {'color': '#B71C1C'},
     };
 
     _razorpay!.open(options);
+  }
+
+  /// Legacy consultation checkout — prefer [openCheckout] for blood orders.
+  Future<void> openCheckoutLegacy({
+    required PaymentOrderResponse order,
+    required PaymentSuccessHandler onSuccess,
+    required PaymentFailureHandler onFailure,
+  }) {
+    return openCheckout(
+      orderId: order.orderId,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: order.keyId,
+      mock: order.mock,
+      businessName: order.doctorName ?? 'MedConnect Doctors',
+      description: 'Doctor consultation booking',
+      prefillName: order.prefillName,
+      prefillEmail: order.prefillEmail,
+      prefillContact: order.prefillContact,
+      onSuccess: onSuccess,
+      onFailure: onFailure,
+    );
+  }
+
+  Future<void> openCheckoutFromPaymentOrder({
+    required PaymentOrderResponse order,
+    required PaymentSuccessHandler onSuccess,
+    required PaymentFailureHandler onFailure,
+  }) {
+    return openCheckout(
+      orderId: order.orderId,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: order.keyId,
+      mock: order.mock,
+      businessName: order.doctorName ?? 'MedConnect Doctors',
+      description: 'Doctor consultation booking',
+      prefillName: order.prefillName,
+      prefillEmail: order.prefillEmail,
+      prefillContact: order.prefillContact,
+      onSuccess: onSuccess,
+      onFailure: onFailure,
+    );
   }
 
   void _handleSuccess(PaymentSuccessResponse response) {

@@ -92,6 +92,7 @@ class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
       ProviderType.ambulance => await TokenStorage.instance.getAmbulanceId(),
       ProviderType.bloodBank => await TokenStorage.instance.getBloodBankId(),
       ProviderType.lab => await TokenStorage.instance.getLabId(),
+      ProviderType.scanCenter => await TokenStorage.instance.getScanCenterId(),
     };
 
     state = ProviderAuthState(

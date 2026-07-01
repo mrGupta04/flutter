@@ -46,6 +46,8 @@ class _ProviderLandingScreenState extends ConsumerState<ProviderLandingScreen> {
         return AppConstants.routeBloodBankApplicationSubmitted;
       case ProviderType.lab:
         return AppConstants.routeLabApplicationSubmitted;
+      case ProviderType.scanCenter:
+        return AppConstants.routeScanApplicationSubmitted;
     }
   }
 
@@ -210,6 +212,18 @@ class _ProviderLandingScreenState extends ConsumerState<ProviderLandingScreen> {
                         context,
                         ref,
                         ProviderType.lab,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _RegistrationCard(
+                      title: 'Scan Center',
+                      subtitle: 'Register · configure imaging services & offers',
+                      icon: Icons.radar_rounded,
+                      color: AppColors.secondary,
+                      onTap: () => openProviderFlow(
+                        context,
+                        ref,
+                        ProviderType.scanCenter,
                       ),
                     ),
                   ],

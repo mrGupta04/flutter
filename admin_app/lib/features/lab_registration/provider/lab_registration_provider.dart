@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/token_storage.dart';
 import '../../../data/models/lab_model.dart';
 import '../../../data/repositories/lab_registration_repository.dart';
 
@@ -36,6 +37,22 @@ class LabRegistrationNotifier extends StateNotifier<LabRegistrationState> {
   LabRegistrationNotifier(this.repository) : super(const LabRegistrationState());
 
   final LabRegistrationRepository repository;
+
+  void setLab(LabModel lab) {
+    state = state.copyWith(lab: lab);
+  }
+
+  Future<void> refreshLabFromApi({String? labId}) async {
+    final response = await repository.getProfile(labId: labId);
+    if (response.success && response.data != null) {
+      final lab = response.data!;
+      state = state.copyWith(lab: lab);
+      final id = lab.id;
+      if (id != null && id.isNotEmpty) {
+        await TokenStorage.instance.saveLabId(id);
+      }
+    }
+  }
 
   Future<bool> submit(
     LabModel lab, {

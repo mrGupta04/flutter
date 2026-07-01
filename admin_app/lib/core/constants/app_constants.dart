@@ -39,6 +39,11 @@ class AppConstants {
   static const String endpointNurseBookings = '/nurse/bookings';
   static const String endpointAmbulanceBookings = '/ambulance/bookings';
   static const String endpointBloodBankBookings = '/blood-bank/bookings';
+  static const String endpointBloodBankDashboard = '/blood-bank/dashboard';
+  static const String endpointBloodBankEmergency = '/blood-bank/emergency';
+  static const String endpointBloodBankUploadLogo = '/blood-bank/upload-logo';
+  static const String endpointBloodBankUploadDocument = '/blood-bank/upload-document';
+  static const String endpointBloodBankUploadGallery = '/blood-bank/upload-gallery';
 
   // Doctor API Endpoints
   static const String endpointRegisterDoctor = '/doctor/register';
@@ -94,6 +99,16 @@ class AppConstants {
   static const String endpointUpdateLabProfile = '/lab/profile';
   static const String endpointVerifiedLabs = '/lab/verified';
 
+  // Scan API Endpoints
+  static const String endpointRegisterScanCenter = '/scan/register';
+  static const String endpointScanLogin = '/scan/login';
+  static const String endpointScanUploadProfile = '/scan/upload-profile';
+  static const String endpointScanUploadDocument = '/scan/upload-document';
+  static const String endpointScanUploadImage = '/scan/upload-image';
+  static const String endpointGetScanCenterProfile = '/scan/profile';
+  static const String endpointUpdateScanCenterProfile = '/scan/profile';
+  static const String endpointVerifiedScanCenters = '/scan/verified';
+
   // Admin API Endpoints
   static const String endpointAdminLogin = '/admin/login';
   static const String endpointAdminDoctors = '/admin/doctors';
@@ -142,6 +157,11 @@ class AppConstants {
       '/admin/blood-banks/$id/approve';
   static String endpointAdminBloodBankReject(String id) =>
       '/admin/blood-banks/$id/reject';
+  static String endpointAdminBloodBankSuspend(String id) =>
+      '/admin/blood-banks/$id/suspend';
+  static const String endpointAdminBloodOrders = '/admin/blood-orders';
+  static const String endpointAdminEmergencyBloodRequests =
+      '/admin/emergency-blood-requests';
   static const String endpointAdminLabs = '/admin/labs';
   static String endpointAdminLab(String id) => '/admin/labs/$id';
   static String endpointAdminLabApprove(String id) => '/admin/labs/$id/approve';
@@ -149,6 +169,16 @@ class AppConstants {
   static String endpointAdminLabSuspend(String id) => '/admin/labs/$id/suspend';
   static String endpointAdminLabRequestDocuments(String id) =>
       '/admin/labs/$id/request-documents';
+  static const String endpointAdminScanCenters = '/admin/scan-centers';
+  static String endpointAdminScanCenter(String id) => '/admin/scan-centers/$id';
+  static String endpointAdminScanCenterApprove(String id) =>
+      '/admin/scan-centers/$id/approve';
+  static String endpointAdminScanCenterReject(String id) =>
+      '/admin/scan-centers/$id/reject';
+  static String endpointAdminScanCenterSuspend(String id) =>
+      '/admin/scan-centers/$id/suspend';
+  static String endpointAdminScanCenterRequestDocuments(String id) =>
+      '/admin/scan-centers/$id/request-documents';
 
   // Validation
   static const int minPasswordLength = 8;
@@ -223,6 +253,10 @@ class AppConstants {
       '/blood-bank-application-submitted';
   static const String routeLabRegistration = '/lab-registration';
   static const String routeLabApplicationSubmitted = '/lab-application-submitted';
+  static const String routeScanRegistration = '/scan-registration';
+  static const String routeScanApplicationSubmitted = '/scan-application-submitted';
+  static const String routeScanDashboard = '/scan-dashboard';
+  static const String routeBloodBankDashboard = '/blood-bank-dashboard';
   static const String routeDoctorDashboard = '/doctor-dashboard';
   static const String routeNurseDashboard = '/nurse-dashboard';
   static const String routeVideoConsult = '/video-consult';
@@ -238,6 +272,8 @@ class AppConstants {
   static const String routeAdminBloodBankDetails = '/admin-blood-bank-details';
   static const String routeAdminLabList = '/admin-lab-list';
   static const String routeAdminLabDetails = '/admin-lab-details';
+  static const String routeAdminScanList = '/admin-scan-list';
+  static const String routeAdminScanDetails = '/admin-scan-details';
 
   static const String mockImageUrl =
       'https://images.unsplash.com/photo-1612349317228-cc624a92fc4d?w=400&h=400&fit=crop';

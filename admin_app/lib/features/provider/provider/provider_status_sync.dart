@@ -22,6 +22,8 @@ import '../../doctor_registration/provider/registration_provider.dart';
 
 import '../../nurse_registration/provider/nurse_registration_provider.dart';
 
+import '../../lab_registration/provider/lab_registration_provider.dart';
+import '../../scan_registration/provider/scan_registration_provider.dart';
 import 'provider_profile_provider.dart';
 
 /// Resolves signed-in partner type from storage (not only in-memory auth).
@@ -52,6 +54,30 @@ Future<void> refreshProviderApplicationStatus(
           .read(doctorRegistrationProvider.notifier)
           .refreshDoctorFromApi(doctorId: doctorId);
     }
+  } else if (type == ProviderType.lab) {
+    final labId = await TokenStorage.instance.getLabId() ??
+        ref.read(labRegistrationProvider).lab?.id;
+    if (labId != null && labId.isNotEmpty) {
+      await ref
+          .read(labRegistrationProvider.notifier)
+          .refreshLabFromApi(labId: labId);
+    }
+  } else if (type == ProviderType.scanCenter) {
+    final scanCenterId = await TokenStorage.instance.getScanCenterId() ??
+        ref.read(scanRegistrationProvider).center?.id;
+    if (scanCenterId != null && scanCenterId.isNotEmpty) {
+      await ref.read(scanRegistrationProvider.notifier).refreshScanCenterFromApi(
+            scanCenterId: scanCenterId,
+          );
+    }
+  } else if (type == ProviderType.bloodBank) {
+    final bloodBankId = await TokenStorage.instance.getBloodBankId() ??
+        ref.read(bloodBankRegistrationProvider).bloodBank?.id;
+    if (bloodBankId != null && bloodBankId.isNotEmpty) {
+      await ref
+          .read(bloodBankRegistrationProvider.notifier)
+          .refreshFromApi(bloodBankId: bloodBankId);
+    }
   }
 
   await ref.read(providerProfileProvider.notifier).loadAll(silent: silent);
@@ -78,6 +104,14 @@ Future<void> refreshProviderApplicationStatus(
     ref
         .read(bloodBankRegistrationProvider.notifier)
         .setBloodBank(profile.bloodBank!);
+  }
+  final lab = ref.read(labRegistrationProvider).lab;
+  if (lab != null) {
+    ref.read(labRegistrationProvider.notifier).setLab(lab);
+  }
+  final scanCenter = ref.read(scanRegistrationProvider).center;
+  if (scanCenter != null) {
+    ref.read(scanRegistrationProvider.notifier).setScanCenter(scanCenter);
   }
 }
 
@@ -119,6 +153,10 @@ Future<void> openProviderDashboard(BuildContext context, WidgetRef ref) async {
 
   if (type == ProviderType.doctor) {
     context.push(AppConstants.routeDoctorDashboard);
+  } else if (type == ProviderType.scanCenter) {
+    context.push(AppConstants.routeScanDashboard);
+  } else if (type == ProviderType.bloodBank) {
+    context.push(AppConstants.routeBloodBankDashboard);
   } else {
     context.push(AppConstants.routeProviderProfile);
   }
@@ -145,6 +183,14 @@ VerificationStatus? readProviderVerificationStatus(WidgetRef ref) {
   }
   final nurse = ref.watch(nurseRegistrationProvider).nurse;
   if (nurse?.verificationStatus != null) return nurse!.verificationStatus;
+
+  final lab = ref.watch(labRegistrationProvider).lab;
+  if (lab?.verificationStatus != null) return lab!.verificationStatus;
+
+  final scanCenter = ref.watch(scanRegistrationProvider).center;
+  if (scanCenter?.verificationStatus != null) {
+    return scanCenter!.verificationStatus;
+  }
 
   return null;
 }
