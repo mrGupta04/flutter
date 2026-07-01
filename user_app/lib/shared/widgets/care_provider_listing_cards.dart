@@ -115,7 +115,7 @@ class BloodBankListingCard extends StatelessWidget {
     ];
     final subtitleParts = <String>[
       if (bloodBank.address != null && bloodBank.address!.isNotEmpty)
-        bloodBank.address!,
+        bloodBank.address!
       else if (bloodBank.city != null && bloodBank.city!.isNotEmpty)
         bloodBank.city!,
     ];

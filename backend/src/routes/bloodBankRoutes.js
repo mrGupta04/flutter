@@ -43,7 +43,6 @@ const {
   acceptEmergencyRequest,
   findEmergencyRequestById,
 } = require('../db/emergencyBloodRequestRepositories');
-const { listBloodBanks } = require('../db/bloodBankRepositories');
 const {
   notifyEmergencyRequestCreated,
   notifyEmergencyRequestAccepted,
