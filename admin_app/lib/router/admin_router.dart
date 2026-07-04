@@ -28,6 +28,7 @@ import '../features/lab_registration/presentation/screens/lab_registration_scree
 import '../features/scan_registration/presentation/screens/scan_application_submitted_screen.dart';
 import '../features/scan_registration/presentation/screens/scan_registration_screen.dart';
 import '../features/scan_dashboard/presentation/screens/scan_dashboard_screen.dart';
+import '../features/lab_dashboard/presentation/screens/lab_dashboard_screen.dart';
 import '../features/blood_bank_dashboard/presentation/screens/blood_bank_dashboard_screen.dart';
 import '../features/doctor_dashboard/presentation/screens/doctor_dashboard_screen.dart';
 import '../features/doctor_registration/presentation/screens/application_submitted_screen.dart';
@@ -71,6 +72,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       if (loc == AppConstants.routeDoctorDashboard ||
           loc == AppConstants.routeNurseDashboard ||
           loc == AppConstants.routeScanDashboard ||
+          loc == AppConstants.routeLabDashboard ||
           loc == AppConstants.routeBloodBankDashboard ||
           loc == AppConstants.routeProviderProfile) {
         if (ref.read(providerAuthProvider).isAuthenticated) {
@@ -271,6 +273,14 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadePage(
           state,
           const ScanDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeLabDashboard,
+        name: 'labDashboard',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          const LabDashboardScreen(),
         ),
       ),
       GoRoute(

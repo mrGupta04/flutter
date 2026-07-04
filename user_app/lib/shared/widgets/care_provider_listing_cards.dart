@@ -27,6 +27,8 @@ class NurseListingCard extends StatelessWidget {
     final specialization = nurse.specialization?.trim();
     final experience = nurse.yearsOfExperience;
     final subtitleParts = <String>[
+      if (nurse.gender != null && nurse.gender!.trim().isNotEmpty)
+        nurse.gender!.trim(),
       if (qualification != null && qualification.isNotEmpty) qualification,
       if (specialization != null && specialization.isNotEmpty) specialization,
       if (experience != null) '$experience yrs exp',

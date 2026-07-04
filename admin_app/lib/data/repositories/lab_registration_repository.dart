@@ -121,9 +121,18 @@ class LabRegistrationRepository {
     }
   }
 
-  Future<ApiResponse<LabModel>> register(LabModel lab, {String? password}) async {
+  Future<ApiResponse<LabModel>> register(
+    LabModel lab, {
+    String? password,
+    Map<String, dynamic>? extras,
+    List<Map<String, dynamic>>? offeredTestsPayload,
+  }) async {
     try {
-      final payload = lab.toJson();
+      final payload = {
+        ...lab.toJson(),
+        ...?extras,
+        if (offeredTestsPayload != null) 'offeredTests': offeredTestsPayload,
+      };
       if (password != null && password.isNotEmpty) {
         payload['password'] = password;
       }

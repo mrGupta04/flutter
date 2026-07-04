@@ -10,5 +10,12 @@ enum NurseDocumentType {
   final String label;
 }
 
+/// Gender options for nurse registration.
+const nurseGenders = [
+  'Male',
+  'Female',
+  'Group D',
+];
+
 /// Total steps in nurse onboarding wizard (home visit only).
 const totalNurseRegistrationSteps = 7;

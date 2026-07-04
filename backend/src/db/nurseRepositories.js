@@ -57,6 +57,7 @@ async function upsertNurse(data) {
     mobileNumber: data.mobileNumber ?? existing?.mobileNumber,
     countryCode: data.countryCode ?? existing?.countryCode ?? '91',
     profilePicture: data.profilePicture ?? existing?.profilePicture,
+    gender: data.gender ?? existing?.gender,
     qualification: data.qualification ?? existing?.qualification,
     registrationNumber: data.registrationNumber ?? existing?.registrationNumber,
     nursingCouncil: data.nursingCouncil ?? existing?.nursingCouncil,

@@ -156,6 +156,14 @@ class _BloodBankRegistrationScreenState
           SnackBarHelper.showError(context, 'Enter a valid email.');
           return false;
         }
+        final mobileError = ValidationUtils.validatePhoneNumber(
+          _mobileController.text.trim(),
+          countryCode: _countryCode,
+        );
+        if (mobileError != null) {
+          SnackBarHelper.showError(context, mobileError);
+          return false;
+        }
         if (_passwordController.text.length < AppConstants.minPasswordLength) {
           SnackBarHelper.showError(context, 'Password too short.');
           return false;

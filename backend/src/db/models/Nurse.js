@@ -10,6 +10,7 @@ const nurseSchema = new mongoose.Schema(
     countryCode: { type: String, default: '91' },
     passwordHash: String,
     profilePicture: String,
+    gender: String,
     qualification: String,
     registrationNumber: String,
     nursingCouncil: String,

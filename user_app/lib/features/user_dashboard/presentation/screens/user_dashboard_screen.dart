@@ -10,7 +10,6 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/patient_booking_model.dart';
 import '../../../../shared/widgets/appointment_code_display.dart';
-import '../../../../shared/widgets/booking_category_filter_dropdown.dart';
 import '../../../../data/models/patient_user_model.dart';
 import '../../../user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
@@ -451,89 +450,75 @@ class _ProfileTab extends StatelessWidget {
   }
 }
 
-class _CurrentBookingsTab extends StatefulWidget {
+class _CurrentBookingsTab extends StatelessWidget {
   const _CurrentBookingsTab({required this.dash, required this.onRefresh});
 
   final PatientDashboardState dash;
   final Future<void> Function() onRefresh;
 
   @override
-  State<_CurrentBookingsTab> createState() => _CurrentBookingsTabState();
-}
-
-class _CurrentBookingsTabState extends State<_CurrentBookingsTab> {
-  Set<PatientBookingCategory> _categories = {PatientBookingCategory.all};
-
-  @override
   Widget build(BuildContext context) {
-    return _FilteredBookingsTab(
-      dash: widget.dash,
-      onRefresh: widget.onRefresh,
-      categories: _categories,
-      onCategoriesChanged: (value) => setState(() => _categories = value),
-      bookings: filterBookingsByCategories(
-        widget.dash.upcomingBookings,
-        _categories,
-      ),
+    return _CategorizedBookingsTab(
+      dash: dash,
+      onRefresh: onRefresh,
+      bookings: dash.upcomingBookings,
       isUpcoming: true,
-      emptyTitle: 'No upcoming bookings',
-      emptySubtitle:
-          'Book an online consult, clinic visit, or other care service from home.',
     );
   }
 }
 
-class _PastBookingsTab extends StatefulWidget {
+class _PastBookingsTab extends StatelessWidget {
   const _PastBookingsTab({required this.dash, required this.onRefresh});
 
   final PatientDashboardState dash;
   final Future<void> Function() onRefresh;
 
   @override
-  State<_PastBookingsTab> createState() => _PastBookingsTabState();
-}
-
-class _PastBookingsTabState extends State<_PastBookingsTab> {
-  Set<PatientBookingCategory> _categories = {PatientBookingCategory.all};
-
-  @override
   Widget build(BuildContext context) {
-    return _FilteredBookingsTab(
-      dash: widget.dash,
-      onRefresh: widget.onRefresh,
-      categories: _categories,
-      onCategoriesChanged: (value) => setState(() => _categories = value),
-      bookings: filterBookingsByCategories(
-        widget.dash.pastBookings,
-        _categories,
-      ),
+    return _CategorizedBookingsTab(
+      dash: dash,
+      onRefresh: onRefresh,
+      bookings: dash.pastBookings,
       isUpcoming: false,
-      emptyTitle: 'No past bookings',
-      emptySubtitle: 'Your completed appointments will appear here.',
     );
   }
 }
 
-class _FilteredBookingsTab extends StatelessWidget {
-  const _FilteredBookingsTab({
+class _CategorizedBookingsTab extends StatelessWidget {
+  const _CategorizedBookingsTab({
     required this.dash,
     required this.onRefresh,
-    required this.categories,
-    required this.onCategoriesChanged,
     required this.bookings,
     required this.isUpcoming,
-    required this.emptyTitle,
-    required this.emptySubtitle,
   });
 
   final PatientDashboardState dash;
   final Future<void> Function() onRefresh;
-  final Set<PatientBookingCategory> categories;
-  final ValueChanged<Set<PatientBookingCategory>> onCategoriesChanged;
   final List<PatientBookingModel> bookings;
   final bool isUpcoming;
-  final String emptyTitle;
-  final String emptySubtitle;
+
+  IconData _sectionIcon(PatientBookingCategory category) {
+    switch (category) {
+      case PatientBookingCategory.onlineConsult:
+        return Icons.videocam_rounded;
+      case PatientBookingCategory.hospitalVisit:
+        return Icons.local_hospital_rounded;
+      case PatientBookingCategory.homeVisit:
+        return Icons.home_rounded;
+      case PatientBookingCategory.nurse:
+        return Icons.health_and_safety_rounded;
+      case PatientBookingCategory.scan:
+        return Icons.radar_rounded;
+      case PatientBookingCategory.lab:
+        return Icons.biotech_rounded;
+      case PatientBookingCategory.bloodBank:
+        return Icons.bloodtype_rounded;
+      case PatientBookingCategory.ambulance:
+        return Icons.local_shipping_rounded;
+      case PatientBookingCategory.all:
+        return Icons.event_note_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -541,83 +526,134 @@ class _FilteredBookingsTab extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final grouped = groupBookingsByCategory(bookings);
+    final totalCount = bookings.length;
+
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
-        padding: const EdgeInsets.only(top: 20, bottom: 16),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          BookingCategoryFilterDropdown(
-            selected: categories,
-            onChanged: onCategoriesChanged,
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                _StatChip(
-                  label: isUpcoming ? 'Upcoming' : 'Past',
-                  value: '${bookings.length}',
-                  color: isUpcoming ? AppColors.success : AppColors.textSecondary,
-                ),
-              ],
-            ),
-          ),
-          if (dash.error != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Text(
-                dash.error!,
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+          Row(
+            children: [
+              _StatChip(
+                label: isUpcoming ? 'Upcoming' : 'Past',
+                value: '$totalCount',
+                color: isUpcoming ? AppColors.success : AppColors.textSecondary,
               ),
+            ],
+          ),
+          if (dash.error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              dash.error!,
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
             ),
-          const SizedBox(height: 12),
-          if (bookings.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.event_busy_outlined,
-                    size: 56,
-                    color: AppColors.grey400,
+          ],
+          const SizedBox(height: 16),
+          ...PatientBookingCategory.bookingSections.map((category) {
+            final sectionBookings = grouped[category] ?? const [];
+            return _BookingCategorySection(
+              title: category.label,
+              icon: _sectionIcon(category),
+              bookings: sectionBookings,
+              isUpcoming: isUpcoming,
+              onRefresh: onRefresh,
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingCategorySection extends StatelessWidget {
+  const _BookingCategorySection({
+    required this.title,
+    required this.icon,
+    required this.bookings,
+    required this.isUpcoming,
+    required this.onRefresh,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<PatientBookingModel> bookings;
+  final bool isUpcoming;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    emptyTitle,
-                    style: AppTextStyles.titleMedium.copyWith(
-                      fontWeight: FontWeight.w700,
+                  child: Icon(icon, size: 20, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTextStyles.titleSmall.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    emptySubtitle,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodySmall.copyWith(
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${bookings.length}',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      fontWeight: FontWeight.w800,
                       color: AppColors.textSecondary,
                     ),
                   ),
-                ],
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: bookings
-                    .map(
-                      (b) => _BookingCard(
-                        booking: b,
-                        isUpcoming: isUpcoming,
-                        onVideoEnded: isUpcoming ? onRefresh : null,
-                        onRefresh: onRefresh,
-                      ),
-                    )
-                    .toList(),
-              ),
+                ),
+              ],
             ),
-        ],
+            const SizedBox(height: 10),
+            if (bookings.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  isUpcoming
+                      ? 'No upcoming bookings in this category.'
+                      : 'No past bookings in this category.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              )
+            else
+              ...bookings.map(
+                (booking) => _BookingCard(
+                  booking: booking,
+                  isUpcoming: isUpcoming,
+                  onVideoEnded: isUpcoming ? onRefresh : null,
+                  onRefresh: onRefresh,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -680,9 +716,22 @@ class _BookingCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dateFmt = DateFormat('EEE, dd MMM yyyy');
     final imageUrl = MediaUrlUtils.resolve(booking.doctorProfilePicture);
+    final category = PatientBookingCategory.resolve(booking);
+    final providerIcon = switch (category) {
+      PatientBookingCategory.nurse => Icons.health_and_safety_rounded,
+      PatientBookingCategory.lab => Icons.biotech_rounded,
+      PatientBookingCategory.scan => Icons.radar_rounded,
+      PatientBookingCategory.bloodBank => Icons.bloodtype_rounded,
+      PatientBookingCategory.ambulance => Icons.local_shipping_rounded,
+      PatientBookingCategory.hospitalVisit => Icons.local_hospital_rounded,
+      PatientBookingCategory.homeVisit => Icons.home_rounded,
+      _ => Icons.medical_services_rounded,
+    };
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
+      elevation: 0,
+      color: AppColors.grey50,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
@@ -694,7 +743,7 @@ class _BookingCard extends ConsumerWidget {
               backgroundImage:
                   imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
               child: imageUrl.isEmpty
-                  ? Icon(Icons.medical_services, color: AppColors.primary)
+                  ? Icon(providerIcon, color: AppColors.primary)
                   : null,
             ),
             const SizedBox(width: 12),

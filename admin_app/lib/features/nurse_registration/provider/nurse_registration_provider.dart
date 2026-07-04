@@ -17,6 +17,7 @@ class NurseRegistrationFormState {
   final String draftId;
   final String firstName;
   final String lastName;
+  final String? gender;
   final String email;
   final String mobileNumber;
   final String countryCode;
@@ -52,6 +53,7 @@ class NurseRegistrationFormState {
     required this.draftId,
     this.firstName = '',
     this.lastName = '',
+    this.gender,
     this.email = '',
     this.mobileNumber = '',
     this.countryCode = PhoneCountries.defaultDialCode,
@@ -91,6 +93,7 @@ class NurseRegistrationFormState {
     String? draftId,
     String? firstName,
     String? lastName,
+    String? gender,
     String? email,
     String? mobileNumber,
     String? countryCode,
@@ -126,6 +129,7 @@ class NurseRegistrationFormState {
       draftId: draftId ?? this.draftId,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
+      gender: gender ?? this.gender,
       email: email ?? this.email,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       countryCode: countryCode ?? this.countryCode,
@@ -166,6 +170,7 @@ class NurseRegistrationFormState {
       id: draftId,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
+      gender: gender?.trim(),
       email: email.trim(),
       mobileNumber: mobileNumber.trim(),
       countryCode: countryCode,
@@ -202,6 +207,7 @@ class NurseRegistrationFormNotifier
   void updatePersonal({
     String? firstName,
     String? lastName,
+    String? gender,
     String? email,
     String? mobileNumber,
     String? countryCode,
@@ -213,6 +219,7 @@ class NurseRegistrationFormNotifier
     state = state.copyWith(
       firstName: firstName,
       lastName: lastName,
+      gender: gender,
       email: email,
       mobileNumber: mobileNumber,
       countryCode: countryCode,

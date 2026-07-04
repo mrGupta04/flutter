@@ -94,7 +94,13 @@ class _AmbulanceRegistrationScreenState
     final form = ref.read(ambulanceRegistrationFormProvider);
 
     if (step == 1) {
-      if (!(_formKeys[0].currentState?.validate() ?? false)) return false;
+      if (!(_formKeys[0].currentState?.validate() ?? false)) {
+        SnackBarHelper.showError(
+          context,
+          'Please complete all required fields including mobile number, email, and password.',
+        );
+        return false;
+      }
       if (!form.hasProfileImage) {
         SnackBarHelper.showError(context, 'Please upload a profile picture.');
         return false;

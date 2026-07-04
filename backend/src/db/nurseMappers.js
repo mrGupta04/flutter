@@ -14,6 +14,7 @@ function toNurse(doc) {
     mobileNumber: d.mobileNumber,
     countryCode: d.countryCode || '91',
     profilePicture: d.profilePicture,
+    gender: d.gender,
     qualification: d.qualification,
     registrationNumber: d.registrationNumber,
     nursingCouncil: d.nursingCouncil,

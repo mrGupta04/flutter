@@ -31,7 +31,10 @@ import '../features/user_auth/presentation/screens/user_register_screen.dart';
 import '../features/user_dashboard/presentation/screens/edit_patient_profile_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_dashboard_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
-import '../features/labs/presentation/screens/labs_screen.dart';
+import '../features/labs/presentation/screens/lab_explore_screen.dart';
+import '../features/labs/presentation/screens/lab_detail_screen.dart';
+import '../features/labs/presentation/screens/lab_cart_screen.dart';
+import '../features/labs/presentation/screens/lab_booking_confirmation_screen.dart';
 import '../features/labs/presentation/screens/lab_search_screen.dart';
 import '../features/scans/presentation/screens/scans_screen.dart';
 import '../features/scans/presentation/screens/scan_search_screen.dart';
@@ -41,7 +44,6 @@ import '../features/scan_registration/presentation/screens/scan_registration_scr
 import '../features/scan_registration/presentation/screens/scan_application_submitted_screen.dart';
 import '../features/lab_registration/presentation/screens/lab_registration_screen.dart';
 import '../features/lab_registration/presentation/screens/lab_application_submitted_screen.dart';
-import '../features/labs/data/models/lab_test_model.dart';
 import '../screens/user_home_screen.dart';
 
 /// Patient marketplace - browse verified providers only.
@@ -318,20 +320,46 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppConstants.routeLabs,
         name: 'labs',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const LabExploreScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '${AppConstants.routeLabDetail}/:labId',
+        name: 'labDetail',
         pageBuilder: (context, state) {
-          final categoryId = state.uri.queryParameters['category'];
-          LabTestCategory? initialCategory;
-          if (categoryId != null) {
-            for (final c in LabTestCategory.values) {
-              if (c.id == categoryId) {
-                initialCategory = c;
-                break;
-              }
-            }
-          }
+          final labId = state.pathParameters['labId'] ?? '';
           return slidePage(
             state,
-            LabsScreen(initialCategory: initialCategory),
+            LabDetailScreen(labId: labId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeLabCart,
+        name: 'labCart',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const LabCartScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeLabBookingConfirmation,
+        name: 'labBookingConfirmation',
+        pageBuilder: (context, state) {
+          final lab = state.uri.queryParameters['lab'] ?? 'Lab';
+          final date = state.uri.queryParameters['date'] ?? '';
+          final slot = state.uri.queryParameters['slot'] ?? '';
+          final total = state.uri.queryParameters['total'] ?? '0';
+          return slidePage(
+            state,
+            LabBookingConfirmationScreen(
+              labName: lab,
+              date: date,
+              slot: slot,
+              total: total,
+            ),
           );
         },
       ),

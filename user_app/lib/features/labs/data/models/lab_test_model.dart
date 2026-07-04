@@ -42,6 +42,10 @@ class LabTest {
     this.preparationInstructions,
     this.homeVisitAvailable = true,
     this.onsiteAvailable = true,
+    this.sampleType = 'Blood',
+    this.fastingRequired = false,
+    this.originalPriceInr,
+    this.discountedPriceInr,
   });
 
   final String id;
@@ -53,6 +57,23 @@ class LabTest {
   final String? preparationInstructions;
   final bool homeVisitAvailable;
   final bool onsiteAvailable;
+  final String sampleType;
+  final bool fastingRequired;
+  final int? originalPriceInr;
+  final int? discountedPriceInr;
+
+  int get effectivePrice => discountedPriceInr ?? priceInr;
+
+  int? get discountPercent {
+    final original = originalPriceInr ?? priceInr;
+    if (discountedPriceInr == null || original <= 0) return null;
+    if (discountedPriceInr! >= original) return null;
+    return (((original - discountedPriceInr!) / original) * 100).round();
+  }
+
+  bool get requiresFasting =>
+      fastingRequired ||
+      (preparationInstructions?.toLowerCase().contains('fasting') ?? false);
 
   List<SampleCollectionOption> get availableCollectionOptions {
     final options = <SampleCollectionOption>[];
@@ -66,6 +87,7 @@ class LabTest {
     final q = query.toLowerCase();
     return name.toLowerCase().contains(q) ||
         description.toLowerCase().contains(q) ||
-        category.label.toLowerCase().contains(q);
+        category.label.toLowerCase().contains(q) ||
+        sampleType.toLowerCase().contains(q);
   }
 }

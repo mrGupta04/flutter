@@ -93,10 +93,39 @@ async function upsertLab(data) {
     licenseNumber: data.licenseNumber ?? existing?.licenseNumber,
     accreditation: data.accreditation ?? existing?.accreditation,
     operatingHours: data.operatingHours ?? existing?.operatingHours,
+    coverImage: data.coverImage ?? existing?.coverImage,
+    labType: data.labType ?? existing?.labType,
+    yearEstablished: data.yearEstablished ?? existing?.yearEstablished,
+    registrationNumber: data.registrationNumber ?? existing?.registrationNumber,
+    nablAccreditationNumber:
+      data.nablAccreditationNumber ?? existing?.nablAccreditationNumber,
+    otherCertifications: data.otherCertifications ?? existing?.otherCertifications,
+    buildingName: data.buildingName ?? existing?.buildingName,
+    street: data.street ?? existing?.street,
+    area: data.area ?? existing?.area,
+    landmark: data.landmark ?? existing?.landmark,
+    openingTime: data.openingTime ?? existing?.openingTime,
+    closingTime: data.closingTime ?? existing?.closingTime,
+    workingDays: data.workingDays ?? existing?.workingDays ?? [],
+    emergencyServiceAvailable:
+      data.emergencyServiceAvailable ??
+      existing?.emergencyServiceAvailable ??
+      false,
+    facilities: data.facilities ?? existing?.facilities ?? [],
+    supportedCategories:
+      data.supportedCategories ?? existing?.supportedCategories ?? [],
     homeCollectionAvailable:
       data.homeCollectionAvailable ?? existing?.homeCollectionAvailable ?? false,
     available24x7: data.available24x7 ?? existing?.available24x7 ?? false,
     offeredTests: data.offeredTests ?? existing?.offeredTests ?? [],
+    healthPackages: data.healthPackages ?? existing?.healthPackages ?? [],
+    offeredScans: data.offeredScans ?? existing?.offeredScans ?? [],
+    staffMembers: data.staffMembers ?? existing?.staffMembers ?? [],
+    bankDetails: data.bankDetails ?? existing?.bankDetails,
+    serviceCities: data.serviceCities ?? existing?.serviceCities ?? [],
+    serviceAreas: data.serviceAreas ?? existing?.serviceAreas ?? [],
+    homeCollectionRadiusKm:
+      data.homeCollectionRadiusKm ?? existing?.homeCollectionRadiusKm,
     branches: data.branches ?? existing?.branches ?? [],
     serviceablePincodes:
       data.serviceablePincodes ?? existing?.serviceablePincodes ?? [],

@@ -95,7 +95,30 @@ class _RegistrationFormScreenState
     if ((step >= 1 && step <= 3) || step == 5) {
       final formKeyIndex = step == 5 ? 4 : step - 1;
       final formKey = _formKeys[formKeyIndex];
-      if (!(formKey.currentState?.validate() ?? false)) return false;
+      if (!(formKey.currentState?.validate() ?? false)) {
+        if (step == 1) {
+          SnackBarHelper.showError(
+            context,
+            'Please complete all required fields including mobile number, email, and password.',
+          );
+        } else if (step == 2) {
+          SnackBarHelper.showError(
+            context,
+            'Please complete all professional details.',
+          );
+        } else if (step == 3) {
+          SnackBarHelper.showError(
+            context,
+            'Please complete your clinic address details.',
+          );
+        } else if (step == 5) {
+          SnackBarHelper.showError(
+            context,
+            'Please complete all payout bank details.',
+          );
+        }
+        return false;
+      }
     }
 
     final formState = ref.read(registrationFormProvider);

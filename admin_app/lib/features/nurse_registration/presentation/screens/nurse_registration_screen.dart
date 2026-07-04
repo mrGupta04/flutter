@@ -90,11 +90,28 @@ class _NurseRegistrationScreenState
     }
   }
 
+  bool _validateFormStep(
+    int formKeyIndex, {
+    required String invalidMessage,
+  }) {
+    final isValid = _formKeys[formKeyIndex].currentState?.validate() ?? false;
+    if (!isValid) {
+      SnackBarHelper.showError(context, invalidMessage);
+    }
+    return isValid;
+  }
+
   bool _validateStep(int step) {
     final form = ref.read(nurseRegistrationFormProvider);
 
     if (step == 1) {
-      if (!(_formKeys[0].currentState?.validate() ?? false)) return false;
+      if (!_validateFormStep(
+        0,
+        invalidMessage:
+            'Please complete all required fields including mobile number, email, and password.',
+      )) {
+        return false;
+      }
       if (!form.hasProfileImage) {
         SnackBarHelper.showError(context, 'Please upload a profile picture.');
         return false;
@@ -102,11 +119,21 @@ class _NurseRegistrationScreenState
     }
 
     if (step == 2) {
-      if (!(_formKeys[1].currentState?.validate() ?? false)) return false;
+      if (!_validateFormStep(
+        1,
+        invalidMessage: 'Please complete all professional details.',
+      )) {
+        return false;
+      }
     }
 
     if (step == 3) {
-      if (!(_formKeys[2].currentState?.validate() ?? false)) return false;
+      if (!_validateFormStep(
+        2,
+        invalidMessage: 'Please complete your base location details.',
+      )) {
+        return false;
+      }
       if (form.latitude == null || form.longitude == null) {
         SnackBarHelper.showError(
           context,
@@ -132,7 +159,12 @@ class _NurseRegistrationScreenState
     }
 
     if (step == 5) {
-      if (!(_formKeys[3].currentState?.validate() ?? false)) return false;
+      if (!_validateFormStep(
+        3,
+        invalidMessage: 'Please complete all payout bank details.',
+      )) {
+        return false;
+      }
       final cheque = NurseDocumentType.cancelledCheque;
       if (!form.documentUrls.containsKey(cheque) &&
           !form.documentBytes.containsKey(cheque)) {

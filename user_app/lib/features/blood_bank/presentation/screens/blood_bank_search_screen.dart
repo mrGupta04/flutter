@@ -108,98 +108,131 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: 'Name, city, area, pincode...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                filled: true,
-                fillColor: AppColors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: BloodBankCareFilter.values
-                  .map((f) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(f.label),
-                          selected: _careFilter == f,
-                          onSelected: (_) => setState(() => _careFilter = f),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: popularCareCities,
-            selected: _city,
-            onSelected: (city) => setState(() {
-              _city = city;
-              _controller.text = city;
-            }),
-          ),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: bloodGroupFilters,
-            selected: _bloodGroup,
-            onSelected: (group) => setState(() => _bloodGroup = group),
-          ),
-          const SizedBox(height: 12),
-          Expanded(child: _buildResults(asyncResults)),
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(child: _buildFilters()),
+          ..._buildResultSlivers(asyncResults),
         ],
       ),
     );
   }
 
-  Widget _buildResults(AsyncValue<List<BloodBankModel>> asyncResults) {
-    return asyncResults.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.all(16),
-        child: ShimmerLoadingList(),
-      ),
-      error: (error, _) => custom.AppErrorWidget(
-        message: error.toString(),
-        onRetry: () => ref.invalidate(bloodBankSearchProvider(_params)),
-      ),
-      data: (items) {
-        if (items.isEmpty) {
-          return Center(
-            child: Text(
-              'No blood banks found.',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-            ),
-          );
-        }
-
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (_, index) => BloodBankListingCard(
-            bloodBank: items[index],
-            onTap: () => context.push(
-              '${AppConstants.routeBloodBankDetail}/${items[index].id}',
-            ),
-            onOrder: () => context.push(
-              '${AppConstants.routeBloodBankDetail}/${items[index].id}',
+  Widget _buildFilters() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: TextField(
+            controller: _controller,
+            decoration: InputDecoration(
+              hintText: 'Name, city, area, pincode...',
+              prefixIcon: const Icon(Icons.search_rounded),
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
             ),
           ),
-        );
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: BloodBankCareFilter.values
+                .map(
+                  (f) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(f.label),
+                      selected: _careFilter == f,
+                      onSelected: (_) => setState(() => _careFilter = f),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        HorizontalFilterChips(
+          labels: popularCareCities,
+          selected: _city,
+          onSelected: (city) => setState(() {
+            _city = city;
+            _controller.text = city;
+          }),
+        ),
+        const SizedBox(height: 8),
+        HorizontalFilterChips(
+          labels: bloodGroupFilters,
+          selected: _bloodGroup,
+          onSelected: (group) => setState(() => _bloodGroup = group),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  List<Widget> _buildResultSlivers(
+    AsyncValue<List<BloodBankModel>> asyncResults,
+  ) {
+    return asyncResults.when(
+      loading: () => const [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: ShimmerLoadingList(),
+          ),
+        ),
+      ],
+      error: (error, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: custom.AppErrorWidget(
+            message: error.toString(),
+            onRetry: () => ref.invalidate(bloodBankSearchProvider(_params)),
+          ),
+        ),
+      ],
+      data: (items) {
+        if (items.isEmpty) {
+          return [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Text(
+                  'No blood banks found.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ];
+        }
+
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            sliver: SliverList.separated(
+              itemCount: items.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) => BloodBankListingCard(
+                bloodBank: items[index],
+                onTap: () => context.push(
+                  '${AppConstants.routeBloodBankDetail}/${items[index].id}',
+                ),
+                onOrder: () => context.push(
+                  '${AppConstants.routeBloodBankDetail}/${items[index].id}',
+                ),
+              ),
+            ),
+          ),
+        ];
       },
     );
   }

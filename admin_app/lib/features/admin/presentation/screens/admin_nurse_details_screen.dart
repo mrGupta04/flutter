@@ -89,6 +89,7 @@ class AdminNurseDetailsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           _DetailRow('Email', nurse.email ?? '-'),
+          _DetailRow('Gender', nurse.gender ?? '-'),
           _DetailRow('Mobile', nurse.mobileNumber ?? '-'),
           _DetailRow('Qualification', nurse.qualification ?? '-'),
           _DetailRow('Registration No.', nurse.registrationNumber ?? '-'),

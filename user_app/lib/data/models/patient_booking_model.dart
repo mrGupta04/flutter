@@ -4,10 +4,12 @@ import 'previous_report_model.dart';
 /// Filter categories for patient booking lists.
 enum PatientBookingCategory {
   all('All'),
-  onlineConsult('Online book'),
+  onlineConsult('Online doctor appointment'),
   hospitalVisit('Hospital visit'),
-  homeVisit('Home visit'),
-  nurse('Nurse'),
+  homeVisit('Home visit doctor'),
+  nurse('Nurse visit'),
+  scan('Scanning'),
+  lab('Lab test'),
   ambulance('Ambulance'),
   bloodBank('Blood bank');
 
@@ -15,24 +17,65 @@ enum PatientBookingCategory {
 
   final String label;
 
+  /// Sections shown on the My bookings tab, in display order.
+  static const bookingSections = [
+    PatientBookingCategory.onlineConsult,
+    PatientBookingCategory.hospitalVisit,
+    PatientBookingCategory.homeVisit,
+    PatientBookingCategory.nurse,
+    PatientBookingCategory.scan,
+    PatientBookingCategory.lab,
+    PatientBookingCategory.bloodBank,
+    PatientBookingCategory.ambulance,
+  ];
+
+  static PatientBookingCategory resolve(PatientBookingModel booking) {
+    for (final category in bookingSections) {
+      if (category.matches(booking)) return category;
+    }
+    return PatientBookingCategory.onlineConsult;
+  }
+
   bool matches(PatientBookingModel booking) {
     switch (this) {
       case PatientBookingCategory.all:
         return true;
       case PatientBookingCategory.onlineConsult:
-        return booking.isOnlineConsult;
+        return booking.serviceType == 'doctor' && booking.isOnlineConsult;
       case PatientBookingCategory.hospitalVisit:
-        return booking.isClinicVisit;
+        return booking.serviceType == 'doctor' && booking.isClinicVisit;
       case PatientBookingCategory.homeVisit:
-        return booking.isHomeVisit;
+        return booking.serviceType == 'doctor' && booking.isHomeVisit;
       case PatientBookingCategory.nurse:
         return booking.serviceType == 'nurse';
+      case PatientBookingCategory.scan:
+        return booking.serviceType == 'scan' ||
+            booking.consultationType == 'scan';
+      case PatientBookingCategory.lab:
+        return booking.serviceType == 'lab' || booking.consultationType == 'lab';
       case PatientBookingCategory.ambulance:
         return booking.serviceType == 'ambulance';
       case PatientBookingCategory.bloodBank:
-        return booking.serviceType == 'blood_bank';
+        return booking.serviceType == 'blood_bank' ||
+            booking.consultationType == 'blood_bank';
     }
   }
+}
+
+Map<PatientBookingCategory, List<PatientBookingModel>> groupBookingsByCategory(
+  List<PatientBookingModel> bookings,
+) {
+  final grouped = {
+    for (final category in PatientBookingCategory.bookingSections)
+      category: <PatientBookingModel>[],
+  };
+
+  for (final booking in bookings) {
+    final category = PatientBookingCategory.resolve(booking);
+    grouped[category]!.add(booking);
+  }
+
+  return grouped;
 }
 
 DateTime _parseDateTime(dynamic value) {
@@ -180,7 +223,11 @@ class PatientBookingModel {
       doctorId: (json['doctorId'] as String?) ??
           (json['nurseId'] as String?) ??
           '',
-      doctorName: json['doctorName'] as String? ?? 'Doctor',
+      doctorName: json['doctorName'] as String? ??
+          json['labName'] as String? ??
+          json['centerName'] as String? ??
+          json['institutionName'] as String? ??
+          'Provider',
       doctorProfilePicture: json['doctorProfilePicture'] as String?,
       serviceType: json['serviceType'] as String? ?? 'doctor',
       consultationType: json['consultationType'] as String? ?? 'online_consult',

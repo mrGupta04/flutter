@@ -97,67 +97,93 @@ class _MobileNumberFieldState extends State<MobileNumberField> {
     );
   }
 
+  Widget _buildCountryCodePicker() {
+    return InkWell(
+      onTap: _pickCountry,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Code',
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _selectedCountry.flag,
+              style: const TextStyle(fontSize: 18),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '+${_selectedCountry.dialCode}',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.arrow_drop_down, color: AppColors.grey500, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return TextFormField(
+      controller: widget.mobileController,
+      validator: _validate,
+      keyboardType: TextInputType.phone,
+      inputFormatters: ValidationUtils.mobileInputFormatters(
+        countryCode: _selectedCountry.dialCode,
+      ),
+      style: AppTextStyles.bodyLarge.copyWith(
+        color: AppColors.textPrimary,
+      ),
+      decoration: InputDecoration(
+        labelText: widget.label,
+        hintText: widget.hint,
+        prefixIcon: Icon(
+          Icons.phone_outlined,
+          color: AppColors.primary,
+          size: 22,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: _pickCountry,
-          borderRadius: BorderRadius.circular(12),
-          child: InputDecorator(
-            decoration: InputDecoration(
-              labelText: 'Code',
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 16,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useStackedLayout = constraints.maxWidth < 360;
+
+        if (useStackedLayout) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildCountryCodePicker(),
+              const SizedBox(height: 12),
+              _buildPhoneField(),
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 120,
+              child: _buildCountryCodePicker(),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _selectedCountry.flag,
-                  style: const TextStyle(fontSize: 18),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '+${_selectedCountry.dialCode}',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 2),
-                Icon(Icons.arrow_drop_down, color: AppColors.grey500, size: 22),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: TextFormField(
-            controller: widget.mobileController,
-            validator: _validate,
-            keyboardType: TextInputType.phone,
-            inputFormatters: ValidationUtils.mobileInputFormatters(
-              countryCode: _selectedCountry.dialCode,
-            ),
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textPrimary,
-            ),
-            decoration: InputDecoration(
-              labelText: widget.label,
-              hintText: widget.hint,
-              prefixIcon: Icon(
-                Icons.phone_outlined,
-                color: AppColors.primary,
-                size: 22,
-              ),
-            ),
-          ),
-        ),
-      ],
+            const SizedBox(width: 10),
+            Expanded(child: _buildPhoneField()),
+          ],
+        );
+      },
     );
   }
 }

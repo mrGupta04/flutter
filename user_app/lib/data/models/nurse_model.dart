@@ -10,6 +10,7 @@ class NurseModel {
   final String? mobileNumber;
   final String? countryCode;
   final String? profilePicture;
+  final String? gender;
   final String? qualification;
   final String? registrationNumber;
   final String? nursingCouncil;
@@ -34,6 +35,7 @@ class NurseModel {
     this.mobileNumber,
     this.countryCode,
     this.profilePicture,
+    this.gender,
     this.qualification,
     this.registrationNumber,
     this.nursingCouncil,
@@ -65,6 +67,7 @@ class NurseModel {
       mobileNumber: json['mobileNumber'] as String?,
       countryCode: json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
       profilePicture: json['profilePicture'] as String?,
+      gender: json['gender'] as String?,
       qualification: json['qualification'] as String?,
       registrationNumber: json['registrationNumber'] as String?,
       nursingCouncil: json['nursingCouncil'] as String?,
@@ -92,6 +95,7 @@ class NurseModel {
       if (mobileNumber != null) 'mobileNumber': mobileNumber,
       if (countryCode != null) 'countryCode': countryCode,
       if (profilePicture != null) 'profilePicture': profilePicture,
+      if (gender != null) 'gender': gender,
       if (qualification != null) 'qualification': qualification,
       if (registrationNumber != null) 'registrationNumber': registrationNumber,
       if (nursingCouncil != null) 'nursingCouncil': nursingCouncil,
@@ -116,6 +120,7 @@ class NurseModel {
     String? email,
     String? mobileNumber,
     String? profilePicture,
+    String? gender,
     String? qualification,
     String? registrationNumber,
     String? nursingCouncil,
@@ -138,6 +143,7 @@ class NurseModel {
       email: email ?? this.email,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       profilePicture: profilePicture ?? this.profilePicture,
+      gender: gender ?? this.gender,
       qualification: qualification ?? this.qualification,
       registrationNumber: registrationNumber ?? this.registrationNumber,
       nursingCouncil: nursingCouncil ?? this.nursingCouncil,

@@ -52,8 +52,8 @@ class LabApplicationSubmittedScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Admin will review your documents and test catalog. '
-                    'After approval, your lab will appear when patients search for tests.',
+                    'Admin will review your documents, test catalog, and bank details. '
+                    'After approval, your lab will appear in Find Care → Labs.',
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.white.withValues(alpha: 0.95),
                     ),

@@ -7,10 +7,6 @@ import '../core/theme/app_text_styles.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/hero_wallpaper_carousel.dart';
 import '../shared/widgets/user_app_footer.dart';
-import '../features/doctor_registration/presentation/widgets/verified_ambulances_section.dart';
-import '../features/doctor_registration/presentation/widgets/verified_blood_banks_section.dart';
-import '../features/doctor_registration/provider/ambulance_search_provider.dart';
-import '../features/doctor_registration/provider/blood_bank_search_provider.dart';
 import '../features/doctor_registration/provider/doctor_search_provider.dart';
 import '../core/services/token_storage.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
@@ -29,20 +25,7 @@ class UserHomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.home),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(ambulanceSearchProvider);
-          ref.invalidate(bloodBankSearchProvider);
-          await Future.wait([
-            ref.read(
-              ambulanceSearchProvider(const AmbulanceSearchParams()).future,
-            ),
-            ref.read(
-              bloodBankSearchProvider(const BloodBankSearchParams()).future,
-            ),
-          ]);
-        },
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -121,6 +104,30 @@ class UserHomeScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: _RoleEntryCard(
+                          label: 'Lab test',
+                          icon: Icons.biotech_rounded,
+                          backgroundImageUrl:
+                              'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=900&h=600&fit=crop',
+                          onTap: () => context.push(AppConstants.routeLabs),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _RoleEntryCard(
+                          label: 'Scanning',
+                          icon: Icons.radar_rounded,
+                          backgroundImageUrl:
+                              'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=900&h=600&fit=crop',
+                          onTap: () => context.push(AppConstants.routeScans),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _RoleEntryCard(
                           label: 'Ambulance',
                           icon: Icons.local_shipping_rounded,
                           backgroundImageUrl:
@@ -142,37 +149,9 @@ class UserHomeScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _RoleEntryCard(
-                          label: 'Lab',
-                          icon: Icons.biotech_rounded,
-                          backgroundImageUrl:
-                              'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=900&h=600&fit=crop',
-                          onTap: () => context.push(AppConstants.routeLabs),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _RoleEntryCard(
-                          label: 'Scan',
-                          icon: Icons.radar_rounded,
-                          backgroundImageUrl:
-                              'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=900&h=600&fit=crop',
-                          onTap: () => context.push(AppConstants.routeScans),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            const VerifiedAmbulancesSection(),
-            const SizedBox(height: 20),
-            const VerifiedBloodBanksSection(),
             const SizedBox(height: 20),
             const MarketplaceSectionTitle(title: 'Browse by specialty'),
             OneMgCategoryGrid(
@@ -233,7 +212,6 @@ class UserHomeScreen extends ConsumerWidget {
             const UserScrollFooter(),
             ],
           ),
-        ),
       ),
     );
   }

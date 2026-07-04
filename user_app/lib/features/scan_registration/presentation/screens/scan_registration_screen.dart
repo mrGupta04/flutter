@@ -9,6 +9,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/scan_center_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
@@ -101,8 +102,86 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
   }
 
   void _next() {
+    if (!_validateCurrentStep()) return;
     if (_step < _totalSteps - 1) {
       setState(() => _step++);
+    }
+  }
+
+  bool _validateCurrentStep() {
+    switch (_step) {
+      case 0:
+        if (_centerNameController.text.trim().isEmpty) {
+          SnackBarHelper.showError(context, 'Scan center name is required.');
+          return false;
+        }
+        if (_ownerController.text.trim().isEmpty) {
+          SnackBarHelper.showError(context, 'Owner name is required.');
+          return false;
+        }
+        if (_emailController.text.trim().isEmpty) {
+          SnackBarHelper.showError(context, 'Email is required.');
+          return false;
+        }
+        if (ValidationUtils.validateEmail(_emailController.text.trim()) != null) {
+          SnackBarHelper.showError(context, 'Enter a valid email address.');
+          return false;
+        }
+        final mobileError = ValidationUtils.validatePhoneNumber(
+          _mobileController.text.trim(),
+          countryCode: _countryCode,
+        );
+        if (mobileError != null) {
+          SnackBarHelper.showError(context, mobileError);
+          return false;
+        }
+        if (_passwordController.text.length < AppConstants.minPasswordLength) {
+          SnackBarHelper.showError(
+            context,
+            'Password must be at least ${AppConstants.minPasswordLength} characters.',
+          );
+          return false;
+        }
+        if (_passwordController.text != _confirmPasswordController.text) {
+          SnackBarHelper.showError(context, 'Passwords do not match.');
+          return false;
+        }
+        if (_addressController.text.trim().isEmpty ||
+            _cityController.text.trim().isEmpty ||
+            _pincodeController.text.trim().isEmpty) {
+          SnackBarHelper.showError(context, 'Complete address details are required.');
+          return false;
+        }
+        return true;
+      case 1:
+        if (_pendingDocs.isEmpty) {
+          SnackBarHelper.showError(
+            context,
+            'Upload at least one license or registration document.',
+          );
+          return false;
+        }
+        return true;
+      case 2:
+        if (_selectedScans.isEmpty) {
+          SnackBarHelper.showError(context, 'Select at least one scan service.');
+          return false;
+        }
+        return true;
+      case 3:
+        if (_offerAvailable) {
+          if (_discountValueController.text.trim().isEmpty) {
+            SnackBarHelper.showError(context, 'Enter a discount value for the offer.');
+            return false;
+          }
+          if (_offerTitleController.text.trim().isEmpty) {
+            SnackBarHelper.showError(context, 'Offer title is required.');
+            return false;
+          }
+        }
+        return true;
+      default:
+        return true;
     }
   }
 

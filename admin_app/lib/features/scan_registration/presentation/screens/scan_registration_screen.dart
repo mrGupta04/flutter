@@ -134,6 +134,14 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           SnackBarHelper.showError(context, 'Mobile number is required.');
           return false;
         }
+        final mobileError = ValidationUtils.validatePhoneNumber(
+          _mobileController.text.trim(),
+          countryCode: _countryCode,
+        );
+        if (mobileError != null) {
+          SnackBarHelper.showError(context, mobileError);
+          return false;
+        }
         if (_passwordController.text.length < AppConstants.minPasswordLength) {
           SnackBarHelper.showError(
             context,

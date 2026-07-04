@@ -7,6 +7,8 @@ import '../models/api_response_model.dart';
 import '../models/lab_model.dart';
 import '../services/dio_service.dart';
 
+typedef LabRegistrationExtrasMap = Map<String, dynamic>;
+
 class LabRegistrationRepository {
   final DioService _dioService;
 
@@ -121,9 +123,18 @@ class LabRegistrationRepository {
     }
   }
 
-  Future<ApiResponse<LabModel>> register(LabModel lab, {String? password}) async {
+  Future<ApiResponse<LabModel>> register(
+    LabModel lab, {
+    String? password,
+    LabRegistrationExtrasMap? extras,
+    List<Map<String, dynamic>>? offeredTestsPayload,
+  }) async {
     try {
-      final payload = lab.toJson();
+      final payload = {
+        ...lab.toJson(),
+        ...?extras,
+        if (offeredTestsPayload != null) 'offeredTests': offeredTestsPayload,
+      };
       if (password != null && password.isNotEmpty) {
         payload['password'] = password;
       }

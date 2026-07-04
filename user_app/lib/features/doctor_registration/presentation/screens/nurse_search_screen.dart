@@ -266,134 +266,148 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              controller: _controller,
-              autofocus: widget.initialQuery == null &&
-                  widget.initialCity == null &&
-                  widget.initialSpecialization == null,
-              decoration: InputDecoration(
-                hintText: 'Search by name, qualification, keyword...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _hasActiveFilters
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded),
-                        onPressed: _clearFilters,
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppColors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-              ),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (value) {
-                setState(() {
-                  _query = value.trim().isEmpty ? null : value.trim();
-                });
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: OutlinedButton.icon(
-              onPressed: _isFetchingNearby ? null : _getNursesNearby,
-              icon: _isFetchingNearby
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(
-                      _nearbyActive
-                          ? Icons.near_me_rounded
-                          : Icons.my_location_rounded,
-                    ),
-              label: Text(
-                _nearbyActive
-                    ? 'Nurses nearby (tap to refresh)'
-                    : 'Get nurses nearby',
-              ),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(44),
-                foregroundColor:
-                    _nearbyActive ? AppColors.primary : AppColors.textPrimary,
-                side: BorderSide(
-                  color: _nearbyActive
-                      ? AppColors.primary.withValues(alpha: 0.55)
-                      : AppColors.border,
-                ),
-                backgroundColor: _nearbyActive
-                    ? AppColors.primary.withValues(alpha: 0.06)
-                    : AppColors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SearchableFilterDropdown(
-              label: 'City',
-              value: _city,
-              allLabel: 'All cities',
-              searchHint: 'Search city...',
-              options: doctorSearchCities,
-              onChanged: (city) => setState(() => _city = city),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SearchableFilterDropdown(
-              label: 'Specialization',
-              value: _specialization,
-              allLabel: 'All specializations',
-              searchHint: 'Search specialization...',
-              options: nurseSpecializationFilters,
-              onChanged: (specialization) =>
-                  setState(() => _specialization = specialization),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: FilterDropdown<int?>(
-              label: 'Years of experience',
-              value: _minYearsExperience,
-              items: doctorMinExperienceOptions,
-              itemLabel: doctorMinExperienceLabel,
-              onChanged: (years) =>
-                  setState(() => _minYearsExperience = years),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(child: _buildResults(asyncResults)),
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(child: _buildFilters()),
+          ..._buildResultSlivers(asyncResults),
         ],
       ),
     );
   }
 
-  Widget _buildResults(AsyncValue<List<NurseModel>> asyncResults) {
+  Widget _buildFilters() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: TextField(
+            controller: _controller,
+            decoration: InputDecoration(
+              hintText: 'Search by name, qualification, keyword...',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _hasActiveFilters
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded),
+                      onPressed: _clearFilters,
+                    )
+                  : null,
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+            ),
+            textInputAction: TextInputAction.search,
+            onSubmitted: (value) {
+              setState(() {
+                _query = value.trim().isEmpty ? null : value.trim();
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: OutlinedButton.icon(
+            onPressed: _isFetchingNearby ? null : _getNursesNearby,
+            icon: _isFetchingNearby
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _nearbyActive
+                        ? Icons.near_me_rounded
+                        : Icons.my_location_rounded,
+                  ),
+            label: Text(
+              _nearbyActive
+                  ? 'Nurses nearby (tap to refresh)'
+                  : 'Get nurses nearby',
+            ),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(44),
+              foregroundColor:
+                  _nearbyActive ? AppColors.primary : AppColors.textPrimary,
+              side: BorderSide(
+                color: _nearbyActive
+                    ? AppColors.primary.withValues(alpha: 0.55)
+                    : AppColors.border,
+              ),
+              backgroundColor: _nearbyActive
+                  ? AppColors.primary.withValues(alpha: 0.06)
+                  : AppColors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SearchableFilterDropdown(
+            label: 'City',
+            value: _city,
+            allLabel: 'All cities',
+            searchHint: 'Search city...',
+            options: doctorSearchCities,
+            onChanged: (city) => setState(() => _city = city),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SearchableFilterDropdown(
+            label: 'Specialization',
+            value: _specialization,
+            allLabel: 'All specializations',
+            searchHint: 'Search specialization...',
+            options: nurseSpecializationFilters,
+            onChanged: (specialization) =>
+                setState(() => _specialization = specialization),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FilterDropdown<int?>(
+            label: 'Years of experience',
+            value: _minYearsExperience,
+            items: doctorMinExperienceOptions,
+            itemLabel: doctorMinExperienceLabel,
+            onChanged: (years) => setState(() => _minYearsExperience = years),
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  List<Widget> _buildResultSlivers(AsyncValue<List<NurseModel>> asyncResults) {
     return asyncResults.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.all(16),
-        child: ShimmerLoadingList(),
-      ),
-      error: (error, _) => custom.AppErrorWidget(
-        message: error.toString(),
-        onRetry: () => ref.invalidate(nurseSearchProvider(_params)),
-      ),
+      loading: () => const [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: ShimmerLoadingList(),
+          ),
+        ),
+      ],
+      error: (error, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: custom.AppErrorWidget(
+            message: error.toString(),
+            onRetry: () => ref.invalidate(nurseSearchProvider(_params)),
+          ),
+        ),
+      ],
       data: (nurses) {
         final sortedNurses = _nearbyActive &&
                 _nearbyLatitude != null &&
@@ -406,56 +420,64 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
             : nurses;
 
         if (sortedNurses.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.person_search_rounded,
-                    size: 48,
-                    color: AppColors.textTertiary,
+          return [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.person_search_rounded,
+                        size: 48,
+                        color: AppColors.textTertiary,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No nurses found',
+                        style: AppTextStyles.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Try another city, specialty, experience, or keyword',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No nurses found',
-                    style: AppTextStyles.titleSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Try another city, specialty, experience, or keyword',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
               ),
             ),
-          );
+          ];
         }
 
-        return ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          itemCount: sortedNurses.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: kDoctorCardSpacing),
-          itemBuilder: (_, index) {
-            final nurse = sortedNurses[index];
-            final distanceKm = _nearbyActive &&
-                    _nearbyLatitude != null &&
-                    _nearbyLongitude != null
-                ? nurseDistanceKm(nurse, _nearbyLatitude!, _nearbyLongitude!)
-                : null;
-            return NurseListingCard(
-              nurse: nurse,
-              distanceLabel: formatNearbyDistanceLabel(distanceKm),
-              onTap: () => openNurseProfile(context, nurse),
-            );
-          },
-        );
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            sliver: SliverList.separated(
+              itemCount: sortedNurses.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: kDoctorCardSpacing),
+              itemBuilder: (_, index) {
+                final nurse = sortedNurses[index];
+                final distanceKm = _nearbyActive &&
+                        _nearbyLatitude != null &&
+                        _nearbyLongitude != null
+                    ? nurseDistanceKm(nurse, _nearbyLatitude!, _nearbyLongitude!)
+                    : null;
+                return NurseListingCard(
+                  nurse: nurse,
+                  distanceLabel: formatNearbyDistanceLabel(distanceKm),
+                  onTap: () => openNurseProfile(context, nurse),
+                );
+              },
+            ),
+          ),
+        ];
       },
     );
   }

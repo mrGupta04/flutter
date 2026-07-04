@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/token_storage.dart';
 import '../../../data/models/lab_model.dart';
 import '../../../data/repositories/lab_registration_repository.dart';
+import '../data/lab_registration_constants.dart';
 
 final labRegistrationRepositoryProvider = Provider(
   (ref) => LabRegistrationRepository(),
@@ -57,8 +58,12 @@ class LabRegistrationNotifier extends StateNotifier<LabRegistrationState> {
   Future<bool> submit(
     LabModel lab, {
     String? password,
+    LabRegistrationExtras? extras,
+    List<Map<String, dynamic>>? offeredTestsPayload,
     Uint8List? logoBytes,
     String? logoFileName,
+    Uint8List? coverBytes,
+    String? coverFileName,
     List<({Uint8List bytes, String filename, String type, String label})>?
         pendingDocuments,
     List<({Uint8List bytes, String filename})>? pendingImages,
@@ -87,6 +92,20 @@ class LabRegistrationNotifier extends StateNotifier<LabRegistrationState> {
         return false;
       }
       model = model.copyWith(profilePicture: upload.data);
+    }
+
+    final extrasMap = {...?extras?.toJson()};
+
+    if (coverBytes != null) {
+      final upload = await repository.uploadLabImage(
+        labId: labId,
+        bytes: coverBytes,
+        filename: coverFileName ?? 'cover.jpg',
+        mobileNumber: lab.mobileNumber,
+      );
+      if (upload.success && upload.data != null) {
+        extrasMap['coverImage'] = upload.data;
+      }
     }
 
     final docs = <LabDocument>[...(model.documents ?? const [])];
@@ -119,7 +138,12 @@ class LabRegistrationNotifier extends StateNotifier<LabRegistrationState> {
 
     model = model.copyWith(documents: docs, labImages: images);
 
-    final response = await repository.register(model, password: password);
+    final response = await repository.register(
+      model,
+      password: password,
+      extras: extrasMap,
+      offeredTestsPayload: offeredTestsPayload,
+    );
     if (response.success && response.data != null) {
       state = state.copyWith(lab: response.data, isSubmitting: false);
       return true;

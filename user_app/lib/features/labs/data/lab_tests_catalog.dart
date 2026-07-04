@@ -400,4 +400,15 @@ class LabTestsCatalog {
     }
     return map;
   }
+
+  static LabTest? byId(String id) {
+    for (final test in tests) {
+      if (test.id == id) return test;
+    }
+    return null;
+  }
+
+  static List<LabTest> byIds(List<String> ids) {
+    return ids.map(byId).whereType<LabTest>().toList();
+  }
 }

@@ -36,6 +36,7 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
     with AutomaticKeepAliveClientMixin {
   late final TextEditingController _firstName;
   late final TextEditingController _lastName;
+  String? _selectedGender;
   late final TextEditingController _email;
   late final TextEditingController _mobile;
   late final TextEditingController _password;
@@ -53,6 +54,7 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
     final s = ref.read(nurseRegistrationFormProvider);
     _firstName = TextEditingController(text: s.firstName);
     _lastName = TextEditingController(text: s.lastName);
+    _selectedGender = s.gender;
     _email = TextEditingController(text: s.email);
     _mobile = TextEditingController(text: s.mobileNumber);
     _countryCode = s.countryCode;
@@ -60,7 +62,6 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
     _confirmPassword = TextEditingController(text: s.confirmPassword);
     _profileBytes = s.profileImageBytes;
     _profileFileName = s.profileImageFileName;
-    _sync();
     for (final c in [
       _firstName,
       _lastName,
@@ -77,6 +78,7 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
     ref.read(nurseRegistrationFormProvider.notifier).updatePersonal(
           firstName: _firstName.text,
           lastName: _lastName.text,
+          gender: _selectedGender,
           email: _email.text,
           mobileNumber: _mobile.text,
           countryCode: _countryCode,
@@ -153,16 +155,30 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
                   (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
             const SizedBox(height: 12),
-            CustomTextField(
-              controller: _email,
-              label: 'Email',
-              prefixIcon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) {
-                if ((v ?? '').trim().isEmpty) return 'Email is required';
-                if (!v!.contains('@')) return 'Enter a valid email';
-                return null;
+            DropdownButtonFormField<String>(
+              value: _selectedGender,
+              decoration: const InputDecoration(
+                labelText: 'Gender',
+                prefixIcon: Icon(Icons.wc_outlined),
+              ),
+              items: nurseGenders
+                  .map(
+                    (g) => DropdownMenuItem(value: g, child: Text(g)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                setState(() => _selectedGender = value);
+                _sync();
               },
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Please select gender' : null,
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Contact & login',
+              style: AppTextStyles.titleMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 12),
             MobileNumberField(
@@ -173,6 +189,15 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
                 _sync();
               },
               label: 'Mobile number',
+              hint: '10-digit mobile number',
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              controller: _email,
+              label: 'Email',
+              prefixIcon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+              validator: ValidationUtils.validateEmail,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -772,8 +797,11 @@ class NurseStep7Review extends ConsumerWidget {
             title: 'Personal',
             lines: [
               '${form.firstName} ${form.lastName}'.trim(),
+              if (form.gender != null && form.gender!.isNotEmpty)
+                'Gender: ${form.gender}',
+              if (form.mobileNumber.trim().isNotEmpty)
+                '+${form.countryCode} ${form.mobileNumber.trim()}',
               form.email,
-              form.mobileNumber,
             ],
             onEdit: () => onEditStep(1),
           ),

@@ -103,7 +103,7 @@ class _LabApplicationSubmittedScreenState
             ),
             const SizedBox(height: 24),
             CustomButton(
-              label: isVerified ? 'Open my profile' : 'View application',
+              label: isVerified ? 'Open my dashboard' : 'View application',
               icon: Icons.dashboard_rounded,
               onPressed: () => openProviderDashboard(context, ref),
             ),

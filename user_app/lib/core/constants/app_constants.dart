@@ -171,6 +171,9 @@ class AppConstants {
   static const String routeBloodOrderConfirmation = '/blood-order';
   static const String routeCareListing = '/care-listing';
   static const String routeLabs = '/labs';
+  static const String routeLabDetail = '/lab';
+  static const String routeLabCart = '/lab-cart';
+  static const String routeLabBookingConfirmation = '/lab-booking-confirmation';
   static const String routeScans = '/scans';
   static const String routeScanSearch = '/scan-search';
   static const String routeScanCenterDetail = '/scan-center';

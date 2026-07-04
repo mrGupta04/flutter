@@ -113,6 +113,12 @@ class _NurseProfileBody extends StatelessWidget {
           const MarketplaceSectionTitle(title: 'Professional details'),
           _InfoCard(
             children: [
+              if (nurse.gender != null && nurse.gender!.trim().isNotEmpty)
+                _InfoRow(
+                  icon: Icons.wc_outlined,
+                  label: 'Gender',
+                  value: nurse.gender!.trim(),
+                ),
               if (nurse.qualification != null &&
                   nurse.qualification!.trim().isNotEmpty)
                 _InfoRow(

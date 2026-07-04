@@ -155,6 +155,8 @@ Future<void> openProviderDashboard(BuildContext context, WidgetRef ref) async {
     context.push(AppConstants.routeDoctorDashboard);
   } else if (type == ProviderType.scanCenter) {
     context.push(AppConstants.routeScanDashboard);
+  } else if (type == ProviderType.lab) {
+    context.push(AppConstants.routeLabDashboard);
   } else if (type == ProviderType.bloodBank) {
     context.push(AppConstants.routeBloodBankDashboard);
   } else {

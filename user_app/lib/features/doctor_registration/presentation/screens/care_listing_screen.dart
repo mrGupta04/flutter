@@ -111,39 +111,27 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ..._buildRoleHeader(showConsultationTypes: true),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(
-                  verifiedDoctorsByConsultationProvider(_doctorType),
-                );
-                await ref.read(
-                  verifiedDoctorsByConsultationProvider(_doctorType).future,
-                );
-              },
-              child: asyncDoctors.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: ShimmerLoadingList(),
-                ),
-                error: (error, _) => ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(error.toString(), textAlign: TextAlign.center),
-                    ),
-                  ],
-                ),
-                data: (doctors) => _buildDoctorList(doctors),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(
+            verifiedDoctorsByConsultationProvider(_doctorType),
+          );
+          await ref.read(
+            verifiedDoctorsByConsultationProvider(_doctorType).future,
+          );
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: _buildRoleHeader(showConsultationTypes: true),
               ),
             ),
-          ),
-        ],
+            ..._doctorResultSlivers(asyncDoctors),
+          ],
+        ),
       ),
     );
   }
@@ -167,39 +155,38 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          ..._buildRoleHeader(),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: popularCareCities,
-            selected: _nurseCity,
-            onSelected: (c) => setState(() => _nurseCity = c),
-          ),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: nurseSpecializationFilters,
-            selected: _nurseSpecialization,
-            onSelected: (s) => setState(() => _nurseSpecialization = s),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(nurseSearchProvider(params));
-                await ref.read(nurseSearchProvider(params).future);
-              },
-              child: asyncNurses.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: ShimmerLoadingList(),
-                ),
-                error: (error, _) => Center(child: Text(error.toString())),
-                data: (items) => _buildNurseList(items),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(nurseSearchProvider(params));
+          await ref.read(nurseSearchProvider(params).future);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ..._buildRoleHeader(),
+                  const SizedBox(height: 8),
+                  HorizontalFilterChips(
+                    labels: popularCareCities,
+                    selected: _nurseCity,
+                    onSelected: (c) => setState(() => _nurseCity = c),
+                  ),
+                  const SizedBox(height: 8),
+                  HorizontalFilterChips(
+                    labels: nurseSpecializationFilters,
+                    selected: _nurseSpecialization,
+                    onSelected: (s) => setState(() => _nurseSpecialization = s),
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ),
             ),
-          ),
-        ],
+            ..._nurseResultSlivers(asyncNurses),
+          ],
+        ),
       ),
     );
   }
@@ -224,43 +211,42 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          ..._buildRoleHeader(),
-          AmbulanceCareFilterCards(
-            selected: _ambulanceFilter,
-            onSelected: (f) => setState(() => _ambulanceFilter = f),
-          ),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: popularCareCities,
-            selected: _ambulanceCity,
-            onSelected: (c) => setState(() => _ambulanceCity = c),
-          ),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: ambulanceVehicleTypeFilters,
-            selected: _ambulanceVehicleType,
-            onSelected: (t) => setState(() => _ambulanceVehicleType = t),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(ambulanceSearchProvider(params));
-                await ref.read(ambulanceSearchProvider(params).future);
-              },
-              child: asyncAmbulances.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: ShimmerLoadingList(),
-                ),
-                error: (error, _) => Center(child: Text(error.toString())),
-                data: (items) => _buildAmbulanceList(items),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(ambulanceSearchProvider(params));
+          await ref.read(ambulanceSearchProvider(params).future);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ..._buildRoleHeader(),
+                  AmbulanceCareFilterCards(
+                    selected: _ambulanceFilter,
+                    onSelected: (f) => setState(() => _ambulanceFilter = f),
+                  ),
+                  const SizedBox(height: 8),
+                  HorizontalFilterChips(
+                    labels: popularCareCities,
+                    selected: _ambulanceCity,
+                    onSelected: (c) => setState(() => _ambulanceCity = c),
+                  ),
+                  const SizedBox(height: 8),
+                  HorizontalFilterChips(
+                    labels: ambulanceVehicleTypeFilters,
+                    selected: _ambulanceVehicleType,
+                    onSelected: (t) => setState(() => _ambulanceVehicleType = t),
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ),
             ),
-          ),
-        ],
+            ..._ambulanceResultSlivers(asyncAmbulances),
+          ],
+        ),
       ),
     );
   }
@@ -285,43 +271,42 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          ..._buildRoleHeader(),
-          BloodBankCareFilterCards(
-            selected: _bloodBankFilter,
-            onSelected: (f) => setState(() => _bloodBankFilter = f),
-          ),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: popularCareCities,
-            selected: _bloodBankCity,
-            onSelected: (c) => setState(() => _bloodBankCity = c),
-          ),
-          const SizedBox(height: 8),
-          HorizontalFilterChips(
-            labels: bloodGroupFilters,
-            selected: _bloodBankGroup,
-            onSelected: (g) => setState(() => _bloodBankGroup = g),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(bloodBankSearchProvider(params));
-                await ref.read(bloodBankSearchProvider(params).future);
-              },
-              child: asyncBloodBanks.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: ShimmerLoadingList(),
-                ),
-                error: (error, _) => Center(child: Text(error.toString())),
-                data: (items) => _buildBloodBankList(items),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(bloodBankSearchProvider(params));
+          await ref.read(bloodBankSearchProvider(params).future);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ..._buildRoleHeader(),
+                  BloodBankCareFilterCards(
+                    selected: _bloodBankFilter,
+                    onSelected: (f) => setState(() => _bloodBankFilter = f),
+                  ),
+                  const SizedBox(height: 8),
+                  HorizontalFilterChips(
+                    labels: popularCareCities,
+                    selected: _bloodBankCity,
+                    onSelected: (c) => setState(() => _bloodBankCity = c),
+                  ),
+                  const SizedBox(height: 8),
+                  HorizontalFilterChips(
+                    labels: bloodGroupFilters,
+                    selected: _bloodBankGroup,
+                    onSelected: (g) => setState(() => _bloodBankGroup = g),
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ),
             ),
-          ),
-        ],
+            ..._bloodBankResultSlivers(asyncBloodBanks),
+          ],
+        ),
       ),
     );
   }
@@ -385,154 +370,255 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     ];
   }
 
-  Widget _buildDoctorList(List<DoctorModel> items) {
+  List<Widget> _doctorResultSlivers(
+    AsyncValue<List<DoctorModel>> asyncDoctors,
+  ) {
+    return asyncDoctors.when(
+      loading: () => const [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerLoadingList(),
+          ),
+        ),
+      ],
+      error: (error, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(error.toString(), textAlign: TextAlign.center),
+          ),
+        ),
+      ],
+      data: _doctorListSlivers,
+    );
+  }
+
+  List<Widget> _doctorListSlivers(List<DoctorModel> items) {
     if (items.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          Padding(
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
               'No verified doctors offer ${_doctorType.label.toLowerCase()} yet.',
               textAlign: TextAlign.center,
             ),
           ),
-        ],
-      );
+        ),
+      ];
     }
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        const MarketplaceSectionTitle(title: 'Consult verified doctors'),
-        const SizedBox(height: 8),
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-          DoctorListingCard(
-            doctor: items[i],
-            showBottomDivider: false,
-            showVerifiedIcon: true,
-            consultationFilter: _doctorType,
-            showActionButtons: items[i].offersOnlineConsult ||
-                items[i].offersVisitSite ||
-                items[i].offersBookHome ||
-                doctorHasMapLocation(items[i]),
-            onTap: () => onDoctorCardTap(context, items[i]),
-            onOnlineConsultTap: () =>
-                openOnlineConsultBooking(context, items[i]),
-            onClinicTap: () => openHospitalVisitBooking(context, items[i]),
-            onHomeVisitTap: () => openHomeVisitBooking(context, items[i]),
-            onOpenMapTap: () => openDoctorInGoogleMaps(context, items[i]),
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        sliver: SliverList(
+          delegate: SliverChildListDelegate([
+            const MarketplaceSectionTitle(title: 'Consult verified doctors'),
+            const SizedBox(height: 8),
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(height: kDoctorCardSpacing),
+              DoctorListingCard(
+                doctor: items[i],
+                showBottomDivider: false,
+                showVerifiedIcon: true,
+                consultationFilter: _doctorType,
+                showActionButtons: items[i].offersOnlineConsult ||
+                    items[i].offersVisitSite ||
+                    items[i].offersBookHome ||
+                    doctorHasMapLocation(items[i]),
+                onTap: () => onDoctorCardTap(context, items[i]),
+                onOnlineConsultTap: () =>
+                    openOnlineConsultBooking(context, items[i]),
+                onClinicTap: () => openHospitalVisitBooking(context, items[i]),
+                onHomeVisitTap: () => openHomeVisitBooking(context, items[i]),
+                onOpenMapTap: () => openDoctorInGoogleMaps(context, items[i]),
+              ),
+            ],
+            const UserScrollFooter(),
+          ]),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _nurseResultSlivers(AsyncValue<List<NurseModel>> asyncNurses) {
+    return asyncNurses.when(
+      loading: () => const [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerLoadingList(),
           ),
-        ],
-        const UserScrollFooter(),
+        ),
       ],
+      error: (error, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: Text(error.toString())),
+        ),
+      ],
+      data: _nurseListSlivers,
     );
   }
 
-  Widget _buildNurseList(List<NurseModel> items) {
+  List<Widget> _nurseListSlivers(List<NurseModel> items) {
     if (items.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          Padding(
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
             padding: EdgeInsets.all(24),
             child: Text(
               'No verified nurses match your filters.',
               textAlign: TextAlign.center,
             ),
           ),
-        ],
-      );
+        ),
+      ];
     }
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        const MarketplaceSectionTitle(title: 'Verified nurses'),
-        const SizedBox(height: 8),
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-          NurseListingCard(
-            nurse: items[i],
-            onTap: () => openNurseProfile(context, items[i]),
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        sliver: SliverList(
+          delegate: SliverChildListDelegate([
+            const MarketplaceSectionTitle(title: 'Verified nurses'),
+            const SizedBox(height: 8),
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(height: kDoctorCardSpacing),
+              NurseListingCard(
+                nurse: items[i],
+                onTap: () => openNurseProfile(context, items[i]),
+              ),
+            ],
+            const UserScrollFooter(),
+          ]),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _ambulanceResultSlivers(
+    AsyncValue<List<AmbulanceModel>> asyncAmbulances,
+  ) {
+    return asyncAmbulances.when(
+      loading: () => const [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerLoadingList(),
           ),
-        ],
-        const UserScrollFooter(),
+        ),
       ],
+      error: (error, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: Text(error.toString())),
+        ),
+      ],
+      data: _ambulanceListSlivers,
     );
   }
 
-  Widget _buildAmbulanceList(List<AmbulanceModel> items) {
+  List<Widget> _ambulanceListSlivers(List<AmbulanceModel> items) {
     if (items.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          Padding(
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
             padding: EdgeInsets.all(24),
             child: Text(
               'No verified ambulance services match your filters.',
               textAlign: TextAlign.center,
             ),
           ),
-        ],
-      );
+        ),
+      ];
     }
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        const MarketplaceSectionTitle(title: 'Verified ambulance services'),
-        const SizedBox(height: 8),
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-          AmbulanceListingCard(ambulance: items[i]),
-        ],
-        const UserScrollFooter(),
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        sliver: SliverList(
+          delegate: SliverChildListDelegate([
+            const MarketplaceSectionTitle(title: 'Verified ambulance services'),
+            const SizedBox(height: 8),
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(height: kDoctorCardSpacing),
+              AmbulanceListingCard(ambulance: items[i]),
+            ],
+            const UserScrollFooter(),
+          ]),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _bloodBankResultSlivers(
+    AsyncValue<List<BloodBankModel>> asyncBloodBanks,
+  ) {
+    return asyncBloodBanks.when(
+      loading: () => const [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerLoadingList(),
+          ),
+        ),
       ],
+      error: (error, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: Text(error.toString())),
+        ),
+      ],
+      data: _bloodBankListSlivers,
     );
   }
 
-  Widget _buildBloodBankList(List<BloodBankModel> items) {
+  List<Widget> _bloodBankListSlivers(List<BloodBankModel> items) {
     if (items.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          Padding(
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
             padding: EdgeInsets.all(24),
             child: Text(
               'No verified blood banks match your filters.',
               textAlign: TextAlign.center,
             ),
           ),
-        ],
-      );
+        ),
+      ];
     }
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        const MarketplaceSectionTitle(title: 'Verified blood banks'),
-        const SizedBox(height: 8),
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-          BloodBankListingCard(
-            bloodBank: items[i],
-            onTap: () => context.push(
-              '${AppConstants.routeBloodBankDetail}/${items[i].id}',
-            ),
-            onOrder: () => context.push(
-              '${AppConstants.routeBloodBankDetail}/${items[i].id}',
-            ),
-          ),
-        ],
-        const UserScrollFooter(),
-      ],
-    );
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        sliver: SliverList(
+          delegate: SliverChildListDelegate([
+            const MarketplaceSectionTitle(title: 'Verified blood banks'),
+            const SizedBox(height: 8),
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(height: kDoctorCardSpacing),
+              BloodBankListingCard(
+                bloodBank: items[i],
+                onTap: () => context.push(
+                  '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+                ),
+                onOrder: () => context.push(
+                  '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+                ),
+              ),
+            ],
+            const UserScrollFooter(),
+          ]),
+        ),
+      ),
+    ];
   }
 }
 

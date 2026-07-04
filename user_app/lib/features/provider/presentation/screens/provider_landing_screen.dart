@@ -42,6 +42,22 @@ class ProviderLandingScreen extends StatelessWidget {
               child: Column(
                 children: [
                   _RegistrationCard(
+                    title: 'Lab test',
+                    subtitle: 'Configure tests, documents & home collection',
+                    icon: Icons.biotech_rounded,
+                    color: AppColors.primary,
+                    onTap: () => context.push(AppConstants.routeLabRegistration),
+                  ),
+                  const SizedBox(height: 10),
+                  _RegistrationCard(
+                    title: 'Scanning',
+                    subtitle: 'MRI, CT, X-Ray, ultrasound & imaging services',
+                    icon: Icons.radar_rounded,
+                    color: AppColors.secondary,
+                    onTap: () => context.push(AppConstants.routeScanRegistration),
+                  ),
+                  const SizedBox(height: 10),
+                  _RegistrationCard(
                     title: 'Ambulance',
                     subtitle: 'Fleet details, license & service area',
                     icon: Icons.local_shipping_rounded,
@@ -57,22 +73,6 @@ class ProviderLandingScreen extends StatelessWidget {
                     color: AppColors.secondary,
                     onTap: () =>
                         context.push(AppConstants.routeBloodBankRegistration),
-                  ),
-                  const SizedBox(height: 10),
-                  _RegistrationCard(
-                    title: 'Diagnostic Lab',
-                    subtitle: 'Configure tests, documents & home collection',
-                    icon: Icons.biotech_rounded,
-                    color: AppColors.primary,
-                    onTap: () => context.push(AppConstants.routeLabRegistration),
-                  ),
-                  const SizedBox(height: 10),
-                  _RegistrationCard(
-                    title: 'Scan Center',
-                    subtitle: 'MRI, CT, X-Ray, ultrasound & imaging services',
-                    icon: Icons.radar_rounded,
-                    color: AppColors.secondary,
-                    onTap: () => context.push(AppConstants.routeScanRegistration),
                   ),
                 ],
               ),

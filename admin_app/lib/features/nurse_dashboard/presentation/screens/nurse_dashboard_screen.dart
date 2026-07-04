@@ -247,6 +247,15 @@ class _ProfileCard extends StatelessWidget {
               ),
             ),
           ],
+          if (nurse.gender != null && nurse.gender!.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              nurse.gender!.trim(),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.white.withValues(alpha: 0.85),
+              ),
+            ),
+          ],
           if (nurse.homeVisitFee != null) ...[
             const SizedBox(height: 8),
             Text(
