@@ -41,6 +41,7 @@ class NurseRegistrationRepository {
     String? search,
     String? city,
     String? specialization,
+    String? gender,
     bool? homeVisit,
   }) async {
     try {
@@ -53,6 +54,7 @@ class NurseRegistrationRepository {
           if (city != null && city.isNotEmpty) 'city': city,
           if (specialization != null && specialization.isNotEmpty)
             'specialization': specialization,
+          if (gender != null && gender.isNotEmpty) 'gender': gender,
           if (homeVisit == true) 'homeVisit': 'true',
         },
       );

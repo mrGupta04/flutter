@@ -124,7 +124,7 @@ class _RegistrationFormScreenState
     final formState = ref.read(registrationFormProvider);
 
     if (step == 1) {
-      if (!formState.emailVerified) {
+      if (!AppConstants.skipVerification && !formState.emailVerified) {
         SnackBarHelper.showError(
           context,
           'Please verify your email address before continuing.',

@@ -41,6 +41,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
   String? _query;
   String? _city;
   String? _specialization;
+  String? _gender;
   int? _minYearsExperience;
   double? _nearbyLatitude;
   double? _nearbyLongitude;
@@ -82,6 +83,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
       _query = null;
       _city = null;
       _specialization = null;
+      _gender = null;
       _minYearsExperience = null;
       _nearbyActive = false;
       _nearbyLatitude = null;
@@ -95,6 +97,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
         city: _city,
         specialization: _specialization,
         minYearsExperience: _minYearsExperience,
+        gender: _gender,
       );
 
   bool get _hasActiveFilters =>
@@ -376,6 +379,17 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
         const SizedBox(height: 10),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FilterDropdown<String?>(
+            label: 'Gender',
+            value: _gender,
+            items: [null, ...nurseGenderFilters],
+            itemLabel: (gender) => gender ?? 'All genders',
+            onChanged: (gender) => setState(() => _gender = gender),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: FilterDropdown<int?>(
             label: 'Years of experience',
             value: _minYearsExperience,
@@ -441,7 +455,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Try another city, specialty, experience, or keyword',
+                        'Try another city, specialty, gender, experience, or keyword',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),

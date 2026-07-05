@@ -112,6 +112,7 @@ async function listNurses({
   city,
   specialization,
   homeVisit,
+  gender,
 }) {
   const filter = {};
   if (status === 'awaiting_review') {
@@ -129,6 +130,9 @@ async function listNurses({
   }
   if (homeVisit === true || homeVisit === 'true') {
     filter.availableForHomeVisit = true;
+  }
+  if (gender?.trim()) {
+    filter.gender = new RegExp(`^${escapeRegex(gender.trim())}$`, 'i');
   }
   if (search?.trim()) {
     const regex = new RegExp(escapeRegex(search.trim()), 'i');

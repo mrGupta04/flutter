@@ -65,6 +65,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
   ConsultationType _doctorType = ConsultationType.onlineConsult;
   String? _nurseCity;
   String? _nurseSpecialization;
+  String? _nurseGender;
   AmbulanceCareFilter _ambulanceFilter = AmbulanceCareFilter.all;
   String? _ambulanceCity;
   String? _ambulanceVehicleType;
@@ -140,6 +141,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     final params = NurseSearchParams(
       city: _nurseCity,
       specialization: _nurseSpecialization,
+      gender: _nurseGender,
     );
     final asyncNurses = ref.watch(nurseSearchProvider(params));
 
@@ -179,6 +181,14 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                     labels: nurseSpecializationFilters,
                     selected: _nurseSpecialization,
                     onSelected: (s) => setState(() => _nurseSpecialization = s),
+                  ),
+                  const SizedBox(height: 8),
+                  HorizontalFilterChips(
+                    labels: nurseGenderFilters,
+                    selected: _nurseGender,
+                    onSelected: (g) => setState(() {
+                      _nurseGender = _nurseGender == g ? null : g;
+                    }),
                   ),
                   const SizedBox(height: 8),
                 ],

@@ -9,6 +9,7 @@ class AppConstants {
   static const int connectionTimeout = 30000;
   static const int receiveTimeout = 30000;
   static bool get useMockApi => ApiConfig.useMockApi;
+  static bool get skipVerification => ApiConfig.skipVerification;
   static String get adminApiKey => ApiConfig.adminApiKey;
 
   // Provider auth

@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../data/lab_test_icons.dart';
 import '../../data/lab_tests_catalog.dart';
 import '../../data/models/lab_test_model.dart';
 import '../widgets/lab_test_card.dart';
@@ -228,9 +229,9 @@ class _CategorySection extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                _categoryIcon(category),
+                category.icon,
                 size: 20,
-                color: AppColors.primary,
+                color: category.iconColor,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -260,24 +261,6 @@ class _CategorySection extends StatelessWidget {
         const SizedBox(height: 8),
       ],
     );
-  }
-
-  IconData _categoryIcon(LabTestCategory category) {
-    return switch (category) {
-      LabTestCategory.bloodTests => Icons.bloodtype_outlined,
-      LabTestCategory.urineTests => Icons.water_drop_outlined,
-      LabTestCategory.thyroidTests => Icons.monitor_heart_outlined,
-      LabTestCategory.diabetesTests => Icons.bloodtype_rounded,
-      LabTestCategory.liverFunctionTests => Icons.healing_outlined,
-      LabTestCategory.kidneyFunctionTests => Icons.filter_alt_outlined,
-      LabTestCategory.lipidProfile => Icons.favorite_outline_rounded,
-      LabTestCategory.vitaminTests => Icons.wb_sunny_outlined,
-      LabTestCategory.hormoneTests => Icons.science_outlined,
-      LabTestCategory.allergyTests => Icons.coronavirus_outlined,
-      LabTestCategory.covid19Tests => Icons.masks_outlined,
-      LabTestCategory.fullBodyCheckups => Icons.health_and_safety_outlined,
-      LabTestCategory.other => Icons.medical_information_outlined,
-    };
   }
 }
 

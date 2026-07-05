@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/models/lab_model.dart';
+import '../../data/lab_test_icons.dart';
 import '../../data/lab_tests_catalog.dart';
 import '../../data/models/lab_test_model.dart';
 import '../../data/lab_model_utils.dart';
@@ -37,26 +38,40 @@ class LabTestTile extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              test.name,
-              style: AppTextStyles.titleSmall.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              test.description,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.35,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LabTestIconAvatar(test: test),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        test.name,
+                        style: AppTextStyles.titleSmall.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        test.description,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 6,
               children: [
-                _Chip(label: test.sampleType, icon: Icons.science_outlined),
+                _Chip(label: test.sampleType, icon: test.sampleTypeIcon),
                 _Chip(
                   label: test.requiresFasting ? 'Fasting required' : 'No fasting',
                   icon: Icons.restaurant_outlined,

@@ -80,6 +80,8 @@ router.get('/verified', async (req, res) => {
 
     const homeVisit = req.query.homeVisit || '';
 
+    const gender = req.query.gender || '';
+
 
 
     const { nurses, pagination } = await listNurses({
@@ -97,6 +99,8 @@ router.get('/verified', async (req, res) => {
       specialization,
 
       homeVisit,
+
+      gender,
 
     });
 

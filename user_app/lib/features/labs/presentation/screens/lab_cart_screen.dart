@@ -7,6 +7,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
+import '../../data/lab_test_icons.dart';
+import '../../data/lab_tests_catalog.dart';
 import '../../data/models/lab_test_model.dart';
 import '../../provider/lab_cart_provider.dart';
 
@@ -160,6 +162,10 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
             (item) => Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
+                leading: LabTestIdIconAvatar(
+                  testId: item.testId,
+                  test: LabTestsCatalog.byId(item.testId),
+                ),
                 title: Text(item.testName),
                 subtitle: Text(item.reportDeliveryTime ?? '24–48 hours'),
                 trailing: Row(

@@ -18,6 +18,7 @@ import '../../../../shared/widgets/appointment_code_display.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../online_consult/online_consult_navigation.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../../../core/utils/user_auth_guard.dart';
@@ -270,6 +271,13 @@ class _HospitalVisitBookingScreenState
                       DoctorConsultationFeesBanner(
                         doctor: doctor,
                         highlightedType: ConsultationType.visitSite,
+                        onTypeSelected: (type) {
+                          if (type == ConsultationType.onlineConsult) {
+                            openOnlineConsultBooking(context, doctor);
+                          } else if (type == ConsultationType.bookHome) {
+                            openHomeVisitBooking(context, doctor);
+                          }
+                        },
                       ),
                       const SizedBox(height: 20),
                       Text(

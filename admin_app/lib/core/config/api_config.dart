@@ -18,6 +18,11 @@ class ApiConfig {
   static const bool useMockApi =
       bool.fromEnvironment('USE_MOCK_API', defaultValue: false);
 
+  /// Skip email OTP during doctor registration (dummy/local testing).
+  /// Re-enable: `--dart-define=SKIP_VERIFICATION=false`
+  static const bool skipVerification =
+      bool.fromEnvironment('SKIP_VERIFICATION', defaultValue: true);
+
   static const String _baseUrlOverride =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
 

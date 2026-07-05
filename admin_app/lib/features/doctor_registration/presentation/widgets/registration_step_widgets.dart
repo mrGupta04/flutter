@@ -224,7 +224,38 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
             validator: ValidationUtils.validateEmail,
           ),
           const SizedBox(height: 12),
-          const _EmailVerificationSection(),
+          if (AppConstants.skipVerification)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.warning,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Email verification is temporarily disabled for testing. Enter any valid email to continue.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            const _EmailVerificationSection(),
           const SizedBox(height: 16),
           CustomTextField(
             controller: _passwordController,

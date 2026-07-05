@@ -12,7 +12,9 @@ const {
   submitDoctorForReview,
   touchDoctorPresence,
   clearDoctorPresence,
+  updateDoctorEmailVerified,
 } = require('../db/repositories');
+const { isVerificationSkipped } = require('../config/verification');
 const { ensureDoctorDocumentsFromProfile } = require('../db/documentVerification');
 const { sendSuccess, sendError } = require('../utils/response');
 const { signToken, authOptional, authRequired } = require('../middleware/auth');
@@ -655,15 +657,23 @@ router.post('/register', authOptional, async (req, res) => {
     }
 
     const existingDoctor = data.id ? await findDoctorById(data.id) : null;
-    if (
-      !existingDoctor?.emailVerified ||
-      String(existingDoctor.email || '').toLowerCase() !== normalizedEmail
-    ) {
-      return sendError(
-        res,
-        'Please verify your email before submitting registration',
-        400,
-      );
+    if (!isVerificationSkipped()) {
+      if (
+        !existingDoctor?.emailVerified ||
+        String(existingDoctor.email || '').toLowerCase() !== normalizedEmail
+      ) {
+        return sendError(
+          res,
+          'Please verify your email before submitting registration',
+          400,
+        );
+      }
+    } else if (data.id) {
+      await ensureDoctorStub(data.id);
+      await updateDoctorEmailVerified({
+        doctorId: data.id,
+        email: normalizedEmail,
+      });
     }
 
     const mobileTaken = await findDoctorByMobile(mobile, data.id || '');

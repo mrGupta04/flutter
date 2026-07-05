@@ -57,6 +57,13 @@ const nurseSpecializationFilters = [
   'Home care',
 ];
 
+/// Nurse gender filter options (matches registration).
+const nurseGenderFilters = [
+  'Male',
+  'Female',
+  'Group D',
+];
+
 /// Ambulance vehicle type filter chips.
 const ambulanceVehicleTypeFilters = [
   'Basic Life Support',

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/doctor_availability_constants.dart';
 import '../../../core/constants/phone_countries.dart';
 import '../../../core/services/token_storage.dart';
@@ -442,8 +443,13 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     if (normalizedEmail != null &&
         verifiedEmail.isNotEmpty &&
         normalizedEmail.toLowerCase() != verifiedEmail.toLowerCase()) {
-      emailVerified = false;
-      verifiedEmail = '';
+      emailVerified = AppConstants.skipVerification;
+      verifiedEmail = AppConstants.skipVerification ? normalizedEmail : '';
+    } else if (AppConstants.skipVerification &&
+        normalizedEmail != null &&
+        ValidationUtils.validateEmail(normalizedEmail) == null) {
+      emailVerified = true;
+      verifiedEmail = normalizedEmail;
     }
 
     state = state.copyWith(
@@ -464,6 +470,23 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
   }
 
   Future<bool> sendEmailVerificationOtp() async {
+    if (AppConstants.skipVerification) {
+      final email = state.email.trim();
+      if (ValidationUtils.validateEmail(email) != null) {
+        state = state.copyWith(
+          emailVerificationError: 'Enter a valid email address first.',
+        );
+        return false;
+      }
+      state = state.copyWith(
+        emailVerified: true,
+        verifiedEmail: email,
+        emailVerificationMessage: 'Email verification skipped (dev mode).',
+        emailVerificationError: null,
+      );
+      return true;
+    }
+
     final email = state.email.trim();
     if (ValidationUtils.validateEmail(email) != null) {
       state = state.copyWith(
@@ -506,6 +529,24 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
   }
 
   Future<bool> verifyEmailVerificationOtp(String otp) async {
+    if (AppConstants.skipVerification) {
+      final email = state.email.trim();
+      if (ValidationUtils.validateEmail(email) != null) {
+        state = state.copyWith(
+          emailVerificationError: 'Enter a valid email address first.',
+        );
+        return false;
+      }
+      state = state.copyWith(
+        isVerifyingEmailOtp: false,
+        emailVerified: true,
+        verifiedEmail: email,
+        emailVerificationMessage: 'Email verification skipped (dev mode).',
+        emailVerificationError: null,
+      );
+      return true;
+    }
+
     final email = state.email.trim();
     if (ValidationUtils.validateEmail(email) != null) {
       state = state.copyWith(

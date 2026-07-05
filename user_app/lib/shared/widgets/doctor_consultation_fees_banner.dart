@@ -13,10 +13,12 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
     super.key,
     required this.doctor,
     this.highlightedType,
+    this.onTypeSelected,
   });
 
   final DoctorModel doctor;
   final ConsultationType? highlightedType;
+  final ValueChanged<ConsultationType>? onTypeSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +67,9 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                         fee: onlineFee,
                         highlighted:
                             highlightedType == ConsultationType.onlineConsult,
+                        onTap: onTypeSelected != null && doctor.offersOnlineConsult
+                            ? () => onTypeSelected!(ConsultationType.onlineConsult)
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -75,6 +80,9 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                         fee: visitFee,
                         highlighted:
                             highlightedType == ConsultationType.visitSite,
+                        onTap: onTypeSelected != null && doctor.offersVisitSite
+                            ? () => onTypeSelected!(ConsultationType.visitSite)
+                            : null,
                       ),
                     ),
                   ],
@@ -86,6 +94,9 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                   fee: homeFee,
                   highlighted: highlightedType == ConsultationType.bookHome,
                   fullWidth: true,
+                  onTap: onTypeSelected != null && doctor.offersBookHome
+                      ? () => onTypeSelected!(ConsultationType.bookHome)
+                      : null,
                 ),
               ],
             )
@@ -100,6 +111,9 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                       fee: onlineFee,
                       highlighted:
                           highlightedType == ConsultationType.onlineConsult,
+                      onTap: onTypeSelected != null && doctor.offersOnlineConsult
+                          ? () => onTypeSelected!(ConsultationType.onlineConsult)
+                          : null,
                     ),
                   ),
                 if (onlineFee != null &&
@@ -113,6 +127,9 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                       fee: visitFee,
                       highlighted:
                           highlightedType == ConsultationType.visitSite,
+                      onTap: onTypeSelected != null && doctor.offersVisitSite
+                          ? () => onTypeSelected!(ConsultationType.visitSite)
+                          : null,
                     ),
                   ),
                 if (visitFee != null && homeFee != null)
@@ -124,6 +141,9 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                       label: 'Home visit',
                       fee: homeFee,
                       highlighted: highlightedType == ConsultationType.bookHome,
+                      onTap: onTypeSelected != null && doctor.offersBookHome
+                          ? () => onTypeSelected!(ConsultationType.bookHome)
+                          : null,
                     ),
                   ),
                 if (homeFee != null && visitFee != null)
@@ -133,6 +153,9 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                       label: 'Home visit',
                       fee: homeFee,
                       highlighted: highlightedType == ConsultationType.bookHome,
+                      onTap: onTypeSelected != null && doctor.offersBookHome
+                          ? () => onTypeSelected!(ConsultationType.bookHome)
+                          : null,
                     ),
                   ),
               ],
@@ -150,6 +173,7 @@ class _FeeTile extends StatelessWidget {
     required this.fee,
     required this.highlighted,
     this.fullWidth = false,
+    this.onTap,
   });
 
   final IconData icon;
@@ -157,6 +181,7 @@ class _FeeTile extends StatelessWidget {
   final int fee;
   final bool highlighted;
   final bool fullWidth;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -199,6 +224,16 @@ class _FeeTile extends StatelessWidget {
         ],
       ),
     );
-    return tile;
+
+    if (onTap == null) return tile;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppDecorations.borderRadiusMd,
+        child: tile,
+      ),
+    );
   }
 }

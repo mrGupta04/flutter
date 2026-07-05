@@ -8,18 +8,21 @@ class NurseSearchParams {
     this.city,
     this.specialization,
     this.minYearsExperience,
+    this.gender,
   });
 
   final String? query;
   final String? city;
   final String? specialization;
   final int? minYearsExperience;
+  final String? gender;
 
   bool get hasTextFilters =>
       (query != null && query!.trim().isNotEmpty) ||
       (city != null && city!.trim().isNotEmpty) ||
       (specialization != null && specialization!.trim().isNotEmpty) ||
-      minYearsExperience != null;
+      minYearsExperience != null ||
+      (gender != null && gender!.trim().isNotEmpty);
 
   @override
   bool operator ==(Object other) {
@@ -28,12 +31,13 @@ class NurseSearchParams {
         other.query == query &&
         other.city == city &&
         other.specialization == specialization &&
-        other.minYearsExperience == minYearsExperience;
+        other.minYearsExperience == minYearsExperience &&
+        other.gender == gender;
   }
 
   @override
   int get hashCode =>
-      Object.hash(query, city, specialization, minYearsExperience);
+      Object.hash(query, city, specialization, minYearsExperience, gender);
 }
 
 String? _trimOrNull(String? value) {
@@ -51,6 +55,7 @@ final nurseSearchProvider =
       search: _trimOrNull(params.query),
       city: _trimOrNull(params.city),
       specialization: _trimOrNull(params.specialization),
+      gender: _trimOrNull(params.gender),
     );
 
     if (response.success && response.data != null) {

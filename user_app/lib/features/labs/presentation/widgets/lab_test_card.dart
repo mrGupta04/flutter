@@ -3,6 +3,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../data/lab_test_icons.dart';
 import '../../data/models/lab_test_model.dart';
 
 class LabTestCard extends StatelessWidget {
@@ -33,16 +34,7 @@ class LabTestCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: AppDecorations.iconTile(AppColors.primaryLight),
-                  child: const Icon(
-                    Icons.science_outlined,
-                    color: AppColors.primary,
-                    size: 22,
-                  ),
-                ),
+                LabTestIconAvatar(test: test),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

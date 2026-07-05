@@ -1,5 +1,6 @@
 const EmailVerification = require('../db/models/EmailVerification');
 const { findDoctorByEmail } = require('../db/repositories');
+const { isVerificationSkipped } = require('../config/verification');
 const { getProvider, getProviderInfo, getProviderByName, resolveProviderName } = require('./emailProviders');
 
 const MAX_ATTEMPTS = 5;
@@ -30,6 +31,16 @@ async function sendEmailVerificationOtp({ doctorId, email }) {
   }
   if (!isValidEmail(normalizedEmail)) {
     throw new Error('Enter a valid email address');
+  }
+
+  if (isVerificationSkipped()) {
+    return {
+      message: 'Email verification skipped (dev mode). You can continue registration.',
+      maskedEmail: maskEmail(normalizedEmail),
+      expiresInSeconds: 0,
+      provider: 'skipped',
+      devNote: 'Set SKIP_VERIFICATION=false to re-enable email OTP.',
+    };
   }
 
   const emailTaken = await findDoctorByEmail(normalizedEmail, doctorId);
@@ -83,6 +94,15 @@ async function verifyEmailVerificationOtp({ doctorId, email, otp }) {
   if (!isValidEmail(normalizedEmail)) {
     throw new Error('Invalid email address');
   }
+
+  if (isVerificationSkipped()) {
+    return {
+      verified: true,
+      email: normalizedEmail,
+      maskedEmail: maskEmail(normalizedEmail),
+    };
+  }
+
   if (!/^\d{6}$/.test(code)) {
     throw new Error('Enter the 6-digit verification code');
   }
