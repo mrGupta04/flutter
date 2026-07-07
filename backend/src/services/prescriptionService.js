@@ -52,8 +52,11 @@ async function findBookingForPrescription(bookingId) {
     err.statusCode = 404;
     throw err;
   }
-  if (booking.consultationType !== 'online_consult') {
-    const err = new Error('Prescriptions are available for online consultations');
+  if (booking.consultationType !== 'online_consult' &&
+      booking.consultationType !== 'book_home') {
+    const err = new Error(
+      'Prescriptions are available for online and home visit consultations',
+    );
     err.statusCode = 400;
     throw err;
   }

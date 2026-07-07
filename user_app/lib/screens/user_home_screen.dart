@@ -11,6 +11,7 @@ import '../data/models/patient_booking_model.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
+import '../shared/widgets/care_role_avatar_card.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/hero_wallpaper_carousel.dart';
 import '../shared/widgets/user_app_footer.dart';
@@ -107,28 +108,50 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             ),
             const SliverToBoxAdapter(
               child: MarketplaceSectionTitle(
-                title: 'Book care instantly',
-                actionLabel: 'See all',
+                title: 'Find care by role',
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.88,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final service = _homeServices[index];
-                    return _QuickServiceTile(
-                      service: service,
-                      onTap: () => _openService(context, service),
-                    );
-                  },
-                  childCount: _homeServices.length,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        for (var i = 0; i < 3; i++) ...[
+                          if (i > 0) const SizedBox(width: 8),
+                          Expanded(
+                            child: CareRoleAvatarCard(
+                              label: _homeServices[i].label,
+                              imageUrl: _homeServices[i].avatarImageUrl,
+                              icon: _homeServices[i].icon,
+                              accentColor: _homeServices[i].color,
+                              onTap: () =>
+                                  _openService(context, _homeServices[i]),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        for (var i = 3; i < 6; i++) ...[
+                          if (i > 3) const SizedBox(width: 8),
+                          Expanded(
+                            child: CareRoleAvatarCard(
+                              label: _homeServices[i].label,
+                              imageUrl: _homeServices[i].avatarImageUrl,
+                              icon: _homeServices[i].icon,
+                              accentColor: _homeServices[i].color,
+                              onTap: () =>
+                                  _openService(context, _homeServices[i]),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -711,61 +734,6 @@ class _FeaturedLabCard extends StatelessWidget {
   }
 }
 
-class _QuickServiceTile extends StatelessWidget {
-  const _QuickServiceTile({
-    required this.service,
-    required this.onTap,
-  });
-
-  final _HomeService service;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.grey100),
-            boxShadow: AppDecorations.softShadow(opacity: 0.05),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: service.bgColor,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(service.icon, color: service.color, size: 24),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                service.label,
-                style: AppTextStyles.labelSmall.copyWith(
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _SpecialtyChip extends StatelessWidget {
   const _SpecialtyChip({
     required this.icon,
@@ -899,7 +867,7 @@ class _HomeService {
     required this.label,
     required this.icon,
     required this.color,
-    required this.bgColor,
+    required this.avatarImageUrl,
     required this.route,
     this.routeParams,
   });
@@ -907,7 +875,7 @@ class _HomeService {
   final String label;
   final IconData icon;
   final Color color;
-  final Color bgColor;
+  final String avatarImageUrl;
   final String route;
   final String? routeParams;
 }
@@ -931,35 +899,40 @@ const _homeServices = [
     label: 'Doctor',
     icon: Icons.medical_services_rounded,
     color: AppColors.primary,
-    bgColor: AppColors.primaryLight,
+    avatarImageUrl:
+        'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400&h=400&fit=crop',
     route: AppConstants.routeDoctorSearch,
   ),
   _HomeService(
     label: 'Nurse',
     icon: Icons.health_and_safety_rounded,
     color: Color(0xFF5E35B1),
-    bgColor: Color(0xFFEDE7F6),
+    avatarImageUrl:
+        'https://images.unsplash.com/photo-1584515933487-779824d29309?w=400&h=400&fit=crop',
     route: AppConstants.routeNurseSearch,
   ),
   _HomeService(
     label: 'Lab test',
     icon: Icons.biotech_rounded,
     color: Color(0xFF00838F),
-    bgColor: Color(0xFFE0F7FA),
+    avatarImageUrl:
+        'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=400&h=400&fit=crop',
     route: AppConstants.routeLabs,
   ),
   _HomeService(
     label: 'Scan',
     icon: Icons.radar_rounded,
     color: Color(0xFF1565C0),
-    bgColor: Color(0xFFE3F2FD),
+    avatarImageUrl:
+        'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=400&h=400&fit=crop',
     route: AppConstants.routeScans,
   ),
   _HomeService(
     label: 'Ambulance',
     icon: Icons.local_shipping_rounded,
     color: Color(0xFFD84315),
-    bgColor: Color(0xFFFBE9E7),
+    avatarImageUrl:
+        'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400&h=400&fit=crop',
     route: AppConstants.routeCareListing,
     routeParams: 'role=ambulance',
   ),
@@ -967,7 +940,8 @@ const _homeServices = [
     label: 'Blood bank',
     icon: Icons.bloodtype_rounded,
     color: Color(0xFFC62828),
-    bgColor: Color(0xFFFFEBEE),
+    avatarImageUrl:
+        'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400&h=400&fit=crop',
     route: AppConstants.routeBloodBanks,
   ),
 ];

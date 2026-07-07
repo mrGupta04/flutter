@@ -186,6 +186,8 @@ class PatientBookingModel {
 
   bool get isOnlineConsult => consultationType == 'online_consult';
 
+  bool get isPrescriptionEligible => isOnlineConsult || isHomeVisit;
+
   bool get isAwaitingDoctorApproval =>
       status == 'awaiting_doctor_approval';
 

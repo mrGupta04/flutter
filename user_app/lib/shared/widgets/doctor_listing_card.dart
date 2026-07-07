@@ -149,7 +149,16 @@ class DoctorListingCard extends StatelessWidget {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _DoctorAvatar(doctor: doctor),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _DoctorAvatar(doctor: doctor),
+                                  if (doctor.isLiveNow) ...[
+                                    const SizedBox(height: 6),
+                                    const BlinkingOnlineBadge(compact: true),
+                                  ],
+                                ],
+                              ),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
@@ -180,8 +189,6 @@ class DoctorListingCard extends StatelessWidget {
                                       crossAxisAlignment:
                                           WrapCrossAlignment.center,
                                       children: [
-                                        if (doctor.isLiveNow)
-                                          const BlinkingOnlineBadge(),
                                         if (doctor.hasRating)
                                           DoctorOverallRatingChip(
                                             rating: doctor.averageRating!,
@@ -552,6 +559,10 @@ class _FilteredActionButtonRow extends StatelessWidget {
     final bookButton = _ConsultationActionButton(
       icon: _bookIcon,
       label: 'Book',
+      subtitle: filter == ConsultationType.onlineConsult ||
+              filter == ConsultationType.bookHome
+          ? 'Prescription'
+          : null,
       available: _bookAvailable,
       fadeUnavailable: false,
       onPressed: _bookOnPressed,
@@ -630,6 +641,7 @@ class _PatientActionButtonRow extends StatelessWidget {
           child: _ConsultationActionButton(
             icon: Icons.videocam_rounded,
             label: ConsultationType.onlineConsult.shortLabel,
+            subtitle: 'Prescription',
             available: doctor.offersOnlineConsult,
             fadeUnavailable: fadeUnavailable,
             onPressed: onOnlineConsult,
@@ -650,6 +662,7 @@ class _PatientActionButtonRow extends StatelessWidget {
           child: _ConsultationActionButton(
             icon: thirdIcon,
             label: thirdLabel,
+            subtitle: doctor.offersBookHome ? 'Prescription' : null,
             available: thirdAvailable,
             fadeUnavailable: fadeUnavailable,
             onPressed: thirdOnPressed,
@@ -666,11 +679,13 @@ class _ConsultationActionButton extends StatelessWidget {
     required this.label,
     required this.available,
     required this.fadeUnavailable,
+    this.subtitle,
     this.onPressed,
   });
 
   final IconData icon;
   final String label;
+  final String? subtitle;
   final bool available;
   final bool fadeUnavailable;
   final VoidCallback? onPressed;
@@ -681,6 +696,7 @@ class _ConsultationActionButton extends StatelessWidget {
     final child = _GradientActionButton(
       icon: icon,
       label: label,
+      subtitle: subtitle,
       onPressed: isEnabled ? onPressed : null,
       filled: available,
     );
@@ -697,12 +713,14 @@ class _GradientActionButton extends StatelessWidget {
   const _GradientActionButton({
     required this.icon,
     required this.label,
+    this.subtitle,
     this.onPressed,
     this.filled = true,
   });
 
   final IconData icon;
   final String label;
+  final String? subtitle;
   final VoidCallback? onPressed;
   final bool filled;
 
@@ -755,6 +773,37 @@ class _GradientActionButton extends StatelessWidget {
                   ),
                 ],
               ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 8,
+                      color: filled
+                          ? AppColors.white.withValues(alpha: 0.92)
+                          : AppColors.primary,
+                    ),
+                    const SizedBox(width: 2),
+                    Flexible(
+                      child: Text(
+                        subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: filled
+                              ? AppColors.white.withValues(alpha: 0.92)
+                              : AppColors.primaryDark,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 8,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -844,12 +893,6 @@ class _DoctorAvatar extends StatelessWidget {
               ),
               child: _avatarImage(hasImage, imageUrl),
             ),
-          ),
-        if (doctor.isLiveNow)
-          const Positioned(
-            right: 2,
-            bottom: 2,
-            child: BlinkingOnlineAvatarBadge(),
           ),
       ],
     );

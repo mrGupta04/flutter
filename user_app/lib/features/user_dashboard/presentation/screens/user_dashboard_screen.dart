@@ -242,12 +242,12 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
             _ProfileTab(
               user: user,
               prescriptions: dash.bookings
-                  .where((b) => b.hasPrescription && b.isOnlineConsult)
+                  .where((b) => b.hasPrescription && b.isPrescriptionEligible)
                   .toList(),
               pendingPrescriptions: dash.bookings
                   .where(
                     (b) =>
-                        b.isOnlineConsult &&
+                        b.isPrescriptionEligible &&
                         b.prescriptionPending &&
                         !b.hasPrescription,
                   )
@@ -324,7 +324,7 @@ class _ProfileTab extends StatelessWidget {
             title: 'My prescriptions',
             children: [
               Text(
-                'Prescriptions from your online consultations appear here and are also emailed to you.',
+                'Prescriptions from your online and home visit consultations appear here and are also emailed to you.',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.35,
@@ -903,10 +903,12 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  if (booking.isOnlineConsult &&
+                  if (booking.isPrescriptionEligible &&
                       !booking.hasPrescription &&
                       (booking.prescriptionPending ||
-                          (isUpcoming && booking.canJoinVideo))) ...[
+                          (booking.isOnlineConsult &&
+                              isUpcoming &&
+                              booking.canJoinVideo))) ...[
                     const SizedBox(height: 12),
                     _PrescriptionPendingBanner(
                       doctorName: booking.doctorName,

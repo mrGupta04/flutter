@@ -17,6 +17,7 @@ import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/prescription_included_banner.dart';
 import '../../../../shared/widgets/previous_reports_picker.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../../../core/utils/user_auth_guard.dart';
@@ -366,6 +367,10 @@ class _OnlineConsultBookingScreenState
                       onTypeSelected: (type) =>
                           _onConsultationTypeSelected(type, doctor),
                     ),
+                    if (!_isHospitalVisit) ...[
+                      const SizedBox(height: 12),
+                      const PrescriptionIncludedBanner(compact: true),
+                    ],
                     const SizedBox(height: 20),
                     Text(
                       _isHospitalVisit

@@ -23,10 +23,14 @@ async function findPrescriptionsByBookingIds(bookingIds) {
   return new Map(rows.map((row) => [row.bookingId, row]));
 }
 
+function isPrescriptionEligibleConsultation(consultationType) {
+  return consultationType === 'online_consult' || consultationType === 'book_home';
+}
+
 async function findBookingsDueForAutoPrescription() {
   const now = new Date();
   const bookings = await ConsultationBooking.find({
-    consultationType: 'online_consult',
+    consultationType: { $in: ['online_consult', 'book_home'] },
     status: 'confirmed',
     slotEnd: { $lte: now },
   }).lean();
@@ -150,14 +154,14 @@ async function finalizePrescription({ bookingId, pdfUrl, pdfFileName }) {
 }
 
 function prescriptionFieldsForBooking(booking, prescription, now = new Date()) {
-  const isOnlineConsult = booking?.consultationType === 'online_consult';
+  const eligible = isPrescriptionEligibleConsultation(booking?.consultationType);
   const finalized = prescription?.status === 'finalized';
   const slotStart = booking?.slotStart ? new Date(booking.slotStart) : null;
   const slotEnd = booking?.slotEnd ? new Date(booking.slotEnd) : null;
   const slotStarted = Boolean(slotStart && slotStart <= now);
   const slotEnded = Boolean(slotEnd && slotEnd <= now);
   const prescriptionPending = Boolean(
-    isOnlineConsult && !finalized && slotStarted,
+    eligible && !finalized && slotStarted,
   );
   const prescriptionProcessing = Boolean(prescriptionPending && slotEnded);
 

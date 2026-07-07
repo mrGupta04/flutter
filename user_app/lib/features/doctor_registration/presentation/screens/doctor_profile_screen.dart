@@ -17,6 +17,7 @@ import '../../../../shared/widgets/blinking_online_badge.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/doctor_feedback_carousel.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/prescription_included_banner.dart';
 import '../../provider/doctor_feedback_provider.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
@@ -414,6 +415,11 @@ List<Widget> _bookingActions(BuildContext context, DoctorModel doctor) {
       actions.add(
         CustomButton(label: label, icon: icon, onPressed: onPressed),
       );
+      if (type == ConsultationType.onlineConsult ||
+          type == ConsultationType.bookHome) {
+        actions.add(const SizedBox(height: 8));
+        actions.add(const PrescriptionIncludedBanner(compact: true));
+      }
     }
   }
   return actions;
