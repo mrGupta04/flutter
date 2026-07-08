@@ -215,6 +215,13 @@ class DoctorModel {
     return age;
   }
 
+  /// Minimum fields needed for a meaningful patient-facing card.
+  bool get isPublicProfileDisplayable {
+    return (firstName?.trim().isNotEmpty ?? false) &&
+        (specializations?.isNotEmpty ?? false) &&
+        (qualification?.trim().isNotEmpty ?? false);
+  }
+
   /// Check if all required fields are filled
   bool get isProfileComplete {
     return firstName != null &&

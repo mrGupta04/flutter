@@ -51,9 +51,10 @@ class _RegistrationFormScreenState
     super.dispose();
   }
 
-  void _nextStep() {
+  Future<void> _nextStep() async {
     final currentStep = ref.read(currentRegistrationStepProvider);
     if (!_validateCurrentStep(currentStep)) return;
+    await ref.read(registrationFormProvider.notifier).saveRegistrationDraft();
     if (_pageController.page! < AppConstants.totalRegistrationSteps - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
@@ -78,6 +79,13 @@ class _RegistrationFormScreenState
     if (!_validateCurrentStep(AppConstants.totalRegistrationSteps)) return;
     final success =
         await ref.read(registrationFormProvider.notifier).submitRegistration();
+
+    if (!success && mounted) {
+      final error = ref.read(registrationFormProvider).submitError ??
+          'Registration could not be saved. Please try again.';
+      SnackBarHelper.showError(context, error);
+      return;
+    }
 
     if (success && mounted) {
       SnackBarHelper.showSuccess(

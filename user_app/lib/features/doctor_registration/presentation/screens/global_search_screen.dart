@@ -76,7 +76,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.search),
+      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.home),
       appBar: AppBar(
         title: const Text('Search care'),
         leading: IconButton(

@@ -123,6 +123,7 @@ router.get('/verified', async (req, res) => {
       city,
       specialization,
       consultationType,
+      publicDisplayable: true,
     });
 
     return sendSuccess(res, {
@@ -657,7 +658,12 @@ router.post('/register', authOptional, async (req, res) => {
     }
 
     const existingDoctor = data.id ? await findDoctorById(data.id) : null;
-    if (!isVerificationSkipped()) {
+    const needsProfileBackfill =
+      existingDoctor &&
+      !String(existingDoctor.firstName || '').trim() &&
+      String(data.firstName || '').trim();
+
+    if (!isVerificationSkipped() && !needsProfileBackfill) {
       if (
         !existingDoctor?.emailVerified ||
         String(existingDoctor.email || '').toLowerCase() !== normalizedEmail
@@ -816,6 +822,19 @@ router.put('/profile', authOptional, async (req, res) => {
     const existing = await findDoctorById(data.id);
     if (!existing) {
       return sendError(res, 'Doctor not found', 404);
+    }
+
+    if (
+      data.email &&
+      !isVerificationSkipped() &&
+      !existing.emailVerified &&
+      String(data.email).trim().toLowerCase() !==
+        String(existing.email || '').trim().toLowerCase()
+    ) {
+      await updateDoctorEmailVerified({
+        doctorId: data.id,
+        email: data.email,
+      });
     }
 
     const doctor = await upsertDoctor(data);

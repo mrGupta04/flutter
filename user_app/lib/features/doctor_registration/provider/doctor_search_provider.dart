@@ -69,13 +69,23 @@ final doctorSearchProvider =
       query: _trimOrNull(params.query),
       city: _trimOrNull(params.city),
       specialization: _trimOrNull(params.specialization),
-      consultationType: params.consultationType,
+      // Fetch all verified doctors; we apply consultation preference on the
+      // client so the list never becomes empty for a valid consultation type.
+      consultationType: null,
     );
 
     if (response.success && response.data != null) {
-      var doctors = response.data!
+      final allDoctors = response.data!
+          .where((doctor) => doctor.isPublicProfileDisplayable)
+          .toList(growable: false);
+      final preferred = allDoctors
           .where((d) => d.offersConsultationType(params.consultationType))
           .toList(growable: false);
+      final others = allDoctors
+          .where((d) => !d.offersConsultationType(params.consultationType))
+          .toList(growable: false);
+
+      var doctors = [...preferred, ...others];
       final minYears = params.minYearsExperience;
       if (minYears != null) {
         doctors = doctors

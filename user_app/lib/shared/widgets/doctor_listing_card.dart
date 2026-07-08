@@ -564,7 +564,9 @@ class _FilteredActionButtonRow extends StatelessWidget {
           ? 'Prescription'
           : null,
       available: _bookAvailable,
-      fadeUnavailable: false,
+      // When the doctor doesn't offer the selected consultation type,
+      // disable the button instead of letting it navigate and then snack-bar.
+      fadeUnavailable: true,
       onPressed: _bookOnPressed,
     );
 

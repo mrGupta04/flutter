@@ -422,18 +422,35 @@ class _ActionBar extends ConsumerWidget {
         documents.where((d) => d.status == DocumentStatus.verified).length;
     final totalCount = documents.length;
     final allDocsVerified = allDocumentsVerified(documents);
-    final canApprove = isPendingReview && allDocsVerified;
+    final profileComplete = state.doctor?.isProfileComplete ?? false;
+    final canApprove = isPendingReview && allDocsVerified && profileComplete;
 
     if (isVerified) {
+      final profileComplete = state.doctor?.isProfileComplete ?? false;
       return SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: CompactVerifiedBanner(
-            message: isVerified ? 'Live on patient app' : 'Review complete',
-            icon: isVerified
-                ? Icons.verified_rounded
-                : Icons.info_outline_rounded,
-            color: isVerified ? AppColors.success : AppColors.textSecondary,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CompactVerifiedBanner(
+                message: isVerified ? 'Live on patient app' : 'Review complete',
+                icon: isVerified
+                    ? Icons.verified_rounded
+                    : Icons.info_outline_rounded,
+                color: isVerified ? AppColors.success : AppColors.textSecondary,
+              ),
+              if (!profileComplete) ...[
+                const SizedBox(height: 10),
+                InfoCard(
+                  icon: Icons.warning_amber_rounded,
+                  title: 'Profile details missing on server',
+                  subtitle:
+                      'Documents were uploaded but name, specialty, and clinic details were not saved. Ask the doctor to open the provider app, complete Registration again, and tap Submit on the final step.',
+                ),
+              ],
+            ],
           ),
         ),
       );
@@ -477,6 +494,16 @@ class _ActionBar extends ConsumerWidget {
                   ),
                 ),
               ),
+            if (!profileComplete)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: InfoCard(
+                  icon: Icons.person_off_outlined,
+                  title: 'Registration profile incomplete',
+                  subtitle:
+                      'The doctor must submit registration with name, specialty, clinic, address, and consultation options before you can publish.',
+                ),
+              ),
             CustomButton(
               label: 'Verify & publish on user app',
               icon: Icons.verified_rounded,
@@ -501,7 +528,9 @@ class _ActionBar extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Open each document above and tap Verify before publishing.',
+                  !profileComplete
+                      ? 'Complete the registration profile before publishing.'
+                      : 'Open each document above and tap Verify before publishing.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,

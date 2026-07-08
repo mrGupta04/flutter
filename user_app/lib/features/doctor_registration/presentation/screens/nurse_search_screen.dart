@@ -263,7 +263,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.search),
+      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
       appBar: AppBar(
         title: const Text('Find a nurse'),
         leading: IconButton(

@@ -20,8 +20,11 @@ final verifiedDoctorsByConsultationProvider =
     );
 
     if (response.success && response.data != null) {
+      final doctors = response.data!
+          .where((doctor) => doctor.isPublicProfileDisplayable)
+          .toList(growable: false);
       return filterDoctorsByConsultation(
-        response.data!,
+        doctors,
         consultationType,
       );
     }
@@ -39,4 +42,22 @@ List<DoctorModel> filterDoctorsByConsultation(
   return doctors
       .where((d) => d.offersConsultationType(type))
       .toList(growable: false);
+}
+
+/// Home screen: keep every verified doctor visible; prefer matches for the tab.
+List<DoctorModel> sortDoctorsByConsultationPreference(
+  List<DoctorModel> doctors,
+  ConsultationType? type,
+) {
+  if (type == null) return List<DoctorModel>.from(doctors);
+  final matching = <DoctorModel>[];
+  final others = <DoctorModel>[];
+  for (final doctor in doctors) {
+    if (doctor.offersConsultationType(type)) {
+      matching.add(doctor);
+    } else {
+      others.add(doctor);
+    }
+  }
+  return [...matching, ...others];
 }

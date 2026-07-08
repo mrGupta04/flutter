@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/services/token_storage.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'healthcare_ui.dart';
 
-enum UserNavTab { home, search, care }
+enum UserNavTab { home, labs, care, profile }
 
-/// Persistent bottom navigation for the user app.
+/// Persistent bottom navigation for the user app — 1mg Care style.
 class UserBottomNavBar extends StatelessWidget {
   const UserBottomNavBar({
     super.key,
@@ -16,15 +17,23 @@ class UserBottomNavBar extends StatelessWidget {
 
   final UserNavTab currentTab;
 
-  void _onTap(BuildContext context, UserNavTab tab) {
+  void _onTap(BuildContext context, UserNavTab tab) async {
     if (tab == currentTab) return;
     switch (tab) {
       case UserNavTab.home:
         context.go(AppConstants.routeUserHome);
-      case UserNavTab.search:
-        context.go(AppConstants.routeGlobalSearch);
+      case UserNavTab.labs:
+        context.go(AppConstants.routeLabs);
       case UserNavTab.care:
         context.go('${AppConstants.routeCareListing}?role=doctor');
+      case UserNavTab.profile:
+        final loggedIn = await TokenStorage.instance.isPatientLoggedIn();
+        if (!context.mounted) return;
+        if (loggedIn) {
+          context.go(AppConstants.routeUserDashboard);
+        } else {
+          context.go(AppConstants.routeUserLogin);
+        }
     }
   }
 
@@ -44,7 +53,7 @@ class UserBottomNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
           child: Row(
             children: [
               _NavItem(
@@ -54,16 +63,22 @@ class UserBottomNavBar extends StatelessWidget {
                 onTap: () => _onTap(context, UserNavTab.home),
               ),
               _NavItem(
-                icon: Icons.search_rounded,
-                label: 'Search',
-                selected: currentTab == UserNavTab.search,
-                onTap: () => _onTap(context, UserNavTab.search),
+                icon: Icons.biotech_outlined,
+                label: 'Lab Tests',
+                selected: currentTab == UserNavTab.labs,
+                onTap: () => _onTap(context, UserNavTab.labs),
               ),
               _NavItem(
                 icon: Icons.medical_services_outlined,
                 label: 'Care',
                 selected: currentTab == UserNavTab.care,
                 onTap: () => _onTap(context, UserNavTab.care),
+              ),
+              _NavItem(
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                selected: currentTab == UserNavTab.profile,
+                onTap: () => _onTap(context, UserNavTab.profile),
               ),
             ],
           ),

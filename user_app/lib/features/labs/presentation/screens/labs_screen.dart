@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/user_app_footer.dart';
 import '../../data/lab_test_icons.dart';
 import '../../data/lab_tests_catalog.dart';
 import '../../data/models/lab_test_model.dart';
@@ -197,6 +198,7 @@ class _LabsScreenState extends State<LabsScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.labs),
     );
   }
 

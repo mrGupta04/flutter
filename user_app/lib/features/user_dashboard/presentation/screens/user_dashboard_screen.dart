@@ -18,6 +18,7 @@ import '../../provider/patient_dashboard_provider.dart';
 import '../../../feedback/presentation/utils/feedback_prompt_helper.dart';
 import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
+import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 
 class UserDashboardScreen extends ConsumerStatefulWidget {
@@ -85,10 +86,12 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar:
+          const UserBottomNavBar(currentTab: UserNavTab.profile),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            expandedHeight: 252,
+            expandedHeight: 220,
             pinned: true,
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.white,
@@ -144,85 +147,95 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.18),
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.12),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 60),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 56),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Row(
                           children: [
-                            if (user != null) ...[
-                              PatientHeaderAvatar(user: user, size: 72),
-                              const SizedBox(height: 10),
-                              Text(
-                                user.fullName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.titleMedium.copyWith(
-                                  color: AppColors.white,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '1mg',
+                                style: AppTextStyles.titleLarge.copyWith(
+                                  color: AppColors.primary,
                                   fontWeight: FontWeight.w800,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withValues(alpha: 0.28),
-                                      blurRadius: 6,
-                                    ),
-                                  ],
+                                  height: 1,
                                 ),
                               ),
-                              if (user.email.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  user.email,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.white.withValues(alpha: 0.95),
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black.withValues(alpha: 0.22),
-                                        blurRadius: 4,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Care',
+                              style: AppTextStyles.titleMedium.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        if (user != null) ...[
+                          PatientHeaderAvatar(user: user, size: 64),
+                          const SizedBox(height: 10),
+                          Text(
+                            user.fullName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.titleMedium.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (user.email.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              user.email,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.white.withValues(alpha: 0.92),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-            bottom: TabBar(
-              controller: _tabController,
-              indicatorColor: AppColors.white,
-              labelColor: AppColors.white,
-              unselectedLabelColor: AppColors.white.withValues(alpha: 0.7),
-              tabs: const [
-                Tab(text: 'Current booking'),
-                Tab(text: 'My bookings'),
-                Tab(text: 'Profile'),
-              ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(48),
+              child: Container(
+                color: AppColors.white,
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorColor: AppColors.primary,
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  labelStyle: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  tabs: const [
+                    Tab(text: 'Upcoming'),
+                    Tab(text: 'History'),
+                    Tab(text: 'Profile'),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

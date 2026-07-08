@@ -8,6 +8,11 @@ const {
   assertDoctorDocumentsVerified,
   assertDocumentNotVerified,
 } = require('./documentVerification');
+const {
+  getDoctorProfileMissingFields,
+  isDoctorProfileCompleteForApproval,
+  isDoctorProfilePublicDisplayable,
+} = require('../utils/doctorProfileCompleteness');
 
 const DOC_URL_FIELDS = {
   medical_license: 'medicalLicenseUrl',
@@ -199,6 +204,7 @@ function buildDoctorListFilter({
   city,
   specialization,
   consultationType,
+  publicDisplayable = false,
 }) {
   const filter = {};
   if (status === 'awaiting_review') {
@@ -220,6 +226,12 @@ function buildDoctorListFilter({
   const consultField = CONSULTATION_TYPE_FIELDS[consultationType];
   if (consultField) {
     filter[consultField] = true;
+  }
+
+  if (publicDisplayable) {
+    filter.firstName = { $exists: true, $nin: [null, ''] };
+    filter.specializations = { $exists: true, $not: { $size: 0 } };
+    filter.qualification = { $exists: true, $nin: [null, ''] };
   }
 
   if (search?.trim()) {
@@ -251,6 +263,7 @@ async function listDoctors({
   city,
   specialization,
   consultationType,
+  publicDisplayable = false,
 }) {
   const filter = buildDoctorListFilter({
     status,
@@ -258,6 +271,7 @@ async function listDoctors({
     city,
     specialization,
     consultationType,
+    publicDisplayable,
   });
   const totalCount = await Doctor.countDocuments(filter);
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -350,6 +364,16 @@ async function approveDoctor(id, approvalNotes) {
 
   await assertDoctorDocumentsVerified(toDoctor(existing));
 
+  const profileDoctor = toDoctor(existing);
+  if (!isDoctorProfileCompleteForApproval(profileDoctor)) {
+    const missing = getDoctorProfileMissingFields(profileDoctor);
+    const err = new Error(
+      `Doctor profile is incomplete. Missing: ${missing.join(', ')}. Ask the doctor to complete registration before publishing.`,
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
   await Doctor.updateOne(
     { id },
     {
@@ -414,4 +438,7 @@ module.exports = {
   touchDoctorPresence,
   clearDoctorPresence,
   getConsultationFeeForType,
+  getDoctorProfileMissingFields,
+  isDoctorProfileCompleteForApproval,
+  isDoctorProfilePublicDisplayable,
 };

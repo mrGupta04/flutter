@@ -755,6 +755,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
           hospitalPhotoUrls: updatedUrls,
           submitError: null,
         );
+        await saveRegistrationDraft();
         return true;
       }
 
@@ -885,6 +886,21 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     );
   }
 
+  /// Sync registration form fields to the server while the doctor is onboarding.
+  /// Document uploads only save files — this keeps name, specialty, clinic, etc.
+  Future<void> saveRegistrationDraft() async {
+    final doctor = _buildDoctorModel();
+    if (doctor.firstName == null || doctor.firstName!.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      await _repository.updateDoctorProfile(doctor: doctor);
+    } catch (_) {
+      // Best-effort while the doctor is still on the registration wizard.
+    }
+  }
+
   Future<bool> uploadDocument(DocumentType type) async {
     final bytes = state.documentBytes[type];
     final fileName = state.documentFileNames[type];
@@ -917,6 +933,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
         updatedDocs[type] = response.data!;
         _setProgress(type, 1);
         state = state.copyWith(uploadedDocuments: updatedDocs, submitError: null);
+        await saveRegistrationDraft();
         return true;
       }
 
@@ -958,6 +975,8 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     }
 
     final doctor = _buildDoctorModel().copyWith(profilePicture: profileUrl);
+
+    await saveRegistrationDraft();
 
     final notifier = _ref.read(doctorRegistrationProvider.notifier);
     final success = await notifier.submitRegistration(doctor);

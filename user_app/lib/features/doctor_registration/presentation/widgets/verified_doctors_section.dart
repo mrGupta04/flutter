@@ -29,8 +29,7 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
 
   @override
   Widget build(BuildContext context) {
-    final asyncDoctors =
-        ref.watch(verifiedDoctorsByConsultationProvider(_selected));
+    final asyncDoctors = ref.watch(verifiedDoctorsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -61,15 +60,25 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
             ),
           ),
           data: (doctors) {
-            final liveMap =
-                ref.watch(doctorLiveStatusProvider(doctorIdsCacheKey(doctors))).valueOrNull ??
-                    const <String, bool>{};
+            final sortedDoctors =
+                sortDoctorsByConsultationPreference(doctors, _selected);
+            final matchingCount = sortedDoctors
+                .where((doctor) => doctor.offersConsultationType(_selected))
+                .length;
+            final liveMap = ref
+                    .watch(
+                      doctorLiveStatusProvider(
+                        doctorIdsCacheKey(sortedDoctors),
+                      ),
+                    )
+                    .valueOrNull ??
+                const <String, bool>{};
 
-            if (doctors.isEmpty) {
+            if (sortedDoctors.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
-                  'No verified doctors offer ${_selected.label.toLowerCase()} yet.',
+                  'No verified doctors are listed yet.',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -83,7 +92,9 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Showing doctors for: ${_selected.label}',
+                    matchingCount > 0
+                        ? 'Showing doctors for: ${_selected.label}'
+                        : 'No doctors offer ${_selected.label.toLowerCase()} yet — other verified doctors below',
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
@@ -91,18 +102,17 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
                   ),
                   const SizedBox(height: 8),
                   HomeProviderScrollList(
-                    itemCount: doctors.length,
+                    itemCount: sortedDoctors.length,
                     itemBuilder: (context, i) {
                       final doctor =
-                          applyLiveStatus(doctors[i], liveMap);
+                          applyLiveStatus(sortedDoctors[i], liveMap);
                       return DoctorListingCard(
                         doctor: doctor,
                         showBottomDivider: false,
                         showVerifiedIcon: true,
                         consultationFilter: _selected,
-                        showActionButtons: doctor.offersOnlineConsult ||
-                            doctor.offersVisitSite ||
-                            doctor.offersBookHome ||
+                        fadeUnavailableConsultationButtons: true,
+                        showActionButtons: doctor.hasAnyConsultationOption ||
                             doctorHasMapLocation(doctor),
                         onTap: () => onDoctorCardTap(context, doctor),
                         onOnlineConsultTap: () =>
