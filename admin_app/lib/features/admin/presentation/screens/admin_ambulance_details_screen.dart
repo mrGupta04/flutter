@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -317,8 +318,8 @@ class _ActionBar extends ConsumerWidget {
           top: false,
           child: Text(
             status == VerificationStatus.verified
-                ? 'This application is already approved.'
-                : 'This application was rejected.',
+                ? 'Already approved'
+                : 'Application rejected',
             style: AppTextStyles.bodyMedium,
             textAlign: TextAlign.center,
           ),
@@ -371,7 +372,7 @@ class _ActionBar extends ConsumerWidget {
         .approveAmbulance(ambulanceId: ambulanceId);
     if (context.mounted) {
       if (ok) {
-        SnackBarHelper.showSuccess(context, 'Ambulance approved');
+        SnackBarHelper.showSuccess(context, AppConstants.adminApprovalSuccess);
         context.pop();
       } else {
         SnackBarHelper.showError(context, 'Approval failed');

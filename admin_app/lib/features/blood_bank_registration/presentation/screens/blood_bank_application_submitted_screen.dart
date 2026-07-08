@@ -10,6 +10,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../auth/provider/provider_auth_provider.dart';
 import '../../../provider/provider/provider_status_sync.dart';
+import '../../../../shared/widgets/healthcare_ui.dart';
 
 class BloodBankApplicationSubmittedScreen extends ConsumerStatefulWidget {
   const BloodBankApplicationSubmittedScreen({super.key});
@@ -56,50 +57,9 @@ class _BloodBankApplicationSubmittedScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isVerified
-                      ? AppColors.gradientSuccess
-                      : [AppColors.secondary, AppColors.primaryDark],
-                ),
-                borderRadius: AppDecorations.borderRadiusXl,
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    isVerified ? Icons.verified_rounded : Icons.bloodtype_rounded,
-                    size: 48,
-                    color: AppColors.white,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    isVerified
-                        ? 'You\'re live!'
-                        : isRejected
-                            ? 'Application not approved'
-                            : 'Verification pending',
-                    style: AppTextStyles.headlineSmall.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    isVerified
-                        ? 'Your blood bank is on the user app'
-                        : isRejected
-                            ? 'Contact support for details'
-                            : 'Admin will review within 24–48 hours',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.95),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+            ApplicationStatusHero(
+              isVerified: isVerified,
+              isRejected: isRejected,
             ),
             const SizedBox(height: 24),
             if (isVerified) ...[

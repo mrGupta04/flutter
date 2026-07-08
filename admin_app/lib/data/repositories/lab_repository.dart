@@ -43,10 +43,9 @@ class LabRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List?)
-              ?.map((e) => LabModel.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
+      final list = extractApiList(body['data'])
+          .map((e) => LabModel.fromJson(e as Map<String, dynamic>))
+          .toList();
 
       return ApiResponse(
         success: body['success'] as bool? ?? false,

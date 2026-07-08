@@ -411,14 +411,26 @@ class SnackBarHelper {
       SnackBar(
         content: Row(
           children: [
-            Icon(icon, color: AppColors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
+            Icon(icon, color: AppColors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ],
         ),
         backgroundColor: background,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         shape: RoundedRectangleBorder(
           borderRadius: AppDecorations.borderRadiusMd,
         ),

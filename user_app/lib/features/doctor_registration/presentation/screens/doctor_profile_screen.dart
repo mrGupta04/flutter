@@ -6,7 +6,6 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -17,6 +16,7 @@ import '../../../../shared/widgets/blinking_online_badge.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/doctor_feedback_carousel.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/provider_profile_widgets.dart';
 import '../../../../shared/widgets/prescription_included_banner.dart';
 import '../../provider/doctor_feedback_provider.dart';
 import '../../../online_consult/online_consult_navigation.dart';
@@ -174,109 +174,67 @@ class _DoctorProfileBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: AppColors.gradientHero),
-                    borderRadius: AppDecorations.borderRadiusXl,
-                  ),
-                  child: Column(
-                    children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          if (doctor.isLiveNow)
-                            BlinkingLiveAvatarBorder(
-                              padding: 4,
-                              borderWidth: 3,
-                              child: CircleAvatar(
-                                radius: 48,
-                                backgroundColor: AppColors.white,
-                                backgroundImage: hasImage
-                                    ? CachedNetworkImageProvider(imageUrl)
-                                    : null,
-                                child: !hasImage
-                                    ? const Icon(
-                                        Icons.medical_services_rounded,
-                                        size: 48,
-                                        color: AppColors.primary,
-                                      )
-                                    : null,
-                              ),
+          ProviderProfileHero(
+            name: _displayName,
+            subtitle: doctor.specializations?.isNotEmpty == true
+                ? doctor.specializations!.join(', ')
+                : null,
+            imageUrl: hasImage ? imageUrl : null,
+            avatarBorder: doctor.isLiveNow
+                ? BlinkingLiveAvatarBorder(
+                    padding: 4,
+                    borderWidth: 3,
+                    child: CircleAvatar(
+                      radius: 48,
+                      backgroundColor: AppColors.white,
+                      backgroundImage: hasImage
+                          ? CachedNetworkImageProvider(imageUrl)
+                          : null,
+                      child: !hasImage
+                          ? const Icon(
+                              Icons.medical_services_rounded,
+                              size: 48,
+                              color: AppColors.primary,
                             )
-                          else
-                            CircleAvatar(
-                              radius: 48,
-                              backgroundColor: AppColors.white,
-                              backgroundImage: hasImage
-                                  ? CachedNetworkImageProvider(imageUrl)
-                                  : null,
-                              child: !hasImage
-                                  ? const Icon(
-                                      Icons.medical_services_rounded,
-                                      size: 48,
-                                      color: AppColors.primary,
-                                    )
-                                  : null,
-                            ),
-                          if (doctor.isLiveNow)
-                            const Positioned(
-                              right: 4,
-                              bottom: 4,
-                              child: BlinkingOnlineAvatarBadge(),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        _displayName,
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.titleLarge.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      if (doctor.isLiveNow) ...[
-                        const SizedBox(height: 10),
-                        const BlinkingOnlineBadge(),
-                      ],
-                      if (doctor.hasRating) ...[
-                        const SizedBox(height: 10),
-                        DoctorOverallRatingChip(
-                          rating: doctor.averageRating!,
-                          count: doctor.ratingCount,
-                        ),
-                      ],
-                      if (doctor.specializations?.isNotEmpty == true) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          doctor.specializations!.join(', '),
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.92),
-                          ),
-                        ),
-                      ],
-                      if (doctor.clinicName != null &&
-                          doctor.clinicName!.trim().isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          doctor.clinicName!.trim(),
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.88),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      VerificationBadge(
-                        status: isVerified ? 'Verified doctor' : 'Admin verified listing',
-                        backgroundColor: AppColors.white,
-                        textColor: isVerified ? AppColors.success : AppColors.warning,
-                      ),
-                    ],
-                  ),
+                          : null,
+                    ),
+                  )
+                : null,
+            avatarOverlay: doctor.isLiveNow
+                ? const Positioned(
+                    right: 4,
+                    bottom: 4,
+                    child: BlinkingOnlineAvatarBadge(),
+                  )
+                : null,
+            badges: [
+              if (doctor.isLiveNow) const BlinkingOnlineBadge(),
+              if (doctor.hasRating)
+                DoctorOverallRatingChip(
+                  rating: doctor.averageRating!,
+                  count: doctor.ratingCount,
                 ),
+              VerificationBadge(
+                status: isVerified ? 'Verified doctor' : 'Admin verified listing',
+                backgroundColor: AppColors.white,
+                textColor: isVerified ? AppColors.success : AppColors.warning,
+              ),
+            ],
+          ),
+          if (doctor.clinicName != null &&
+              doctor.clinicName!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                doctor.clinicName!.trim(),
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
           if (feedbackAsync != null) ...[
                   const SizedBox(height: 20),
                   feedbackAsync.when(
@@ -300,28 +258,29 @@ class _DoctorProfileBody extends ConsumerWidget {
           ],
           const SizedBox(height: 20),
           const MarketplaceSectionTitle(title: 'Professional details'),
-          _InfoCard(
+          ProviderInfoCard(
                   children: [
                     if (doctor.qualification != null &&
                         doctor.qualification!.trim().isNotEmpty)
-                      _InfoRow(
+                      ProviderInfoRow(
                         icon: Icons.school_outlined,
                         label: 'Qualification',
                         value: doctor.qualification!.trim(),
                       ),
                     if (doctor.yearsOfExperience != null)
-                      _InfoRow(
+                      ProviderInfoRow(
                         icon: Icons.work_history_outlined,
                         label: 'Experience',
                         value: '${doctor.yearsOfExperience} years',
                       ),
                     if (doctor.languagesSpoken?.isNotEmpty == true)
-                      _InfoRow(
+                      ProviderInfoRow(
+                        icon: Icons.translate_rounded,
                         label: 'Languages',
                         value: doctor.languagesSpoken!.join(', '),
                       ),
                     if (doctor.bio != null && doctor.bio!.trim().isNotEmpty)
-                      _InfoRow(
+                      ProviderInfoRow(
                         icon: Icons.info_outline_rounded,
                         label: 'About',
                         value: doctor.bio!.trim(),
@@ -331,9 +290,9 @@ class _DoctorProfileBody extends ConsumerWidget {
           if (_locationLine.isNotEmpty) ...[
             const SizedBox(height: 16),
             const MarketplaceSectionTitle(title: 'Clinic location'),
-            _InfoCard(
+            ProviderInfoCard(
               children: [
-                _InfoRow(
+                ProviderInfoRow(
                   icon: Icons.location_on_outlined,
                   label: 'Address',
                   value: _locationLine,
@@ -540,90 +499,6 @@ class _HospitalPhotoGallery extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    if (children.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Text(
-          'No additional details provided.',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 20),
-            children[i],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData? icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 20, color: AppColors.primary),
-          const SizedBox(width: 10),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(value, style: AppTextStyles.bodyMedium),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

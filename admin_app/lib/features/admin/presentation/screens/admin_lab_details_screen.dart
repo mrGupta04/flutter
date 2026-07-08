@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -197,7 +198,10 @@ class _ActionBar extends ConsumerWidget {
                       .read(labDetailsProvider(labId).notifier)
                       .approveLab(labId: labId);
                   if (context.mounted && ok) {
-                    SnackBarHelper.showSuccess(context, 'Lab approved');
+                    SnackBarHelper.showSuccess(
+                      context,
+                      AppConstants.adminApprovalSuccess,
+                    );
                     context.pop();
                   }
                 },

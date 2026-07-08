@@ -82,7 +82,9 @@ class NurseModel {
       availableForHomeVisit: json['availableForHomeVisit'] as bool? ?? true,
       homeVisitFee: _parseInt(json['homeVisitFee']),
       shiftAvailability: json['shiftAvailability'] as String?,
-      verificationStatus: _parseStatus(json['verificationStatus'] as String?),
+      verificationStatus: _isApprovedTruthy(json['isApproved'])
+          ? VerificationStatus.verified
+          : _parseStatus(json['verificationStatus'] as String?),
     );
   }
 
@@ -182,5 +184,14 @@ class NurseModel {
       default:
         return VerificationStatus.pending;
     }
+  }
+
+  static bool _isApprovedTruthy(dynamic value) {
+    if (value == true || value == 1) return true;
+    if (value is String) {
+      final v = value.toLowerCase();
+      return v == 'true' || v == '1';
+    }
+    return false;
   }
 }

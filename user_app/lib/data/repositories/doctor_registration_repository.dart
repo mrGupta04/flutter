@@ -251,8 +251,7 @@ class DoctorRegistrationRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final raw = body['data'];
-      final list = (_extractDoctorList(raw))
+      final list = extractApiList(body['data'])
           .map((e) => DoctorModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
@@ -430,13 +429,4 @@ class DoctorRegistrationRepository {
       statusCode: statusCode,
     );
   }
-}
-
-List<dynamic> _extractDoctorList(dynamic raw) {
-  if (raw is List) return raw;
-  if (raw is Map<String, dynamic>) {
-    final nested = raw['data'];
-    if (nested is List) return nested;
-  }
-  return const [];
 }

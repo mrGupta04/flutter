@@ -166,7 +166,7 @@ class BloodBankRegistrationRepository {
         },
       );
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
       return ApiResponse(success: true, data: list);
@@ -183,7 +183,7 @@ class BloodBankRegistrationRepository {
         queryParameters: {if (id != null) 'bloodBankId': id},
       );
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
       return ApiResponse(success: true, data: list);

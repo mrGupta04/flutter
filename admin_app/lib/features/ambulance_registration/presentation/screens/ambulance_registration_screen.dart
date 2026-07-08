@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/ambulance_constants.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/models/provider_type.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../provider/provider/provider_status_sync.dart';
 import '../../provider/ambulance_registration_provider.dart';
 import '../widgets/ambulance_registration_step_widgets.dart';
 
@@ -80,7 +82,11 @@ class _AmbulanceRegistrationScreenState
         .submitRegistration();
     if (!mounted) return;
     if (ok) {
-      context.go(AppConstants.routeAmbulanceApplicationSubmitted);
+      SnackBarHelper.showSuccess(
+        context,
+        AppConstants.successApplicationSubmitted,
+      );
+      await navigateAfterRegistration(context, ref, ProviderType.ambulance);
     } else {
       SnackBarHelper.showError(
         context,

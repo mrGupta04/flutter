@@ -68,8 +68,9 @@ enum ProviderType {
         return '/scan-dashboard';
       case ProviderType.bloodBank:
         return '/blood-bank-dashboard';
-      case ProviderType.ambulance:
       case ProviderType.lab:
+        return '/lab-dashboard';
+      case ProviderType.ambulance:
         return '/provider-profile';
     }
   }

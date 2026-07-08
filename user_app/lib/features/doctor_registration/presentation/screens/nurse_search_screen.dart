@@ -17,6 +17,8 @@ import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../provider/care_filter_constants.dart';
 import '../../provider/nurse_search_provider.dart';
+import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
+import '../../../../core/utils/provider_location_utils.dart';
 import 'nurse_profile_screen.dart';
 
 class NurseSearchScreen extends ConsumerStatefulWidget {
@@ -487,6 +489,11 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
                   nurse: nurse,
                   distanceLabel: formatNearbyDistanceLabel(distanceKm),
                   onTap: () => openNurseProfile(context, nurse),
+                  onBookHomeVisit: () =>
+                      openNurseHomeVisitBooking(context, nurse),
+                  onOpenMapTap: nurseHasMapLocation(nurse)
+                      ? () => openNurseInGoogleMaps(context, nurse)
+                      : null,
                 );
               },
             ),

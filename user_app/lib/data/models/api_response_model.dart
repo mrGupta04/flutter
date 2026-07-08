@@ -1,3 +1,26 @@
+/// Unwraps list items from an API `data` field that may be a raw [List]
+/// or a paginated object `{ data: [...], pagination: {...} }`.
+List<dynamic> extractApiList(dynamic raw) {
+  if (raw is List) return raw;
+  if (raw is Map<String, dynamic>) {
+    final nested = raw['data'];
+    if (nested is List) return nested;
+  }
+  return const [];
+}
+
+/// Reads pagination metadata from a paginated API `data` object.
+Map<String, dynamic> extractApiPagination(
+  dynamic raw, {
+  Map<String, dynamic> fallback = const {},
+}) {
+  if (raw is Map<String, dynamic>) {
+    final pagination = raw['pagination'];
+    if (pagination is Map<String, dynamic>) return pagination;
+  }
+  return fallback;
+}
+
 /// Generic API response wrapper
 class ApiResponse<T> {
   final bool success;

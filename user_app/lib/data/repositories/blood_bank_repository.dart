@@ -60,7 +60,7 @@ class BloodBankRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => BloodBankModel.fromJson(e as Map<String, dynamic>))
           .toList();
 

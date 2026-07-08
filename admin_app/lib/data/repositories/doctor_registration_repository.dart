@@ -217,7 +217,7 @@ class DoctorRegistrationRepository {
         queryParameters: {'doctorId': doctorId},
       );
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => DoctorDocumentModel.fromJson(e as Map<String, dynamic>))
           .toList();
       return ApiResponse(
@@ -301,7 +301,7 @@ class DoctorRegistrationRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => DoctorModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
@@ -386,7 +386,7 @@ class DoctorRegistrationRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = body['data'] as List? ?? [];
+      final list = extractApiList(body['data']);
       final bookings = list
           .map(
             (e) => DoctorBookingModel.fromJson(e as Map<String, dynamic>),

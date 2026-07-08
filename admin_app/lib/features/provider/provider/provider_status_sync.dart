@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_constants.dart';
-
 import '../../../core/models/provider_type.dart';
 
 import '../../../core/services/token_storage.dart';
@@ -151,22 +149,24 @@ Future<void> openProviderDashboard(BuildContext context, WidgetRef ref) async {
 
   if (!context.mounted) return;
 
-  if (type == ProviderType.doctor) {
-    context.push(AppConstants.routeDoctorDashboard);
-  } else if (type == ProviderType.scanCenter) {
-    context.push(AppConstants.routeScanDashboard);
-  } else if (type == ProviderType.lab) {
-    context.push(AppConstants.routeLabDashboard);
-  } else if (type == ProviderType.bloodBank) {
-    context.push(AppConstants.routeBloodBankDashboard);
-  } else {
-    context.push(AppConstants.routeProviderProfile);
-  }
+  context.go(type.profileRoute);
 
   Future.microtask(() async {
     await ref.read(providerAuthProvider.notifier).refreshProfile();
     await refreshProviderApplicationStatus(ref, silent: true);
   });
+}
+
+/// After successful registration, refresh session and open profile/dashboard.
+Future<void> navigateAfterRegistration(
+  BuildContext context,
+  WidgetRef ref,
+  ProviderType type,
+) async {
+  await ref.read(providerAuthProvider.notifier).refreshSession();
+  await refreshProviderApplicationStatus(ref);
+  if (!context.mounted) return;
+  context.go(type.profileRoute);
 }
 
 /// Reads verification status from API-backed profile or registration cache.

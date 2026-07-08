@@ -7,7 +7,8 @@ import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/models.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
-import '../../../auth/provider/provider_auth_provider.dart';
+import '../../../../core/models/provider_type.dart';
+import '../../../provider/provider/provider_status_sync.dart';
 import '../../provider/registration_provider.dart';
 import '../widgets/registration_step_widgets.dart';
 
@@ -79,15 +80,11 @@ class _RegistrationFormScreenState
         await ref.read(registrationFormProvider.notifier).submitRegistration();
 
     if (success && mounted) {
-      await ref.read(providerAuthProvider.notifier).refreshSession();
       SnackBarHelper.showSuccess(
         context,
         AppConstants.successApplicationSubmitted,
       );
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        context.push(AppConstants.routeApplicationSubmitted);
-      }
+      await navigateAfterRegistration(context, ref, ProviderType.doctor);
     }
   }
 

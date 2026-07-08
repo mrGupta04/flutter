@@ -11,6 +11,10 @@ import '../data/models/patient_booking_model.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
+import '../features/doctor_registration/presentation/widgets/verified_doctors_section.dart';
+import '../features/doctor_registration/presentation/widgets/verified_nurses_section.dart';
+import '../features/doctor_registration/provider/nurse_search_provider.dart';
+import '../features/doctor_registration/provider/verified_doctors_provider.dart';
 import '../shared/widgets/care_role_avatar_card.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/hero_wallpaper_carousel.dart';
@@ -60,6 +64,8 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: () async {
+          ref.invalidate(verifiedDoctorsByConsultationProvider);
+          ref.invalidate(nurseSearchProvider);
           if (await TokenStorage.instance.isPatientLoggedIn()) {
             await ref.read(patientDashboardProvider.notifier).refreshAll();
           }
@@ -155,6 +161,9 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                 ),
               ),
             ),
+            const SliverToBoxAdapter(child: VerifiedDoctorsSection()),
+            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+            const SliverToBoxAdapter(child: VerifiedNursesSection()),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
             SliverToBoxAdapter(
               child: MarketplaceSectionTitle(

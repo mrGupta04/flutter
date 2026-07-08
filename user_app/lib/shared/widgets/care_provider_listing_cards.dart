@@ -5,55 +5,547 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/media_url_utils.dart';
 import '../../data/models/ambulance_model.dart';
 import '../../data/models/blood_bank_model.dart';
+import '../../data/models/doctor_model.dart';
 import '../../data/models/nurse_model.dart';
+
+/// Nurse accent gradient for cards and profiles.
+const List<Color> kNurseGradient = AppColors.gradientNurse;
 
 class NurseListingCard extends StatelessWidget {
   const NurseListingCard({
     super.key,
     required this.nurse,
     this.showBottomDivider = false,
+    this.showActionButtons = true,
     this.onTap,
+    this.onBookHomeVisit,
+    this.onOpenMapTap,
     this.distanceLabel,
   });
 
   final NurseModel nurse;
   final bool showBottomDivider;
+  final bool showActionButtons;
   final VoidCallback? onTap;
+  final VoidCallback? onBookHomeVisit;
+  final VoidCallback? onOpenMapTap;
   final String? distanceLabel;
 
   @override
   Widget build(BuildContext context) {
     final qualification = nurse.qualification?.trim();
-    final specialization = nurse.specialization?.trim();
+    final specialization = nurse.specialization?.trim() ?? 'General Nursing';
     final experience = nurse.yearsOfExperience;
-    final subtitleParts = <String>[
-      if (nurse.gender != null && nurse.gender!.trim().isNotEmpty)
-        nurse.gender!.trim(),
-      if (qualification != null && qualification.isNotEmpty) qualification,
-      if (specialization != null && specialization.isNotEmpty) specialization,
-      if (experience != null) '$experience yrs exp',
-      if (nurse.city != null && nurse.city!.isNotEmpty) nurse.city!,
-    ];
-    final services = <String>[
-      if (nurse.availableForHomeVisit == true) 'Home visit',
-      if (nurse.shiftAvailability != null && nurse.shiftAvailability!.isNotEmpty)
-        nurse.shiftAvailability!,
-    ];
-    final footerParts = <String>[
-      if (distanceLabel != null && distanceLabel!.isNotEmpty) distanceLabel!,
-      ...services,
-    ];
+    final city = nurse.city?.trim();
+    final isVerified =
+        nurse.verificationStatus == VerificationStatus.verified;
+    final available = nurse.availableForHomeVisit != false;
+    final cardSurface = Theme.of(context).colorScheme.surface;
 
-    return _CareListingShell(
-      title: nurse.displayName,
-      subtitle: subtitleParts.join(' · '),
-      footer: footerParts.isEmpty ? null : footerParts.join(' · '),
-      icon: Icons.health_and_safety_rounded,
-      iconColor: AppColors.secondary,
-      imageUrl: MediaUrlUtils.resolve(nurse.profilePicture),
-      showBottomDivider: showBottomDivider,
-      trailing: nurse.mobileNumber,
-      onTap: onTap,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: cardSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: showBottomDivider
+                  ? AppColors.divider
+                  : AppColors.secondary.withValues(alpha: 0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.secondary.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -24,
+                  top: -24,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.secondary.withValues(alpha: 0.14),
+                          AppColors.secondary.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: kNurseGradient),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _NurseAvatar(nurse: nurse),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      nurse.displayName,
+                                      style: AppTextStyles.titleSmall.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        height: 1.2,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        if (isVerified) const _NurseVerifiedBadge(),
+                                        _NurseSpecialtyChip(label: specialization),
+                                        if (nurse.gender != null &&
+                                            nurse.gender!.trim().isNotEmpty)
+                                          _NurseTagChip(label: nurse.gender!.trim()),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (qualification != null && qualification.isNotEmpty)
+                            _NurseMetaRow(
+                              icon: Icons.school_outlined,
+                              text: experience != null
+                                  ? '$experience+ yrs · $qualification'
+                                  : qualification,
+                            ),
+                          if (city != null && city.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            _NurseMetaRow(
+                              icon: Icons.location_on_outlined,
+                              text: distanceLabel != null
+                                  ? '$city · $distanceLabel'
+                                  : city,
+                            ),
+                          ] else if (distanceLabel != null) ...[
+                            const SizedBox(height: 6),
+                            _NurseMetaRow(
+                              icon: Icons.near_me_outlined,
+                              text: distanceLabel!,
+                            ),
+                          ],
+                          if (nurse.shiftAvailability != null &&
+                              nurse.shiftAvailability!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            _NurseMetaRow(
+                              icon: Icons.schedule_rounded,
+                              text: nurse.shiftAvailability!.trim(),
+                            ),
+                          ],
+                          if (nurse.homeVisitFee != null) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondaryLight,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColors.secondary.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.home_rounded,
+                                    size: 14,
+                                    color: AppColors.secondaryDark,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Home visit from ₹${nurse.homeVisitFee}',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: AppColors.secondaryDark,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (!showActionButtons) ...[
+                            const SizedBox(height: 10),
+                            _NurseAvailabilityPill(available: available),
+                          ],
+                          if (showActionButtons) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: _NurseActionButton(
+                                    icon: Icons.home_rounded,
+                                    label: 'Book visit',
+                                    subtitle: nurse.homeVisitFee != null
+                                        ? '₹${nurse.homeVisitFee}'
+                                        : null,
+                                    filled: available,
+                                    onPressed: available
+                                        ? (onBookHomeVisit ?? onTap)
+                                        : null,
+                                  ),
+                                ),
+                                if (onOpenMapTap != null) ...[
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _NurseActionButton(
+                                      icon: Icons.map_rounded,
+                                      label: 'Map',
+                                      filled: false,
+                                      onPressed: onOpenMapTap,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NurseAvatar extends StatelessWidget {
+  const _NurseAvatar({required this.nurse});
+
+  final NurseModel nurse;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = MediaUrlUtils.resolve(nurse.profilePicture);
+    final hasImage = imageUrl.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(colors: kNurseGradient),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          shape: BoxShape.circle,
+        ),
+        child: ClipOval(
+          child: SizedBox(
+            width: 60,
+            height: 60,
+            child: hasImage
+                ? CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => _placeholder(),
+                    errorWidget: (_, __, ___) => _placeholder(),
+                  )
+                : _placeholder(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.secondaryLight,
+            AppColors.secondary.withValues(alpha: 0.2),
+          ],
+        ),
+      ),
+      child: const Icon(
+        Icons.health_and_safety_rounded,
+        size: 30,
+        color: AppColors.secondary,
+      ),
+    );
+  }
+}
+
+class _NurseVerifiedBadge extends StatelessWidget {
+  const _NurseVerifiedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: kNurseGradient),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.verified_rounded,
+            size: 12,
+            color: AppColors.white.withValues(alpha: 0.95),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Verified',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 10,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NurseSpecialtyChip extends StatelessWidget {
+  const _NurseSpecialtyChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.secondaryLight,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.secondaryDark,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+}
+
+class _NurseTagChip extends StatelessWidget {
+  const _NurseTagChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.grey50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+}
+
+class _NurseMetaRow extends StatelessWidget {
+  const _NurseMetaRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: AppColors.secondary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NurseAvailabilityPill extends StatelessWidget {
+  const _NurseAvailabilityPill({required this.available});
+
+  final bool available;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: available
+            ? AppColors.secondaryLight
+            : AppColors.grey50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: available
+              ? AppColors.secondary.withValues(alpha: 0.3)
+              : AppColors.divider,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            available ? Icons.check_circle_rounded : Icons.cancel_outlined,
+            size: 14,
+            color: available ? AppColors.secondary : AppColors.grey500,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            available ? 'Available for home visit' : 'Not available',
+            style: AppTextStyles.labelSmall.copyWith(
+              fontWeight: FontWeight.w700,
+              color: available ? AppColors.secondaryDark : AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NurseActionButton extends StatelessWidget {
+  const _NurseActionButton({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    this.filled = true,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final bool filled;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: filled
+                ? const LinearGradient(colors: kNurseGradient)
+                : null,
+            color: filled ? null : AppColors.secondary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: filled
+                  ? Colors.transparent
+                  : AppColors.secondary.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 16,
+                    color: filled ? AppColors.white : AppColors.secondaryDark,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: filled ? AppColors.white : AppColors.secondaryDark,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: filled
+                        ? AppColors.white.withValues(alpha: 0.9)
+                        : AppColors.secondary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -63,10 +555,12 @@ class AmbulanceListingCard extends StatelessWidget {
     super.key,
     required this.ambulance,
     this.showBottomDivider = false,
+    this.onTap,
   });
 
   final AmbulanceModel ambulance;
   final bool showBottomDivider;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -74,19 +568,17 @@ class AmbulanceListingCard extends StatelessWidget {
     final subtitleParts = <String>[
       if (ambulance.city != null && ambulance.city!.isNotEmpty) ambulance.city!,
       if (vehicles.isNotEmpty) vehicles.join(', '),
-      if (ambulance.serviceArea != null && ambulance.serviceArea!.isNotEmpty)
-        'Area: ${ambulance.serviceArea}',
     ];
 
-    return _CareListingShell(
+    return _ModernCareCard(
+      accentGradient: const [Color(0xFF1565C0), Color(0xFF1976D2)],
       title: ambulance.serviceName ?? 'Ambulance service',
       subtitle: subtitleParts.join(' · '),
-      footer: ambulance.available24x7 == true ? '24x7 emergency' : 'Limited hours',
+      footer: ambulance.available24x7 == true ? '24×7 emergency' : 'Limited hours',
       icon: Icons.local_shipping_rounded,
       iconColor: const Color(0xFF1565C0),
       imageUrl: MediaUrlUtils.resolve(ambulance.profilePicture),
-      showBottomDivider: showBottomDivider,
-      trailing: ambulance.emergencyContact ?? ambulance.mobileNumber,
+      onTap: onTap,
     );
   }
 }
@@ -128,21 +620,27 @@ class BloodBankListingCard extends StatelessWidget {
     final footerParts = <String>[
       if (distance != null) distance,
       ...features,
-      if (bloodBank.startingPrice != null)
-        'From ₹${bloodBank.startingPrice}',
+      if (bloodBank.startingPrice != null) 'From ₹${bloodBank.startingPrice}',
     ];
 
     return Material(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(12),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Ink(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.divider),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFB71C1C).withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,20 +650,25 @@ class BloodBankListingCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: const Color(0xFFB71C1C).withValues(alpha: 0.12),
-                    backgroundImage: MediaUrlUtils.resolve(
-                              bloodBank.logoUrl ?? bloodBank.profilePicture) !=
-                            null
-                        ? CachedNetworkImageProvider(
-                            MediaUrlUtils.resolve(
-                                bloodBank.logoUrl ?? bloodBank.profilePicture)!,
-                          )
-                        : null,
-                    child: bloodBank.logoUrl == null &&
-                            bloodBank.profilePicture == null
-                        ? const Icon(Icons.bloodtype_rounded,
-                            color: Color(0xFFB71C1C), size: 28)
-                        : null,
+                    backgroundColor:
+                        const Color(0xFFB71C1C).withValues(alpha: 0.12),
+                    backgroundImage: () {
+                      final resolved = MediaUrlUtils.resolve(
+                        bloodBank.logoUrl ?? bloodBank.profilePicture,
+                      );
+                      return resolved.isNotEmpty
+                          ? CachedNetworkImageProvider(resolved)
+                          : null;
+                    }(),
+                    child: () {
+                      final resolved = MediaUrlUtils.resolve(
+                        bloodBank.logoUrl ?? bloodBank.profilePicture,
+                      );
+                      return resolved.isEmpty
+                          ? const Icon(Icons.bloodtype_rounded,
+                              color: Color(0xFFB71C1C), size: 28)
+                          : null;
+                    }(),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -225,24 +728,6 @@ class BloodBankListingCard extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            if (bloodBank.activeOffer != null) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.offerLight,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Offer',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.offer,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
                           ],
                         ),
                       ],
@@ -312,130 +797,122 @@ class BloodBankListingCard extends StatelessWidget {
   }
 }
 
-class _CareListingShell extends StatelessWidget {
-  const _CareListingShell({
+class _ModernCareCard extends StatelessWidget {
+  const _ModernCareCard({
+    required this.accentGradient,
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.iconColor,
     this.footer,
-    this.trailing,
     this.imageUrl,
-    this.showBottomDivider = false,
     this.onTap,
   });
 
+  final List<Color> accentGradient;
   final String title;
   final String subtitle;
   final String? footer;
-  final String? trailing;
   final String? imageUrl;
   final IconData icon;
   final Color iconColor;
-  final bool showBottomDivider;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(12),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Ink(
-          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.divider),
+            boxShadow: [
+              BoxShadow(
+                color: iconColor.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: iconColor.withValues(alpha: 0.12),
-                backgroundImage: imageUrl != null && imageUrl!.isNotEmpty
-                    ? CachedNetworkImageProvider(imageUrl!)
-                    : null,
-                child: imageUrl == null || imageUrl!.isEmpty
-                    ? Icon(icon, color: iconColor, size: 28)
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: AppTextStyles.labelLarge.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.verified_rounded,
-                          color: AppColors.primary,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                    if (subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                    if (footer != null && footer!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        footer!,
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                    if (trailing != null && trailing!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Contact: $trailing',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    if (onTap != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        'Tap to view full profile',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (onTap != null)
-                const Padding(
-                  padding: EdgeInsets.only(left: 4),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.grey400,
-                    size: 22,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  height: 4,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: accentGradient),
                   ),
                 ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: iconColor.withValues(alpha: 0.12),
+                        backgroundImage: imageUrl != null && imageUrl!.isNotEmpty
+                            ? CachedNetworkImageProvider(imageUrl!)
+                            : null,
+                        child: imageUrl == null || imageUrl!.isEmpty
+                            ? Icon(icon, color: iconColor, size: 28)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: AppTextStyles.labelLarge.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.verified_rounded,
+                                  color: AppColors.primary,
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                            if (subtitle.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                subtitle,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                            if (footer != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                footer!,
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: iconColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

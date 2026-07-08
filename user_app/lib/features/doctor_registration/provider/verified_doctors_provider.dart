@@ -17,7 +17,6 @@ final verifiedDoctorsByConsultationProvider =
     final repository = ref.watch(doctorRegistrationRepositoryProvider);
     final response = await repository.getVerifiedDoctors(
       pageSize: 50,
-      consultationType: consultationType,
     );
 
     if (response.success && response.data != null) {

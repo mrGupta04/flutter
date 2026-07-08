@@ -26,6 +26,8 @@ import '../../provider/care_filter_constants.dart';
 import '../../provider/nurse_search_provider.dart';
 import '../../provider/verified_doctors_provider.dart';
 import '../../../../core/utils/doctor_location_utils.dart';
+import '../../../../core/utils/provider_location_utils.dart';
+import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 
 enum CareRole { doctor, nurse, ambulance, bloodBank }
@@ -502,6 +504,11 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
               NurseListingCard(
                 nurse: items[i],
                 onTap: () => openNurseProfile(context, items[i]),
+                onBookHomeVisit: () =>
+                    openNurseHomeVisitBooking(context, items[i]),
+                onOpenMapTap: nurseHasMapLocation(items[i])
+                    ? () => openNurseInGoogleMaps(context, items[i])
+                    : null,
               ),
             ],
             const UserScrollFooter(),

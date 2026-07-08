@@ -18,6 +18,8 @@ import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../provider/global_search_provider.dart';
 import '../../../../core/utils/doctor_location_utils.dart';
+import '../../../../core/utils/provider_location_utils.dart';
+import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 import 'nurse_profile_screen.dart';
 
@@ -263,6 +265,11 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                         child: NurseListingCard(
                           nurse: n,
                           onTap: () => openNurseProfile(context, n),
+                          onBookHomeVisit: () =>
+                              openNurseHomeVisitBooking(context, n),
+                          onOpenMapTap: nurseHasMapLocation(n)
+                              ? () => openNurseInGoogleMaps(context, n)
+                              : null,
                         ),
                       ),
                     )

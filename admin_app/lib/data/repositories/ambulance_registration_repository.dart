@@ -23,7 +23,7 @@ class AmbulanceRegistrationRepository {
         queryParameters: {'ambulanceId': ambulanceId},
       );
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => DoctorDocumentModel.fromJson(e as Map<String, dynamic>))
           .toList();
       return ApiResponse(

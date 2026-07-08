@@ -33,7 +33,7 @@ class AmbulanceRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => AmbulanceModel.fromJson(e as Map<String, dynamic>))
           .toList();
 

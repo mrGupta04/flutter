@@ -10,6 +10,7 @@ import '../../../data/repositories/ambulance_registration_repository.dart';
 import '../../../data/repositories/blood_bank_registration_repository.dart';
 import '../../../data/repositories/doctor_registration_repository.dart';
 import '../../../data/repositories/nurse_registration_repository.dart';
+import '../../../data/models/api_response_model.dart';
 import '../../../data/services/dio_service.dart';
 import '../../../core/constants/app_constants.dart';
 
@@ -279,7 +280,7 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
     try {
       final response = await _dio.get(endpoint, queryParameters: params);
       final body = response.data as Map<String, dynamic>;
-      final list = body['data'] as List? ?? [];
+      final list = extractApiList(body['data']);
       final bookings = list.map((e) {
         final m = e as Map<String, dynamic>;
         return ProviderBookingItem(

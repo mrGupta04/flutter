@@ -165,11 +165,11 @@ class LabRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List?)
-              ?.map((e) => LabModel.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
-      final pagination = body['pagination'] as Map<String, dynamic>? ?? {};
+      final raw = body['data'];
+      final list = extractApiList(raw)
+          .map((e) => LabModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final pagination = extractApiPagination(raw);
 
       return ApiResponse(
         success: body['success'] as bool? ?? false,

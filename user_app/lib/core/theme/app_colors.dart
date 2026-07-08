@@ -97,4 +97,10 @@ class AppColors {
     Color(0xFF1D6B5C),
     Color(0xFF208376),
   ];
+
+  /// Nurse / secondary care provider accent.
+  static const List<Color> gradientNurse = [
+    Color(0xFF2D7A56),
+    Color(0xFF3D9970),
+  ];
 }

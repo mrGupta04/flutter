@@ -31,7 +31,7 @@ class AdminRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => DoctorModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
@@ -184,7 +184,7 @@ class AdminRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => DoctorDocumentModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
@@ -222,7 +222,7 @@ class AdminRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => NurseModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
@@ -250,7 +250,7 @@ class AdminRepository {
         AppConstants.endpointAdminNurseDocuments(nurseId),
       );
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => DoctorDocumentModel.fromJson(e as Map<String, dynamic>))
           .toList();
       return ApiResponse(
@@ -411,7 +411,7 @@ class AdminRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => AmbulanceModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
@@ -439,7 +439,7 @@ class AdminRepository {
         AppConstants.endpointAdminAmbulanceDocuments(ambulanceId),
       );
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => DoctorDocumentModel.fromJson(e as Map<String, dynamic>))
           .toList();
       return ApiResponse(
@@ -606,7 +606,7 @@ class AdminRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List? ?? [])
+      final list = extractApiList(body['data'])
           .map((e) => BloodBankModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
@@ -740,10 +740,9 @@ class AdminRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List?)
-              ?.map((e) => LabModel.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
+      final list = extractApiList(body['data'])
+          .map((e) => LabModel.fromJson(e as Map<String, dynamic>))
+          .toList();
 
       return ApiResponse(
         success: body['success'] as bool? ?? false,
@@ -865,10 +864,9 @@ class AdminRepository {
       );
 
       final body = response.data as Map<String, dynamic>;
-      final list = (body['data'] as List?)
-              ?.map((e) => ScanCenterModel.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
+      final list = extractApiList(body['data'])
+          .map((e) => ScanCenterModel.fromJson(e as Map<String, dynamic>))
+          .toList();
 
       return ApiResponse(
         success: body['success'] as bool? ?? false,

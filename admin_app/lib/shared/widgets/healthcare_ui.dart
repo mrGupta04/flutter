@@ -670,5 +670,79 @@ class FormStepHeader extends StatelessWidget {
   }
 }
 
+/// Compact row banner for application / verification status (provider app).
+class ApplicationStatusHero extends StatelessWidget {
+  const ApplicationStatusHero({
+    super.key,
+    required this.isVerified,
+    required this.isRejected,
+  });
+
+  final bool isVerified;
+  final bool isRejected;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = isVerified
+        ? 'Verified'
+        : isRejected
+            ? 'Not approved'
+            : 'Under review';
+    final subtitle = isVerified
+        ? 'Visible to patients in the app'
+        : isRejected
+            ? 'Contact support if you need help'
+            : 'Usually reviewed within 24–48 hours';
+    final icon = isVerified
+        ? Icons.verified_rounded
+        : isRejected
+            ? Icons.cancel_outlined
+            : Icons.hourglass_top_rounded;
+    final colors = isVerified
+        ? AppColors.gradientSuccess
+        : isRejected
+            ? [AppColors.error, AppColors.error.withValues(alpha: 0.88)]
+            : [AppColors.primary, AppColors.primaryDark];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: colors),
+        borderRadius: AppDecorations.borderRadiusLg,
+        boxShadow: AppDecorations.softShadow(opacity: 0.08),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.white, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.white.withValues(alpha: 0.92),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // Legacy alias
 typedef HealthcareTopBar = OneMgHeader;

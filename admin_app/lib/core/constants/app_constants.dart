@@ -291,4 +291,7 @@ class AppConstants {
   static const String successApplicationSubmitted =
       'Application sent to admin for review.';
   static const String successProfileUpdated = 'Profile updated successfully.';
+
+  /// Short admin toast after approving a provider application.
+  static const String adminApprovalSuccess = 'Approved';
 }

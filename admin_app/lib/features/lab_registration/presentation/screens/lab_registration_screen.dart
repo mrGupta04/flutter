@@ -15,6 +15,8 @@ import '../../../../data/models/lab_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../core/models/provider_type.dart';
+import '../../../provider/provider/provider_status_sync.dart';
 import '../../../labs/data/lab_registration_catalog.dart';
 import '../../data/lab_registration_constants.dart';
 import '../../provider/lab_registration_provider.dart';
@@ -426,7 +428,11 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
 
     if (!mounted) return;
     if (ok) {
-      context.go(AppConstants.routeLabApplicationSubmitted);
+      SnackBarHelper.showSuccess(
+        context,
+        AppConstants.successApplicationSubmitted,
+      );
+      await navigateAfterRegistration(context, ref, ProviderType.lab);
     } else {
       final err = ref.read(labRegistrationProvider).error;
       SnackBarHelper.showError(context, err ?? 'Registration failed');

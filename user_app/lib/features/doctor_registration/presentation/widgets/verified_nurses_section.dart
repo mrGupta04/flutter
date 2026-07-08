@@ -9,6 +9,8 @@ import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/home_provider_preview.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../provider/nurse_search_provider.dart';
+import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
+import '../../../../core/utils/provider_location_utils.dart';
 import '../screens/nurse_profile_screen.dart';
 
 class VerifiedNursesSection extends ConsumerWidget {
@@ -62,7 +64,13 @@ class VerifiedNursesSection extends ConsumerWidget {
                 itemCount: nurses.length,
                 itemBuilder: (context, i) => NurseListingCard(
                   nurse: nurses[i],
+                  showBottomDivider: false,
                   onTap: () => openNurseProfile(context, nurses[i]),
+                  onBookHomeVisit: () =>
+                      openNurseHomeVisitBooking(context, nurses[i]),
+                  onOpenMapTap: nurseHasMapLocation(nurses[i])
+                      ? () => openNurseInGoogleMaps(context, nurses[i])
+                      : null,
                 ),
               ),
             );

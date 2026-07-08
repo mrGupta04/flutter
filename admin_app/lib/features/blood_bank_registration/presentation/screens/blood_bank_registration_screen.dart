@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
@@ -15,7 +14,8 @@ import '../../../../data/models/blood_bank_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
-import '../../../auth/provider/provider_auth_provider.dart';
+import '../../../../core/models/provider_type.dart';
+import '../../../provider/provider/provider_status_sync.dart';
 import '../../data/blood_bank_registration_catalog.dart';
 import '../../provider/blood_bank_registration_provider.dart';
 
@@ -325,9 +325,11 @@ class _BloodBankRegistrationScreenState
 
     if (!mounted) return;
     if (ok) {
-      await ref.read(providerAuthProvider.notifier).refreshSession();
-      if (!mounted) return;
-      context.go(AppConstants.routeBloodBankApplicationSubmitted);
+      SnackBarHelper.showSuccess(
+        context,
+        AppConstants.successApplicationSubmitted,
+      );
+      await navigateAfterRegistration(context, ref, ProviderType.bloodBank);
     } else {
       SnackBarHelper.showError(
         context,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -227,16 +228,12 @@ class _ActionBar extends ConsumerWidget {
       return SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: InfoCard(
+          child: CompactVerifiedBanner(
+            message: isVerified ? 'Live on patient app' : 'Review complete',
             icon: isVerified
                 ? Icons.verified_rounded
                 : Icons.info_outline_rounded,
-            title: isVerified
-                ? 'Published on user app'
-                : 'Application processed',
-            subtitle: isVerified
-                ? 'This nurse is visible to patients in the 1mg Care app.'
-                : 'This application is no longer pending review.',
+            color: isVerified ? AppColors.success : AppColors.textSecondary,
           ),
         ),
       );
@@ -254,10 +251,9 @@ class _ActionBar extends ConsumerWidget {
                 .read(nurseDetailsProvider(nurseId).notifier)
                 .approveNurse(nurseId: nurseId);
             if (context.mounted && ok) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Nurse verified — now live on user app'),
-                ),
+              SnackBarHelper.showSuccess(
+                context,
+                AppConstants.adminApprovalSuccess,
               );
             }
           },

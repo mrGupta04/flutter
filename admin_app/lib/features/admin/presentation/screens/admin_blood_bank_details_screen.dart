@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -142,12 +143,16 @@ class _ActionBar extends ConsumerWidget {
       return SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: InfoCard(
-            icon: Icons.verified_rounded,
-            title: status == VerificationStatus.verified
-                ? 'Published on user app'
-                : 'Application processed',
-            subtitle: 'This application is no longer pending review.',
+          child: CompactVerifiedBanner(
+            message: status == VerificationStatus.verified
+                ? 'Live on patient app'
+                : 'Review complete',
+            icon: status == VerificationStatus.verified
+                ? Icons.verified_rounded
+                : Icons.info_outline_rounded,
+            color: status == VerificationStatus.verified
+                ? AppColors.success
+                : AppColors.textSecondary,
           ),
         ),
       );
@@ -168,10 +173,9 @@ class _ActionBar extends ConsumerWidget {
                     .read(bloodBankDetailsProvider(bloodBankId).notifier)
                     .approveBloodBank(bloodBankId: bloodBankId);
                 if (context.mounted && ok) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Blood bank verified — now live on user app'),
-                    ),
+                  SnackBarHelper.showSuccess(
+                    context,
+                    AppConstants.adminApprovalSuccess,
                   );
                 }
               },

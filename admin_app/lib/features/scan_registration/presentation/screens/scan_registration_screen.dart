@@ -15,9 +15,10 @@ import '../../../../data/models/scan_center_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../core/models/provider_type.dart';
+import '../../../provider/provider/provider_status_sync.dart';
 import '../../../scans/data/scan_registration_catalog.dart';
 import '../../../scans/data/models/scan_procedure_model.dart';
-import '../../../auth/provider/provider_auth_provider.dart';
 import '../../provider/scan_registration_provider.dart';
 
 const _totalSteps = 5;
@@ -326,8 +327,11 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
       ref.read(scanRegistrationProvider.notifier).setScanCenter(
             ref.read(scanRegistrationProvider).center!,
           );
-      await ref.read(providerAuthProvider.notifier).refreshSession();
-      context.go(AppConstants.routeScanApplicationSubmitted);
+      SnackBarHelper.showSuccess(
+        context,
+        AppConstants.successApplicationSubmitted,
+      );
+      await navigateAfterRegistration(context, ref, ProviderType.scanCenter);
     } else {
       final err = ref.read(scanRegistrationProvider).error;
       SnackBarHelper.showError(context, err ?? 'Registration failed');
