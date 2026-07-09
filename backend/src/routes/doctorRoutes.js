@@ -17,6 +17,7 @@ const {
 const { isVerificationSkipped } = require('../config/verification');
 const { ensureDoctorDocumentsFromProfile } = require('../db/documentVerification');
 const { sendSuccess, sendError } = require('../utils/response');
+const { validateMobile } = require('../utils/mobile');
 const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { loginProvider } = require('../utils/providerAuth');
 const { toDoctor } = require('../db/mappers');

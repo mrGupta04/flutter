@@ -212,10 +212,34 @@ class _AmbulanceRegistrationScreenState
     return true;
   }
 
+  Widget _stepPage(int step, {required Widget child, Widget? footer}) {
+    final meta = _stepTitles[step - 1];
+    return RegistrationStepPage(
+      step: step,
+      total: totalAmbulanceRegistrationSteps,
+      title: meta.$1,
+      subtitle: meta.$2,
+      footer: footer,
+      child: child,
+    );
+  }
+
+  Widget? _stepFooter(int step) {
+    if (step >= totalAmbulanceRegistrationSteps) return null;
+    return RegistrationStepActions(
+      showBack: step > 1,
+      onBack: _previousStep,
+      onContinue: _nextStep,
+      continueLabel: step == totalAmbulanceRegistrationSteps - 1
+          ? 'Review'
+          : 'Continue',
+      continueIcon: Icons.arrow_forward_rounded,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentStep = ref.watch(currentAmbulanceStepProvider);
-    final stepMeta = _stepTitles[currentStep - 1];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -226,60 +250,47 @@ class _AmbulanceRegistrationScreenState
           onPressed: currentStep > 1 ? _previousStep : () => context.pop(),
         ),
       ),
-      body: Column(
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          FormStepHeader(
-            step: currentStep,
-            total: totalAmbulanceRegistrationSteps,
-            title: stepMeta.$1,
-            subtitle: stepMeta.$2,
+          _stepPage(
+            1,
+            footer: _stepFooter(1),
+            child: AmbulanceStep1ServiceOwner(formKey: _formKeys[0]),
           ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                AmbulanceStep1ServiceOwner(formKey: _formKeys[0]),
-                const AmbulanceStep2VehicleFleet(),
-                const AmbulanceStep3Drivers(),
-                const AmbulanceStep4Documents(),
-                AmbulanceStep5Location(formKey: _formKeys[1]),
-                AmbulanceStep6BankDetails(formKey: _formKeys[2]),
-                AmbulanceStep7Review(
-                  onSubmit: _submit,
-                  onEdit: _goToStep,
-                ),
-              ],
+          _stepPage(
+            2,
+            footer: _stepFooter(2),
+            child: const AmbulanceStep2VehicleFleet(),
+          ),
+          _stepPage(
+            3,
+            footer: _stepFooter(3),
+            child: const AmbulanceStep3Drivers(),
+          ),
+          _stepPage(
+            4,
+            footer: _stepFooter(4),
+            child: const AmbulanceStep4Documents(),
+          ),
+          _stepPage(
+            5,
+            footer: _stepFooter(5),
+            child: AmbulanceStep5Location(formKey: _formKeys[1]),
+          ),
+          _stepPage(
+            6,
+            footer: _stepFooter(6),
+            child: AmbulanceStep6BankDetails(formKey: _formKeys[2]),
+          ),
+          _stepPage(
+            7,
+            child: AmbulanceStep7Review(
+              onSubmit: _submit,
+              onEdit: _goToStep,
             ),
           ),
-          if (currentStep < totalAmbulanceRegistrationSteps)
-            BottomCtaBar(
-              child: Row(
-                children: [
-                  if (currentStep > 1) ...[
-                    Expanded(
-                      child: CustomOutlineButton(
-                        label: 'Back',
-                        onPressed: _previousStep,
-                        height: 50,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    flex: currentStep > 1 ? 2 : 1,
-                    child: CustomButton(
-                      label: currentStep == totalAmbulanceRegistrationSteps - 1
-                          ? 'Review'
-                          : 'Continue',
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: _nextStep,
-                      height: 50,
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );

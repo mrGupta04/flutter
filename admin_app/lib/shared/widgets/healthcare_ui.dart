@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/custom_widgets.dart';
 
 /// Tata 1mg home header — location + white search pill.
 class OneMgHeader extends StatelessWidget {
@@ -666,6 +667,175 @@ class FormStepHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Scrollable registration step with header, form content, and optional footer.
+class RegistrationStepPage extends StatelessWidget {
+  const RegistrationStepPage({
+    super.key,
+    required this.step,
+    required this.total,
+    required this.title,
+    required this.subtitle,
+    required this.child,
+    this.footer,
+    this.progressColor,
+  });
+
+  final int step;
+  final int total;
+  final String title;
+  final String subtitle;
+  final Widget child;
+  final Widget? footer;
+  final Color? progressColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ScrollableFormStepHeader(
+            step: step,
+            total: total,
+            title: title,
+            subtitle: subtitle,
+            progressColor: progressColor,
+          ),
+          child,
+          if (footer != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: footer!,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScrollableFormStepHeader extends StatelessWidget {
+  const _ScrollableFormStepHeader({
+    required this.step,
+    required this.total,
+    required this.title,
+    required this.subtitle,
+    this.progressColor,
+  });
+
+  final int step;
+  final int total;
+  final String title;
+  final String subtitle;
+  final Color? progressColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = step / total;
+    final color = progressColor ?? AppColors.primary;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: AppDecorations.borderRadiusLg,
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Step $step/$total',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${(progress * 100).round()}%',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: AppDecorations.borderRadiusSm,
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 4,
+              backgroundColor: AppColors.grey100,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(title, style: AppTextStyles.titleSmall),
+          if (subtitle.isNotEmpty)
+            Text(
+              subtitle,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Back / continue actions placed at the end of a registration step.
+class RegistrationStepActions extends StatelessWidget {
+  const RegistrationStepActions({
+    super.key,
+    this.showBack = false,
+    required this.onBack,
+    required this.onContinue,
+    required this.continueLabel,
+    this.isLoading = false,
+    this.continueIcon,
+  });
+
+  final bool showBack;
+  final VoidCallback onBack;
+  final VoidCallback onContinue;
+  final String continueLabel;
+  final bool isLoading;
+  final IconData? continueIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (showBack) ...[
+          Expanded(
+            child: CustomOutlineButton(
+              label: 'Back',
+              onPressed: onBack,
+              height: 50,
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+        Expanded(
+          flex: showBack ? 2 : 1,
+          child: CustomButton(
+            label: continueLabel,
+            icon: continueIcon,
+            isLoading: isLoading,
+            onPressed: onContinue,
+            height: 50,
+          ),
+        ),
+      ],
     );
   }
 }

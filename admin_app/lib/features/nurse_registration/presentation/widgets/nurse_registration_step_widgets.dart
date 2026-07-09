@@ -18,8 +18,8 @@ import '../../../doctor_registration/presentation/widgets/weekly_availability_pi
 import '../../provider/nurse_registration_provider.dart';
 
 Widget nurseStepScroll({required Widget child}) {
-  return SingleChildScrollView(
-    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
     child: child,
   );
 }

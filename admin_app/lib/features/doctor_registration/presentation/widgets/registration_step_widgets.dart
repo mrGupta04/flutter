@@ -17,10 +17,10 @@ import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../provider/registration_provider.dart';
 import 'weekly_availability_picker.dart';
 
-/// Scrollable padding wrapper for registration step forms.
+/// Padded content wrapper for registration step forms (parent provides scroll).
 Widget registrationStepScroll({required Widget child}) {
-  return SingleChildScrollView(
-    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
     child: child,
   );
 }
@@ -1582,8 +1582,8 @@ class Step7ReviewSubmit extends ConsumerWidget {
     final formState = ref.watch(registrationFormProvider);
     final registrationState = ref.watch(doctorRegistrationProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

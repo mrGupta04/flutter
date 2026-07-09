@@ -14,6 +14,7 @@ import '../../../../data/models/blood_bank_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../core/models/provider_type.dart';
 import '../../../provider/provider/provider_status_sync.dart';
 import '../../data/blood_bank_registration_catalog.dart';
@@ -348,69 +349,41 @@ class _BloodBankRegistrationScreenState
       'Pricing & offers',
       'Review & submit',
     ];
+    const stepSubtitles = [
+      'Blood bank details for admin verification',
+      'Emergency contacts and required documents',
+      'Hours, blood groups and facilities',
+      'Component pricing and promotional offers',
+      'Confirm details before submitting',
+    ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Blood bank registration')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Step ${_step + 1}/$_totalSteps · ${stepTitles[_step]}',
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: const Color(0xFFB71C1C),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (_step + 1) / _totalSteps,
-                  backgroundColor: AppColors.grey200,
-                  color: const Color(0xFFB71C1C),
-                  minHeight: 4,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: switch (_step) {
-                0 => _buildBasicStep(),
-                1 => _buildContactStep(),
-                2 => _buildFacilitiesStep(),
-                3 => _buildPricingStep(),
-                _ => _buildReviewStep(),
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              children: [
-                if (_step > 0)
-                  Expanded(
-                    child: CustomOutlineButton(label: 'Back', onPressed: _back),
-                  ),
-                if (_step > 0) const SizedBox(width: 10),
-                Expanded(
-                  child: CustomButton(
-                    label: _step == _totalSteps - 1
-                        ? 'Submit application'
-                        : 'Continue',
-                    isLoading: regState.isSubmitting,
-                    onPressed: _step == _totalSteps - 1 ? _submit : _next,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      body: RegistrationStepPage(
+        step: _step + 1,
+        total: _totalSteps,
+        title: stepTitles[_step],
+        subtitle: stepSubtitles[_step],
+        progressColor: const Color(0xFFB71C1C),
+        footer: RegistrationStepActions(
+          showBack: _step > 0,
+          onBack: _back,
+          onContinue: _step == _totalSteps - 1 ? _submit : _next,
+          continueLabel:
+              _step == _totalSteps - 1 ? 'Submit application' : 'Continue',
+          isLoading: regState.isSubmitting,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: switch (_step) {
+            0 => _buildBasicStep(),
+            1 => _buildContactStep(),
+            2 => _buildFacilitiesStep(),
+            3 => _buildPricingStep(),
+            _ => _buildReviewStep(),
+          },
+        ),
       ),
     );
   }

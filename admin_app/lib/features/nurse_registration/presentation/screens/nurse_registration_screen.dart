@@ -195,11 +195,34 @@ class _NurseRegistrationScreenState
     return true;
   }
 
+  Widget _stepPage(int step, {required Widget child, Widget? footer}) {
+    final meta = _stepTitles[step - 1];
+    return RegistrationStepPage(
+      step: step,
+      total: totalNurseRegistrationSteps,
+      title: meta.$1,
+      subtitle: meta.$2,
+      footer: footer,
+      child: child,
+    );
+  }
+
+  Widget? _stepFooter(int step) {
+    if (step >= totalNurseRegistrationSteps) return null;
+    return RegistrationStepActions(
+      showBack: step > 1,
+      onBack: _previousStep,
+      onContinue: _nextStep,
+      continueLabel:
+          step == totalNurseRegistrationSteps - 1 ? 'Review' : 'Continue',
+      continueIcon: Icons.arrow_forward_rounded,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentStep = ref.watch(currentNurseStepProvider);
     final form = ref.watch(nurseRegistrationFormProvider);
-    final stepMeta = _stepTitles[currentStep - 1];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -210,81 +233,51 @@ class _NurseRegistrationScreenState
           onPressed: currentStep > 1 ? _previousStep : () => context.pop(),
         ),
       ),
-      body: Column(
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          FormStepHeader(
-            step: currentStep,
-            total: totalNurseRegistrationSteps,
-            title: stepMeta.$1,
-            subtitle: stepMeta.$2,
+          _stepPage(
+            1,
+            footer: _stepFooter(1),
+            child: NurseStep1Personal(formKey: _formKeys[0]),
           ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                NurseStep1Personal(formKey: _formKeys[0]),
-                NurseStep2Professional(formKey: _formKeys[1]),
-                NurseStep3Location(formKey: _formKeys[2]),
-                const NurseStep4Documents(),
-                NurseStep5Bank(formKey: _formKeys[3]),
-                const NurseStep6Availability(),
-                NurseStep7Review(onEditStep: _goToStep),
-              ],
-            ),
+          _stepPage(
+            2,
+            footer: _stepFooter(2),
+            child: NurseStep2Professional(formKey: _formKeys[1]),
           ),
-          if (currentStep < totalNurseRegistrationSteps)
-            BottomCtaBar(
-              child: Row(
-                children: [
-                  if (currentStep > 1) ...[
-                    Expanded(
-                      child: CustomOutlineButton(
-                        label: 'Back',
-                        onPressed: _previousStep,
-                        height: 50,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    flex: currentStep > 1 ? 2 : 1,
-                    child: CustomButton(
-                      label: currentStep == totalNurseRegistrationSteps - 1
-                          ? 'Review'
-                          : 'Continue',
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: _nextStep,
-                      height: 50,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            BottomCtaBar(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: CustomOutlineButton(
-                      label: 'Back',
-                      onPressed: _previousStep,
-                      height: 50,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: CustomButton(
-                      label: 'Submit for verification',
-                      isLoading: form.isSubmitting,
-                      onPressed: _submit,
-                      height: 50,
-                    ),
-                  ),
-                ],
-              ),
+          _stepPage(
+            3,
+            footer: _stepFooter(3),
+            child: NurseStep3Location(formKey: _formKeys[2]),
+          ),
+          _stepPage(
+            4,
+            footer: _stepFooter(4),
+            child: const NurseStep4Documents(),
+          ),
+          _stepPage(
+            5,
+            footer: _stepFooter(5),
+            child: NurseStep5Bank(formKey: _formKeys[3]),
+          ),
+          _stepPage(
+            6,
+            footer: _stepFooter(6),
+            child: const NurseStep6Availability(),
+          ),
+          _stepPage(
+            7,
+            footer: RegistrationStepActions(
+              showBack: true,
+              onBack: _previousStep,
+              onContinue: _submit,
+              continueLabel: 'Submit for verification',
+              isLoading: form.isSubmitting,
             ),
+            child: NurseStep7Review(onEditStep: _goToStep),
+          ),
         ],
       ),
     );

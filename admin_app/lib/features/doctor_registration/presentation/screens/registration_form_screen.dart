@@ -313,10 +313,34 @@ class _RegistrationFormScreenState
     return true;
   }
 
+  Widget _stepPage(int step, {required Widget child, Widget? footer}) {
+    final meta = _stepTitles[step - 1];
+    return RegistrationStepPage(
+      step: step,
+      total: AppConstants.totalRegistrationSteps,
+      title: meta.$1,
+      subtitle: meta.$2,
+      footer: footer,
+      child: child,
+    );
+  }
+
+  Widget? _stepFooter(int step) {
+    if (step >= AppConstants.totalRegistrationSteps) return null;
+    return RegistrationStepActions(
+      showBack: step > 1,
+      onBack: _previousStep,
+      onContinue: _nextStep,
+      continueLabel: step == AppConstants.totalRegistrationSteps - 1
+          ? 'Review'
+          : 'Continue',
+      continueIcon: Icons.arrow_forward_rounded,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentStep = ref.watch(currentRegistrationStepProvider);
-    final stepMeta = _stepTitles[currentStep - 1];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -329,65 +353,51 @@ class _RegistrationFormScreenState
               : () => context.pop(),
         ),
       ),
-      body: Column(
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          FormStepHeader(
-            step: currentStep,
-            total: AppConstants.totalRegistrationSteps,
-            title: stepMeta.$1,
-            subtitle: stepMeta.$2,
+          _stepPage(
+            1,
+            footer: _stepFooter(1),
+            child: Step1PersonalInfo(formKey: _formKeys[0]),
           ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                Step1PersonalInfo(formKey: _formKeys[0]),
-                Step2ProfessionalDetails(formKey: _formKeys[1]),
-                Step3ClinicAddress(formKey: _formKeys[2]),
-                Step4DocumentUpload(formKey: _formKeys[3]),
-                Step5BankDetails(formKey: _formKeys[4]),
-                const Step6WeeklyAvailability(),
-                Step7ReviewSubmit(
-                  onSubmit: _submitRegistration,
-                  onEdit: (step) {
-                    _pageController.jumpToPage(step - 1);
-                    ref.read(currentRegistrationStepProvider.notifier).state =
-                        step;
-                  },
-                ),
-              ],
+          _stepPage(
+            2,
+            footer: _stepFooter(2),
+            child: Step2ProfessionalDetails(formKey: _formKeys[1]),
+          ),
+          _stepPage(
+            3,
+            footer: _stepFooter(3),
+            child: Step3ClinicAddress(formKey: _formKeys[2]),
+          ),
+          _stepPage(
+            4,
+            footer: _stepFooter(4),
+            child: Step4DocumentUpload(formKey: _formKeys[3]),
+          ),
+          _stepPage(
+            5,
+            footer: _stepFooter(5),
+            child: Step5BankDetails(formKey: _formKeys[4]),
+          ),
+          _stepPage(
+            6,
+            footer: _stepFooter(6),
+            child: const Step6WeeklyAvailability(),
+          ),
+          _stepPage(
+            7,
+            child: Step7ReviewSubmit(
+              onSubmit: _submitRegistration,
+              onEdit: (step) {
+                _pageController.jumpToPage(step - 1);
+                ref.read(currentRegistrationStepProvider.notifier).state =
+                    step;
+              },
             ),
           ),
-          if (currentStep < AppConstants.totalRegistrationSteps)
-            BottomCtaBar(
-              child: Row(
-                children: [
-                  if (currentStep > 1) ...[
-                    Expanded(
-                      child: CustomOutlineButton(
-                        label: 'Back',
-                        onPressed: _previousStep,
-                        height: 50,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    flex: currentStep > 1 ? 2 : 1,
-                    child: CustomButton(
-                      label: currentStep ==
-                              AppConstants.totalRegistrationSteps - 1
-                          ? 'Review'
-                          : 'Continue',
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: _nextStep,
-                      height: 50,
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
