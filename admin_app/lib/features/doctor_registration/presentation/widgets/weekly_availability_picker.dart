@@ -57,47 +57,42 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: hours
-                      .where((hour) {
-                        final key =
-                            DoctorAvailabilityConstants.slotKey(day, hour);
-                        final selected = selectedSlots.contains(key);
-                        final blockedElsewhere =
-                            !selected && blockedSlots.contains(key);
-                        return !blockedElsewhere;
-                      })
-                      .map((hour) {
-                        final key =
-                            DoctorAvailabilityConstants.slotKey(day, hour);
-                        final selected = selectedSlots.contains(key);
-                        return FilterChip(
-                          label: Text(
-                            DoctorAvailabilityConstants.formatHourRange(hour),
-                            style: AppTextStyles.labelLarge.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: selected
-                                  ? AppColors.white
-                                  : AppColors.textPrimary,
-                            ),
-                          ),
-                          selected: selected,
-                          onSelected: (value) => onToggle(day, hour, value),
-                          selectedColor: selectedColor,
-                          checkmarkColor: AppColors.white,
-                          backgroundColor: AppColors.white,
-                          side: BorderSide(
-                            color: selected ? selectedColor : AppColors.divider,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                        );
-                      })
-                      .toList(),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    const spacing = 8.0;
+                    const slotHeight = 44.0;
+                    final slotWidth = (constraints.maxWidth - spacing) / 2;
+
+                    return Wrap(
+                      spacing: spacing,
+                      runSpacing: spacing,
+                      children: hours
+                          .where((hour) {
+                            final key =
+                                DoctorAvailabilityConstants.slotKey(day, hour);
+                            final selected = selectedSlots.contains(key);
+                            final blockedElsewhere =
+                                !selected && blockedSlots.contains(key);
+                            return !blockedElsewhere;
+                          })
+                          .map((hour) {
+                            final key =
+                                DoctorAvailabilityConstants.slotKey(day, hour);
+                            final selected = selectedSlots.contains(key);
+                            return _AvailabilitySlotChip(
+                              label: DoctorAvailabilityConstants.formatHourRange(
+                                hour,
+                              ),
+                              selected: selected,
+                              selectedColor: selectedColor,
+                              width: slotWidth,
+                              height: slotHeight,
+                              onTap: () => onToggle(day, hour, !selected),
+                            );
+                          })
+                          .toList(),
+                    );
+                  },
                 ),
               ],
             ),
@@ -111,6 +106,57 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AvailabilitySlotChip extends StatelessWidget {
+  const _AvailabilitySlotChip({
+    required this.label,
+    required this.selected,
+    required this.selectedColor,
+    required this.width,
+    required this.height,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color selectedColor;
+  final double width;
+  final double height;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Material(
+        color: selected ? selectedColor : AppColors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(
+            color: selected ? selectedColor : AppColors.divider,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Center(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelLarge.copyWith(
+                fontWeight: FontWeight.w600,
+                color: selected ? AppColors.white : AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

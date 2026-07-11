@@ -12,17 +12,24 @@ class NurseModel {
   final String? countryCode;
   final String? profilePicture;
   final String? gender;
+  final DateTime? dateOfBirth;
+  final List<String>? languagesSpoken;
+  final String? emergencyContactName;
+  final String? emergencyContactNumber;
   final String? qualification;
   final String? registrationNumber;
   final String? nursingCouncil;
+  final String? nuid;
   final int? yearsOfExperience;
   final String? specialization;
+  final List<String>? nursingSkills;
   final String? address;
   final String? city;
   final String? state;
   final String? pincode;
   final double? latitude;
   final double? longitude;
+  final int? serviceRadiusKm;
   final bool? availableForHomeVisit;
   final int? homeVisitFee;
   final String? shiftAvailability;
@@ -46,17 +53,24 @@ class NurseModel {
     this.countryCode,
     this.profilePicture,
     this.gender,
+    this.dateOfBirth,
+    this.languagesSpoken,
+    this.emergencyContactName,
+    this.emergencyContactNumber,
     this.qualification,
     this.registrationNumber,
     this.nursingCouncil,
+    this.nuid,
     this.yearsOfExperience,
     this.specialization,
+    this.nursingSkills,
     this.address,
     this.city,
     this.state,
     this.pincode,
     this.latitude,
     this.longitude,
+    this.serviceRadiusKm,
     this.availableForHomeVisit,
     this.homeVisitFee,
     this.shiftAvailability,
@@ -84,20 +98,30 @@ class NurseModel {
       lastName: json['lastName'] as String?,
       email: json['email'] as String?,
       mobileNumber: json['mobileNumber'] as String?,
-      countryCode: json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
+      countryCode:
+          json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
       profilePicture: json['profilePicture'] as String?,
       gender: json['gender'] as String?,
+      dateOfBirth: json['dateOfBirth'] != null
+          ? DateTime.tryParse(json['dateOfBirth'].toString())
+          : null,
+      languagesSpoken: _parseStringList(json['languagesSpoken']),
+      emergencyContactName: json['emergencyContactName'] as String?,
+      emergencyContactNumber: json['emergencyContactNumber'] as String?,
       qualification: json['qualification'] as String?,
       registrationNumber: json['registrationNumber'] as String?,
       nursingCouncil: json['nursingCouncil'] as String?,
+      nuid: json['nuid'] as String?,
       yearsOfExperience: json['yearsOfExperience'] as int?,
       specialization: json['specialization'] as String?,
+      nursingSkills: _parseStringList(json['nursingSkills']),
       address: json['address'] as String?,
       city: json['city'] as String?,
       state: json['state'] as String?,
       pincode: json['pincode'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      serviceRadiusKm: (json['serviceRadiusKm'] as num?)?.toInt(),
       availableForHomeVisit: json['availableForHomeVisit'] as bool? ?? true,
       homeVisitFee: (json['homeVisitFee'] as num?)?.toInt(),
       shiftAvailability: json['shiftAvailability'] as String?,
@@ -130,17 +154,26 @@ class NurseModel {
       if (countryCode != null) 'countryCode': countryCode,
       if (profilePicture != null) 'profilePicture': profilePicture,
       if (gender != null) 'gender': gender,
+      if (dateOfBirth != null) 'dateOfBirth': dateOfBirth!.toIso8601String(),
+      if (languagesSpoken != null) 'languagesSpoken': languagesSpoken,
+      if (emergencyContactName != null)
+        'emergencyContactName': emergencyContactName,
+      if (emergencyContactNumber != null)
+        'emergencyContactNumber': emergencyContactNumber,
       if (qualification != null) 'qualification': qualification,
       if (registrationNumber != null) 'registrationNumber': registrationNumber,
       if (nursingCouncil != null) 'nursingCouncil': nursingCouncil,
+      if (nuid != null) 'nuid': nuid,
       if (yearsOfExperience != null) 'yearsOfExperience': yearsOfExperience,
       if (specialization != null) 'specialization': specialization,
+      if (nursingSkills != null) 'nursingSkills': nursingSkills,
       if (address != null) 'address': address,
       if (city != null) 'city': city,
       if (state != null) 'state': state,
       if (pincode != null) 'pincode': pincode,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (serviceRadiusKm != null) 'serviceRadiusKm': serviceRadiusKm,
       if (availableForHomeVisit != null)
         'availableForHomeVisit': availableForHomeVisit,
       if (homeVisitFee != null) 'homeVisitFee': homeVisitFee,
@@ -151,6 +184,11 @@ class NurseModel {
       if (ifscCode != null) 'ifscCode': ifscCode,
       if (bankName != null) 'bankName': bankName,
     };
+  }
+
+  static List<String>? _parseStringList(dynamic value) {
+    if (value is! List) return null;
+    return value.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
   }
 
   static VerificationStatus? _parseStatus(String? status) {
@@ -176,17 +214,24 @@ class NurseModel {
     String? mobileNumber,
     String? profilePicture,
     String? gender,
+    DateTime? dateOfBirth,
+    List<String>? languagesSpoken,
+    String? emergencyContactName,
+    String? emergencyContactNumber,
     String? qualification,
     String? registrationNumber,
     String? nursingCouncil,
+    String? nuid,
     int? yearsOfExperience,
     String? specialization,
+    List<String>? nursingSkills,
     String? address,
     String? city,
     String? state,
     String? pincode,
     double? latitude,
     double? longitude,
+    int? serviceRadiusKm,
     bool? availableForHomeVisit,
     int? homeVisitFee,
     String? shiftAvailability,
@@ -209,17 +254,26 @@ class NurseModel {
       mobileNumber: mobileNumber ?? this.mobileNumber,
       profilePicture: profilePicture ?? this.profilePicture,
       gender: gender ?? this.gender,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      languagesSpoken: languagesSpoken ?? this.languagesSpoken,
+      emergencyContactName:
+          emergencyContactName ?? this.emergencyContactName,
+      emergencyContactNumber:
+          emergencyContactNumber ?? this.emergencyContactNumber,
       qualification: qualification ?? this.qualification,
       registrationNumber: registrationNumber ?? this.registrationNumber,
       nursingCouncil: nursingCouncil ?? this.nursingCouncil,
+      nuid: nuid ?? this.nuid,
       yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
       specialization: specialization ?? this.specialization,
+      nursingSkills: nursingSkills ?? this.nursingSkills,
       address: address ?? this.address,
       city: city ?? this.city,
       state: state ?? this.state,
       pincode: pincode ?? this.pincode,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      serviceRadiusKm: serviceRadiusKm ?? this.serviceRadiusKm,
       availableForHomeVisit:
           availableForHomeVisit ?? this.availableForHomeVisit,
       homeVisitFee: homeVisitFee ?? this.homeVisitFee,

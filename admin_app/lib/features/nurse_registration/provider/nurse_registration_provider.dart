@@ -18,6 +18,10 @@ class NurseRegistrationFormState {
   final String firstName;
   final String lastName;
   final String? gender;
+  final DateTime? dateOfBirth;
+  final List<String> languagesSpoken;
+  final String emergencyContactName;
+  final String emergencyContactNumber;
   final String email;
   final String mobileNumber;
   final String countryCode;
@@ -27,10 +31,13 @@ class NurseRegistrationFormState {
   final String? profileImageFileName;
   final String? profilePictureUrl;
   final String qualification;
+  final String qualificationOther;
   final String registrationNumber;
   final String nursingCouncil;
+  final String nuid;
   final String yearsOfExperience;
   final String specialization;
+  final List<String> nursingSkills;
   final String homeVisitFee;
   final String address;
   final String city;
@@ -38,6 +45,7 @@ class NurseRegistrationFormState {
   final String pincode;
   final double? latitude;
   final double? longitude;
+  final int? serviceRadiusKm;
   final String bankAccountHolderName;
   final String bankAccountNumber;
   final String ifscCode;
@@ -54,6 +62,10 @@ class NurseRegistrationFormState {
     this.firstName = '',
     this.lastName = '',
     this.gender,
+    this.dateOfBirth,
+    this.languagesSpoken = const [],
+    this.emergencyContactName = '',
+    this.emergencyContactNumber = '',
     this.email = '',
     this.mobileNumber = '',
     this.countryCode = PhoneCountries.defaultDialCode,
@@ -63,10 +75,13 @@ class NurseRegistrationFormState {
     this.profileImageFileName,
     this.profilePictureUrl,
     this.qualification = '',
+    this.qualificationOther = '',
     this.registrationNumber = '',
     this.nursingCouncil = '',
+    this.nuid = '',
     this.yearsOfExperience = '',
     this.specialization = '',
+    this.nursingSkills = const [],
     this.homeVisitFee = '',
     this.address = '',
     this.city = '',
@@ -74,6 +89,7 @@ class NurseRegistrationFormState {
     this.pincode = '',
     this.latitude,
     this.longitude,
+    this.serviceRadiusKm,
     this.bankAccountHolderName = '',
     this.bankAccountNumber = '',
     this.ifscCode = '',
@@ -89,11 +105,22 @@ class NurseRegistrationFormState {
   bool get hasProfileImage =>
       profileImageBytes != null || (profilePictureUrl?.isNotEmpty ?? false);
 
+  String get resolvedQualification {
+    if (qualification == 'Other') {
+      return qualificationOther.trim();
+    }
+    return qualification.trim();
+  }
+
   NurseRegistrationFormState copyWith({
     String? draftId,
     String? firstName,
     String? lastName,
     String? gender,
+    DateTime? dateOfBirth,
+    List<String>? languagesSpoken,
+    String? emergencyContactName,
+    String? emergencyContactNumber,
     String? email,
     String? mobileNumber,
     String? countryCode,
@@ -103,10 +130,13 @@ class NurseRegistrationFormState {
     String? profileImageFileName,
     String? profilePictureUrl,
     String? qualification,
+    String? qualificationOther,
     String? registrationNumber,
     String? nursingCouncil,
+    String? nuid,
     String? yearsOfExperience,
     String? specialization,
+    List<String>? nursingSkills,
     String? homeVisitFee,
     String? address,
     String? city,
@@ -114,6 +144,7 @@ class NurseRegistrationFormState {
     String? pincode,
     double? latitude,
     double? longitude,
+    int? serviceRadiusKm,
     String? bankAccountHolderName,
     String? bankAccountNumber,
     String? ifscCode,
@@ -130,6 +161,11 @@ class NurseRegistrationFormState {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       gender: gender ?? this.gender,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      languagesSpoken: languagesSpoken ?? this.languagesSpoken,
+      emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      emergencyContactNumber:
+          emergencyContactNumber ?? this.emergencyContactNumber,
       email: email ?? this.email,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       countryCode: countryCode ?? this.countryCode,
@@ -139,10 +175,13 @@ class NurseRegistrationFormState {
       profileImageFileName: profileImageFileName ?? this.profileImageFileName,
       profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
       qualification: qualification ?? this.qualification,
+      qualificationOther: qualificationOther ?? this.qualificationOther,
       registrationNumber: registrationNumber ?? this.registrationNumber,
       nursingCouncil: nursingCouncil ?? this.nursingCouncil,
+      nuid: nuid ?? this.nuid,
       yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
       specialization: specialization ?? this.specialization,
+      nursingSkills: nursingSkills ?? this.nursingSkills,
       homeVisitFee: homeVisitFee ?? this.homeVisitFee,
       address: address ?? this.address,
       city: city ?? this.city,
@@ -150,6 +189,7 @@ class NurseRegistrationFormState {
       pincode: pincode ?? this.pincode,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      serviceRadiusKm: serviceRadiusKm ?? this.serviceRadiusKm,
       bankAccountHolderName:
           bankAccountHolderName ?? this.bankAccountHolderName,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
@@ -171,21 +211,28 @@ class NurseRegistrationFormState {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       gender: gender?.trim(),
+      dateOfBirth: dateOfBirth,
+      languagesSpoken: languagesSpoken,
+      emergencyContactName: emergencyContactName.trim(),
+      emergencyContactNumber: emergencyContactNumber.trim(),
       email: email.trim(),
       mobileNumber: mobileNumber.trim(),
       countryCode: countryCode,
       profilePicture: profilePicture,
-      qualification: qualification.trim(),
+      qualification: resolvedQualification,
       registrationNumber: registrationNumber.trim(),
       nursingCouncil: nursingCouncil.trim(),
+      nuid: nuid.trim().isEmpty ? null : nuid.trim(),
       yearsOfExperience: int.tryParse(yearsOfExperience.trim()) ?? 0,
       specialization: specialization.trim(),
+      nursingSkills: nursingSkills,
       address: address.trim(),
       city: city.trim(),
       state: state.trim(),
       pincode: pincode.trim(),
       latitude: latitude,
       longitude: longitude,
+      serviceRadiusKm: serviceRadiusKm,
       availableForHomeVisit: true,
       homeVisitFee: int.tryParse(homeVisitFee.trim()),
       bankAccountHolderName: bankAccountHolderName.trim(),
@@ -208,6 +255,10 @@ class NurseRegistrationFormNotifier
     String? firstName,
     String? lastName,
     String? gender,
+    DateTime? dateOfBirth,
+    List<String>? languagesSpoken,
+    String? emergencyContactName,
+    String? emergencyContactNumber,
     String? email,
     String? mobileNumber,
     String? countryCode,
@@ -220,6 +271,10 @@ class NurseRegistrationFormNotifier
       firstName: firstName,
       lastName: lastName,
       gender: gender,
+      dateOfBirth: dateOfBirth,
+      languagesSpoken: languagesSpoken,
+      emergencyContactName: emergencyContactName,
+      emergencyContactNumber: emergencyContactNumber,
       email: email,
       mobileNumber: mobileNumber,
       countryCode: countryCode,
@@ -233,18 +288,24 @@ class NurseRegistrationFormNotifier
 
   void updateProfessional({
     String? qualification,
+    String? qualificationOther,
     String? registrationNumber,
     String? nursingCouncil,
+    String? nuid,
     String? yearsOfExperience,
     String? specialization,
+    List<String>? nursingSkills,
     String? homeVisitFee,
   }) {
     state = state.copyWith(
       qualification: qualification,
+      qualificationOther: qualificationOther,
       registrationNumber: registrationNumber,
       nursingCouncil: nursingCouncil,
+      nuid: nuid,
       yearsOfExperience: yearsOfExperience,
       specialization: specialization,
+      nursingSkills: nursingSkills,
       homeVisitFee: homeVisitFee,
       submitError: null,
     );
@@ -257,6 +318,7 @@ class NurseRegistrationFormNotifier
     String? pincode,
     double? latitude,
     double? longitude,
+    int? serviceRadiusKm,
   }) {
     state = state.copyWith(
       address: address,
@@ -265,6 +327,7 @@ class NurseRegistrationFormNotifier
       pincode: pincode,
       latitude: latitude,
       longitude: longitude,
+      serviceRadiusKm: serviceRadiusKm,
       submitError: null,
     );
   }

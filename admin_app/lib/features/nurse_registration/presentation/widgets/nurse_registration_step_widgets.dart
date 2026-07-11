@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/app_lists.dart';
 import '../../../../core/constants/nurse_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -24,6 +25,95 @@ Widget nurseStepScroll({required Widget child}) {
   );
 }
 
+class _NurseChipMultiSelect extends StatelessWidget {
+  const _NurseChipMultiSelect({
+    required this.label,
+    required this.helperText,
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String helperText;
+  final List<String> options;
+  final List<String> selected;
+  final ValueChanged<List<String>> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          helperText,
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((option) {
+            final isSelected = selected.contains(option);
+            return FilterChip(
+              label: Text(option),
+              selected: isSelected,
+              onSelected: (value) {
+                final next = List<String>.from(selected);
+                if (value) {
+                  next.add(option);
+                } else {
+                  next.remove(option);
+                }
+                onChanged(next);
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _NurseDateOfBirthTile extends StatelessWidget {
+  const _NurseDateOfBirthTile({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final DateTime? value;
+  final ValueChanged<DateTime> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text('Date of birth', style: AppTextStyles.labelLarge),
+      subtitle: Text(
+        value != null
+            ? '${value!.day}/${value!.month}/${value!.year}'
+            : 'Tap to select',
+        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+      ),
+      trailing: const Icon(Icons.calendar_month_outlined),
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: value ?? DateTime(1995),
+          firstDate: DateTime(1950),
+          lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+        );
+        if (picked != null) onChanged(picked);
+      },
+    );
+  }
+}
+
 class NurseStep1Personal extends ConsumerStatefulWidget {
   const NurseStep1Personal({super.key, required this.formKey});
   final GlobalKey<FormState> formKey;
@@ -41,6 +131,10 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
   late final TextEditingController _mobile;
   late final TextEditingController _password;
   late final TextEditingController _confirmPassword;
+  late final TextEditingController _emergencyName;
+  late final TextEditingController _emergencyMobile;
+  DateTime? _dateOfBirth;
+  List<String> _languages = [];
   Uint8List? _profileBytes;
   String? _profileFileName;
   String _countryCode = PhoneCountries.defaultDialCode;
@@ -60,6 +154,10 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
     _countryCode = s.countryCode;
     _password = TextEditingController(text: s.password);
     _confirmPassword = TextEditingController(text: s.confirmPassword);
+    _emergencyName = TextEditingController(text: s.emergencyContactName);
+    _emergencyMobile = TextEditingController(text: s.emergencyContactNumber);
+    _dateOfBirth = s.dateOfBirth;
+    _languages = List<String>.from(s.languagesSpoken);
     _profileBytes = s.profileImageBytes;
     _profileFileName = s.profileImageFileName;
     for (final c in [
@@ -69,6 +167,8 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
       _mobile,
       _password,
       _confirmPassword,
+      _emergencyName,
+      _emergencyMobile,
     ]) {
       c.addListener(_sync);
     }
@@ -79,6 +179,10 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
           firstName: _firstName.text,
           lastName: _lastName.text,
           gender: _selectedGender,
+          dateOfBirth: _dateOfBirth,
+          languagesSpoken: _languages,
+          emergencyContactName: _emergencyName.text,
+          emergencyContactNumber: _emergencyMobile.text,
           email: _email.text,
           mobileNumber: _mobile.text,
           countryCode: _countryCode,
@@ -98,6 +202,8 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
       _mobile,
       _password,
       _confirmPassword,
+      _emergencyName,
+      _emergencyMobile,
     ]) {
       c.dispose();
     }
@@ -173,6 +279,49 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
               validator: (v) =>
                   v == null || v.isEmpty ? 'Please select gender' : null,
             ),
+            const SizedBox(height: 12),
+            _NurseDateOfBirthTile(
+              value: _dateOfBirth,
+              onChanged: (date) {
+                setState(() => _dateOfBirth = date);
+                _sync();
+              },
+            ),
+            const SizedBox(height: 12),
+            _NurseChipMultiSelect(
+              label: 'Languages spoken',
+              helperText: 'Select all languages you can communicate in.',
+              options: AppLists.languages,
+              selected: _languages,
+              onChanged: (values) {
+                setState(() => _languages = values);
+                _sync();
+              },
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Emergency contact',
+              style: AppTextStyles.titleMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              controller: _emergencyName,
+              label: 'Emergency contact name',
+              prefixIcon: Icons.contact_emergency_outlined,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              controller: _emergencyMobile,
+              label: 'Emergency contact mobile',
+              keyboardType: TextInputType.phone,
+              prefixIcon: Icons.phone_outlined,
+              validator: (v) =>
+                  (v == null || v.trim().length < 10) ? 'Enter valid number' : null,
+            ),
             const SizedBox(height: 18),
             Text(
               'Contact & login',
@@ -237,11 +386,15 @@ class NurseStep2Professional extends ConsumerStatefulWidget {
 class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
     with AutomaticKeepAliveClientMixin {
   late final TextEditingController _qualification;
+  late final TextEditingController _qualificationOther;
   late final TextEditingController _registration;
   late final TextEditingController _council;
+  late final TextEditingController _nuid;
   late final TextEditingController _experience;
   late final TextEditingController _specialization;
   late final TextEditingController _homeVisitFee;
+  String? _selectedQualification;
+  List<String> _selectedSkills = [];
 
   @override
   bool get wantKeepAlive => true;
@@ -251,16 +404,24 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
     super.initState();
     final s = ref.read(nurseRegistrationFormProvider);
     _qualification = TextEditingController(text: s.qualification);
+    _qualificationOther = TextEditingController(text: s.qualificationOther);
     _registration = TextEditingController(text: s.registrationNumber);
     _council = TextEditingController(text: s.nursingCouncil);
+    _nuid = TextEditingController(text: s.nuid);
     _experience = TextEditingController(text: s.yearsOfExperience);
     _specialization = TextEditingController(text: s.specialization);
     _homeVisitFee = TextEditingController(text: s.homeVisitFee);
+    _selectedQualification = nurseQualifications.contains(s.qualification)
+        ? s.qualification
+        : (s.qualification.isNotEmpty ? 'Other' : null);
+    _selectedSkills = List<String>.from(s.nursingSkills);
     _sync();
     for (final c in [
       _qualification,
+      _qualificationOther,
       _registration,
       _council,
+      _nuid,
       _experience,
       _specialization,
       _homeVisitFee,
@@ -271,11 +432,14 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
 
   void _sync() {
     ref.read(nurseRegistrationFormProvider.notifier).updateProfessional(
-          qualification: _qualification.text,
+          qualification: _selectedQualification ?? _qualification.text,
+          qualificationOther: _qualificationOther.text,
           registrationNumber: _registration.text,
           nursingCouncil: _council.text,
+          nuid: _nuid.text,
           yearsOfExperience: _experience.text,
           specialization: _specialization.text,
+          nursingSkills: _selectedSkills,
           homeVisitFee: _homeVisitFee.text,
         );
   }
@@ -284,8 +448,10 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
   void dispose() {
     for (final c in [
       _qualification,
+      _qualificationOther,
       _registration,
       _council,
+      _nuid,
       _experience,
       _specialization,
       _homeVisitFee,
@@ -318,26 +484,51 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
               ),
             ),
             const SizedBox(height: 16),
-            CustomTextField(
-              controller: _qualification,
-              label: 'Qualification',
-              hint: 'GNM / B.Sc Nursing / ANM',
-              prefixIcon: Icons.school_outlined,
+            DropdownButtonFormField<String>(
+              value: _selectedQualification,
+              decoration: const InputDecoration(
+                labelText: 'Qualification',
+                prefixIcon: Icon(Icons.school_outlined),
+              ),
+              items: nurseQualifications
+                  .map((q) => DropdownMenuItem(value: q, child: Text(q)))
+                  .toList(),
+              onChanged: (value) {
+                setState(() => _selectedQualification = value);
+                _sync();
+              },
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  v == null || v.isEmpty ? 'Select qualification' : null,
             ),
+            if (_selectedQualification == 'Other') ...[
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _qualificationOther,
+                label: 'Specify qualification',
+                prefixIcon: Icons.school_outlined,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+            ],
             const SizedBox(height: 12),
             CustomTextField(
               controller: _registration,
-              label: 'Registration number',
+              label: 'State nursing council registration number',
               prefixIcon: Icons.badge_outlined,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
             const SizedBox(height: 12),
             CustomTextField(
+              controller: _nuid,
+              label: 'NUID (optional)',
+              hint: 'Nurse Unique ID from INC / NRTS',
+              prefixIcon: Icons.fingerprint_outlined,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
               controller: _council,
-              label: 'Nursing council',
+              label: 'State nursing council',
               prefixIcon: Icons.account_balance_outlined,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -353,6 +544,17 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
                 final n = int.tryParse((v ?? '').trim());
                 if (n == null || n < 0) return 'Enter valid experience';
                 return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _NurseChipMultiSelect(
+              label: 'Clinical skills & services',
+              helperText: 'Select the home visit services you can provide.',
+              options: nurseClinicalSkills,
+              selected: _selectedSkills,
+              onChanged: (values) {
+                setState(() => _selectedSkills = values);
+                _sync();
               },
             ),
             const SizedBox(height: 12),
@@ -405,6 +607,7 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
   late final TextEditingController _pincode;
   double? _lat;
   double? _lng;
+  int? _serviceRadiusKm;
 
   @override
   bool get wantKeepAlive => true;
@@ -419,6 +622,7 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
     _pincode = TextEditingController(text: s.pincode);
     _lat = s.latitude;
     _lng = s.longitude;
+    _serviceRadiusKm = s.serviceRadiusKm;
     _sync();
     for (final c in [_address, _city, _state, _pincode]) {
       c.addListener(_sync);
@@ -433,6 +637,7 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
           pincode: _pincode.text,
           latitude: _lat,
           longitude: _lng,
+          serviceRadiusKm: _serviceRadiusKm,
         );
   }
 
@@ -500,6 +705,28 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
                   (v ?? '').trim().length == 6 ? null : 'Enter 6-digit pincode',
             ),
             const SizedBox(height: 16),
+            DropdownButtonFormField<int>(
+              value: _serviceRadiusKm,
+              decoration: const InputDecoration(
+                labelText: 'Service radius (km)',
+                prefixIcon: Icon(Icons.radar_outlined),
+                helperText: 'How far you can travel for home visits',
+              ),
+              items: nurseServiceRadiusOptions
+                  .map(
+                    (km) => DropdownMenuItem(
+                      value: km,
+                      child: Text('$km km'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                setState(() => _serviceRadiusKm = value);
+                _sync();
+              },
+              validator: (v) => v == null ? 'Select service radius' : null,
+            ),
+            const SizedBox(height: 16),
             RegistrationMapPicker(
               addressController: _address,
               cityController: _city,
@@ -542,7 +769,7 @@ class NurseStep4Documents extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Admin will verify these before you appear in the patient app.',
+            'Upload license, ID, and compliance documents. Items marked * are required.',
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -553,6 +780,7 @@ class NurseStep4Documents extends ConsumerWidget {
               .map(
                 (type) => _DocumentTile(
                   type: type,
+                  required: requiredNurseDocuments.contains(type),
                   uploaded: form.documentUrls.containsKey(type) ||
                       form.documentBytes.containsKey(type),
                   onPick: () async {
@@ -584,11 +812,13 @@ class _DocumentTile extends StatelessWidget {
     required this.type,
     required this.uploaded,
     required this.onPick,
+    this.required = false,
   });
 
   final NurseDocumentType type;
   final bool uploaded;
   final VoidCallback onPick;
+  final bool required;
 
   @override
   Widget build(BuildContext context) {
@@ -599,7 +829,7 @@ class _DocumentTile extends StatelessWidget {
           uploaded ? Icons.check_circle_rounded : Icons.upload_file_rounded,
           color: uploaded ? AppColors.success : AppColors.primary,
         ),
-        title: Text(type.label),
+        title: Text(required ? '${type.label} *' : type.label),
         subtitle: Text(uploaded ? 'Selected' : 'Tap to upload'),
         trailing: TextButton(onPressed: onPick, child: const Text('Upload')),
       ),
@@ -799,6 +1029,12 @@ class NurseStep7Review extends ConsumerWidget {
               '${form.firstName} ${form.lastName}'.trim(),
               if (form.gender != null && form.gender!.isNotEmpty)
                 'Gender: ${form.gender}',
+              if (form.dateOfBirth != null)
+                'DOB: ${form.dateOfBirth!.day}/${form.dateOfBirth!.month}/${form.dateOfBirth!.year}',
+              if (form.languagesSpoken.isNotEmpty)
+                'Languages: ${form.languagesSpoken.join(', ')}',
+              if (form.emergencyContactName.trim().isNotEmpty)
+                'Emergency: ${form.emergencyContactName} (${form.emergencyContactNumber})',
               if (form.mobileNumber.trim().isNotEmpty)
                 '+${form.countryCode} ${form.mobileNumber.trim()}',
               form.email,
@@ -808,9 +1044,12 @@ class NurseStep7Review extends ConsumerWidget {
           _ReviewSection(
             title: 'Professional',
             lines: [
-              form.qualification,
+              form.resolvedQualification,
               'Reg: ${form.registrationNumber}',
+              if (form.nuid.trim().isNotEmpty) 'NUID: ${form.nuid}',
               form.specialization,
+              if (form.nursingSkills.isNotEmpty)
+                'Skills: ${form.nursingSkills.take(3).join(', ')}${form.nursingSkills.length > 3 ? ' +${form.nursingSkills.length - 3} more' : ''}',
               'Home visit fee: ₹${form.homeVisitFee}',
             ],
             onEdit: () => onEditStep(2),
@@ -820,6 +1059,8 @@ class NurseStep7Review extends ConsumerWidget {
             lines: [
               form.address,
               '${form.city}, ${form.state} ${form.pincode}'.trim(),
+              if (form.serviceRadiusKm != null)
+                'Service radius: ${form.serviceRadiusKm} km',
             ],
             onEdit: () => onEditStep(3),
           ),

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,7 +49,6 @@ class _OnlineConsultBookingScreenState
   final _formKey = GlobalKey<FormState>();
   ConsultationType _selectedType = ConsultationType.onlineConsult;
   String? _selectedDateKey;
-  Timer? _slotsRefreshTimer;
 
   bool get _isHospitalVisit => _selectedType == ConsultationType.visitSite;
 
@@ -64,9 +61,6 @@ class _OnlineConsultBookingScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _ensureAuthAndPrefill());
-    _slotsRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.invalidate(bookableSlotsProvider(_slotsQuery));
-    });
   }
 
   Future<void> _ensureAuthAndPrefill() async {
@@ -90,7 +84,6 @@ class _OnlineConsultBookingScreenState
 
   @override
   void dispose() {
-    _slotsRefreshTimer?.cancel();
     _nameController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
@@ -306,6 +299,10 @@ class _OnlineConsultBookingScreenState
           ? ref.read(hospitalVisitBookingProvider(widget.doctorId)).selectedSlot
           : ref.read(onlineConsultBookingProvider(widget.doctorId)).selectedSlot;
       if (selected == null) return;
+      final holdId = _isHospitalVisit
+          ? ref.read(hospitalVisitBookingProvider(widget.doctorId)).slotHoldId
+          : ref.read(onlineConsultBookingProvider(widget.doctorId)).slotHoldId;
+      if (holdId != null && holdId.isNotEmpty) return;
       next.whenData((slotsData) {
         final stillAvailable = slotsData.slots.any(
           (slot) => slot.slotKey == selected.slotKey,
@@ -391,6 +388,7 @@ class _OnlineConsultBookingScreenState
                     ),
                     const SizedBox(height: 16),
                     slotsAsync.when(
+                      skipLoadingOnReload: true,
                       loading: () => const Padding(
                         padding: EdgeInsets.symmetric(vertical: 32),
                         child: Center(child: CircularProgressIndicator()),
@@ -435,7 +433,6 @@ class _OnlineConsultBookingScreenState
                                 )
                                 .selectSlot(slot);
                             if (!mounted) return;
-                            ref.invalidate(bookableSlotsProvider(_slotsQuery));
                             final err = ref
                                 .read(hospitalVisitBookingProvider(widget.doctorId))
                                 .error;
@@ -450,7 +447,6 @@ class _OnlineConsultBookingScreenState
                                 )
                                 .selectSlot(slot);
                             if (!mounted) return;
-                            ref.invalidate(bookableSlotsProvider(_slotsQuery));
                             final err = ref
                                 .read(onlineConsultBookingProvider(widget.doctorId))
                                 .error;

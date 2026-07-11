@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -47,7 +45,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
   final _pincodeController = TextEditingController();
   final _reasonController = TextEditingController();
   String? _selectedDateKey;
-  Timer? _slotsRefreshTimer;
   double? _patientLatitude;
   double? _patientLongitude;
   bool _isFetchingLocation = false;
@@ -61,9 +58,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _ensureAuthAndPrefill());
-    _slotsRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.invalidate(bookableSlotsProvider(_slotsQuery));
-    });
   }
 
   Future<void> _ensureAuthAndPrefill() async {
@@ -87,7 +81,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
 
   @override
   void dispose() {
-    _slotsRefreshTimer?.cancel();
     _nameController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
@@ -269,13 +262,16 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
   @override
   Widget build(BuildContext context) {
     final doctorAsync = ref.watch(doctorForBookingProvider(widget.doctorId));
-    final slotsAsync =
-        ref.watch(bookableSlotsForHomeVisitProvider(widget.doctorId));
+    final slotsAsync = ref.watch(bookableSlotsProvider(_slotsQuery));
     final bookingState = ref.watch(homeVisitBookingProvider(widget.doctorId));
 
     ref.listen(bookableSlotsProvider(_slotsQuery), (previous, next) {
-      final selected = bookingState.selectedSlot;
+      final visitState = ref.read(homeVisitBookingProvider(widget.doctorId));
+      final selected = visitState.selectedSlot;
       if (selected == null) return;
+      if (visitState.slotHoldId != null && visitState.slotHoldId!.isNotEmpty) {
+        return;
+      }
       next.whenData((slotsData) {
         final stillAvailable = slotsData.slots.any(
           (slot) => slot.slotKey == selected.slotKey,
@@ -343,6 +339,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                         ),
                         const SizedBox(height: 16),
                         slotsAsync.when(
+                          skipLoadingOnReload: true,
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
                             child: Center(child: CircularProgressIndicator()),
@@ -351,7 +348,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                             message:
                                 e.toString().replaceFirst('Exception: ', ''),
                             onRetry: () => ref.invalidate(
-                              bookableSlotsForHomeVisitProvider(widget.doctorId),
+                              bookableSlotsProvider(_slotsQuery),
                             ),
                           ),
                           data: (slotsData) => BookableSlotsSection(
@@ -379,7 +376,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                                   )
                                   .selectSlot(slot);
                               if (!mounted) return;
-                              ref.invalidate(bookableSlotsProvider(_slotsQuery));
                               final err = ref
                                   .read(homeVisitBookingProvider(widget.doctorId))
                                   .error;

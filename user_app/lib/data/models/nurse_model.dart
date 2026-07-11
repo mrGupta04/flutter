@@ -11,21 +11,32 @@ class NurseModel {
   final String? countryCode;
   final String? profilePicture;
   final String? gender;
+  final List<String>? languagesSpoken;
   final String? qualification;
   final String? registrationNumber;
   final String? nursingCouncil;
   final int? yearsOfExperience;
   final String? specialization;
+  final List<String>? nursingSkills;
   final String? address;
   final String? city;
   final String? state;
   final String? pincode;
   final double? latitude;
   final double? longitude;
+  final int? serviceRadiusKm;
   final bool? availableForHomeVisit;
   final int? homeVisitFee;
   final String? shiftAvailability;
   final VerificationStatus? verificationStatus;
+  final double? averageRating;
+  final int? ratingCount;
+
+  bool get hasRating =>
+      (ratingCount ?? 0) > 0 && averageRating != null && averageRating! > 0;
+
+  /// Rating shown on listing cards (real average when available).
+  double get cardDisplayRating => hasRating ? averageRating! : 4.5;
 
   NurseModel({
     this.id,
@@ -36,21 +47,26 @@ class NurseModel {
     this.countryCode,
     this.profilePicture,
     this.gender,
+    this.languagesSpoken,
     this.qualification,
     this.registrationNumber,
     this.nursingCouncil,
     this.yearsOfExperience,
     this.specialization,
+    this.nursingSkills,
     this.address,
     this.city,
     this.state,
     this.pincode,
     this.latitude,
     this.longitude,
+    this.serviceRadiusKm,
     this.availableForHomeVisit,
     this.homeVisitFee,
     this.shiftAvailability,
     this.verificationStatus,
+    this.averageRating,
+    this.ratingCount,
   });
 
   String get displayName {
@@ -68,23 +84,28 @@ class NurseModel {
       countryCode: json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
       profilePicture: json['profilePicture'] as String?,
       gender: json['gender'] as String?,
+      languagesSpoken: _parseStringList(json['languagesSpoken']),
       qualification: json['qualification'] as String?,
       registrationNumber: json['registrationNumber'] as String?,
       nursingCouncil: json['nursingCouncil'] as String?,
       yearsOfExperience: _parseInt(json['yearsOfExperience']),
       specialization: json['specialization'] as String?,
+      nursingSkills: _parseStringList(json['nursingSkills']),
       address: json['address'] as String?,
       city: json['city'] as String?,
       state: json['state'] as String?,
       pincode: json['pincode'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      serviceRadiusKm: _parseInt(json['serviceRadiusKm']),
       availableForHomeVisit: json['availableForHomeVisit'] as bool? ?? true,
       homeVisitFee: _parseInt(json['homeVisitFee']),
       shiftAvailability: json['shiftAvailability'] as String?,
       verificationStatus: _isApprovedTruthy(json['isApproved'])
           ? VerificationStatus.verified
           : _parseStatus(json['verificationStatus'] as String?),
+      averageRating: _parseDouble(json['averageRating']),
+      ratingCount: (json['ratingCount'] as num?)?.toInt(),
     );
   }
 
@@ -123,20 +144,25 @@ class NurseModel {
     String? mobileNumber,
     String? profilePicture,
     String? gender,
+    List<String>? languagesSpoken,
     String? qualification,
     String? registrationNumber,
     String? nursingCouncil,
     int? yearsOfExperience,
     String? specialization,
+    List<String>? nursingSkills,
     String? address,
     String? city,
     String? state,
     String? pincode,
     double? latitude,
     double? longitude,
+    int? serviceRadiusKm,
     bool? availableForHomeVisit,
     String? shiftAvailability,
     VerificationStatus? verificationStatus,
+    double? averageRating,
+    int? ratingCount,
   }) {
     return NurseModel(
       id: id ?? this.id,
@@ -146,22 +172,39 @@ class NurseModel {
       mobileNumber: mobileNumber ?? this.mobileNumber,
       profilePicture: profilePicture ?? this.profilePicture,
       gender: gender ?? this.gender,
+      languagesSpoken: languagesSpoken ?? this.languagesSpoken,
       qualification: qualification ?? this.qualification,
       registrationNumber: registrationNumber ?? this.registrationNumber,
       nursingCouncil: nursingCouncil ?? this.nursingCouncil,
       yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
       specialization: specialization ?? this.specialization,
+      nursingSkills: nursingSkills ?? this.nursingSkills,
       address: address ?? this.address,
       city: city ?? this.city,
       state: state ?? this.state,
       pincode: pincode ?? this.pincode,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      serviceRadiusKm: serviceRadiusKm ?? this.serviceRadiusKm,
       availableForHomeVisit:
           availableForHomeVisit ?? this.availableForHomeVisit,
       shiftAvailability: shiftAvailability ?? this.shiftAvailability,
       verificationStatus: verificationStatus ?? this.verificationStatus,
+      averageRating: averageRating ?? this.averageRating,
+      ratingCount: ratingCount ?? this.ratingCount,
     );
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  static List<String>? _parseStringList(dynamic value) {
+    if (value is! List) return null;
+    return value.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
   }
 
   static int? _parseInt(dynamic value) {

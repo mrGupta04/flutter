@@ -8,6 +8,16 @@ import '../../data/models/blood_bank_model.dart';
 import '../../data/models/doctor_model.dart';
 import '../../data/models/nurse_model.dart';
 
+/// Nurse profile card accent (reference design).
+const Color kNurseCardPurple = Color(0xFF6C4AB6);
+const Color kNurseCardPurpleDark = Color(0xFF4E3589);
+const Color kNurseCardPurpleLight = Color(0xFFF6F1FF);
+const Color kNurseCardPurpleChip = Color(0xFFF0E9FF);
+const Color kNurseCardStar = Color(0xFFFFB800);
+
+/// Estimated height for nurse cards in home preview lists.
+const double kNurseListingCardHeight = 340;
+
 /// Nurse accent gradient for cards and profiles.
 const List<Color> kNurseGradient = AppColors.gradientNurse;
 
@@ -21,6 +31,8 @@ class NurseListingCard extends StatelessWidget {
     this.onBookHomeVisit,
     this.onOpenMapTap,
     this.distanceLabel,
+    this.availabilityLabel,
+    this.originalFee,
   });
 
   final NurseModel nurse;
@@ -30,222 +42,173 @@ class NurseListingCard extends StatelessWidget {
   final VoidCallback? onBookHomeVisit;
   final VoidCallback? onOpenMapTap;
   final String? distanceLabel;
+  final String? availabilityLabel;
+  final int? originalFee;
 
   @override
   Widget build(BuildContext context) {
     final qualification = nurse.qualification?.trim();
-    final specialization = nurse.specialization?.trim() ?? 'General Nursing';
+    final designation = nurse.specialization?.trim().isNotEmpty == true
+        ? nurse.specialization!.trim()
+        : 'Registered Nurse';
     final experience = nurse.yearsOfExperience;
     final city = nurse.city?.trim();
+    final state = nurse.state?.trim();
     final isVerified =
         nurse.verificationStatus == VerificationStatus.verified;
     final available = nurse.availableForHomeVisit != false;
-    final cardSurface = Theme.of(context).colorScheme.surface;
+    final skills = nurse.nursingSkills?.where((s) => s.trim().isNotEmpty).toList() ??
+        const <String>[];
+    final locationParts = <String>[
+      if (city != null && city.isNotEmpty) city,
+      if (state != null && state.isNotEmpty) state,
+    ];
+    final locationLine = locationParts.join(', ');
+    final availabilityText = availabilityLabel?.trim().isNotEmpty == true
+        ? availabilityLabel!.trim()
+        : (nurse.shiftAvailability?.trim().isNotEmpty == true
+            ? nurse.shiftAvailability!.trim()
+            : 'Flexible hours');
+    final fee = nurse.homeVisitFee;
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: cardSurface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: showBottomDivider
-                  ? AppColors.divider
-                  : AppColors.secondary.withValues(alpha: 0.1),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.secondary.withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+      child: Ink(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: showBottomDivider
+                ? AppColors.divider
+                : const Color(0xFFE8E8EC),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -24,
-                  top: -24,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.secondary.withValues(alpha: 0.14),
-                          AppColors.secondary.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Column(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(12),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      height: 4,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(colors: kNurseGradient),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _NurseAvatar(nurse: nurse),
-                              const SizedBox(width: 14),
-                              Expanded(
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _NurseProfileImage(
+                              nurse: nurse,
+                              available: available,
+                              rating: nurse.cardDisplayRating,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  right: isVerified ? 72 : 0,
+                                ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       nurse.displayName,
-                                      style: AppTextStyles.titleSmall.copyWith(
+                                      style: const TextStyle(
+                                        fontSize: 17,
                                         fontWeight: FontWeight.w800,
+                                        color: Color(0xFF1A1D26),
                                         height: 1.2,
                                         letterSpacing: -0.2,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: [
-                                        if (isVerified) const _NurseVerifiedBadge(),
-                                        _NurseSpecialtyChip(label: specialization),
-                                        if (nurse.gender != null &&
-                                            nurse.gender!.trim().isNotEmpty)
-                                          _NurseTagChip(label: nurse.gender!.trim()),
-                                      ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      designation,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: kNurseCardPurple,
+                                        height: 1.2,
+                                      ),
                                     ),
+                                    if (qualification != null &&
+                                        qualification.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        qualification,
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: const Color(0xFF6B7280),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                    if (experience != null) ...[
+                                      const SizedBox(height: 8),
+                                      _MetaRow(
+                                        icon: Icons.work_outline_rounded,
+                                        label: '$experience+ Years Experience',
+                                      ),
+                                    ],
+                                    if (locationLine.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      _MetaRow(
+                                        icon: Icons.location_on_outlined,
+                                        label: locationLine,
+                                        onTap: onOpenMapTap,
+                                      ),
+                                    ],
+                                    if (skills.isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      _NurseSkillChips(skills: skills),
+                                    ],
                                   ],
                                 ),
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        if (isVerified)
+                          const Positioned(
+                            top: 0,
+                            right: 0,
+                            child: _VerifiedBadge(),
                           ),
-                          const SizedBox(height: 12),
-                          if (qualification != null && qualification.isNotEmpty)
-                            _NurseMetaRow(
-                              icon: Icons.school_outlined,
-                              text: experience != null
-                                  ? '$experience+ yrs · $qualification'
-                                  : qualification,
-                            ),
-                          if (city != null && city.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            _NurseMetaRow(
-                              icon: Icons.location_on_outlined,
-                              text: distanceLabel != null
-                                  ? '$city · $distanceLabel'
-                                  : city,
-                            ),
-                          ] else if (distanceLabel != null) ...[
-                            const SizedBox(height: 6),
-                            _NurseMetaRow(
-                              icon: Icons.near_me_outlined,
-                              text: distanceLabel!,
-                            ),
-                          ],
-                          if (nurse.shiftAvailability != null &&
-                              nurse.shiftAvailability!.trim().isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            _NurseMetaRow(
-                              icon: Icons.schedule_rounded,
-                              text: nurse.shiftAvailability!.trim(),
-                            ),
-                          ],
-                          if (nurse.homeVisitFee != null) ...[
-                            const SizedBox(height: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.secondaryLight,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: AppColors.secondary.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.home_rounded,
-                                    size: 14,
-                                    color: AppColors.secondaryDark,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Home visit from ₹${nurse.homeVisitFee}',
-                                    style: AppTextStyles.labelSmall.copyWith(
-                                      color: AppColors.secondaryDark,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          if (!showActionButtons) ...[
-                            const SizedBox(height: 10),
-                            _NurseAvailabilityPill(available: available),
-                          ],
-                          if (showActionButtons) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: _NurseActionButton(
-                                    icon: Icons.home_rounded,
-                                    label: 'Book visit',
-                                    subtitle: nurse.homeVisitFee != null
-                                        ? '₹${nurse.homeVisitFee}'
-                                        : null,
-                                    filled: available,
-                                    onPressed: available
-                                        ? (onBookHomeVisit ?? onTap)
-                                        : null,
-                                  ),
-                                ),
-                                if (onOpenMapTap != null) ...[
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _NurseActionButton(
-                                      icon: Icons.map_rounded,
-                                      label: 'Map',
-                                      filled: false,
-                                      onPressed: onOpenMapTap,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFECECF0),
+                    ),
+                    const SizedBox(height: 12),
+                    _NurseServiceStatsBar(
+                      serviceType: available ? 'Home Visit' : 'Unavailable',
+                      availability: availabilityText,
+                      fee: fee,
+                      originalFee: originalFee,
                     ),
                   ],
                 ),
+              ),
+              if (showActionButtons) ...[
+                const SizedBox(height: 14),
+                _NurseBookNowButton(
+                  enabled: available,
+                  onPressed: available ? (onBookHomeVisit ?? onTap) : null,
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -253,42 +216,55 @@ class NurseListingCard extends StatelessWidget {
   }
 }
 
-class _NurseAvatar extends StatelessWidget {
-  const _NurseAvatar({required this.nurse});
+class _NurseProfileImage extends StatelessWidget {
+  const _NurseProfileImage({
+    required this.nurse,
+    required this.available,
+    required this.rating,
+  });
 
   final NurseModel nurse;
+  final bool available;
+  final double rating;
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = MediaUrlUtils.resolve(nurse.profilePicture);
     final hasImage = imageUrl.isNotEmpty;
 
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(colors: kNurseGradient),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(2),
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          shape: BoxShape.circle,
-        ),
-        child: ClipOval(
-          child: SizedBox(
-            width: 60,
-            height: 60,
-            child: hasImage
-                ? CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => _placeholder(),
-                    errorWidget: (_, __, ___) => _placeholder(),
-                  )
-                : _placeholder(),
+    return SizedBox(
+      width: 118,
+      height: 118,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              width: 118,
+              height: 118,
+              child: hasImage
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => _placeholder(),
+                      errorWidget: (_, __, ___) => _placeholder(),
+                    )
+                  : _placeholder(),
+            ),
           ),
-        ),
+          if (available)
+            const Positioned(
+              top: 10,
+              left: 10,
+              child: _AvailabilityBadge(),
+            ),
+          Positioned(
+            left: 10,
+            bottom: 10,
+            child: _RatingBadge(rating: rating),
+          ),
+        ],
       ),
     );
   }
@@ -298,47 +274,58 @@ class _NurseAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.secondaryLight,
-            AppColors.secondary.withValues(alpha: 0.2),
+            kNurseCardPurpleLight,
+            kNurseCardPurple.withValues(alpha: 0.18),
           ],
         ),
       ),
-      child: const Icon(
-        Icons.health_and_safety_rounded,
-        size: 30,
-        color: AppColors.secondary,
+      child: const Center(
+        child: Icon(
+          Icons.health_and_safety_rounded,
+          size: 34,
+          color: kNurseCardPurple,
+        ),
       ),
     );
   }
 }
 
-class _NurseVerifiedBadge extends StatelessWidget {
-  const _NurseVerifiedBadge();
+class _AvailabilityBadge extends StatelessWidget {
+  const _AvailabilityBadge();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: kNurseGradient),
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.verified_rounded,
-            size: 12,
-            color: AppColors.white.withValues(alpha: 0.95),
+          Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              color: Color(0xFF22C55E),
+              shape: BoxShape.circle,
+            ),
           ),
-          const SizedBox(width: 4),
-          Text(
-            'Verified',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.white,
-              fontWeight: FontWeight.w800,
+          const SizedBox(width: 5),
+          const Text(
+            'Available',
+            style: TextStyle(
               fontSize: 10,
-              height: 1,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4B5563),
             ),
           ),
         ],
@@ -347,77 +334,344 @@ class _NurseVerifiedBadge extends StatelessWidget {
   }
 }
 
-class _NurseSpecialtyChip extends StatelessWidget {
-  const _NurseSpecialtyChip({required this.label});
+class _RatingBadge extends StatelessWidget {
+  const _RatingBadge({required this.rating});
 
-  final String label;
+  final double rating;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.secondaryLight,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.secondaryDark,
-          fontWeight: FontWeight.w700,
-          fontSize: 10,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.star_rounded,
+            size: 13,
+            color: kNurseCardStar,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            rating.toStringAsFixed(1),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1A1D26),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _NurseTagChip extends StatelessWidget {
-  const _NurseTagChip({required this.label});
-
-  final String label;
+class _VerifiedBadge extends StatelessWidget {
+  const _VerifiedBadge();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.grey50,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.divider),
+        color: kNurseCardPurple,
+        borderRadius: BorderRadius.circular(18),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textSecondary,
-          fontWeight: FontWeight.w600,
-          fontSize: 10,
-        ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.verified_rounded,
+            size: 13,
+            color: AppColors.white,
+          ),
+          SizedBox(width: 4),
+          Text(
+            'Verified',
+            style: TextStyle(
+              color: AppColors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _NurseMetaRow extends StatelessWidget {
-  const _NurseMetaRow({required this.icon, required this.text});
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
 
   final IconData icon;
-  final String text;
+  final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final row = Row(
       children: [
-        Icon(icon, size: 16, color: AppColors.secondary),
+        Icon(icon, size: 14, color: kNurseCardPurple),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            text,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.35,
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6B7280),
+              height: 1.3,
             ),
+          ),
+        ),
+      ],
+    );
+
+    if (onTap == null) return row;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: row,
+    );
+  }
+}
+
+class _NurseSkillChips extends StatelessWidget {
+  const _NurseSkillChips({required this.skills});
+
+  final List<String> skills;
+
+  @override
+  Widget build(BuildContext context) {
+    const maxVisible = 3;
+    final visible = skills.take(maxVisible).toList();
+    final remaining = skills.length - visible.length;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final skill in visible) _NurseSkillChip(label: skill),
+        if (remaining > 0) _NurseMoreSkillsChip(label: '+$remaining more'),
+      ],
+    );
+  }
+}
+
+class _NurseSkillChip extends StatelessWidget {
+  const _NurseSkillChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: kNurseCardPurpleChip,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _nurseSkillIcon(label),
+            size: 13,
+            color: kNurseCardPurpleDark,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: kNurseCardPurpleDark,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NurseMoreSkillsChip extends StatelessWidget {
+  const _NurseMoreSkillsChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: kNurseCardPurple,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
+IconData _nurseSkillIcon(String skill) {
+  final value = skill.toLowerCase();
+  if (value.contains('elder')) return Icons.person_outline_rounded;
+  if (value.contains('patient') || value.contains('care')) {
+    return Icons.volunteer_activism_rounded;
+  }
+  if (value.contains('injection') || value.contains('iv')) {
+    return Icons.vaccines_rounded;
+  }
+  if (value.contains('wound') || value.contains('dressing')) {
+    return Icons.healing_rounded;
+  }
+  if (value.contains('vital') || value.contains('monitor')) {
+    return Icons.monitor_heart_outlined;
+  }
+  if (value.contains('catheter')) return Icons.water_drop_outlined;
+  return Icons.medical_services_outlined;
+}
+
+class _NurseServiceStatsBar extends StatelessWidget {
+  const _NurseServiceStatsBar({
+    required this.serviceType,
+    required this.availability,
+    required this.fee,
+    this.originalFee,
+  });
+
+  final String serviceType;
+  final String availability;
+  final int? fee;
+  final int? originalFee;
+
+  @override
+  Widget build(BuildContext context) {
+    final chargeLabel = fee != null && fee! > 0 ? '₹$fee / Visit' : 'On request';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              child: _NurseStatColumn(
+                icon: Icons.home_rounded,
+                label: 'Service Type',
+                value: serviceType,
+              ),
+            ),
+            const _NurseStatDivider(),
+            Expanded(
+              child: _NurseStatColumn(
+                icon: Icons.schedule_rounded,
+                label: 'Availability',
+                value: availability,
+              ),
+            ),
+            const _NurseStatDivider(),
+            Expanded(
+              child: _NurseStatColumn(
+                icon: Icons.account_balance_wallet_outlined,
+                label: 'Charges',
+                value: chargeLabel,
+                strikeValue: originalFee != null &&
+                        fee != null &&
+                        originalFee! > fee!
+                    ? '₹$originalFee'
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NurseStatDivider extends StatelessWidget {
+  const _NurseStatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      color: const Color(0xFFE5E7EB),
+    );
+  }
+}
+
+class _NurseStatColumn extends StatelessWidget {
+  const _NurseStatColumn({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.strikeValue,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final String? strikeValue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 18, color: kNurseCardPurple),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFF9AA3AF),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (strikeValue != null) ...[
+          Text(
+            strikeValue!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFFC8CDD4),
+              decoration: TextDecoration.lineThrough,
+              fontSize: 10,
+            ),
+          ),
+          const SizedBox(height: 2),
+        ],
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFF1A1D26),
+            fontWeight: FontWeight.w800,
+            fontSize: 12,
+            height: 1.2,
           ),
         ),
       ],
@@ -425,125 +679,46 @@ class _NurseMetaRow extends StatelessWidget {
   }
 }
 
-class _NurseAvailabilityPill extends StatelessWidget {
-  const _NurseAvailabilityPill({required this.available});
-
-  final bool available;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: available
-            ? AppColors.secondaryLight
-            : AppColors.grey50,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: available
-              ? AppColors.secondary.withValues(alpha: 0.3)
-              : AppColors.divider,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            available ? Icons.check_circle_rounded : Icons.cancel_outlined,
-            size: 14,
-            color: available ? AppColors.secondary : AppColors.grey500,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            available ? 'Available for home visit' : 'Not available',
-            style: AppTextStyles.labelSmall.copyWith(
-              fontWeight: FontWeight.w700,
-              color: available ? AppColors.secondaryDark : AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NurseActionButton extends StatelessWidget {
-  const _NurseActionButton({
-    required this.icon,
-    required this.label,
-    this.subtitle,
-    this.filled = true,
+class _NurseBookNowButton extends StatelessWidget {
+  const _NurseBookNowButton({
+    required this.enabled,
     this.onPressed,
   });
 
-  final IconData icon;
-  final String label;
-  final String? subtitle;
-  final bool filled;
+  final bool enabled;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: filled
-                ? const LinearGradient(colors: kNurseGradient)
-                : null,
-            color: filled ? null : AppColors.secondary.withValues(alpha: 0.08),
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: FilledButton(
+        onPressed: enabled ? onPressed : null,
+        style: FilledButton.styleFrom(
+          backgroundColor: kNurseCardPurple,
+          disabledBackgroundColor: AppColors.grey200,
+          foregroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: filled
-                  ? Colors.transparent
-                  : AppColors.secondary.withValues(alpha: 0.35),
-            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    size: 16,
-                    color: filled ? AppColors.white : AppColors.secondaryDark,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: filled ? AppColors.white : AppColors.secondaryDark,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                ],
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Book Now',
+              style: TextStyle(
+                color: AppColors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
               ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  subtitle!,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: filled
-                        ? AppColors.white.withValues(alpha: 0.9)
-                        : AppColors.secondary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ],
-          ),
+            ),
+            SizedBox(width: 8),
+            Icon(Icons.arrow_forward_rounded, size: 20),
+          ],
         ),
       ),
     );

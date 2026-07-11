@@ -167,11 +167,13 @@ class BlinkingLiveAvatarBorder extends StatefulWidget {
     required this.child,
     this.padding = 3,
     this.borderWidth = 2.5,
+    this.borderRadius,
   });
 
   final Widget child;
   final double padding;
   final double borderWidth;
+  final double? borderRadius;
 
   @override
   State<BlinkingLiveAvatarBorder> createState() =>
@@ -210,7 +212,12 @@ class _BlinkingLiveAvatarBorderState extends State<BlinkingLiveAvatarBorder>
         return Container(
           padding: EdgeInsets.all(widget.padding),
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
+            shape: widget.borderRadius == null
+                ? BoxShape.circle
+                : BoxShape.rectangle,
+            borderRadius: widget.borderRadius == null
+                ? null
+                : BorderRadius.circular(widget.borderRadius!),
             border: Border.all(
               color: kLiveOnlineColor.withValues(alpha: 0.55 + glow * 0.45),
               width: widget.borderWidth,

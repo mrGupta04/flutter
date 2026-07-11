@@ -11,8 +11,7 @@ import '../data/models/patient_booking_model.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
-import '../features/doctor_registration/presentation/widgets/verified_nurses_section.dart';
-import '../features/doctor_registration/provider/nurse_search_provider.dart';
+import '../shared/widgets/health_service_card.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/hero_wallpaper_carousel.dart';
 import '../shared/widgets/user_app_footer.dart';
@@ -39,28 +38,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     }
   }
 
-  List<OneMgServiceItem> _buildServiceItems(BuildContext context) {
-    return _homeServices
-        .map(
-          (service) => OneMgServiceItem(
-            title: service.title,
-            description: service.description ?? '',
-            imageUrl: service.imageUrl ?? '',
-            color: service.color ?? AppColors.primary,
-            style: service.style,
-            icon: service.icon,
-            footerLeft: service.footerLeft,
-            footerRight: service.footerRight,
-            footerFeatures: service.footerFeatures,
-            footerAccentTint: service.footerAccentTint,
-            assetImage: service.assetImage,
-            assetAspectRatio: service.assetAspectRatio,
-            onTap: () => _openService(context, service),
-          ),
-        )
-        .toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(patientAuthProvider);
@@ -76,7 +53,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: () async {
-          ref.invalidate(nurseSearchProvider);
           if (await TokenStorage.instance.isPatientLoggedIn()) {
             await ref.read(patientDashboardProvider.notifier).refreshAll();
           }
@@ -100,7 +76,20 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
             SliverToBoxAdapter(
-              child: OneMgServiceGrid(items: _buildServiceItems(context)),
+              child: HealthServiceGrid(
+                items: _homeServices
+                    .map(
+                      (service) => HealthServiceItem(
+                        title: service.title,
+                        description: service.description,
+                        image: service.image,
+                        icon: service.icon,
+                        color: service.color,
+                        onTap: () => _openService(context, service),
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 14)),
             SliverToBoxAdapter(
@@ -155,15 +144,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                 child: HeroWallpaperCarousel(),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                child: _FeaturedLabCard(
-                  onTap: () => context.push(AppConstants.routeLabs),
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: VerifiedNursesSection()),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
             SliverToBoxAdapter(
               child: MarketplaceSectionTitle(
@@ -332,100 +312,6 @@ class _UpcomingBookingCard extends StatelessWidget {
   }
 }
 
-class _FeaturedLabCard extends StatelessWidget {
-  const _FeaturedLabCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF165C54), Color(0xFF2BA896)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.22),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'LAB TESTS',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.6,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Book diagnostic tests',
-                      style: AppTextStyles.titleSmall.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Home collection · Reports in 24–48 hrs',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.biotech_rounded,
-                  color: AppColors.white,
-                  size: 30,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _SpecialtyChip extends StatelessWidget {
   const _SpecialtyChip({
     required this.icon,
@@ -549,35 +435,21 @@ class _ProviderPartnerCard extends StatelessWidget {
 class _HomeService {
   const _HomeService({
     required this.title,
+    required this.description,
+    required this.image,
+    required this.icon,
+    required this.color,
     required this.route,
     this.routeParams,
-    this.style = OneMgServiceCardStyle.asset,
-    this.assetImage,
-    this.assetAspectRatio,
-    this.description,
-    this.imageUrl,
-    this.color,
-    this.icon,
-    this.footerLeft,
-    this.footerRight,
-    this.footerFeatures,
-    this.footerAccentTint = false,
   });
 
   final String title;
+  final String description;
+  final String image;
+  final IconData icon;
+  final Color color;
   final String route;
   final String? routeParams;
-  final OneMgServiceCardStyle style;
-  final String? assetImage;
-  final double? assetAspectRatio;
-  final String? description;
-  final String? imageUrl;
-  final Color? color;
-  final IconData? icon;
-  final OneMgServiceFooterFeature? footerLeft;
-  final OneMgServiceFooterFeature? footerRight;
-  final List<OneMgServiceFooterFeature>? footerFeatures;
-  final bool footerAccentTint;
 }
 
 class _SpecialtyItem {
@@ -596,71 +468,53 @@ class _SpecialtyItem {
 
 const _homeServices = [
   _HomeService(
-    title: 'Doctor Consultation',
+    title: 'Doctor\nConsultation',
+    description: 'Consult trusted doctors online or in clinic.',
+    image: 'assets/images/home_cards/doctor_card.png',
+    icon: Icons.medical_services_outlined,
+    color: Color(0xff2CB67D),
     route: AppConstants.routeDoctorSearch,
-    assetImage: 'assets/images/home_cards/doctor_consultation.png',
-    assetAspectRatio: 948 / 1024,
   ),
   _HomeService(
-    title: 'Lab Tests',
-    route: AppConstants.routeLabs,
-    assetImage: 'assets/images/home_cards/lab_tests.png',
-    assetAspectRatio: 1024 / 997,
-  ),
-  _HomeService(
-    title: 'Nurse Home Care',
+    title: 'Nurse\nHome Care',
+    description: 'Professional nursing care at home.',
+    image: 'assets/images/home_cards/nurse_card.png',
+    icon: Icons.health_and_safety_outlined,
+    color: Color(0xff8B5CF6),
     route: AppConstants.routeNurseSearch,
-    assetImage: 'assets/images/home_cards/nurse_home_care.png',
-    assetAspectRatio: 1,
   ),
   _HomeService(
-    title: 'Diagnostic Scans',
+    title: 'Lab\nTests',
+    description: 'Book tests with home sample collection.',
+    image: 'assets/images/home_cards/lab_card.png',
+    icon: Icons.science_outlined,
+    color: Color(0xff3B82F6),
+    route: AppConstants.routeLabs,
+  ),
+  _HomeService(
+    title: 'Diagnostic\nScans',
+    description: 'MRI, CT Scan, X-Ray & Ultrasound.',
+    image: 'assets/images/home_cards/scan_card.png',
+    icon: Icons.monitor_heart_outlined,
+    color: Color(0xff14B8A6),
     route: AppConstants.routeScans,
-    assetImage: 'assets/images/home_cards/diagnostic_scans.png',
-    assetAspectRatio: 1,
   ),
   _HomeService(
-    title: 'Ambulance Booking',
-    description: 'Book 24/7 ambulance for emergencies & patient transfers.',
-    imageUrl:
-        'https://images.unsplash.com/photo-1601580110406-4eac4d6b56c6?w=500&h=650&fit=crop',
-    color: Color(0xFFD84315),
+    title: 'Ambulance\nBooking',
+    description: '24/7 emergency ambulance service.',
+    image: 'assets/images/home_cards/ambulance.png',
+    icon: Icons.local_hospital_outlined,
+    color: Color(0xffEF4444),
     route: AppConstants.routeCareListing,
     routeParams: 'role=ambulance',
-    style: OneMgServiceCardStyle.premium,
-    icon: Icons.local_shipping_rounded,
-    footerLeft: OneMgServiceFooterFeature(
-      title: '24/7 Service',
-      subtitle: 'Always available',
-      icon: Icons.access_time_filled_rounded,
-    ),
-    footerRight: OneMgServiceFooterFeature(
-      title: 'Fast Dispatch',
-      subtitle: 'Nearest ambulance',
-      icon: Icons.near_me_rounded,
-      iconColor: Color(0xFF1565C0),
-    ),
   ),
   _HomeService(
-    title: 'Blood Bank',
-    description: 'Find verified blood banks & request units when you need.',
-    imageUrl:
-        'https://images.unsplash.com/photo-1629909613654-28e377c37b0a?w=500&h=650&fit=crop',
-    color: Color(0xFFC62828),
+    title: 'Blood\nBank',
+    description: 'Find verified blood banks near you.',
+    image: 'assets/images/home_cards/blood.png',
+    icon: Icons.bloodtype_outlined,
+    color: Color(0xffEC4899),
     route: AppConstants.routeBloodBanks,
-    style: OneMgServiceCardStyle.premium,
-    icon: Icons.bloodtype_rounded,
-    footerLeft: OneMgServiceFooterFeature(
-      title: 'Verified Banks',
-      subtitle: 'Safe & reliable',
-      icon: Icons.verified_user_rounded,
-    ),
-    footerRight: OneMgServiceFooterFeature(
-      title: 'Emergency Units',
-      subtitle: 'Quick requests',
-      icon: Icons.emergency_rounded,
-      iconColor: Color(0xFFD84315),
-    ),
   ),
 ];
 

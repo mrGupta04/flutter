@@ -777,11 +777,48 @@ class _DocUploadTile extends StatelessWidget {
   }
 }
 
-class _TestConfigFields extends StatelessWidget {
+class _TestConfigFields extends StatefulWidget {
   const _TestConfigFields({required this.test, required this.onChanged});
 
   final ScanOfferedProcedure test;
   final ValueChanged<ScanOfferedProcedure> onChanged;
+
+  @override
+  State<_TestConfigFields> createState() => _TestConfigFieldsState();
+}
+
+class _TestConfigFieldsState extends State<_TestConfigFields> {
+  late final TextEditingController _priceController;
+  late final TextEditingController _discountedController;
+  late final TextEditingController _reportDeliveryController;
+  late final TextEditingController _preparationController;
+
+  static final _fieldStyle =
+      AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary);
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController(text: '${widget.test.priceInr}');
+    _discountedController = TextEditingController(
+      text: widget.test.discountedPriceInr?.toString() ?? '',
+    );
+    _reportDeliveryController = TextEditingController(
+      text: widget.test.reportDeliveryTime ?? '',
+    );
+    _preparationController = TextEditingController(
+      text: widget.test.preparationInstructions ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    _discountedController.dispose();
+    _reportDeliveryController.dispose();
+    _preparationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -791,28 +828,32 @@ class _TestConfigFields extends StatelessWidget {
           children: [
             Expanded(
               child: TextFormField(
-                initialValue: '${test.priceInr}',
+                controller: _priceController,
+                style: _fieldStyle,
                 decoration: const InputDecoration(
                   labelText: 'Price (₹)',
                   isDense: true,
                 ),
                 keyboardType: TextInputType.number,
-                onChanged: (v) => onChanged(
-                  test.copyWith(priceInr: int.tryParse(v) ?? test.priceInr),
+                onChanged: (v) => widget.onChanged(
+                  widget.test.copyWith(
+                    priceInr: int.tryParse(v) ?? widget.test.priceInr,
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: TextFormField(
-                initialValue: test.discountedPriceInr?.toString() ?? '',
+                controller: _discountedController,
+                style: _fieldStyle,
                 decoration: const InputDecoration(
                   labelText: 'Discounted (₹)',
                   isDense: true,
                 ),
                 keyboardType: TextInputType.number,
-                onChanged: (v) => onChanged(
-                  test.copyWith(
+                onChanged: (v) => widget.onChanged(
+                  widget.test.copyWith(
                     discountedPriceInr: v.isEmpty ? null : int.tryParse(v),
                   ),
                 ),
@@ -822,39 +863,45 @@ class _TestConfigFields extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextFormField(
-          initialValue: test.reportDeliveryTime ?? '',
+          controller: _reportDeliveryController,
+          style: _fieldStyle,
           decoration: const InputDecoration(
             labelText: 'Report delivery time',
             isDense: true,
           ),
-          onChanged: (v) =>
-              onChanged(test.copyWith(reportDeliveryTime: v.trim())),
+          onChanged: (v) => widget.onChanged(
+            widget.test.copyWith(reportDeliveryTime: v.trim()),
+          ),
         ),
         const SizedBox(height: 8),
         TextFormField(
-          initialValue: test.preparationInstructions ?? '',
+          controller: _preparationController,
+          style: _fieldStyle,
           decoration: const InputDecoration(
             labelText: 'Preparation instructions',
             isDense: true,
           ),
           maxLines: 2,
-          onChanged: (v) =>
-              onChanged(test.copyWith(preparationInstructions: v.trim())),
+          onChanged: (v) => widget.onChanged(
+            widget.test.copyWith(preparationInstructions: v.trim()),
+          ),
         ),
         const SizedBox(height: 8),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           dense: true,
           title: const Text('Home visit available'),
-          value: test.homeVisitAvailable,
-          onChanged: (v) => onChanged(test.copyWith(homeVisitAvailable: v)),
+          value: widget.test.homeVisitAvailable,
+          onChanged: (v) =>
+              widget.onChanged(widget.test.copyWith(homeVisitAvailable: v)),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           dense: true,
           title: const Text('Onsite only'),
-          value: test.onsiteOnly,
-          onChanged: (v) => onChanged(test.copyWith(onsiteOnly: v)),
+          value: widget.test.onsiteOnly,
+          onChanged: (v) =>
+              widget.onChanged(widget.test.copyWith(onsiteOnly: v)),
         ),
       ],
     );

@@ -841,15 +841,35 @@ router.post('/register', async (req, res) => {
 
           profilePicture: body.profilePicture?.trim(),
 
+          gender: body.gender?.trim(),
+
+          dateOfBirth: body.dateOfBirth
+            ? new Date(body.dateOfBirth)
+            : undefined,
+
+          languagesSpoken: Array.isArray(body.languagesSpoken)
+            ? body.languagesSpoken
+            : undefined,
+
+          emergencyContactName: body.emergencyContactName?.trim(),
+
+          emergencyContactNumber: body.emergencyContactNumber?.trim(),
+
           qualification: body.qualification?.trim(),
 
           registrationNumber: body.registrationNumber?.trim(),
 
           nursingCouncil: body.nursingCouncil?.trim(),
 
+          nuid: body.nuid?.trim(),
+
           yearsOfExperience: parseInt(body.yearsOfExperience, 10) || 0,
 
           specialization: body.specialization?.trim(),
+
+          nursingSkills: Array.isArray(body.nursingSkills)
+            ? body.nursingSkills
+            : undefined,
 
           address: body.address?.trim(),
 
@@ -858,6 +878,17 @@ router.post('/register', async (req, res) => {
           state: body.state?.trim(),
 
           pincode: body.pincode?.trim(),
+
+          latitude:
+            body.latitude != null ? parseFloat(body.latitude) : undefined,
+
+          longitude:
+            body.longitude != null ? parseFloat(body.longitude) : undefined,
+
+          serviceRadiusKm:
+            body.serviceRadiusKm != null
+              ? parseInt(body.serviceRadiusKm, 10)
+              : undefined,
 
           availableForHomeVisit: body.availableForHomeVisit != null
 

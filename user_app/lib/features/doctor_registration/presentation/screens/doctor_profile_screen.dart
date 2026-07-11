@@ -13,11 +13,10 @@ import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/blinking_online_badge.dart';
-import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
+import '../../../../shared/widgets/doctor_consultation_booking_section.dart';
 import '../../../../shared/widgets/doctor_feedback_carousel.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/provider_profile_widgets.dart';
-import '../../../../shared/widgets/prescription_included_banner.dart';
 import '../../provider/doctor_feedback_provider.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
@@ -305,12 +304,12 @@ class _DoctorProfileBody extends ConsumerWidget {
             const MarketplaceSectionTitle(title: 'Hospital photos'),
             _HospitalPhotoGallery(photoUrls: hospitalPhotos),
           ],
-          if (doctor.availableConsultationTypes.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            DoctorConsultationFeesBanner(doctor: doctor),
-            const SizedBox(height: 12),
-            ..._bookingActions(context, doctor),
-          ] else ...[
+          if (doctor.availableConsultationTypes.isNotEmpty)
+            DoctorConsultationBookingSection(
+              doctor: doctor,
+              onBook: (type) => _openConsultationBooking(context, doctor, type),
+            )
+          else ...[
             const SizedBox(height: 20),
             Text(
               'No bookable consultation options for this doctor.',
@@ -326,62 +325,19 @@ class _DoctorProfileBody extends ConsumerWidget {
   }
 }
 
-String _bookingButtonLabel(String action, int? fee) {
-  if (fee == null || fee <= 0) return action;
-  return '$action · ₹$fee';
-}
-
-String _consultationTypeLabel(ConsultationType type) {
+void _openConsultationBooking(
+  BuildContext context,
+  DoctorModel doctor,
+  ConsultationType type,
+) {
   switch (type) {
     case ConsultationType.onlineConsult:
-      return 'Online consult';
+      openOnlineConsultBooking(context, doctor);
     case ConsultationType.visitSite:
-      return 'Hospital visit';
+      openHospitalVisitBooking(context, doctor);
     case ConsultationType.bookHome:
-      return 'Home visit';
+      openHomeVisitBooking(context, doctor);
   }
-}
-
-List<Widget> _bookingActions(BuildContext context, DoctorModel doctor) {
-  final actions = <Widget>[];
-  for (final type in doctor.availableConsultationTypes) {
-    if (actions.isNotEmpty) {
-      actions.add(const SizedBox(height: 10));
-    }
-
-    final label = _bookingButtonLabel(
-      'Book ${_consultationTypeLabel(type).toLowerCase()}',
-      doctor.feeForConsultationType(type),
-    );
-    final icon = switch (type) {
-      ConsultationType.onlineConsult => Icons.videocam_rounded,
-      ConsultationType.visitSite => Icons.local_hospital_rounded,
-      ConsultationType.bookHome => Icons.home_rounded,
-    };
-    final onPressed = switch (type) {
-      ConsultationType.onlineConsult =>
-        () => openOnlineConsultBooking(context, doctor),
-      ConsultationType.visitSite =>
-        () => openHospitalVisitBooking(context, doctor),
-      ConsultationType.bookHome => () => openHomeVisitBooking(context, doctor),
-    };
-
-    if (type == ConsultationType.visitSite) {
-      actions.add(
-        CustomOutlineButton(label: label, icon: icon, onPressed: onPressed),
-      );
-    } else {
-      actions.add(
-        CustomButton(label: label, icon: icon, onPressed: onPressed),
-      );
-      if (type == ConsultationType.onlineConsult ||
-          type == ConsultationType.bookHome) {
-        actions.add(const SizedBox(height: 8));
-        actions.add(const PrescriptionIncludedBanner(compact: true));
-      }
-    }
-  }
-  return actions;
 }
 
 class _HospitalPhotoGallery extends StatelessWidget {

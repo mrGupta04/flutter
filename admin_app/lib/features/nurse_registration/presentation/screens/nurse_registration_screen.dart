@@ -25,10 +25,10 @@ class _NurseRegistrationScreenState
   late List<GlobalKey<FormState>> _formKeys;
 
   static const _stepTitles = [
-    ('Personal details', 'Name, contact & profile photo'),
-    ('Professional info', 'License, specialty & home visit fee'),
-    ('Base location', 'Address & map pin'),
-    ('Upload documents', 'License, ID & certificates'),
+    ('Personal details', 'Name, DOB, languages & emergency contact'),
+    ('Professional info', 'License, skills, NUID & home visit fee'),
+    ('Base location', 'Address, map pin & service radius'),
+    ('Upload documents', 'License, PAN, police verification & more'),
     ('Payout details', 'Bank account & cancelled cheque'),
     ('Weekly availability', 'Home visit slots (Sun–Sat, 8 AM–6 PM)'),
     ('Review & submit', 'Confirm before admin verification'),
@@ -122,6 +122,17 @@ class _NurseRegistrationScreenState
         SnackBarHelper.showError(context, 'Please upload a profile picture.');
         return false;
       }
+      if (form.dateOfBirth == null) {
+        SnackBarHelper.showError(context, 'Please select your date of birth.');
+        return false;
+      }
+      if (form.languagesSpoken.isEmpty) {
+        SnackBarHelper.showError(
+          context,
+          'Select at least one language you speak.',
+        );
+        return false;
+      }
     }
 
     if (step == 2) {
@@ -129,6 +140,18 @@ class _NurseRegistrationScreenState
         1,
         invalidMessage: 'Please complete all professional details.',
       )) {
+        return false;
+      }
+      if (form.nursingSkills.isEmpty) {
+        SnackBarHelper.showError(
+          context,
+          'Select at least one clinical skill or service.',
+        );
+        return false;
+      }
+      if (form.qualification == 'Other' &&
+          form.qualificationOther.trim().isEmpty) {
+        SnackBarHelper.showError(context, 'Please specify your qualification.');
         return false;
       }
     }
@@ -147,15 +170,17 @@ class _NurseRegistrationScreenState
         );
         return false;
       }
+      if (form.serviceRadiusKm == null) {
+        SnackBarHelper.showError(
+          context,
+          'Please select your home visit service radius.',
+        );
+        return false;
+      }
     }
 
     if (step == 4) {
-      final required = [
-        NurseDocumentType.nursingLicense,
-        NurseDocumentType.degreeCertificate,
-        NurseDocumentType.aadhaarCard,
-      ];
-      for (final doc in required) {
+      for (final doc in requiredNurseDocuments) {
         if (!form.documentUrls.containsKey(doc) &&
             !form.documentBytes.containsKey(doc)) {
           SnackBarHelper.showError(context, 'Please upload: ${doc.label}');

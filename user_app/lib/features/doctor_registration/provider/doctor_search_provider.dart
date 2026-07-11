@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/consultation_type.dart';
 import '../../../data/models/doctor_model.dart';
 import 'doctor_registration_repository_provider.dart';
+import 'verified_doctors_provider.dart';
 
 /// Parameters for searching verified doctors.
 class DoctorSearchParams {
@@ -69,23 +70,16 @@ final doctorSearchProvider =
       query: _trimOrNull(params.query),
       city: _trimOrNull(params.city),
       specialization: _trimOrNull(params.specialization),
-      // Fetch all verified doctors; we apply consultation preference on the
-      // client so the list never becomes empty for a valid consultation type.
-      consultationType: null,
+      consultationType: params.consultationType,
     );
 
     if (response.success && response.data != null) {
-      final allDoctors = response.data!
-          .where((doctor) => doctor.isPublicProfileDisplayable)
-          .toList(growable: false);
-      final preferred = allDoctors
-          .where((d) => d.offersConsultationType(params.consultationType))
-          .toList(growable: false);
-      final others = allDoctors
-          .where((d) => !d.offersConsultationType(params.consultationType))
-          .toList(growable: false);
-
-      var doctors = [...preferred, ...others];
+      var doctors = filterDoctorsByConsultation(
+        response.data!
+            .where((doctor) => doctor.isPublicProfileDisplayable)
+            .toList(growable: false),
+        params.consultationType,
+      );
       final minYears = params.minYearsExperience;
       if (minYears != null) {
         doctors = doctors

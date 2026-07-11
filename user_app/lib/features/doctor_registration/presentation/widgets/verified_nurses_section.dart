@@ -34,7 +34,7 @@ class VerifiedNursesSection extends ConsumerWidget {
         asyncNurses.when(
           loading: () => const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(height: 140, child: ShimmerLoadingList()),
+            child: SizedBox(height: 220, child: ShimmerLoadingList()),
           ),
           error: (_, __) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -61,6 +61,7 @@ class VerifiedNursesSection extends ConsumerWidget {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: HomeProviderScrollList(
+                cardHeight: kNurseListingCardHeight,
                 itemCount: nurses.length,
                 itemBuilder: (context, i) => NurseListingCard(
                   nurse: nurses[i],

@@ -6,8 +6,8 @@ import 'doctor_listing_card.dart';
 /// How many provider cards are visible before the user scrolls for more.
 const int kHomeProviderPreviewCount = 3;
 
-/// Estimated card height for viewport sizing (home cards, no action row).
-const double kHomeProviderCardHeight = 112;
+/// Estimated card height for viewport sizing (home cards).
+const double kHomeProviderCardHeight = 220;
 
 /// Extra space below the third card so the next card peeks through.
 const double kHomeProviderPeekExtent = 36;

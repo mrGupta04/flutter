@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -43,7 +41,6 @@ class _NurseHomeVisitBookingScreenState
   final _pincodeController = TextEditingController();
   final _reasonController = TextEditingController();
   String? _selectedDateKey;
-  Timer? _slotsRefreshTimer;
   double? _patientLatitude;
   double? _patientLongitude;
   bool _isFetchingLocation = false;
@@ -52,9 +49,6 @@ class _NurseHomeVisitBookingScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _ensureAuthAndPrefill());
-    _slotsRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.invalidate(nurseBookableSlotsProvider(widget.nurseId));
-    });
   }
 
   Future<void> _ensureAuthAndPrefill() async {
@@ -74,7 +68,6 @@ class _NurseHomeVisitBookingScreenState
 
   @override
   void dispose() {
-    _slotsRefreshTimer?.cancel();
     _nameController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
@@ -213,6 +206,7 @@ class _NurseHomeVisitBookingScreenState
                       ),
                       const SizedBox(height: 12),
                       slotsAsync.when(
+                        skipLoadingOnReload: true,
                         loading: () => const Center(
                           child: Padding(
                             padding: EdgeInsets.all(24),

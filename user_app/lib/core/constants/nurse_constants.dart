@@ -2,5 +2,4 @@
 const nurseGenders = [
   'Male',
   'Female',
-  'Group D',
 ];
