@@ -24,6 +24,7 @@ import '../../provider/ambulance_search_provider.dart';
 import '../../provider/blood_bank_search_provider.dart';
 import '../../provider/care_filter_constants.dart';
 import '../../provider/nurse_search_provider.dart';
+import '../../provider/nurse_live_status_provider.dart';
 import '../../provider/verified_doctors_provider.dart';
 import '../../../../core/utils/doctor_location_utils.dart';
 import '../../../../core/utils/provider_location_utils.dart';
@@ -492,6 +493,11 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       ];
     }
 
+    final liveMap = ref
+            .watch(nurseLiveStatusProvider(nurseIdsCacheKey(items)))
+            .valueOrNull ??
+        const <String, bool>{};
+
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -501,14 +507,19 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
             const SizedBox(height: 8),
             for (var i = 0; i < items.length; i++) ...[
               if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-              NurseListingCard(
-                nurse: items[i],
-                onTap: () => openNurseProfile(context, items[i]),
-                onBookHomeVisit: () =>
-                    openNurseHomeVisitBooking(context, items[i]),
-                onOpenMapTap: nurseHasMapLocation(items[i])
-                    ? () => openNurseInGoogleMaps(context, items[i])
-                    : null,
+              Builder(
+                builder: (context) {
+                  final nurse = applyNurseLiveStatus(items[i], liveMap);
+                  return NurseListingCard(
+                    nurse: nurse,
+                    onTap: () => openNurseProfile(context, nurse),
+                    onBookHomeVisit: () =>
+                        openNurseHomeVisitBooking(context, nurse),
+                    onOpenMapTap: nurseHasMapLocation(nurse)
+                        ? () => openNurseInGoogleMaps(context, nurse)
+                        : null,
+                  );
+                },
               ),
             ],
             const UserScrollFooter(),

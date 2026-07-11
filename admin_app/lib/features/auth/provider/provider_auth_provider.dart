@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/provider_type.dart';
 import '../../../core/services/doctor_presence_service.dart';
+import '../../../core/services/nurse_presence_service.dart';
 import '../../../core/services/token_storage.dart';
 import '../../../data/repositories/provider_auth_repository.dart';
 
@@ -112,6 +113,15 @@ class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
         state = state.copyWith(entityId: id);
       }
       await DoctorPresenceService.instance.goOnline();
+    } else if (type == ProviderType.nurse) {
+      final profile = await _repository.fetchProfile(type);
+      final id = profile.data?['id'] as String?;
+      if (id != null && id.isNotEmpty) {
+        await TokenStorage.instance.saveNurseId(id);
+        entityId = id;
+        state = state.copyWith(entityId: id);
+      }
+      await NursePresenceService.instance.goOnline();
     }
   }
 
@@ -157,6 +167,8 @@ class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
           entityId = profile['id'] as String? ?? '';
           if (entityId.isNotEmpty && type == ProviderType.doctor) {
             await TokenStorage.instance.saveDoctorId(entityId);
+          } else if (entityId.isNotEmpty && type == ProviderType.nurse) {
+            await TokenStorage.instance.saveNurseId(entityId);
           }
         }
       }
@@ -171,6 +183,8 @@ class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
       );
       if (type == ProviderType.doctor) {
         await DoctorPresenceService.instance.goOnline();
+      } else if (type == ProviderType.nurse) {
+        await NursePresenceService.instance.goOnline();
       }
       return true;
     }
@@ -185,6 +199,8 @@ class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
   Future<void> logout() async {
     if (state.providerType == ProviderType.doctor) {
       await DoctorPresenceService.instance.goOffline(immediate: true);
+    } else if (state.providerType == ProviderType.nurse) {
+      await NursePresenceService.instance.goOffline(immediate: true);
     }
     await TokenStorage.instance.clearProviderSession();
     state = ProviderAuthState();

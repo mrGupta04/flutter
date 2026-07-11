@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/doctor_presence_utils.dart';
 import '../models/api_response_model.dart';
 import '../models/nurse_model.dart';
 import '../services/dio_service.dart';
@@ -78,6 +79,59 @@ class NurseRegistrationRepository {
         statusCode: 500,
       );
     }
+  }
+
+  /// Lightweight live-status poll for nurse cards (admin app presence).
+  Future<ApiResponse<Map<String, bool>>> getNursesLiveStatus(
+    List<String> nurseIds,
+  ) async {
+    final ids = nurseIds.where((id) => id.trim().isNotEmpty).toList();
+    if (ids.isEmpty) {
+      return ApiResponse(success: true, statusCode: 200, data: const {});
+    }
+
+    try {
+      final response = await _dioService.get(
+        AppConstants.endpointNurseLiveStatus,
+        queryParameters: {'ids': ids.join(',')},
+      );
+
+      final body = response.data as Map<String, dynamic>;
+      final rows = body['data'];
+      final map = <String, bool>{};
+
+      if (rows is List) {
+        for (final row in rows) {
+          if (row is! Map<String, dynamic>) continue;
+          final id = row['id'] as String?;
+          if (id == null || id.isEmpty) continue;
+          final lastActiveAt = _parseLiveStatusTime(row['lastActiveAt']);
+          final isLive = row['isLiveNow'] == true ||
+              isDoctorLiveNow(lastActiveAt: lastActiveAt);
+          map[id] = isLive;
+        }
+      }
+
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: map,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
+    }
+  }
+
+  DateTime? _parseLiveStatusTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   ApiResponse<T> _handleError<T>(DioException error) {

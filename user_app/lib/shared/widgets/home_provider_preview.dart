@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'doctor_listing_card.dart';
+import 'marketplace_provider_card_ui.dart';
 
 /// How many provider cards are visible before the user scrolls for more.
 const int kHomeProviderPreviewCount = 3;
 
 /// Estimated card height for viewport sizing (home cards).
-const double kHomeProviderCardHeight = 220;
+const double kHomeProviderCardHeight = kDoctorListingCardHeight;
 
 /// Extra space below the third card so the next card peeks through.
 const double kHomeProviderPeekExtent = 36;

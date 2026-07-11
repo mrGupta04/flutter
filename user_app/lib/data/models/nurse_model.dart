@@ -1,6 +1,7 @@
 import 'doctor_model.dart';
 
 import '../../core/constants/phone_countries.dart';
+import '../../core/utils/doctor_presence_utils.dart';
 
 class NurseModel {
   final String? id;
@@ -31,6 +32,8 @@ class NurseModel {
   final VerificationStatus? verificationStatus;
   final double? averageRating;
   final int? ratingCount;
+  final DateTime? lastActiveAt;
+  final bool isLiveNow;
 
   bool get hasRating =>
       (ratingCount ?? 0) > 0 && averageRating != null && averageRating! > 0;
@@ -67,6 +70,8 @@ class NurseModel {
     this.verificationStatus,
     this.averageRating,
     this.ratingCount,
+    this.lastActiveAt,
+    this.isLiveNow = false,
   });
 
   String get displayName {
@@ -106,6 +111,11 @@ class NurseModel {
           : _parseStatus(json['verificationStatus'] as String?),
       averageRating: _parseDouble(json['averageRating']),
       ratingCount: (json['ratingCount'] as num?)?.toInt(),
+      lastActiveAt: _parseDateTime(json['lastActiveAt']),
+      isLiveNow: _resolveIsLiveNow(
+        json['isLiveNow'],
+        _parseDateTime(json['lastActiveAt']),
+      ),
     );
   }
 
@@ -163,6 +173,8 @@ class NurseModel {
     VerificationStatus? verificationStatus,
     double? averageRating,
     int? ratingCount,
+    DateTime? lastActiveAt,
+    bool? isLiveNow,
   }) {
     return NurseModel(
       id: id ?? this.id,
@@ -192,7 +204,29 @@ class NurseModel {
       verificationStatus: verificationStatus ?? this.verificationStatus,
       averageRating: averageRating ?? this.averageRating,
       ratingCount: ratingCount ?? this.ratingCount,
+      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
+      isLiveNow: isLiveNow ?? this.isLiveNow,
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
+  static bool? _parseBool(dynamic value) {
+    if (value == null) return null;
+    if (value is bool) return value;
+    if (value == 1 || value == '1' || value == 'true') return true;
+    if (value == 0 || value == '0' || value == 'false') return false;
+    return null;
+  }
+
+  static bool _resolveIsLiveNow(dynamic rawLive, DateTime? lastActiveAt) {
+    final parsed = _parseBool(rawLive);
+    if (parsed != null) return parsed;
+    return isDoctorLiveNow(lastActiveAt: lastActiveAt);
   }
 
   static double? _parseDouble(dynamic value) {

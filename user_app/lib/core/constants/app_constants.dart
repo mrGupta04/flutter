@@ -59,6 +59,7 @@ class AppConstants {
   // Nurse API Endpoints (patient discovery)
   static const String endpointGetNurseProfile = '/nurse/profile';
   static const String endpointVerifiedNurses = '/nurse/verified';
+  static const String endpointNurseLiveStatus = '/nurse/live-status';
   static const String endpointNurseBookableSlots = '/nurse/bookable-slots';
   static const String endpointNurseSlotHold = '/nurse/slot-hold';
   static String endpointNurseSlotHoldRelease(String holdId) =>

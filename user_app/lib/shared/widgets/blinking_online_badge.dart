@@ -84,6 +84,50 @@ class _BlinkingOnlineBadgeState extends State<BlinkingOnlineBadge>
   }
 }
 
+/// Green "Available" badge with blinking dot — shown when a provider is live in the admin app.
+class LiveAvailableBadge extends StatelessWidget {
+  const LiveAvailableBadge({super.key, this.label = 'Available'});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BlinkingOnlineDot(
+            size: 7,
+            showRing: false,
+            dotColor: AppColors.success,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4B5563),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Small pulsing red dot — use on avatars or compact layouts.
 class BlinkingOnlineDot extends StatefulWidget {
   const BlinkingOnlineDot({
@@ -91,11 +135,13 @@ class BlinkingOnlineDot extends StatefulWidget {
     this.size = 10,
     this.pulse,
     this.showRing = true,
+    this.dotColor = kLiveOnlineColor,
   });
 
   final double size;
   final double? pulse;
   final bool showRing;
+  final Color dotColor;
 
   @override
   State<BlinkingOnlineDot> createState() => _BlinkingOnlineDotState();
@@ -145,8 +191,8 @@ class _BlinkingOnlineDotState extends State<BlinkingOnlineDot>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Color.lerp(
-          kLiveOnlineColor.withValues(alpha: 0.5),
-          kLiveOnlineColor,
+          widget.dotColor.withValues(alpha: 0.5),
+          widget.dotColor,
           glow,
         ),
         border: widget.showRing

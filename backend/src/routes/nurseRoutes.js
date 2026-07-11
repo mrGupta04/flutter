@@ -19,7 +19,12 @@ const {
   submitNurseForReview,
 
   findDocumentsByNurseId,
+  touchNursePresence,
+  clearNursePresence,
 } = require('../db/nurseRepositories');
+
+const Nurse = require('../db/models/Nurse');
+const { isDoctorLiveNow } = require('../utils/doctorPresence');
 
 const {
   getNurseAvailability,
@@ -44,7 +49,7 @@ const {
 
 const { sendSuccess, sendError } = require('../utils/response');
 
-const { signToken, authOptional } = require('../middleware/auth');
+const { signToken, authOptional, authRequired } = require('../middleware/auth');
 
 const { upload, filePublicUrl } = require('../middleware/multerUpload');
 
@@ -156,6 +161,58 @@ router.get('/profile', authOptional, async (req, res) => {
 
 
 
+// GET /nurse/live-status?ids=id1,id2 — lightweight presence for patient cards
+
+router.get('/live-status', async (req, res) => {
+
+  try {
+
+    const raw = String(req.query.ids || '').trim();
+
+    const ids = [...new Set(raw.split(',').map((id) => id.trim()).filter(Boolean))];
+
+    if (!ids.length) {
+
+      return sendSuccess(res, { data: [] });
+
+    }
+
+
+
+    const docs = await Nurse.find({ id: { $in: ids.slice(0, 50) } })
+
+      .select('id lastActiveAt')
+
+      .lean();
+
+
+
+    const data = docs.map((doc) => ({
+
+      id: doc.id,
+
+      lastActiveAt: doc.lastActiveAt ?? null,
+
+      isLiveNow: isDoctorLiveNow(doc.lastActiveAt),
+
+    }));
+
+
+
+    return sendSuccess(res, { data });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return sendError(res, err.message || 'Failed to load live status', 500);
+
+  }
+
+});
+
+
+
 // POST /nurse/login
 
 router.post('/login', async (req, res) => {
@@ -213,6 +270,74 @@ router.post('/login', async (req, res) => {
     console.error(err);
 
     return sendError(res, err.message || 'Login failed', 500);
+
+  }
+
+});
+
+
+
+// POST /nurse/presence/heartbeat — nurse app pings while logged in
+
+router.post('/presence/heartbeat', authRequired, async (req, res) => {
+
+  try {
+
+    if (req.auth?.type !== 'nurse' || !req.auth?.nurseId) {
+
+      return sendError(res, 'Nurse authentication required', 403);
+
+    }
+
+    const nurse = await touchNursePresence(req.auth.nurseId);
+
+    if (!nurse) {
+
+      return sendError(res, 'Nurse not found', 404);
+
+    }
+
+    return sendSuccess(res, {
+
+      message: 'Presence updated',
+
+      data: { isLiveNow: nurse.isLiveNow, lastActiveAt: nurse.lastActiveAt },
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return sendError(res, err.message || 'Failed to update presence', 500);
+
+  }
+
+});
+
+
+
+// POST /nurse/presence/offline — nurse logs out or closes app
+
+router.post('/presence/offline', authRequired, async (req, res) => {
+
+  try {
+
+    if (req.auth?.type !== 'nurse' || !req.auth?.nurseId) {
+
+      return sendError(res, 'Nurse authentication required', 403);
+
+    }
+
+    await clearNursePresence(req.auth.nurseId);
+
+    return sendSuccess(res, { message: 'Marked offline' });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return sendError(res, err.message || 'Failed to clear presence', 500);
 
   }
 

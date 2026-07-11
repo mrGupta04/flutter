@@ -17,6 +17,7 @@ import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../provider/global_search_provider.dart';
+import '../../provider/nurse_live_status_provider.dart';
 import '../../../../core/utils/doctor_location_utils.dart';
 import '../../../../core/utils/provider_location_utils.dart';
 import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
@@ -207,6 +208,14 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
           );
         }
 
+        final nursePreview = results.nurses.take(5).toList();
+        final nurseLiveMap = ref
+                .watch(
+                  nurseLiveStatusProvider(nurseIdsCacheKey(nursePreview)),
+                )
+                .valueOrNull ??
+            const <String, bool>{};
+
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
@@ -257,21 +266,23 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                 count: results.nurses.length,
                 onSeeAll: () =>
                     _openCategorySearch(AppConstants.routeNurseSearch),
-                children: results.nurses
-                    .take(5)
+                children: nursePreview
                     .map(
-                      (n) => Padding(
+                      (n) {
+                        final nurse = applyNurseLiveStatus(n, nurseLiveMap);
+                        return Padding(
                         padding: const EdgeInsets.only(bottom: kDoctorCardSpacing),
                         child: NurseListingCard(
-                          nurse: n,
-                          onTap: () => openNurseProfile(context, n),
+                          nurse: nurse,
+                          onTap: () => openNurseProfile(context, nurse),
                           onBookHomeVisit: () =>
-                              openNurseHomeVisitBooking(context, n),
-                          onOpenMapTap: nurseHasMapLocation(n)
-                              ? () => openNurseInGoogleMaps(context, n)
+                              openNurseHomeVisitBooking(context, nurse),
+                          onOpenMapTap: nurseHasMapLocation(nurse)
+                              ? () => openNurseInGoogleMaps(context, nurse)
                               : null,
                         ),
-                      ),
+                      );
+                      },
                     )
                     .toList(),
               ),

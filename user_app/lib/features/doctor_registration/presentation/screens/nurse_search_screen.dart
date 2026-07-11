@@ -17,6 +17,7 @@ import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../provider/care_filter_constants.dart';
 import '../../provider/nurse_search_provider.dart';
+import '../../provider/nurse_live_status_provider.dart';
 import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../../core/utils/provider_location_utils.dart';
 import 'nurse_profile_screen.dart';
@@ -471,6 +472,13 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
           ];
         }
 
+        final liveMap = ref
+                .watch(
+                  nurseLiveStatusProvider(nurseIdsCacheKey(sortedNurses)),
+                )
+                .valueOrNull ??
+            const <String, bool>{};
+
         return [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -479,7 +487,8 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
               separatorBuilder: (_, __) =>
                   const SizedBox(height: kDoctorCardSpacing),
               itemBuilder: (_, index) {
-                final nurse = sortedNurses[index];
+                final nurse =
+                    applyNurseLiveStatus(sortedNurses[index], liveMap);
                 final distanceKm = _nearbyActive &&
                         _nearbyLatitude != null &&
                         _nearbyLongitude != null

@@ -2,9 +2,10 @@ import 'package:flutter/widgets.dart';
 
 import '../models/provider_type.dart';
 import 'doctor_presence_service.dart';
+import 'nurse_presence_service.dart';
 import 'token_storage.dart';
 
-/// Marks doctor offline when the app is closed; keeps presence while in foreground.
+/// Marks provider offline when the app is closed; keeps presence while in foreground.
 class DoctorPresenceLifecycleObserver extends WidgetsBindingObserver {
   DoctorPresenceLifecycleObserver._();
 
@@ -17,7 +18,7 @@ class DoctorPresenceLifecycleObserver extends WidgetsBindingObserver {
     if (_registered) return;
     WidgetsBinding.instance.addObserver(this);
     _registered = true;
-    _ensureOnlineIfDoctor();
+    _ensureOnlineIfProvider();
   }
 
   void unregister() {
@@ -26,16 +27,29 @@ class DoctorPresenceLifecycleObserver extends WidgetsBindingObserver {
     _registered = false;
   }
 
-  Future<bool> _isLoggedInDoctor() async {
+  Future<ProviderType?> _loggedInProviderType() async {
     final token = await TokenStorage.instance.getToken();
-    if (token == null || token.isEmpty) return false;
+    if (token == null || token.isEmpty) return null;
     final type = await TokenStorage.instance.getProviderType();
-    return type == ProviderType.doctor.routeParam;
+    return ProviderType.fromRouteParam(type ?? '') ??
+        (type == 'bloodbank' ? ProviderType.bloodBank : null);
   }
 
-  Future<void> _ensureOnlineIfDoctor() async {
-    if (await _isLoggedInDoctor()) {
+  Future<void> _ensureOnlineIfProvider() async {
+    final type = await _loggedInProviderType();
+    if (type == ProviderType.doctor) {
       await DoctorPresenceService.instance.goOnline();
+    } else if (type == ProviderType.nurse) {
+      await NursePresenceService.instance.goOnline();
+    }
+  }
+
+  Future<void> _goOfflineIfProvider() async {
+    final type = await _loggedInProviderType();
+    if (type == ProviderType.doctor) {
+      await DoctorPresenceService.instance.goOffline(immediate: true);
+    } else if (type == ProviderType.nurse) {
+      await NursePresenceService.instance.goOffline(immediate: true);
     }
   }
 
@@ -43,10 +57,10 @@ class DoctorPresenceLifecycleObserver extends WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.detached:
-        DoctorPresenceService.instance.goOffline(immediate: true);
+        _goOfflineIfProvider();
         break;
       case AppLifecycleState.resumed:
-        _ensureOnlineIfDoctor();
+        _ensureOnlineIfProvider();
         break;
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:

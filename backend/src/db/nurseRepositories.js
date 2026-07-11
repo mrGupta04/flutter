@@ -244,6 +244,18 @@ async function rejectNurse(id, rejectionReason) {
   return findNurseById(id);
 }
 
+async function touchNursePresence(nurseId) {
+  if (!nurseId) return null;
+  await Nurse.updateOne({ id: nurseId }, { $set: { lastActiveAt: new Date() } });
+  return findNurseById(nurseId);
+}
+
+async function clearNursePresence(nurseId) {
+  if (!nurseId) return null;
+  await Nurse.updateOne({ id: nurseId }, { $set: { lastActiveAt: null } });
+  return findNurseById(nurseId);
+}
+
 module.exports = {
   toNurse,
   findNurseById,
@@ -256,4 +268,6 @@ module.exports = {
   approveNurse,
   rejectNurse,
   findDocumentsByNurseId,
+  touchNursePresence,
+  clearNursePresence,
 };

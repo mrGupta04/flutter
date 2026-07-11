@@ -398,6 +398,30 @@ class NurseRegistrationRepository {
     }
   }
 
+  /// Mark nurse as live (heartbeat while logged in to admin app).
+  Future<void> sendPresenceHeartbeat() async {
+    try {
+      await _dioService.post(
+        AppConstants.endpointNursePresenceHeartbeat,
+        data: const {},
+      );
+    } catch (_) {
+      // Non-blocking; next heartbeat will retry.
+    }
+  }
+
+  /// Clear live status on logout.
+  Future<void> setPresenceOffline() async {
+    try {
+      await _dioService.post(
+        AppConstants.endpointNursePresenceOffline,
+        data: const {},
+      );
+    } catch (_) {
+      // Best-effort on logout.
+    }
+  }
+
   ApiResponse<T> _handleError<T>(DioException error) {
     String message = AppConstants.errorSomethingWentWrong;
     int statusCode = 500;

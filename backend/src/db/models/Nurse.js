@@ -42,6 +42,7 @@ const nurseSchema = new mongoose.Schema(
     approvalNotes: String,
     averageRating: { type: Number, default: null },
     ratingCount: { type: Number, default: 0 },
+    lastActiveAt: { type: Date, default: null, index: true },
   },
   { timestamps: true },
 );

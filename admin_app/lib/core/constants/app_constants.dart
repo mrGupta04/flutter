@@ -56,6 +56,8 @@ class AppConstants {
   static const String endpointDoctorAvailability = '/doctor/availability';
   static const String endpointDoctorPresenceHeartbeat = '/doctor/presence/heartbeat';
   static const String endpointDoctorPresenceOffline = '/doctor/presence/offline';
+  static const String endpointNursePresenceHeartbeat = '/nurse/presence/heartbeat';
+  static const String endpointNursePresenceOffline = '/nurse/presence/offline';
   static const String endpointVerifiedDoctors = '/doctor/verified';
   static const String endpointDoctorEmailSendOtp = '/doctor/email/send-otp';
   static const String endpointDoctorEmailVerifyOtp = '/doctor/email/verify-otp';

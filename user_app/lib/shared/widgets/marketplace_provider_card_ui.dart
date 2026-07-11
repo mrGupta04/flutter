@@ -6,7 +6,10 @@ import '../../core/theme/app_text_styles.dart';
 const Color kProviderSpecialtyGold = Color(0xFFC9922A);
 
 /// Light mint stats strip behind satisfaction / consult counts.
-const Color kProviderStatsBarBg = Color(0xFFE8F6F3);
+const Color kProviderStatsBarBg = Color(0xFFF0FAF7);
+
+/// Doctor listing card height estimate for home previews.
+const double kDoctorListingCardHeight = 420;
 
 class MarketplaceCardShell extends StatelessWidget {
   const MarketplaceCardShell({
@@ -14,39 +17,47 @@ class MarketplaceCardShell extends StatelessWidget {
     required this.child,
     this.onTap,
     this.borderColor,
+    this.padding = const EdgeInsets.all(16),
   });
 
   final Widget child;
   final VoidCallback? onTap;
   final Color? borderColor;
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
     final surface = Theme.of(context).colorScheme.surface;
 
+    final card = Ink(
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor ?? const Color(0xFFE8E8EC)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: padding,
+        child: child,
+      ),
+    );
+
+    if (onTap == null) {
+      return Material(color: Colors.transparent, child: card);
+    }
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: borderColor ?? AppColors.divider),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: child,
-          ),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        child: card,
       ),
     );
   }
@@ -91,8 +102,10 @@ class MarketplaceProviderHeader extends StatelessWidget {
                   Expanded(
                     child: Text(
                       name,
-                      style: AppTextStyles.titleSmall.copyWith(
+                      style: const TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
+                        color: Color(0xFF1A1D26),
                         height: 1.2,
                         letterSpacing: -0.2,
                       ),
@@ -105,9 +118,11 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   specialty!,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: specialtyColor,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: kProviderSpecialtyGold,
                     fontWeight: FontWeight.w700,
+                    height: 1.2,
                   ),
                 ),
               ],
@@ -115,9 +130,10 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   metaLine!,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.3,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -129,9 +145,11 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   languagesLine!,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.3,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF374151),
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -175,13 +193,14 @@ class _ProviderTagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF2F7),
-        borderRadius: BorderRadius.circular(6),
+        color: const Color(0xFFF3F4F8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE4E7EC)),
       ),
       child: Text(
         label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.textPrimary,
+        style: const TextStyle(
+          color: Color(0xFF374151),
           fontWeight: FontWeight.w600,
           fontSize: 11,
         ),
@@ -209,22 +228,26 @@ class MarketplaceStatsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
         color: kProviderStatsBarBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accentColor.withValues(alpha: 0.12)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.16)),
       ),
       child: Row(
         children: [
           Expanded(
-            child: _StatItem(icon: leftIcon, label: leftLabel, color: accentColor),
+            child: _StatItem(
+              icon: leftIcon,
+              label: leftLabel,
+              color: AppColors.primaryDark,
+            ),
           ),
           Expanded(
             child: _StatItem(
               icon: rightIcon,
               label: rightLabel,
-              color: accentColor,
+              color: AppColors.primaryDark,
               alignEnd: true,
             ),
           ),
@@ -252,14 +275,14 @@ class _StatItem extends StatelessWidget {
     final content = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color),
+        Icon(icon, size: 15, color: color),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.labelSmall.copyWith(
+            style: TextStyle(
               color: color,
               fontWeight: FontWeight.w700,
               fontSize: 11,
@@ -338,46 +361,54 @@ class MarketplacePriceActionRow extends StatelessWidget {
         ),
         if (showButton) ...[
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              SizedBox(
-                width: 132,
-                height: 40,
-                child: FilledButton(
-                  onPressed: buttonEnabled ? onButtonPressed : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: accentColor,
-                    disabledBackgroundColor: AppColors.grey200,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+          SizedBox(
+            width: 138,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: FilledButton(
+                    onPressed: buttonEnabled ? onButtonPressed : null,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: accentColor,
+                      disabledBackgroundColor: AppColors.grey200,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: EdgeInsets.zero,
+                      elevation: 0,
                     ),
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: Text(
-                    buttonLabel,
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w700,
+                    child: Text(
+                      buttonLabel,
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              if (availabilityLabel != null &&
-                  availabilityLabel!.trim().isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  availabilityLabel!,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                if (availabilityLabel != null &&
+                    availabilityLabel!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    availabilityLabel!,
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.right,
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ],
@@ -406,19 +437,21 @@ class _PriceBlock extends StatelessWidget {
             children: [
               Text(
                 '₹$originalPrice',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.textTertiary,
+                style: const TextStyle(
+                  color: Color(0xFF9AA3AF),
                   decoration: TextDecoration.lineThrough,
-                  decorationColor: AppColors.textTertiary,
+                  decorationColor: Color(0xFF9AA3AF),
                   fontWeight: FontWeight.w500,
+                  fontSize: 12,
                 ),
               ),
               const SizedBox(width: 6),
               Text(
                 '$discountPercent%',
-                style: AppTextStyles.labelSmall.copyWith(
+                style: const TextStyle(
                   color: AppColors.offer,
                   fontWeight: FontWeight.w800,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -427,8 +460,10 @@ class _PriceBlock extends StatelessWidget {
         ],
         Text(
           '₹$price',
-          style: AppTextStyles.headlineSmall.copyWith(
+          style: const TextStyle(
+            fontSize: 24,
             fontWeight: FontWeight.w800,
+            color: Color(0xFF1A1D26),
             height: 1,
             letterSpacing: -0.5,
           ),
@@ -491,13 +526,15 @@ class MarketplaceSquareAvatar extends StatelessWidget {
   const MarketplaceSquareAvatar({
     super.key,
     required this.child,
-    this.size = 76,
-    this.borderColor = AppColors.divider,
+    this.size = 96,
+    this.borderColor = const Color(0xFFE4E7EC),
+    this.borderRadius = 12,
   });
 
   final Widget child;
   final double size;
   final Color borderColor;
+  final double borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -506,7 +543,7 @@ class MarketplaceSquareAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         color: AppColors.grey50,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(color: borderColor),
       ),
       clipBehavior: Clip.antiAlias,

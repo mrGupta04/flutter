@@ -3,9 +3,12 @@ function normalizeVerificationStatus(status) {
   return status;
 }
 
+const { isDoctorLiveNow } = require('../utils/doctorPresence');
+
 function toNurse(doc) {
   if (!doc) return null;
   const d = doc.toObject ? doc.toObject() : doc;
+  const lastActiveAt = d.lastActiveAt ?? null;
   return {
     id: d.id,
     firstName: d.firstName,
@@ -46,6 +49,8 @@ function toNurse(doc) {
     approvalNotes: d.approvalNotes,
     averageRating: d.averageRating ?? null,
     ratingCount: d.ratingCount ?? 0,
+    lastActiveAt,
+    isLiveNow: isDoctorLiveNow(lastActiveAt),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
