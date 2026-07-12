@@ -11,7 +11,7 @@ const nurseSchema = new mongoose.Schema(
     passwordHash: String,
     profilePicture: String,
     gender: String,
-    dateOfBirth: DateTime,
+    dateOfBirth: Date,
     languagesSpoken: { type: [String], default: [] },
     emergencyContactName: String,
     emergencyContactNumber: String,
