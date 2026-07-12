@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -15,6 +14,7 @@ import '../../../user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../../video_consult/presentation/widgets/join_video_consult_button.dart';
 import '../../provider/patient_dashboard_provider.dart';
+import '../utils/prescription_view_utils.dart';
 import '../../../feedback/presentation/utils/feedback_prompt_helper.dart';
 import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
@@ -91,7 +91,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 268,
             pinned: true,
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.white,
@@ -150,7 +150,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                 child: SafeArea(
                   bottom: false,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 56),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 68),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -210,6 +210,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                               ),
                             ),
                           ],
+                          const SizedBox(height: 12),
                         ],
                       ],
                     ),
@@ -273,7 +274,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
   }
 }
 
-class _ProfileTab extends StatelessWidget {
+class _ProfileTab extends ConsumerWidget {
   const _ProfileTab({
     required this.user,
     required this.prescriptions,
@@ -284,26 +285,8 @@ class _ProfileTab extends StatelessWidget {
   final List<PatientBookingModel> prescriptions;
   final List<PatientBookingModel> pendingPrescriptions;
 
-  Future<void> _openPrescriptionPdf(BuildContext context, String? url) async {
-    final resolved = MediaUrlUtils.resolve(url);
-    if (resolved.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prescription file is not available yet.')),
-      );
-      return;
-    }
-    final uri = Uri.parse(resolved);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the prescription PDF.')),
-        );
-      }
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (user == null) {
       return const Center(child: Text('Not signed in'));
     }
@@ -381,9 +364,12 @@ class _ProfileTab extends StatelessWidget {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
-                            onPressed: () => _openPrescriptionPdf(
+                            onPressed: () => openPatientPrescriptionPdf(
                               context,
-                              booking.prescriptionPdfUrl,
+                              bookingId: booking.id,
+                              prescriptionPdfUrl: booking.prescriptionPdfUrl,
+                              repository:
+                                  ref.read(patientDashboardRepositoryProvider),
                             ),
                             icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
                             label: Text(
@@ -707,24 +693,6 @@ class _BookingCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _openPrescriptionPdf(BuildContext context, String? url) async {
-    final resolved = MediaUrlUtils.resolve(url);
-    if (resolved.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prescription file is not available yet.')),
-      );
-      return;
-    }
-    final uri = Uri.parse(resolved);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the prescription PDF.')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dateFmt = DateFormat('EEE, dd MMM yyyy');
@@ -902,9 +870,12 @@ class _BookingCard extends ConsumerWidget {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: () => _openPrescriptionPdf(
+                        onPressed: () => openPatientPrescriptionPdf(
                           context,
-                          booking.prescriptionPdfUrl,
+                          bookingId: booking.id,
+                          prescriptionPdfUrl: booking.prescriptionPdfUrl,
+                          repository:
+                              ref.read(patientDashboardRepositoryProvider),
                         ),
                         icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
                         label: Text(

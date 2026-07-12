@@ -8,6 +8,9 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../utils/embedded_documents_helper.dart';
+import '../widgets/admin_document_sections.dart';
+import '../widgets/admin_embedded_documents_panel.dart';
 import '../../provider/admin_blood_bank_provider.dart';
 
 class AdminBloodBankDetailsScreen extends ConsumerWidget {
@@ -63,6 +66,11 @@ class AdminBloodBankDetailsScreen extends ConsumerWidget {
       );
     }
 
+    final documents = bloodBankDocumentsToAdminDocs(bloodBank.documents);
+    final canReviewDocuments = bloodBank.verificationStatus !=
+            VerificationStatus.verified &&
+        bloodBank.verificationStatus != VerificationStatus.rejected;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -92,6 +100,43 @@ class AdminBloodBankDetailsScreen extends ConsumerWidget {
             bloodBank.hasComponentSeparation == true ? 'Yes' : 'No',
           ),
           _DetailRow('24x7', bloodBank.available24x7 == true ? 'Yes' : 'No'),
+          const SizedBox(height: 20),
+          AdminEmbeddedDocumentsPanel(
+            documents: documents,
+            canReviewDocuments: canReviewDocuments,
+            emptyMessage:
+                'This blood bank has not uploaded registration documents yet.',
+            onVerify: (doc) => handleEmbeddedDocumentAction(
+              context,
+              action: () => ref
+                  .read(bloodBankDetailsProvider(bloodBankId).notifier)
+                  .verifyDocument(
+                    bloodBankId: bloodBankId,
+                    documentId: doc.id ?? '',
+                  ),
+              successMessage: 'Document verified',
+              errorMessage:
+                  ref.read(bloodBankDetailsProvider(bloodBankId)).error ??
+                      'Could not verify document',
+            ),
+            onReject: (doc, reason) => handleEmbeddedDocumentAction(
+              context,
+              action: () => ref
+                  .read(bloodBankDetailsProvider(bloodBankId).notifier)
+                  .rejectDocument(
+                    bloodBankId: bloodBankId,
+                    documentId: doc.id ?? '',
+                    reason: reason,
+                  ),
+              successMessage:
+                  'Document rejected — provider will see your message',
+              errorMessage:
+                  ref.read(bloodBankDetailsProvider(bloodBankId)).error ??
+                      'Could not reject document',
+              successIsErrorStyle: true,
+            ),
+          ),
+          const SizedBox(height: 120),
         ],
       ),
     );
@@ -138,6 +183,10 @@ class _ActionBar extends ConsumerWidget {
     final status = bloodBank.verificationStatus;
     final canApprove = status != VerificationStatus.verified &&
         status != VerificationStatus.rejected;
+    final documents = bloodBankDocumentsToAdminDocs(bloodBank.documents);
+    final allDocsVerified = allDocumentsVerified(documents);
+    final canPublish =
+        canApprove && allDocsVerified && documents.isNotEmpty;
 
     if (!canApprove) {
       return SafeArea(
@@ -164,21 +213,22 @@ class _ActionBar extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (!allDocsVerified && documents.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: InfoCard(
+                  icon: Icons.info_outline_rounded,
+                  title: 'Verify all documents first',
+                  subtitle:
+                      'Publish is enabled after every uploaded document is verified.',
+                ),
+              ),
             CustomButton(
               label: 'Verify & publish',
               icon: Icons.verified_rounded,
               isLoading: state.isApproving,
-              onPressed: () async {
-                final ok = await ref
-                    .read(bloodBankDetailsProvider(bloodBankId).notifier)
-                    .approveBloodBank(bloodBankId: bloodBankId);
-                if (context.mounted && ok) {
-                  SnackBarHelper.showSuccess(
-                    context,
-                    AppConstants.adminApprovalSuccess,
-                  );
-                }
-              },
+              isEnabled: canPublish,
+              onPressed: () => _approveBloodBank(context, ref),
             ),
             const SizedBox(height: 8),
             CustomOutlineButton(
@@ -190,6 +240,18 @@ class _ActionBar extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _approveBloodBank(BuildContext context, WidgetRef ref) async {
+    final ok = await ref
+        .read(bloodBankDetailsProvider(bloodBankId).notifier)
+        .approveBloodBank(bloodBankId: bloodBankId);
+    if (context.mounted && ok) {
+      SnackBarHelper.showSuccess(
+        context,
+        AppConstants.adminApprovalSuccess,
+      );
+    }
   }
 
   Future<void> _showRejectDialog(BuildContext context, WidgetRef ref) async {

@@ -111,6 +111,7 @@ class BloodBankDocument {
     required this.label,
     required this.url,
     this.verificationStatus = 'pending',
+    this.rejectionReason,
   });
 
   final String id;
@@ -118,6 +119,7 @@ class BloodBankDocument {
   final String label;
   final String url;
   final String verificationStatus;
+  final String? rejectionReason;
 
   factory BloodBankDocument.fromJson(Map<String, dynamic> json) {
     return BloodBankDocument(
@@ -126,6 +128,7 @@ class BloodBankDocument {
       label: json['label'] as String? ?? '',
       url: json['url'] as String? ?? '',
       verificationStatus: json['verificationStatus'] as String? ?? 'pending',
+      rejectionReason: json['rejectionReason'] as String?,
     );
   }
 }

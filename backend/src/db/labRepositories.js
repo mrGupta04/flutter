@@ -2,6 +2,11 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const Lab = require('./models/Lab');
 const { toLab } = require('./labMappers');
+const {
+  assertEmbeddedDocumentsVerified,
+  verifyEmbeddedDocument,
+  rejectEmbeddedDocument,
+} = require('./embeddedDocumentVerification');
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -282,6 +287,8 @@ async function approveLab(id, approvalNotes) {
     throw err;
   }
 
+  assertEmbeddedDocumentsVerified(existing.documents, 'lab document');
+
   await Lab.updateOne(
     { id },
     {
@@ -338,6 +345,14 @@ async function requestLabDocuments(id, note) {
   return findLabById(id);
 }
 
+async function verifyLabDocument(labId, documentId) {
+  return verifyEmbeddedDocument(Lab, labId, documentId);
+}
+
+async function rejectLabDocument(labId, documentId, rejectionReason) {
+  return rejectEmbeddedDocument(Lab, labId, documentId, rejectionReason);
+}
+
 module.exports = {
   toLab,
   findLabById,
@@ -353,4 +368,6 @@ module.exports = {
   rejectLab,
   suspendLab,
   requestLabDocuments,
+  verifyLabDocument,
+  rejectLabDocument,
 };

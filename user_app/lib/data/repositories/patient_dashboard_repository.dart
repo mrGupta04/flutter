@@ -134,4 +134,22 @@ class PatientDashboardRepository {
     }
     return AppConstants.errorSomethingWentWrong;
   }
+
+  Future<String?> fetchPrescriptionPdfUrl(String bookingId) async {
+    try {
+      final response = await _dio.get(
+        AppConstants.endpointConsultationPrescription(bookingId),
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body['success'] == false) {
+        return null;
+      }
+      final data = body['data'];
+      if (data is! Map<String, dynamic>) return null;
+      final pdfUrl = data['pdfUrl'] as String?;
+      return pdfUrl?.trim().isNotEmpty == true ? pdfUrl!.trim() : null;
+    } on DioException {
+      return null;
+    }
+  }
 }

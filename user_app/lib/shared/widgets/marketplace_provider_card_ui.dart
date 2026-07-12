@@ -9,7 +9,7 @@ const Color kProviderSpecialtyGold = Color(0xFFC9922A);
 const Color kProviderStatsBarBg = Color(0xFFF0FAF7);
 
 /// Doctor listing card height estimate for home previews.
-const double kDoctorListingCardHeight = 420;
+const double kDoctorListingCardHeight = 310;
 
 class MarketplaceCardShell extends StatelessWidget {
   const MarketplaceCardShell({
@@ -103,7 +103,7 @@ class MarketplaceProviderHeader extends StatelessWidget {
                     child: Text(
                       name,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF1A1D26),
                         height: 1.2,
@@ -119,7 +119,7 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 Text(
                   specialty!,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 10,
                     color: kProviderSpecialtyGold,
                     fontWeight: FontWeight.w700,
                     height: 1.2,
@@ -131,7 +131,7 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 Text(
                   metaLine!,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 9,
                     color: Color(0xFF6B7280),
                     height: 1.35,
                   ),
@@ -146,7 +146,7 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 Text(
                   languagesLine!,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 9,
                     color: Color(0xFF374151),
                     height: 1.35,
                     fontWeight: FontWeight.w500,
@@ -202,7 +202,7 @@ class _ProviderTagChip extends StatelessWidget {
         style: const TextStyle(
           color: Color(0xFF374151),
           fontWeight: FontWeight.w600,
-          fontSize: 11,
+          fontSize: 8,
         ),
       ),
     );
@@ -275,8 +275,8 @@ class _StatItem extends StatelessWidget {
     final content = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: 6),
+        Icon(icon, size: 11, color: color),
+        const SizedBox(width: 5),
         Flexible(
           child: Text(
             label,
@@ -285,7 +285,7 @@ class _StatItem extends StatelessWidget {
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.w700,
-              fontSize: 11,
+              fontSize: 8,
             ),
           ),
         ),
@@ -386,7 +386,7 @@ class MarketplacePriceActionRow extends StatelessWidget {
                       style: const TextStyle(
                         color: AppColors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                        fontSize: 10,
                       ),
                     ),
                   ),
@@ -442,7 +442,7 @@ class _PriceBlock extends StatelessWidget {
                   decoration: TextDecoration.lineThrough,
                   decorationColor: Color(0xFF9AA3AF),
                   fontWeight: FontWeight.w500,
-                  fontSize: 12,
+                  fontSize: 9,
                 ),
               ),
               const SizedBox(width: 6),
@@ -451,7 +451,7 @@ class _PriceBlock extends StatelessWidget {
                 style: const TextStyle(
                   color: AppColors.offer,
                   fontWeight: FontWeight.w800,
-                  fontSize: 12,
+                  fontSize: 9,
                 ),
               ),
             ],
@@ -461,7 +461,7 @@ class _PriceBlock extends StatelessWidget {
         Text(
           '₹$price',
           style: const TextStyle(
-            fontSize: 24,
+            fontSize: 18,
             fontWeight: FontWeight.w800,
             color: Color(0xFF1A1D26),
             height: 1,

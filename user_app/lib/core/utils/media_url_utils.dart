@@ -19,6 +19,12 @@ class MediaUrlUtils {
     if (url == null || url.isEmpty) return '';
     final trimmed = url.trim();
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      final uri = Uri.tryParse(trimmed);
+      final path = uri?.path ?? '';
+      if (path.contains('/uploads/')) {
+        final uploadsPath = path.substring(path.indexOf('/uploads/'));
+        return '$_serverOrigin$uploadsPath';
+      }
       return trimmed;
     }
     if (trimmed.startsWith('/uploads/')) {
@@ -32,6 +38,9 @@ class MediaUrlUtils {
     }
     return '$_serverOrigin/uploads/$trimmed';
   }
+
+  /// Prescription PDFs may be stored as absolute localhost URLs from the server.
+  static String resolvePrescriptionPdf(String? url) => resolve(url);
 
   static bool isPdfUrl(String? url, {String? mimeType}) {
     if (mimeType != null && mimeType.toLowerCase().contains('pdf')) {

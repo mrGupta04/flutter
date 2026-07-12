@@ -26,83 +26,6 @@ class MockApi {
 
     await Future.delayed(const Duration(milliseconds: 500));
 
-    if (path == AppConstants.endpointAadhaarConfig && method == 'GET') {
-      return _ok(
-        path,
-        method,
-        {
-          'success': true,
-          'statusCode': 200,
-          'data': {
-            'provider': 'mock',
-            'uidaiOtp': false,
-            'description': 'Mock OTP (development)',
-          },
-        },
-      );
-    }
-
-    if (path == AppConstants.endpointAadhaarSendOtp && method == 'POST') {
-      return _ok(
-        path,
-        method,
-        {
-          'success': true,
-          'message': 'OTP sent',
-          'statusCode': 200,
-          'data': {
-            'message': 'OTP sent',
-            'maskedAadhaar': 'XXXX-XXXX-1234',
-            'expiresInSeconds': 600,
-            'devOtp': '123456',
-          },
-        },
-      );
-    }
-
-    if (path == AppConstants.endpointAadhaarVerifyOtp && method == 'POST') {
-      final doctorId = data?['doctorId'] as String? ?? '';
-      final doctor = _db.getDoctorById(doctorId) ?? _db.latestDoctor;
-      final updated = doctor?.copyWith(
-            aadhaarVerified: true,
-            aadhaarLast4: '1234',
-          ) ??
-          doctor;
-      if (updated != null) {
-        _db.updateDoctor(updated);
-      }
-      return _ok(
-        path,
-        method,
-        {
-          'success': true,
-          'message': 'Aadhaar verified',
-          'statusCode': 200,
-          'data': {
-            'verified': true,
-            'maskedAadhaar': 'XXXX-XXXX-1234',
-            'aadhaarLast4': '1234',
-            'doctor': updated?.toJson(),
-          },
-        },
-      );
-    }
-
-    if (path == AppConstants.endpointRegisterDoctor && method == 'POST') {
-      final doctor = DoctorModel.fromJson(data ?? {});
-      final created = _db.registerDoctor(doctor);
-      return _ok(
-        path,
-        method,
-        {
-          'success': true,
-          'message': 'Doctor registered successfully',
-          'statusCode': 200,
-          'data': created.toJson(),
-        },
-      );
-    }
-
     if (path == AppConstants.endpointGetProfile && method == 'GET') {
       final doctorId = queryParameters?['doctorId'] as String?;
       final doctor = doctorId != null
@@ -115,21 +38,6 @@ class MockApi {
           'success': true,
           'statusCode': 200,
           'data': doctor?.toJson(),
-        },
-      );
-    }
-
-    if (path == AppConstants.endpointUpdateProfile && method == 'PUT') {
-      final doctor = DoctorModel.fromJson(data ?? {});
-      final updated = _db.updateDoctor(doctor);
-      return _ok(
-        path,
-        method,
-        {
-          'success': true,
-          'message': 'Profile updated successfully',
-          'statusCode': 200,
-          'data': updated.toJson(),
         },
       );
     }
@@ -414,35 +322,6 @@ class MockApi {
     _db.seedIfEmpty();
 
     await Future.delayed(const Duration(milliseconds: 800));
-
-    if (path == AppConstants.endpointUploadDocument) {
-      final doctorId = fields['doctorId'] ?? _db.latestDoctor?.id ?? '';
-      final documentTypeValue = fields['documentType'];
-      final documentType = _parseDocumentType(documentTypeValue) ??
-          DocumentType.medicalLicense;
-        final fileName = _fileNameFromPath(filePath);
-      final mimeType = _guessMimeType(fileName);
-        const fileSize = 1024 * 500;
-
-      final document = _db.addDocument(
-        doctorId: doctorId,
-        documentType: documentType,
-        fileName: fileName,
-        mimeType: mimeType,
-        fileSize: fileSize,
-      );
-
-      return _ok(
-        path,
-        'POST',
-        {
-          'success': true,
-          'message': 'Document uploaded successfully',
-          'statusCode': 200,
-          'data': document.toJson(),
-        },
-      );
-    }
 
     return _error(path, 'POST', 'Endpoint not found', 404);
   }

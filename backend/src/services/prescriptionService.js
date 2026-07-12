@@ -12,6 +12,27 @@ const { formatSlotLabel } = require('../utils/slotDateTime');
 const { generatePrescriptionPdf } = require('./prescriptionPdfService');
 const { sendPrescriptionEmail } = require('./prescriptionNotificationService');
 
+function normalizePrescriptionPdfUrlForResponse(pdfUrl) {
+  if (!pdfUrl) return null;
+  const str = String(pdfUrl).trim();
+  if (!str) return null;
+  const uploadsIdx = str.indexOf('/uploads/');
+  if (uploadsIdx >= 0) {
+    return str.slice(uploadsIdx);
+  }
+  return str;
+}
+
+function absolutePrescriptionPdfUrl(pdfUrl, publicBaseUrl) {
+  const normalized = normalizePrescriptionPdfUrlForResponse(pdfUrl);
+  if (!normalized) return null;
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
+  }
+  const base = String(publicBaseUrl || '').replace(/\/$/, '');
+  return `${base}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
+}
+
 const DEFAULT_AUTO_PRESCRIPTION_ADVICE =
   'Thank you for your consultation. Please follow any instructions discussed during your visit. Contact your doctor or seek urgent care if symptoms worsen.';
 
@@ -85,7 +106,7 @@ function formatPrescriptionResponse(prescription, doctor, booking) {
     tests: prescription.tests || [],
     advice: prescription.advice,
     status: prescription.status,
-    pdfUrl: prescription.pdfUrl,
+    pdfUrl: normalizePrescriptionPdfUrlForResponse(prescription.pdfUrl),
     pdfFileName: prescription.pdfFileName,
     emailedAt: prescription.emailedAt,
     createdAt: prescription.createdAt,
@@ -146,7 +167,7 @@ async function finalizeAndDeliverPrescription({
     slotStart: booking.slotStart,
   });
 
-  const pdfUrl = `${String(publicBaseUrl || '').replace(/\/$/, '')}${pdf.publicPath}`;
+  const pdfUrl = pdf.publicPath;
   const finalized = await finalizePrescription({
     bookingId: booking.id,
     pdfUrl,
@@ -154,6 +175,7 @@ async function finalizeAndDeliverPrescription({
   });
 
   let emailResult = { sent: false, reason: 'Patient email not provided' };
+  const emailPdfUrl = absolutePrescriptionPdfUrl(pdfUrl, publicBaseUrl);
   if (booking.patientEmail) {
     try {
       emailResult = await sendPrescriptionEmail({
@@ -163,7 +185,7 @@ async function finalizeAndDeliverPrescription({
         slotLabel: formatSlotLabel(booking.slotStart, booking.slotEnd),
         pdfPath: pdf.filePath,
         pdfFileName: pdf.fileName,
-        pdfUrl,
+        pdfUrl: emailPdfUrl,
       });
     } catch (emailErr) {
       console.error('[prescription] Email failed:', emailErr.message);

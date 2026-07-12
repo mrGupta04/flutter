@@ -153,6 +153,17 @@ async function finalizePrescription({ bookingId, pdfUrl, pdfFileName }) {
   return Prescription.findOne({ bookingId }).lean();
 }
 
+function normalizePrescriptionPdfUrl(pdfUrl) {
+  if (!pdfUrl) return null;
+  const str = String(pdfUrl).trim();
+  if (!str) return null;
+  const uploadsIdx = str.indexOf('/uploads/');
+  if (uploadsIdx >= 0) {
+    return str.slice(uploadsIdx);
+  }
+  return str;
+}
+
 function prescriptionFieldsForBooking(booking, prescription, now = new Date()) {
   const eligible = isPrescriptionEligibleConsultation(booking?.consultationType);
   const finalized = prescription?.status === 'finalized';
@@ -178,7 +189,7 @@ function prescriptionFieldsForBooking(booking, prescription, now = new Date()) {
 
   return {
     hasPrescription: true,
-    prescriptionPdfUrl: prescription.pdfUrl,
+    prescriptionPdfUrl: normalizePrescriptionPdfUrl(prescription.pdfUrl),
     prescriptionFileName: prescription.pdfFileName,
     prescriptionCreatedAt: prescription.updatedAt || prescription.createdAt,
     prescriptionPending: false,

@@ -203,6 +203,40 @@ class ScanCenterDetailsNotifier extends StateNotifier<ScanCenterDetailsState> {
     );
     return false;
   }
+
+  Future<bool> verifyDocument({
+    required String scanCenterId,
+    required String documentId,
+  }) async {
+    final response = await repository.verifyScanCenterDocument(
+      scanCenterId: scanCenterId,
+      documentId: documentId,
+    );
+    if (response.success && response.data != null) {
+      state = state.copyWith(center: response.data, error: null);
+      return true;
+    }
+    state = state.copyWith(error: response.error ?? 'Failed to verify document');
+    return false;
+  }
+
+  Future<bool> rejectDocument({
+    required String scanCenterId,
+    required String documentId,
+    required String reason,
+  }) async {
+    final response = await repository.rejectScanCenterDocument(
+      scanCenterId: scanCenterId,
+      documentId: documentId,
+      rejectionReason: reason,
+    );
+    if (response.success && response.data != null) {
+      state = state.copyWith(center: response.data, error: null);
+      return true;
+    }
+    state = state.copyWith(error: response.error ?? 'Failed to reject document');
+    return false;
+  }
 }
 
 final scanCenterDetailsProvider = StateNotifierProvider.family<

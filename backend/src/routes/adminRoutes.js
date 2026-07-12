@@ -35,6 +35,8 @@ const {
   rejectBloodBank,
   suspendBloodBank,
   requestBloodBankDocuments,
+  verifyBloodBankDocument,
+  rejectBloodBankDocument,
   getBloodBankDashboardStats,
 } = require('../db/bloodBankRepositories');
 const { listAllOrders } = require('../db/bloodOrderRepositories');
@@ -47,6 +49,8 @@ const {
   rejectLab,
   suspendLab,
   requestLabDocuments,
+  verifyLabDocument,
+  rejectLabDocument,
 } = require('../db/labRepositories');
 const {
   findScanCenterById,
@@ -55,6 +59,8 @@ const {
   rejectScanCenter,
   suspendScanCenter,
   requestScanCenterDocuments,
+  verifyScanCenterDocument,
+  rejectScanCenterDocument,
 } = require('../db/scanCenterRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const { adminRequired } = require('../middleware/auth');
@@ -652,6 +658,65 @@ router.post('/blood-banks/:id/request-documents', adminRequired, async (req, res
   }
 });
 
+router.post(
+  '/blood-banks/:bloodBankId/documents/:documentId/verify',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { bloodBankId, documentId } = req.params;
+      const bloodBank = await findBloodBankById(bloodBankId);
+      if (!bloodBank) {
+        return sendError(res, 'Blood bank not found', 404);
+      }
+
+      const document = await verifyBloodBankDocument(bloodBankId, documentId);
+      const updated = await findBloodBankById(bloodBankId);
+      return sendSuccess(res, {
+        message: 'Document verified',
+        data: { document, bloodBank: updated },
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to verify document', status);
+    }
+  },
+);
+
+router.post(
+  '/blood-banks/:bloodBankId/documents/:documentId/reject',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { bloodBankId, documentId } = req.params;
+      const { rejectionReason } = req.body;
+      if (!rejectionReason?.trim()) {
+        return sendError(res, 'rejectionReason is required');
+      }
+
+      const bloodBank = await findBloodBankById(bloodBankId);
+      if (!bloodBank) {
+        return sendError(res, 'Blood bank not found', 404);
+      }
+
+      const document = await rejectBloodBankDocument(
+        bloodBankId,
+        documentId,
+        rejectionReason.trim(),
+      );
+      const updated = await findBloodBankById(bloodBankId);
+      return sendSuccess(res, {
+        message: 'Document rejected',
+        data: { document, bloodBank: updated },
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to reject document', status);
+    }
+  },
+);
+
 router.get('/blood-banks/:id/stats', adminRequired, async (req, res) => {
   try {
     const stats = await getBloodBankDashboardStats(req.params.id);
@@ -823,6 +888,65 @@ router.post('/labs/:id/request-documents', adminRequired, async (req, res) => {
   }
 });
 
+router.post(
+  '/labs/:labId/documents/:documentId/verify',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { labId, documentId } = req.params;
+      const lab = await findLabById(labId);
+      if (!lab) {
+        return sendError(res, 'Lab not found', 404);
+      }
+
+      const document = await verifyLabDocument(labId, documentId);
+      const updated = await findLabById(labId);
+      return sendSuccess(res, {
+        message: 'Document verified',
+        data: { document, lab: updated },
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to verify document', status);
+    }
+  },
+);
+
+router.post(
+  '/labs/:labId/documents/:documentId/reject',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { labId, documentId } = req.params;
+      const { rejectionReason } = req.body;
+      if (!rejectionReason?.trim()) {
+        return sendError(res, 'rejectionReason is required');
+      }
+
+      const lab = await findLabById(labId);
+      if (!lab) {
+        return sendError(res, 'Lab not found', 404);
+      }
+
+      const document = await rejectLabDocument(
+        labId,
+        documentId,
+        rejectionReason.trim(),
+      );
+      const updated = await findLabById(labId);
+      return sendSuccess(res, {
+        message: 'Document rejected',
+        data: { document, lab: updated },
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to reject document', status);
+    }
+  },
+);
+
 // ——— Scan center applications (admin only) ———
 
 router.get('/scan-centers', adminRequired, async (req, res) => {
@@ -954,5 +1078,64 @@ router.post('/scan-centers/:id/request-documents', adminRequired, async (req, re
     return sendError(res, err.message || 'Failed to request documents', 500);
   }
 });
+
+router.post(
+  '/scan-centers/:scanCenterId/documents/:documentId/verify',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { scanCenterId, documentId } = req.params;
+      const center = await findScanCenterById(scanCenterId);
+      if (!center) {
+        return sendError(res, 'Scan center not found', 404);
+      }
+
+      const document = await verifyScanCenterDocument(scanCenterId, documentId);
+      const updated = await findScanCenterById(scanCenterId);
+      return sendSuccess(res, {
+        message: 'Document verified',
+        data: { document, scanCenter: updated },
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to verify document', status);
+    }
+  },
+);
+
+router.post(
+  '/scan-centers/:scanCenterId/documents/:documentId/reject',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const { scanCenterId, documentId } = req.params;
+      const { rejectionReason } = req.body;
+      if (!rejectionReason?.trim()) {
+        return sendError(res, 'rejectionReason is required');
+      }
+
+      const center = await findScanCenterById(scanCenterId);
+      if (!center) {
+        return sendError(res, 'Scan center not found', 404);
+      }
+
+      const document = await rejectScanCenterDocument(
+        scanCenterId,
+        documentId,
+        rejectionReason.trim(),
+      );
+      const updated = await findScanCenterById(scanCenterId);
+      return sendSuccess(res, {
+        message: 'Document rejected',
+        data: { document, scanCenter: updated },
+      });
+    } catch (err) {
+      console.error(err);
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to reject document', status);
+    }
+  },
+);
 
 module.exports = router;

@@ -2,6 +2,11 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const ScanCenter = require('./models/ScanCenter');
 const { toScanCenter } = require('./scanCenterMappers');
+const {
+  assertEmbeddedDocumentsVerified,
+  verifyEmbeddedDocument,
+  rejectEmbeddedDocument,
+} = require('./embeddedDocumentVerification');
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -292,6 +297,8 @@ async function approveScanCenter(id, approvalNotes) {
     throw err;
   }
 
+  assertEmbeddedDocumentsVerified(existing.documents, 'scan center document');
+
   await ScanCenter.updateOne(
     { id },
     {
@@ -348,6 +355,19 @@ async function requestScanCenterDocuments(id, note) {
   return findScanCenterById(id);
 }
 
+async function verifyScanCenterDocument(scanCenterId, documentId) {
+  return verifyEmbeddedDocument(ScanCenter, scanCenterId, documentId);
+}
+
+async function rejectScanCenterDocument(scanCenterId, documentId, rejectionReason) {
+  return rejectEmbeddedDocument(
+    ScanCenter,
+    scanCenterId,
+    documentId,
+    rejectionReason,
+  );
+}
+
 module.exports = {
   toScanCenter,
   findScanCenterById,
@@ -363,4 +383,6 @@ module.exports = {
   rejectScanCenter,
   suspendScanCenter,
   requestScanCenterDocuments,
+  verifyScanCenterDocument,
+  rejectScanCenterDocument,
 };

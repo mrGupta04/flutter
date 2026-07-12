@@ -118,8 +118,8 @@ class LiveAvailableBadge extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF4B5563),
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF16A34A),
             ),
           ),
         ],

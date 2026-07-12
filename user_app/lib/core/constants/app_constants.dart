@@ -11,12 +11,8 @@ class AppConstants {
   static bool get useMockApi => ApiConfig.useMockApi;
   static String get adminApiKey => ApiConfig.adminApiKey;
 
-  // Doctor API Endpoints
-  static const String endpointRegisterDoctor = '/doctor/register';
-  static const String endpointUploadDocument = '/doctor/upload-document';
-  static const String endpointUploadProfile = '/doctor/upload-profile';
+  // Doctor API Endpoints (patient discovery & booking)
   static const String endpointGetProfile = '/doctor/profile';
-  static const String endpointUpdateProfile = '/doctor/profile';
   static const String endpointPatientRegister = '/patient/register';
   static const String endpointPatientLogin = '/patient/login';
   static const String endpointPatientProfile = '/patient/profile';
@@ -52,9 +48,6 @@ class AppConstants {
       '/consultations/$bookingId/feedback/dismiss';
   static String endpointConsultationPrescription(String bookingId) =>
       '/consultations/$bookingId/prescription';
-  static const String endpointAadhaarConfig = '/doctor/aadhaar/config';
-  static const String endpointAadhaarSendOtp = '/doctor/aadhaar/send-otp';
-  static const String endpointAadhaarVerifyOtp = '/doctor/aadhaar/verify-otp';
 
   // Nurse API Endpoints (patient discovery)
   static const String endpointGetNurseProfile = '/nurse/profile';
@@ -66,17 +59,10 @@ class AppConstants {
       '/nurse/slot-hold/$holdId';
   static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
 
-  // Ambulance API Endpoints
-  static const String endpointRegisterAmbulance = '/ambulance/register';
-  static const String endpointAmbulanceUploadProfile = '/ambulance/upload-profile';
-  static const String endpointAmbulanceUploadDocument = '/ambulance/upload-document';
-  static const String endpointGetAmbulanceProfile = '/ambulance/profile';
+  // Ambulance API Endpoints (patient discovery)
   static const String endpointVerifiedAmbulances = '/ambulance/verified';
 
-  // Blood Bank API Endpoints
-  static const String endpointRegisterBloodBank = '/blood-bank/register';
-  static const String endpointBloodBankUploadProfile = '/blood-bank/upload-profile';
-  static const String endpointGetBloodBankProfile = '/blood-bank/profile';
+  // Blood Bank API Endpoints (patient discovery & booking)
   static const String endpointVerifiedBloodBanks = '/blood-bank/verified';
   static const String endpointBloodBankBookings = '/blood-bank/bookings';
   static const String endpointBloodBankReviews = '/blood-bank/reviews';
@@ -84,19 +70,6 @@ class AppConstants {
   static const String endpointBloodBankCatalog = '/blood-bank/catalog';
   static const String endpointBloodBankPaymentCreateOrder = '/blood-bank/payments/create-order';
   static const String endpointBloodBankPaymentVerify = '/blood-bank/payments/verify';
-
-  // Admin API Endpoints
-  static const String endpointAdminLogin = '/admin/login';
-  static const String endpointAdminDoctors = '/admin/doctors';
-  static String endpointAdminDoctor(String id) => '/admin/doctors/$id';
-  static String endpointAdminDoctorDocuments(String id) =>
-      '/admin/doctors/$id/documents';
-  static String endpointAdminApprove(String id) => '/admin/doctors/$id/approve';
-  static String endpointAdminReject(String id) => '/admin/doctors/$id/reject';
-  static const String endpointAdminNurses = '/admin/nurses';
-  static String endpointAdminNurse(String id) => '/admin/nurses/$id';
-  static String endpointAdminNurseApprove(String id) => '/admin/nurses/$id/approve';
-  static String endpointAdminNurseReject(String id) => '/admin/nurses/$id/reject';
 
   // Validation
   static const int minPasswordLength = 8;
@@ -122,14 +95,6 @@ class AppConstants {
     'png',
   ];
 
-  // Maps
-  static const double defaultMapLat = 28.6139;
-  static const double defaultMapLng = 77.2090;
-  static const double defaultMapZoom = 13;
-
-  // Registration Steps
-  static const int totalRegistrationSteps = 6;
-
   // Cache
   static const int cacheDurationMinutes = 30;
 
@@ -142,9 +107,6 @@ class AppConstants {
   static const int mediumAnimationDuration = 300;
   static const int longAnimationDuration = 500;
 
-  // Database
-  static const String hiveBoxName = 'doctor_registration_box';
-
   // Routes — user app
   static const String routeUserHome = '/user-home';
   static const String routeUserLogin = '/user-login';
@@ -155,10 +117,7 @@ class AppConstants {
   static const String routeUserDashboardLegacy = '/user-dashboard';
   static const String routeUserEditProfileLegacy = '/user-edit-profile';
 
-  // Routes — provider registration app
-  static const String routeProviderLanding = '/provider-landing';
-
-  // Routes — shared / legacy
+  // Routes — patient marketplace
   static const String routeGlobalSearch = '/search';
   static const String routeDoctorSearch = '/doctor-search';
   static const String routeDoctorProfile = '/doctor-profile';
@@ -178,49 +137,24 @@ class AppConstants {
   static const String routeScans = '/scans';
   static const String routeScanSearch = '/scan-search';
   static const String routeScanCenterDetail = '/scan-center';
-  static const String routeScanRegistration = '/scan-registration';
-  static const String routeScanApplicationSubmitted = '/scan-application-submitted';
   static const String routeLabSearch = '/lab-search';
-  static const String routeLabRegistration = '/lab-registration';
-  static const String routeLabApplicationSubmitted = '/lab-application-submitted';
   static const String routeConsultationDemo = '/consultation-demo';
   static const String routeOnlineConsultBooking = '/online-consult';
   static const String routeHospitalVisitBooking = '/hospital-visit';
   static const String routeHomeVisitBooking = '/home-visit';
   static const String routeNurseHomeVisitBooking = '/nurse-home-visit';
   static const String routeVideoConsult = '/video-consult';
-  static const String routeRegistrationLanding = '/registration-landing';
-  static const String routeRegistrationForm = '/registration-form';
-  static const String routeAmbulanceRegistration = '/ambulance-registration';
-  static const String routeBloodBankRegistration = '/blood-bank-registration';
-  static const String routeAmbulanceApplicationSubmitted =
-      '/ambulance-application-submitted';
-  static const String routeBloodBankApplicationSubmitted =
-      '/blood-bank-application-submitted';
-  static const String routeApplicationSubmitted = '/application-submitted';
-  static const String routeDoctorDashboard = '/doctor-dashboard';
-  static const String routeAdminLogin = '/admin-login';
-  static const String routeAdminDashboard = '/admin-dashboard';
-  static const String routeAdminDoctorList = '/admin-doctor-list';
-  static const String routeAdminDoctorDetails = '/admin-doctor-details';
-  static const String routeAdminNurseList = '/admin-nurse-list';
-  static const String routeAdminNurseDetails = '/admin-nurse-details';
 
-  // Lab API Endpoints
-  static const String endpointRegisterLab = '/lab/register';
-  static const String endpointLabUploadProfile = '/lab/upload-profile';
-  static const String endpointLabUploadDocument = '/lab/upload-document';
-  static const String endpointLabUploadImage = '/lab/upload-image';
+  // Lab API Endpoints (patient discovery)
   static const String endpointGetLabProfile = '/lab/profile';
   static const String endpointVerifiedLabs = '/lab/verified';
 
-  // Scan API Endpoints
-  static const String endpointRegisterScanCenter = '/scan/register';
-  static const String endpointScanUploadProfile = '/scan/upload-profile';
-  static const String endpointScanUploadDocument = '/scan/upload-document';
-  static const String endpointScanUploadImage = '/scan/upload-image';
+  // Scan API Endpoints (patient discovery)
   static const String endpointGetScanCenterProfile = '/scan/profile';
   static const String endpointVerifiedScanCenters = '/scan/verified';
+
+  // Blood bank profile (patient discovery)
+  static const String endpointGetBloodBankProfile = '/blood-bank/profile';
 
   static const String mockImageUrl =
       'https://images.unsplash.com/photo-1612349317228-cc624a92fc4d?w=400&h=400&fit=crop';

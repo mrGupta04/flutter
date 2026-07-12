@@ -21,11 +21,6 @@ import '../features/doctor_registration/presentation/screens/global_search_scree
 import '../features/doctor_registration/presentation/screens/doctor_profile_screen.dart';
 import '../features/doctor_registration/presentation/screens/nurse_profile_screen.dart';
 import '../features/doctor_registration/presentation/screens/nurse_search_screen.dart';
-import '../features/ambulance_registration/presentation/screens/ambulance_application_submitted_screen.dart';
-import '../features/ambulance_registration/presentation/screens/ambulance_registration_screen.dart';
-import '../features/blood_bank_registration/presentation/screens/blood_bank_application_submitted_screen.dart';
-import '../features/blood_bank_registration/presentation/screens/blood_bank_registration_screen.dart';
-import '../features/provider/presentation/screens/provider_landing_screen.dart';
 import '../features/user_auth/presentation/screens/user_login_screen.dart';
 import '../features/user_auth/presentation/screens/user_register_screen.dart';
 import '../features/user_dashboard/presentation/screens/edit_patient_profile_screen.dart';
@@ -40,10 +35,6 @@ import '../features/scans/presentation/screens/scans_screen.dart';
 import '../features/scans/presentation/screens/scan_search_screen.dart';
 import '../features/scans/presentation/screens/scan_center_detail_screen.dart';
 import '../features/scans/data/models/scan_procedure_model.dart';
-import '../features/scan_registration/presentation/screens/scan_registration_screen.dart';
-import '../features/scan_registration/presentation/screens/scan_application_submitted_screen.dart';
-import '../features/lab_registration/presentation/screens/lab_registration_screen.dart';
-import '../features/lab_registration/presentation/screens/lab_application_submitted_screen.dart';
 import '../screens/user_home_screen.dart';
 
 /// Patient marketplace - browse verified providers only.
@@ -122,46 +113,6 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadePage(
           state,
           const UserHomeScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppConstants.routeProviderLanding,
-        name: 'providerLanding',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const ProviderLandingScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppConstants.routeAmbulanceRegistration,
-        name: 'ambulanceRegistration',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const AmbulanceRegistrationScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppConstants.routeAmbulanceApplicationSubmitted,
-        name: 'ambulanceApplicationSubmitted',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const AmbulanceApplicationSubmittedScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppConstants.routeBloodBankRegistration,
-        name: 'bloodBankRegistration',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const BloodBankRegistrationScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppConstants.routeBloodBankApplicationSubmitted,
-        name: 'bloodBankApplicationSubmitted',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const BloodBankApplicationSubmittedScreen(),
         ),
       ),
       GoRoute(
@@ -413,22 +364,6 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: AppConstants.routeScanRegistration,
-        name: 'scanRegistration',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const ScanRegistrationScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppConstants.routeScanApplicationSubmitted,
-        name: 'scanApplicationSubmitted',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const ScanApplicationSubmittedScreen(),
-        ),
-      ),
-      GoRoute(
         path: AppConstants.routeLabSearch,
         name: 'labSearch',
         pageBuilder: (context, state) {
@@ -439,22 +374,6 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             LabSearchScreen(testId: testId, testName: testName),
           );
         },
-      ),
-      GoRoute(
-        path: AppConstants.routeLabRegistration,
-        name: 'labRegistration',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const LabRegistrationScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppConstants.routeLabApplicationSubmitted,
-        name: 'labApplicationSubmitted',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const LabApplicationSubmittedScreen(),
-        ),
       ),
       GoRoute(
         path: AppConstants.routeBloodBanks,

@@ -172,6 +172,40 @@ class BloodBankDetailsNotifier extends StateNotifier<BloodBankDetailsState> {
     state = state.copyWith(error: response.error ?? 'Failed to suspend blood bank');
     return false;
   }
+
+  Future<bool> verifyDocument({
+    required String bloodBankId,
+    required String documentId,
+  }) async {
+    final response = await repository.verifyBloodBankDocument(
+      bloodBankId: bloodBankId,
+      documentId: documentId,
+    );
+    if (response.success && response.data != null) {
+      state = state.copyWith(bloodBank: response.data, error: null);
+      return true;
+    }
+    state = state.copyWith(error: response.error ?? 'Failed to verify document');
+    return false;
+  }
+
+  Future<bool> rejectDocument({
+    required String bloodBankId,
+    required String documentId,
+    required String reason,
+  }) async {
+    final response = await repository.rejectBloodBankDocument(
+      bloodBankId: bloodBankId,
+      documentId: documentId,
+      rejectionReason: reason,
+    );
+    if (response.success && response.data != null) {
+      state = state.copyWith(bloodBank: response.data, error: null);
+      return true;
+    }
+    state = state.copyWith(error: response.error ?? 'Failed to reject document');
+    return false;
+  }
 }
 
 final bloodBankDetailsProvider = StateNotifierProvider.family<

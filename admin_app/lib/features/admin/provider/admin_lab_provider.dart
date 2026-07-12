@@ -170,6 +170,40 @@ class LabDetailsNotifier extends StateNotifier<LabDetailsState> {
     );
     return false;
   }
+
+  Future<bool> verifyDocument({
+    required String labId,
+    required String documentId,
+  }) async {
+    final response = await repository.verifyLabDocument(
+      labId: labId,
+      documentId: documentId,
+    );
+    if (response.success && response.data != null) {
+      state = state.copyWith(lab: response.data, error: null);
+      return true;
+    }
+    state = state.copyWith(error: response.error ?? 'Failed to verify document');
+    return false;
+  }
+
+  Future<bool> rejectDocument({
+    required String labId,
+    required String documentId,
+    required String reason,
+  }) async {
+    final response = await repository.rejectLabDocument(
+      labId: labId,
+      documentId: documentId,
+      rejectionReason: reason,
+    );
+    if (response.success && response.data != null) {
+      state = state.copyWith(lab: response.data, error: null);
+      return true;
+    }
+    state = state.copyWith(error: response.error ?? 'Failed to reject document');
+    return false;
+  }
 }
 
 final labDetailsProvider =

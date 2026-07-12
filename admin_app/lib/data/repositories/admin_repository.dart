@@ -726,6 +726,36 @@ class AdminRepository {
     }
   }
 
+  Future<ApiResponse<BloodBankModel>> verifyBloodBankDocument({
+    required String bloodBankId,
+    required String documentId,
+  }) async {
+    return _embeddedDocumentAction<BloodBankModel>(
+      endpoint: AppConstants.endpointAdminBloodBankDocumentVerify(
+        bloodBankId,
+        documentId,
+      ),
+      entityKey: 'bloodBank',
+      fromJson: (json) => BloodBankModel.fromJson(json),
+    );
+  }
+
+  Future<ApiResponse<BloodBankModel>> rejectBloodBankDocument({
+    required String bloodBankId,
+    required String documentId,
+    required String rejectionReason,
+  }) async {
+    return _embeddedDocumentAction<BloodBankModel>(
+      endpoint: AppConstants.endpointAdminBloodBankDocumentReject(
+        bloodBankId,
+        documentId,
+      ),
+      entityKey: 'bloodBank',
+      fromJson: (json) => BloodBankModel.fromJson(json),
+      data: {'rejectionReason': rejectionReason},
+    );
+  }
+
   Future<ApiResponse<List<LabModel>>> getLabsForVerification({
     int page = 1,
     String? status,
@@ -848,6 +878,30 @@ class AdminRepository {
     } catch (e) {
       return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
     }
+  }
+
+  Future<ApiResponse<LabModel>> verifyLabDocument({
+    required String labId,
+    required String documentId,
+  }) async {
+    return _embeddedDocumentAction<LabModel>(
+      endpoint: AppConstants.endpointAdminLabDocumentVerify(labId, documentId),
+      entityKey: 'lab',
+      fromJson: (json) => LabModel.fromJson(json),
+    );
+  }
+
+  Future<ApiResponse<LabModel>> rejectLabDocument({
+    required String labId,
+    required String documentId,
+    required String rejectionReason,
+  }) async {
+    return _embeddedDocumentAction<LabModel>(
+      endpoint: AppConstants.endpointAdminLabDocumentReject(labId, documentId),
+      entityKey: 'lab',
+      fromJson: (json) => LabModel.fromJson(json),
+      data: {'rejectionReason': rejectionReason},
+    );
   }
 
   Future<ApiResponse<List<ScanCenterModel>>> getScanCentersForVerification({
@@ -974,6 +1028,81 @@ class AdminRepository {
       return _handleError(e);
     } catch (e) {
       return ApiResponse(success: false, error: 'An unexpected error occurred', statusCode: 500);
+    }
+  }
+
+  Future<ApiResponse<ScanCenterModel>> verifyScanCenterDocument({
+    required String scanCenterId,
+    required String documentId,
+  }) async {
+    return _embeddedDocumentAction<ScanCenterModel>(
+      endpoint: AppConstants.endpointAdminScanCenterDocumentVerify(
+        scanCenterId,
+        documentId,
+      ),
+      entityKey: 'scanCenter',
+      fromJson: (json) => ScanCenterModel.fromJson(json),
+    );
+  }
+
+  Future<ApiResponse<ScanCenterModel>> rejectScanCenterDocument({
+    required String scanCenterId,
+    required String documentId,
+    required String rejectionReason,
+  }) async {
+    return _embeddedDocumentAction<ScanCenterModel>(
+      endpoint: AppConstants.endpointAdminScanCenterDocumentReject(
+        scanCenterId,
+        documentId,
+      ),
+      entityKey: 'scanCenter',
+      fromJson: (json) => ScanCenterModel.fromJson(json),
+      data: {'rejectionReason': rejectionReason},
+    );
+  }
+
+  Future<ApiResponse<T>> _embeddedDocumentAction<T>({
+    required String endpoint,
+    required String entityKey,
+    required T Function(Map<String, dynamic> json) fromJson,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        endpoint,
+        data: data ?? const {},
+      );
+      final body = response.data as Map<String, dynamic>;
+      final payload = body['data'];
+      if (payload is! Map<String, dynamic>) {
+        return ApiResponse(
+          success: false,
+          error: 'Unexpected response from server',
+          statusCode: body['statusCode'] as int? ?? 500,
+        );
+      }
+      final entityJson = payload[entityKey];
+      if (entityJson is! Map<String, dynamic>) {
+        return ApiResponse(
+          success: false,
+          error: 'Updated provider data missing from response',
+          statusCode: body['statusCode'] as int? ?? 500,
+        );
+      }
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: fromJson(entityJson),
+        message: body['message'] as String?,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
     }
   }
 

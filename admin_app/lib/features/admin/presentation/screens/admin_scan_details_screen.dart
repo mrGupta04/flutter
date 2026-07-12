@@ -6,7 +6,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/doctor_model.dart';
+import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../utils/embedded_documents_helper.dart';
+import '../widgets/admin_document_sections.dart';
+import '../widgets/admin_embedded_documents_panel.dart';
 import '../../provider/admin_scan_provider.dart';
 
 class AdminScanDetailsScreen extends ConsumerWidget {
@@ -62,6 +66,11 @@ class AdminScanDetailsScreen extends ConsumerWidget {
       );
     }
 
+    final documents = scanDocumentsToAdminDocs(center.documents);
+    final canReviewDocuments = center.verificationStatus !=
+            VerificationStatus.verified &&
+        center.verificationStatus != VerificationStatus.rejected;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -103,8 +112,43 @@ class AdminScanDetailsScreen extends ConsumerWidget {
           _DetailRow('24×7', center.available24x7 == true ? 'Yes' : 'No'),
           _DetailRow('Scans offered', '${center.offeredScans?.length ?? 0}'),
           _DetailRow('Offers', '${center.offers?.length ?? 0}'),
-          _DetailRow('Documents', '${center.documents?.length ?? 0}'),
           _DetailRow('Center images', '${center.centerImages?.length ?? 0}'),
+          const SizedBox(height: 20),
+          AdminEmbeddedDocumentsPanel(
+            documents: documents,
+            canReviewDocuments: canReviewDocuments,
+            emptyMessage:
+                'This scan center has not uploaded registration documents yet.',
+            onVerify: (doc) => handleEmbeddedDocumentAction(
+              context,
+              action: () => ref
+                  .read(scanCenterDetailsProvider(scanCenterId).notifier)
+                  .verifyDocument(
+                    scanCenterId: scanCenterId,
+                    documentId: doc.id ?? '',
+                  ),
+              successMessage: 'Document verified',
+              errorMessage:
+                  ref.read(scanCenterDetailsProvider(scanCenterId)).error ??
+                      'Could not verify document',
+            ),
+            onReject: (doc, reason) => handleEmbeddedDocumentAction(
+              context,
+              action: () => ref
+                  .read(scanCenterDetailsProvider(scanCenterId).notifier)
+                  .rejectDocument(
+                    scanCenterId: scanCenterId,
+                    documentId: doc.id ?? '',
+                    reason: reason,
+                  ),
+              successMessage:
+                  'Document rejected — provider will see your message',
+              errorMessage:
+                  ref.read(scanCenterDetailsProvider(scanCenterId)).error ??
+                      'Could not reject document',
+              successIsErrorStyle: true,
+            ),
+          ),
           if (center.offeredScans != null && center.offeredScans!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
@@ -129,6 +173,7 @@ class AdminScanDetailsScreen extends ConsumerWidget {
                 ),
               ),
           ],
+          const SizedBox(height: 120),
         ],
       ),
     );
@@ -175,6 +220,9 @@ class _ActionBar extends ConsumerWidget {
     final canModerate =
         center.verificationStatus != VerificationStatus.verified ||
             center.isApproved != true;
+    final documents = scanDocumentsToAdminDocs(center.documents);
+    final allDocsVerified = allDocumentsVerified(documents);
+    final canApprove = canModerate && allDocsVerified && documents.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -193,24 +241,25 @@ class _ActionBar extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (canModerate)
+            if (canModerate) ...[
+              if (!allDocsVerified && documents.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InfoCard(
+                    icon: Icons.info_outline_rounded,
+                    title: 'Verify all documents first',
+                    subtitle:
+                        'Approve is enabled after every uploaded document is verified.',
+                  ),
+                ),
               CustomButton(
                 label: 'Approve scan center',
                 icon: Icons.verified_rounded,
                 isLoading: state.isApproving,
-                onPressed: () async {
-                  final ok = await ref
-                      .read(scanCenterDetailsProvider(scanCenterId).notifier)
-                      .approveScanCenter(scanCenterId: scanCenterId);
-                  if (context.mounted && ok) {
-                    SnackBarHelper.showSuccess(
-                      context,
-                      AppConstants.adminApprovalSuccess,
-                    );
-                    context.pop();
-                  }
-                },
+                isEnabled: canApprove,
+                onPressed: () => _approveScanCenter(context, ref),
               ),
+            ],
             if (canModerate) const SizedBox(height: 8),
             Row(
               children: [
@@ -241,6 +290,19 @@ class _ActionBar extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _approveScanCenter(BuildContext context, WidgetRef ref) async {
+    final ok = await ref
+        .read(scanCenterDetailsProvider(scanCenterId).notifier)
+        .approveScanCenter(scanCenterId: scanCenterId);
+    if (context.mounted && ok) {
+      SnackBarHelper.showSuccess(
+        context,
+        AppConstants.adminApprovalSuccess,
+      );
+      context.pop();
+    }
   }
 
   Future<void> _showRejectDialog(BuildContext context, WidgetRef ref) async {

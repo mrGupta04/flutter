@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/services/token_storage.dart';
@@ -7,224 +5,12 @@ import '../../core/utils/doctor_presence_utils.dart';
 import '../../data/models/models.dart';
 import '../../data/services/dio_service.dart';
 
-/// Doctor registration repository
+/// Doctor discovery repository for the patient marketplace.
 class DoctorRegistrationRepository {
   final DioService _dioService;
 
   DoctorRegistrationRepository({DioService? dioService})
       : _dioService = dioService ?? DioService();
-
-  /// Register doctor
-  Future<ApiResponse<DoctorModel>> registerDoctor({
-    required DoctorModel doctor,
-  }) async {
-    try {
-      final response = await _dioService.post(
-        AppConstants.endpointRegisterDoctor,
-        data: doctor.toJson(),
-      );
-
-      final body = response.data as Map<String, dynamic>;
-      final result = ApiResponse.fromJson(
-        body,
-        (json) => DoctorModel.fromJson(json as Map<String, dynamic>),
-      );
-
-      final token = body['token'] as String?;
-      if (token != null && token.isNotEmpty) {
-        await TokenStorage.instance.saveToken(token);
-      }
-      if (result.data?.id != null) {
-        await TokenStorage.instance.saveDoctorId(result.data!.id!);
-      }
-
-      return result;
-    } on DioException catch (e) {
-      return _handleError(e);
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        error: 'An unexpected error occurred',
-        statusCode: 500,
-      );
-    }
-  }
-
-  /// Aadhaar provider config (mock vs real UIDAI via Surepass).
-  Future<ApiResponse<Map<String, dynamic>>> getAadhaarConfig() async {
-    try {
-      final response = await _dioService.get(AppConstants.endpointAadhaarConfig);
-      final body = response.data as Map<String, dynamic>;
-      return ApiResponse(
-        success: body['success'] as bool? ?? true,
-        statusCode: body['statusCode'] as int? ?? 200,
-        data: body['data'] as Map<String, dynamic>? ?? {},
-      );
-    } on DioException catch (e) {
-      return _handleError(e);
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        error: 'An unexpected error occurred',
-        statusCode: 500,
-      );
-    }
-  }
-
-  /// Send Aadhaar verification OTP to linked mobile.
-  Future<ApiResponse<Map<String, dynamic>>> sendAadhaarOtp({
-    required String doctorId,
-    required String aadhaarNumber,
-    required String mobileNumber,
-  }) async {
-    try {
-      final response = await _dioService.post(
-        AppConstants.endpointAadhaarSendOtp,
-        data: {
-          'doctorId': doctorId,
-          'aadhaarNumber': aadhaarNumber,
-          'mobileNumber': mobileNumber,
-        },
-      );
-
-      final body = response.data as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>? ?? {};
-
-      return ApiResponse(
-        success: body['success'] as bool? ?? true,
-        message: body['message'] as String?,
-        statusCode: body['statusCode'] as int? ?? 200,
-        data: data,
-      );
-    } on DioException catch (e) {
-      return _handleError(e);
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        error: 'An unexpected error occurred',
-        statusCode: 500,
-      );
-    }
-  }
-
-  /// Verify Aadhaar OTP.
-  Future<ApiResponse<DoctorModel>> verifyAadhaarOtp({
-    required String doctorId,
-    required String aadhaarNumber,
-    required String otp,
-  }) async {
-    try {
-      final response = await _dioService.post(
-        AppConstants.endpointAadhaarVerifyOtp,
-        data: {
-          'doctorId': doctorId,
-          'aadhaarNumber': aadhaarNumber,
-          'otp': otp,
-        },
-      );
-
-      final body = response.data as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>? ?? {};
-      final doctorJson = data['doctor'] as Map<String, dynamic>?;
-
-      return ApiResponse(
-        success: body['success'] as bool? ?? true,
-        message: body['message'] as String?,
-        statusCode: body['statusCode'] as int? ?? 200,
-        data: doctorJson != null
-            ? DoctorModel.fromJson(doctorJson)
-            : null,
-      );
-    } on DioException catch (e) {
-      return _handleError(e);
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        error: 'An unexpected error occurred',
-        statusCode: 500,
-      );
-    }
-  }
-
-  /// Upload profile picture before registration submit
-  Future<ApiResponse<String>> uploadProfilePicture({
-    required String doctorId,
-    String? filePath,
-    Uint8List? bytes,
-    String? filename,
-    String? mobileNumber,
-  }) async {
-    try {
-      final response = await _dioService.uploadFile(
-        AppConstants.endpointUploadProfile,
-        filePath: filePath,
-        bytes: bytes,
-        filename: filename ?? 'profile.jpg',
-        fieldName: 'file',
-        additionalFields: {
-          'doctorId': doctorId,
-          if (mobileNumber != null) 'mobileNumber': mobileNumber,
-        },
-      );
-
-      final body = response.data as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>?;
-      final url = data?['profilePicture'] as String?;
-
-      return ApiResponse(
-        success: body['success'] as bool? ?? false,
-        message: body['message'] as String?,
-        data: url,
-        statusCode: body['statusCode'] as int? ?? 200,
-      );
-    } on DioException catch (e) {
-      return _handleError(e);
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        error: 'An unexpected error occurred',
-        statusCode: 500,
-      );
-    }
-  }
-
-  /// Upload document
-  Future<ApiResponse<DoctorDocumentModel>> uploadDocument({
-    required String doctorId,
-    String? filePath,
-    Uint8List? bytes,
-    String? filename,
-    required DocumentType documentType,
-    ProgressCallback? onSendProgress,
-  }) async {
-    try {
-      final response = await _dioService.uploadFile(
-        AppConstants.endpointUploadDocument,
-        filePath: filePath,
-        bytes: bytes,
-        filename: filename,
-        fieldName: 'file',
-        additionalFields: {
-          'doctorId': doctorId,
-          'documentType': _documentTypeToString(documentType),
-        },
-        onSendProgress: onSendProgress,
-      );
-
-      return ApiResponse.fromJson(
-        response.data as Map<String, dynamic>,
-        (json) => DoctorDocumentModel.fromJson(json as Map<String, dynamic>),
-      );
-    } on DioException catch (e) {
-      return _handleError(e);
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        error: 'An unexpected error occurred',
-        statusCode: 500,
-      );
-    }
-  }
 
   /// Public list of verified doctors (no auth).
   Future<ApiResponse<List<DoctorModel>>> getVerifiedDoctors({
@@ -324,7 +110,7 @@ class DoctorRegistrationRepository {
     return null;
   }
 
-  /// Get doctor profile
+  /// Get doctor profile for patient booking flows.
   Future<ApiResponse<DoctorModel>> getDoctorProfile({
     String? doctorId,
   }) async {
@@ -360,47 +146,6 @@ class DoctorRegistrationRepository {
     }
   }
 
-  /// Update doctor profile
-  Future<ApiResponse<DoctorModel>> updateDoctorProfile({
-    required DoctorModel doctor,
-  }) async {
-    try {
-      final response = await _dioService.put(
-        AppConstants.endpointUpdateProfile,
-        data: doctor.toJson(),
-      );
-
-      return ApiResponse.fromJson(
-        response.data as Map<String, dynamic>,
-        (json) => DoctorModel.fromJson(json as Map<String, dynamic>),
-      );
-    } on DioException catch (e) {
-      return _handleError(e);
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        error: 'An unexpected error occurred',
-        statusCode: 500,
-      );
-    }
-  }
-
-  String _documentTypeToString(DocumentType type) {
-    switch (type) {
-      case DocumentType.medicalLicense:
-        return 'medical_license';
-      case DocumentType.governmentId:
-        return 'government_id';
-      case DocumentType.degreeCertificate:
-        return 'degree_certificate';
-      case DocumentType.clinicProof:
-        return 'clinic_proof';
-      case DocumentType.cancelledCheque:
-        return 'cancelled_cheque';
-    }
-  }
-
-  /// Handle Dio errors
   ApiResponse<T> _handleError<T>(DioException error) {
     String message = 'An error occurred';
     int statusCode = 500;

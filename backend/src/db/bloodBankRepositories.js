@@ -2,6 +2,11 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const BloodBank = require('./models/BloodBank');
 const { toBloodBank } = require('./bloodBankMappers');
+const {
+  assertEmbeddedDocumentsVerified,
+  verifyEmbeddedDocument,
+  rejectEmbeddedDocument,
+} = require('./embeddedDocumentVerification');
 
 const DEFAULT_BLOOD_GROUPS = [
   'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Bombay', 'Rare',
@@ -330,6 +335,8 @@ async function approveBloodBank(id, approvalNotes) {
     throw err;
   }
 
+  assertEmbeddedDocumentsVerified(existing.documents, 'blood bank document');
+
   await BloodBank.updateOne(
     { id },
     {
@@ -386,6 +393,19 @@ async function requestBloodBankDocuments(id, note) {
   return findBloodBankById(id);
 }
 
+async function verifyBloodBankDocument(bloodBankId, documentId) {
+  return verifyEmbeddedDocument(BloodBank, bloodBankId, documentId);
+}
+
+async function rejectBloodBankDocument(bloodBankId, documentId, rejectionReason) {
+  return rejectEmbeddedDocument(
+    BloodBank,
+    bloodBankId,
+    documentId,
+    rejectionReason,
+  );
+}
+
 async function getBloodBankDashboardStats(bloodBankId) {
   const BloodOrder = require('./models/BloodOrder');
   const EmergencyBloodRequest = require('./models/EmergencyBloodRequest');
@@ -439,6 +459,8 @@ module.exports = {
   rejectBloodBank,
   suspendBloodBank,
   requestBloodBankDocuments,
+  verifyBloodBankDocument,
+  rejectBloodBankDocument,
   getBloodBankDashboardStats,
   DEFAULT_BLOOD_GROUPS,
   DEFAULT_BLOOD_COMPONENTS,

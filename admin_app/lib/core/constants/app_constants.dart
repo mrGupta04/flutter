@@ -162,6 +162,18 @@ class AppConstants {
       '/admin/blood-banks/$id/reject';
   static String endpointAdminBloodBankSuspend(String id) =>
       '/admin/blood-banks/$id/suspend';
+  static String endpointAdminBloodBankRequestDocuments(String id) =>
+      '/admin/blood-banks/$id/request-documents';
+  static String endpointAdminBloodBankDocumentVerify(
+    String bloodBankId,
+    String documentId,
+  ) =>
+      '/admin/blood-banks/$bloodBankId/documents/$documentId/verify';
+  static String endpointAdminBloodBankDocumentReject(
+    String bloodBankId,
+    String documentId,
+  ) =>
+      '/admin/blood-banks/$bloodBankId/documents/$documentId/reject';
   static const String endpointAdminBloodOrders = '/admin/blood-orders';
   static const String endpointAdminEmergencyBloodRequests =
       '/admin/emergency-blood-requests';
@@ -172,6 +184,10 @@ class AppConstants {
   static String endpointAdminLabSuspend(String id) => '/admin/labs/$id/suspend';
   static String endpointAdminLabRequestDocuments(String id) =>
       '/admin/labs/$id/request-documents';
+  static String endpointAdminLabDocumentVerify(String labId, String documentId) =>
+      '/admin/labs/$labId/documents/$documentId/verify';
+  static String endpointAdminLabDocumentReject(String labId, String documentId) =>
+      '/admin/labs/$labId/documents/$documentId/reject';
   static const String endpointAdminScanCenters = '/admin/scan-centers';
   static String endpointAdminScanCenter(String id) => '/admin/scan-centers/$id';
   static String endpointAdminScanCenterApprove(String id) =>
@@ -182,6 +198,16 @@ class AppConstants {
       '/admin/scan-centers/$id/suspend';
   static String endpointAdminScanCenterRequestDocuments(String id) =>
       '/admin/scan-centers/$id/request-documents';
+  static String endpointAdminScanCenterDocumentVerify(
+    String scanCenterId,
+    String documentId,
+  ) =>
+      '/admin/scan-centers/$scanCenterId/documents/$documentId/verify';
+  static String endpointAdminScanCenterDocumentReject(
+    String scanCenterId,
+    String documentId,
+  ) =>
+      '/admin/scan-centers/$scanCenterId/documents/$documentId/reject';
 
   // Validation
   static const int minPasswordLength = 8;

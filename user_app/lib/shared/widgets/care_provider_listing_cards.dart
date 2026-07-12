@@ -166,6 +166,17 @@ class NurseListingCard extends StatelessWidget {
                                         onTap: onOpenMapTap,
                                       ),
                                     ],
+                                    if (distanceLabel != null &&
+                                        distanceLabel!.trim().isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        distanceLabel!.trim(),
+                                        style: AppTextStyles.labelSmall.copyWith(
+                                          color: kNurseCardAccent,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
                                     if (skills.isNotEmpty) ...[
                                       const SizedBox(height: 10),
                                       _NurseSkillChips(skills: skills),

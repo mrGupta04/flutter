@@ -45,6 +45,7 @@ class DoctorDocumentModel {
   final DateTime? uploadedAt;
   final DateTime? verifiedAt;
   final String? verifiedBy;
+  final String? displayLabel;
 
   DoctorDocumentModel({
     this.id,
@@ -64,10 +65,14 @@ class DoctorDocumentModel {
     this.uploadedAt,
     this.verifiedAt,
     this.verifiedBy,
+    this.displayLabel,
   });
 
   /// Get document type display name
   String get documentTypeDisplay {
+    if (displayLabel != null && displayLabel!.trim().isNotEmpty) {
+      return displayLabel!.trim();
+    }
     switch (documentType) {
       case DocumentType.medicalLicense:
         return 'Medical License';
