@@ -46,6 +46,9 @@ class LabTest {
     this.fastingRequired = false,
     this.originalPriceInr,
     this.discountedPriceInr,
+    this.includedTestsLabel,
+    this.parameterCount,
+    this.highlightText,
   });
 
   final String id;
@@ -62,14 +65,60 @@ class LabTest {
   final int? originalPriceInr;
   final int? discountedPriceInr;
 
+  /// Short list of included markers, e.g. "TSH, T3, T4".
+  final String? includedTestsLabel;
+
+  /// Number of parameters / tests in the panel.
+  final int? parameterCount;
+
+  /// One-line benefit shown in the card footer.
+  final String? highlightText;
+
   int get effectivePrice => discountedPriceInr ?? priceInr;
 
-  int? get discountPercent {
-    final original = originalPriceInr ?? priceInr;
-    if (discountedPriceInr == null || original <= 0) return null;
-    if (discountedPriceInr! >= original) return null;
-    return (((original - discountedPriceInr!) / original) * 100).round();
+  /// MRP shown on cards. Uses catalog MRP when set; otherwise a list price
+  /// so marketplace-style discount UI can render consistently.
+  int get displayOriginalPrice {
+    if (originalPriceInr != null) return originalPriceInr!;
+    final suggested = (effectivePrice / 0.54);
+    final rounded = ((suggested / 50).ceil() * 50);
+    return rounded <= effectivePrice ? effectivePrice + 50 : rounded;
   }
+
+  int? get discountPercent {
+    final original = displayOriginalPrice;
+    final sale = effectivePrice;
+    if (original <= 0 || sale >= original) return null;
+    return (((original - sale) / original) * 100).round();
+  }
+
+  bool get hasCouponPricing =>
+      discountPercent != null && discountPercent! > 0;
+
+  String get subtitleLabel {
+    if (includedTestsLabel != null && includedTestsLabel!.isNotEmpty) {
+      return includedTestsLabel!;
+    }
+    final paren = RegExp(r'\(([^)]+)\)').firstMatch(name);
+    if (paren != null) return paren.group(1)!;
+    return sampleType;
+  }
+
+  String get testsCountLabel {
+    final count = parameterCount ?? 1;
+    return '$count ${count == 1 ? 'TEST' : 'TESTS'}';
+  }
+
+  String get reportTimeCompact {
+    final digits = RegExp(r'(\d+)').allMatches(reportDeliveryTime).toList();
+    if (digits.isEmpty) return reportDeliveryTime.toUpperCase();
+    final hours = digits.last.group(1)!;
+    final lower = reportDeliveryTime.toLowerCase();
+    if (lower.contains('day')) return '$hours DAYS';
+    return '$hours HRS';
+  }
+
+  String get footerHighlight => highlightText ?? description;
 
   bool get requiresFasting =>
       fastingRequired ||
@@ -88,6 +137,7 @@ class LabTest {
     return name.toLowerCase().contains(q) ||
         description.toLowerCase().contains(q) ||
         category.label.toLowerCase().contains(q) ||
-        sampleType.toLowerCase().contains(q);
+        sampleType.toLowerCase().contains(q) ||
+        (includedTestsLabel?.toLowerCase().contains(q) ?? false);
   }
 }

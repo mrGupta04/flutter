@@ -369,24 +369,6 @@ class _OnlineConsultBookingScreenState
                       const PrescriptionIncludedBanner(compact: true),
                     ],
                     const SizedBox(height: 20),
-                    Text(
-                      _isHospitalVisit
-                          ? 'Choose appointment time'
-                          : 'Choose a time slot',
-                      style: AppTextStyles.titleSmall.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _isHospitalVisit
-                          ? 'Select when you will visit the hospital/clinic'
-                          : 'Based on the doctor\'s weekly availability (Sun–Sat, 8 AM–6 PM)',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     slotsAsync.when(
                       skipLoadingOnReload: true,
                       loading: () => const Padding(

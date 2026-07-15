@@ -9,7 +9,6 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
-import '../../../../data/models/bookable_slot_model.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
@@ -324,20 +323,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                         const SizedBox(height: 12),
                         const PrescriptionIncludedBanner(compact: true),
                         const SizedBox(height: 20),
-                        Text(
-                          'Choose visit time',
-                          style: AppTextStyles.titleSmall.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Select when the doctor should arrive at your home',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
                         slotsAsync.when(
                           skipLoadingOnReload: true,
                           loading: () => const Padding(

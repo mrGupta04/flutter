@@ -28,9 +28,22 @@ class AdminNurseDetailsScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          if (state.isLoading && state.nurse != null)
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+        ],
       ),
       body: _buildBody(context, ref, state),
-      bottomNavigationBar: state.nurse != null && !state.isLoading
+      bottomNavigationBar: state.nurse != null
           ? _ActionBar(
               nurseId: nurseId,
               state: state,
@@ -45,7 +58,7 @@ class AdminNurseDetailsScreen extends ConsumerWidget {
     WidgetRef ref,
     NurseDetailsState state,
   ) {
-    if (state.isLoading) {
+    if (state.isLoading && state.nurse == null) {
       return const SingleChildScrollView(
         padding: EdgeInsets.all(24),
         child: ShimmerProfileHeader(),

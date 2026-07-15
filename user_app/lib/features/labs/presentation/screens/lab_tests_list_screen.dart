@@ -9,6 +9,8 @@ import '../../../../data/models/lab_model.dart';
 import '../../data/models/lab_test_model.dart';
 import '../../data/lab_catalog_metadata.dart';
 import '../../data/lab_tests_catalog.dart';
+import '../widgets/lab_browse_group_card.dart';
+import '../widgets/lab_package_card.dart';
 import '../widgets/lab_test_tile.dart';
 
 class LabTestsListScreen extends ConsumerStatefulWidget {
@@ -79,31 +81,42 @@ class _LabTestsListScreenState extends ConsumerState<LabTestsListScreen> {
       body: widget.browseType != null
           ? ListView(
               padding: const EdgeInsets.all(16),
-              children: _browseGroups.map((group) {
-                final g = group as LabBrowseGroup;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    leading: Icon(g.icon, color: AppColors.primary),
-                    title: Text(g.name),
-                    subtitle: Text(
-                      '${g.testCount} tests • From ₹${g.startingPriceInr}',
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => LabTestsListScreen(
-                            lab: widget.lab,
-                            title: g.name,
-                            testIds: g.testIds,
-                          ),
+              children: widget.browseType == LabBrowseGroupType.package
+                  ? LabCatalogMetadata.healthPackages
+                      .map(
+                        (pkg) => LabPackageCard(
+                          package: pkg,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => LabTestsListScreen(
+                                  lab: widget.lab,
+                                  title: pkg.name,
+                                  testIds: pkg.testIds,
+                                ),
+                              ),
+                            );
+                          },
                         ),
+                      )
+                      .toList()
+                  : _browseGroups.map((group) {
+                      final g = group as LabBrowseGroup;
+                      return LabBrowseGroupListTile(
+                        group: g,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => LabTestsListScreen(
+                                lab: widget.lab,
+                                title: g.name,
+                                testIds: g.testIds,
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-                );
-              }).toList(),
+                    }).toList(),
             )
           : Column(
               children: [

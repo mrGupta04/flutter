@@ -4,7 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_text_styles.dart';
 
-/// Modern gradient hero header for doctor/nurse profile pages.
+/// Gradient hero header for doctor/nurse profile pages.
 class ProviderProfileHero extends StatelessWidget {
   const ProviderProfileHero({
     super.key,
@@ -17,6 +17,7 @@ class ProviderProfileHero extends StatelessWidget {
     this.avatarOverlay,
     this.avatarBorder,
     this.trailing,
+    this.avatarSize = 96,
   });
 
   final String name;
@@ -28,6 +29,9 @@ class ProviderProfileHero extends StatelessWidget {
   final Widget? avatarOverlay;
   final Widget? avatarBorder;
   final Widget? trailing;
+  final double avatarSize;
+
+  static const double avatarCornerRadius = 16;
 
   @override
   Widget build(BuildContext context) {
@@ -84,36 +88,11 @@ class ProviderProfileHero extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   avatarBorder ??
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.white.withValues(alpha: 0.85),
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.18),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 48,
-                          backgroundColor: AppColors.white,
-                          backgroundImage: hasImage
-                              ? CachedNetworkImageProvider(imageUrl!)
-                              : null,
-                          child: !hasImage
-                              ? Icon(
-                                  placeholderIcon,
-                                  size: 48,
-                                  color: gradientColors.last,
-                                )
-                              : null,
-                        ),
+                      ProviderProfilePhoto(
+                        imageUrl: hasImage ? imageUrl : null,
+                        placeholderIcon: placeholderIcon,
+                        accentColor: gradientColors.last,
+                        size: avatarSize,
                       ),
                   if (avatarOverlay != null) avatarOverlay!,
                 ],
@@ -151,6 +130,101 @@ class ProviderProfileHero extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Square rounded profile photo used on doctor / nurse / patient profile heroes.
+class ProviderProfilePhoto extends StatelessWidget {
+  const ProviderProfilePhoto({
+    super.key,
+    this.imageUrl,
+    this.placeholderIcon = Icons.person_rounded,
+    this.accentColor = AppColors.primary,
+    this.size = 96,
+    this.borderColor,
+    this.borderWidth = 3,
+  });
+
+  final String? imageUrl;
+  final IconData placeholderIcon;
+  final Color accentColor;
+  final double size;
+  final Color? borderColor;
+  final double borderWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+    final radius = ProviderProfileHero.avatarCornerRadius;
+
+    return Container(
+      width: size + borderWidth * 2 + 2,
+      height: size + borderWidth * 2 + 2,
+      padding: EdgeInsets.all(borderWidth > 0 ? 3 : 0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius + 4),
+        border: Border.all(
+          color: borderColor ?? AppColors.white.withValues(alpha: 0.85),
+          width: borderWidth,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: ColoredBox(
+          color: AppColors.white,
+          child: hasImage
+              ? CachedNetworkImage(
+                  imageUrl: imageUrl!,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => _Placeholder(
+                    icon: placeholderIcon,
+                    color: accentColor,
+                    size: size,
+                  ),
+                  errorWidget: (_, __, ___) => _Placeholder(
+                    icon: placeholderIcon,
+                    color: accentColor,
+                    size: size,
+                  ),
+                )
+              : _Placeholder(
+                  icon: placeholderIcon,
+                  color: accentColor,
+                  size: size,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Placeholder extends StatelessWidget {
+  const _Placeholder({
+    required this.icon,
+    required this.color,
+    required this.size,
+  });
+
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Icon(icon, size: size * 0.5, color: color),
     );
   }
 }

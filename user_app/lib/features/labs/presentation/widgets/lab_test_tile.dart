@@ -29,112 +29,300 @@ class LabTestTile extends ConsumerWidget {
     final cart = ref.watch(labCartProvider);
     final inCart = cart.contains(test.id);
     final price = offered?.effectivePrice ?? test.effectivePrice;
-    final original = offered?.priceInr ?? test.originalPriceInr ?? test.priceInr;
+    final original =
+        offered?.priceInr ?? test.displayOriginalPrice;
+    final discount = offered?.discountPercent ??
+        (original > price
+            ? (((original - price) / original) * 100).round()
+            : null);
+    final reportLabel = offered?.reportDeliveryTime != null
+        ? _compactReportTime(offered!.reportDeliveryTime!)
+        : test.reportTimeCompact;
+    final canAdd = offered != null || lab.offeredTest(test.id) != null;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LabTestIconAvatar(test: test),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: AppDecorations.borderRadiusLg,
+        border: Border.all(color: AppColors.grey200),
+        boxShadow: AppDecorations.softShadow(opacity: 0.04),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onBookNow,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _TestThumb(test: test),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            test.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.titleSmall.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                              height: 1.25,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            test.subtitleLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.labelMedium.copyWith(
+                              color: const Color(0xFF2F80C4),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.medication_outlined,
+                                size: 14,
+                                color: AppColors.grey600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                test.testsCountLabel,
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.grey700,
+                                  letterSpacing: 0.2,
+                                  decoration: TextDecoration.underline,
+                                  decorationStyle: TextDecorationStyle.dotted,
+                                  decorationColor: AppColors.grey400,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Icon(
+                                Icons.description_outlined,
+                                size: 14,
+                                color: AppColors.grey600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                reportLabel,
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.grey700,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F7FA),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        test.name,
-                        style: AppTextStyles.titleSmall.copyWith(
-                          fontWeight: FontWeight.w800,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '₹$price',
+                                  style: AppTextStyles.titleMedium.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                    height: 1,
+                                  ),
+                                ),
+                                if (original > price) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '₹$original',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      decoration: TextDecoration.lineThrough,
+                                      color: AppColors.grey500,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  if (discount != null && discount > 0) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '$discount% OFF',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: const Color(0xFFE91E63),
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ],
+                            ),
+                            if (original > price) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.local_offer_outlined,
+                                    size: 12,
+                                    color: AppColors.grey500,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'with coupon',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: AppColors.grey500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        test.description,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                          height: 1.35,
+                      const SizedBox(width: 8),
+                      _AddButton(
+                        label: inCart ? 'Added' : 'Add',
+                        enabled: canAdd,
+                        onPressed: !canAdd
+                            ? null
+                            : () {
+                                final offer =
+                                    offered ?? lab.offeredTest(test.id)!;
+                                final added = ref
+                                    .read(labCartProvider.notifier)
+                                    .addItem(
+                                      lab: lab,
+                                      item: LabCartItem.fromOfferedTest(offer),
+                                    );
+                                if (!added && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Clear cart from another lab before adding tests.',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: onBookNow,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  color: const Color(0xFFE8F2FB),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: const Color(0xFF1A4B7A),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          test.footerHighlight,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: const Color(0xFF1A4B7A),
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF5BA3D9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: Colors.white,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TestThumb extends StatelessWidget {
+  const _TestThumb({required this.test});
+
+  final LabTest test;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 72,
+        height: 56,
+        color: test.iconColor.withValues(alpha: 0.12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/home_cards/lab_tests.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox.shrink(),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _Chip(label: test.sampleType, icon: test.sampleTypeIcon),
-                _Chip(
-                  label: test.requiresFasting ? 'Fasting required' : 'No fasting',
-                  icon: Icons.restaurant_outlined,
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    test.iconColor.withValues(alpha: 0.35),
+                    test.iconColor.withValues(alpha: 0.05),
+                  ],
                 ),
-                if (test.homeVisitAvailable)
-                  const _Chip(
-                    label: 'Home collection',
-                    icon: Icons.home_outlined,
-                  ),
-                _Chip(
-                  label: offered?.reportDeliveryTime ?? test.reportDeliveryTime,
-                  icon: Icons.schedule_outlined,
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (original > price) ...[
-                  Text(
-                    '₹$original',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      decoration: TextDecoration.lineThrough,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Text(
-                  '₹$price',
-                  style: AppTextStyles.titleSmall.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Spacer(),
-                OutlinedButton(
-                  onPressed: offered == null && lab.offeredTest(test.id) == null
-                      ? null
-                      : () {
-                          final offer = offered ?? lab.offeredTest(test.id)!;
-                          final added = ref.read(labCartProvider.notifier).addItem(
-                                lab: lab,
-                                item: LabCartItem.fromOfferedTest(offer),
-                              );
-                          if (!added && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Clear cart from another lab before adding tests.',
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                  child: Text(inCart ? 'Added' : 'Add to Cart'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: onBookNow,
-                  child: const Text('Book Now'),
-                ),
-              ],
+            Center(
+              child: Icon(
+                test.icon,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
           ],
         ),
@@ -143,31 +331,50 @@ class LabTestTile extends ConsumerWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.icon});
+class _AddButton extends StatelessWidget {
+  const _AddButton({
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+  });
 
   final String label;
-  final IconData icon;
+  final bool enabled;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.grey50,
-        borderRadius: AppDecorations.borderRadiusSm,
-        border: Border.all(color: AppColors.grey200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: AppColors.textSecondary),
-          const SizedBox(width: 4),
-          Text(label, style: AppTextStyles.labelSmall),
-        ],
+    return SizedBox(
+      height: 36,
+      child: FilledButton(
+        onPressed: enabled ? onPressed : null,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          disabledBackgroundColor: AppColors.primarySoft,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          minimumSize: const Size(72, 36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          elevation: 0,
+          textStyle: AppTextStyles.labelLarge.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        child: Text(label),
       ),
     );
   }
+}
+
+String _compactReportTime(String raw) {
+  final digits = RegExp(r'(\d+)').allMatches(raw).toList();
+  if (digits.isEmpty) return raw.toUpperCase();
+  final hours = digits.last.group(1)!;
+  final lower = raw.toLowerCase();
+  if (lower.contains('day')) return '$hours DAYS';
+  return '$hours HRS';
 }
 
 List<LabTest> labTestsForLab(LabModel lab, {String? query}) {
@@ -192,8 +399,10 @@ LabOfferedTest? resolveOfferedTest(LabModel lab, LabTest test) {
               testId: test.id,
               testName: test.name,
               categoryId: test.category.id,
-              priceInr: test.priceInr,
-              discountedPriceInr: test.discountedPriceInr,
+              priceInr: test.displayOriginalPrice,
+              discountedPriceInr: test.effectivePrice != test.displayOriginalPrice
+                  ? test.effectivePrice
+                  : test.discountedPriceInr,
               reportDeliveryTime: test.reportDeliveryTime,
               homeCollectionAvailable: test.homeVisitAvailable,
               onsiteCollectionAvailable: test.onsiteAvailable,

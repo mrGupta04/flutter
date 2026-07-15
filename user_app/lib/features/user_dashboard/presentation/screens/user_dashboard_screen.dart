@@ -186,7 +186,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                         ),
                         const SizedBox(height: 16),
                         if (user != null) ...[
-                          PatientHeaderAvatar(user: user, size: 64),
+                          PatientHeaderAvatar(user: user, size: 72, cornerRadius: 16),
                           const SizedBox(height: 10),
                           Text(
                             user.fullName,

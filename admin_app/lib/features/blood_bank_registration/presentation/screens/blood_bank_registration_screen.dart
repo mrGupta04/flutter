@@ -148,13 +148,26 @@ class _BloodBankRegistrationScreenState
   bool _validateCurrentStep() {
     switch (_step) {
       case 0:
-        if (_nameController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Blood bank name is required.');
+        final nameError = ValidationUtils.validateOrganizationName(
+          _nameController.text,
+          fieldName: 'Blood bank name',
+        );
+        if (nameError != null) {
+          SnackBarHelper.showError(context, nameError);
           return false;
         }
-        if (_emailController.text.trim().isEmpty ||
-            ValidationUtils.validateEmail(_emailController.text.trim()) != null) {
-          SnackBarHelper.showError(context, 'Enter a valid email.');
+        final ownerError = ValidationUtils.validateName(
+          _ownerController.text,
+          fieldName: 'Owner / manager name',
+        );
+        if (ownerError != null) {
+          SnackBarHelper.showError(context, ownerError);
+          return false;
+        }
+        final emailError =
+            ValidationUtils.validateEmail(_emailController.text.trim());
+        if (emailError != null) {
+          SnackBarHelper.showError(context, emailError);
           return false;
         }
         final mobileError = ValidationUtils.validatePhoneNumber(
@@ -165,12 +178,62 @@ class _BloodBankRegistrationScreenState
           SnackBarHelper.showError(context, mobileError);
           return false;
         }
-        if (_passwordController.text.length < AppConstants.minPasswordLength) {
-          SnackBarHelper.showError(context, 'Password too short.');
+        final passwordError =
+            ValidationUtils.validatePassword(_passwordController.text);
+        if (passwordError != null) {
+          SnackBarHelper.showError(context, passwordError);
           return false;
         }
-        if (_passwordController.text != _confirmPasswordController.text) {
-          SnackBarHelper.showError(context, 'Passwords do not match.');
+        final confirmError = ValidationUtils.validatePasswordMatch(
+          _passwordController.text,
+          _confirmPasswordController.text,
+        );
+        if (confirmError != null) {
+          SnackBarHelper.showError(context, confirmError);
+          return false;
+        }
+        final licenseError = ValidationUtils.validateLicenseNumber(
+          _licenseController.text,
+          fieldName: 'Blood bank license number',
+        );
+        if (licenseError != null) {
+          SnackBarHelper.showError(context, licenseError);
+          return false;
+        }
+        final govRegError = ValidationUtils.validateLicenseNumber(
+          _govRegController.text,
+          fieldName: 'Government registration number',
+        );
+        if (govRegError != null) {
+          SnackBarHelper.showError(context, govRegError);
+          return false;
+        }
+        final gstError =
+            ValidationUtils.validateOptionalGstin(_gstController.text);
+        if (gstError != null) {
+          SnackBarHelper.showError(context, gstError);
+          return false;
+        }
+        final addressError =
+            ValidationUtils.validateAddress(_addressController.text);
+        if (addressError != null) {
+          SnackBarHelper.showError(context, addressError);
+          return false;
+        }
+        final cityError = ValidationUtils.validateCity(_cityController.text);
+        if (cityError != null) {
+          SnackBarHelper.showError(context, cityError);
+          return false;
+        }
+        final stateError = ValidationUtils.validateState(_stateController.text);
+        if (stateError != null) {
+          SnackBarHelper.showError(context, stateError);
+          return false;
+        }
+        final pincodeError =
+            ValidationUtils.validatePincode(_pincodeController.text);
+        if (pincodeError != null) {
+          SnackBarHelper.showError(context, pincodeError);
           return false;
         }
         if (_latitude == null || _longitude == null) {
@@ -181,6 +244,33 @@ class _BloodBankRegistrationScreenState
       case 1:
         if (_pendingDocs.isEmpty) {
           SnackBarHelper.showError(context, 'Upload at least one license document.');
+          return false;
+        }
+        final emergencyError = ValidationUtils.validatePhoneNumber(
+          _emergencyController.text.trim(),
+        );
+        if (emergencyError != null) {
+          SnackBarHelper.showError(
+            context,
+            emergencyError.replaceFirst(
+              'Mobile number',
+              'Emergency contact',
+            ),
+          );
+          return false;
+        }
+        final whatsappError = ValidationUtils.validateOptionalPhone(
+          _whatsappController.text.trim(),
+        );
+        if (whatsappError != null) {
+          SnackBarHelper.showError(context, whatsappError);
+          return false;
+        }
+        final supportEmailError = ValidationUtils.validateOptionalEmail(
+          _emailSupportController.text.trim(),
+        );
+        if (supportEmailError != null) {
+          SnackBarHelper.showError(context, supportEmailError);
           return false;
         }
         return true;
@@ -416,20 +506,30 @@ class _BloodBankRegistrationScreenState
         ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _nameController,
-            label: 'Blood bank name',
-            prefixIcon: Icons.bloodtype_rounded),
+          controller: _nameController,
+          label: 'Blood bank name',
+          prefixIcon: Icons.bloodtype_rounded,
+          validator: (v) => ValidationUtils.validateOrganizationName(
+            v,
+            fieldName: 'Blood bank name',
+          ),
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _ownerController,
-            label: 'Owner / Manager name',
-            prefixIcon: Icons.person_outline_rounded),
+          controller: _ownerController,
+          label: 'Owner / Manager name',
+          prefixIcon: Icons.person_outline_rounded,
+          validator: (v) =>
+              ValidationUtils.validateName(v, fieldName: 'Owner / manager name'),
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _emailController,
-            label: 'Email',
-            prefixIcon: Icons.email_outlined,
-            keyboardType: TextInputType.emailAddress),
+          controller: _emailController,
+          label: 'Email',
+          prefixIcon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress,
+          validator: ValidationUtils.validateEmail,
+        ),
         const SizedBox(height: 12),
         MobileNumberField(
           mobileController: _mobileController,
@@ -438,59 +538,91 @@ class _BloodBankRegistrationScreenState
         ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _passwordController,
-            label: 'Password',
-            obscureText: true,
-            prefixIcon: Icons.lock_outline_rounded),
+          controller: _passwordController,
+          label: 'Password',
+          obscureText: true,
+          prefixIcon: Icons.lock_outline_rounded,
+          validator: ValidationUtils.validatePassword,
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _confirmPasswordController,
-            label: 'Confirm password',
-            obscureText: true,
-            prefixIcon: Icons.lock_outline_rounded),
+          controller: _confirmPasswordController,
+          label: 'Confirm password',
+          obscureText: true,
+          prefixIcon: Icons.lock_outline_rounded,
+          validator: (v) => ValidationUtils.validatePasswordMatch(
+            _passwordController.text,
+            v,
+          ),
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _licenseController,
-            label: 'Blood bank license number',
-            prefixIcon: Icons.badge_outlined),
+          controller: _licenseController,
+          label: 'Blood bank license number',
+          prefixIcon: Icons.badge_outlined,
+          validator: (v) => ValidationUtils.validateLicenseNumber(
+            v,
+            fieldName: 'Blood bank license number',
+          ),
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _govRegController,
-            label: 'Government registration number',
-            prefixIcon: Icons.assignment_outlined),
+          controller: _govRegController,
+          label: 'Government registration number',
+          prefixIcon: Icons.assignment_outlined,
+          validator: (v) => ValidationUtils.validateLicenseNumber(
+            v,
+            fieldName: 'Government registration number',
+          ),
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _gstController,
-            label: 'GST number (optional)',
-            prefixIcon: Icons.receipt_long_outlined),
+          controller: _gstController,
+          label: 'GST number (optional)',
+          prefixIcon: Icons.receipt_long_outlined,
+          validator: ValidationUtils.validateOptionalGstin,
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _descriptionController,
-            label: 'Description',
-            maxLines: 3,
-            prefixIcon: Icons.notes_outlined),
+          controller: _descriptionController,
+          label: 'Description',
+          maxLines: 3,
+          prefixIcon: Icons.notes_outlined,
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _addressController,
-            label: 'Address',
-            prefixIcon: Icons.home_outlined),
+          controller: _addressController,
+          label: 'Address',
+          prefixIcon: Icons.home_outlined,
+          validator: ValidationUtils.validateAddress,
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
-                child: CustomTextField(
-                    controller: _cityController, label: 'City')),
+              child: CustomTextField(
+                controller: _cityController,
+                label: 'City',
+                validator: ValidationUtils.validateCity,
+              ),
+            ),
             const SizedBox(width: 8),
             Expanded(
-                child: CustomTextField(
-                    controller: _stateController, label: 'State')),
+              child: CustomTextField(
+                controller: _stateController,
+                label: 'State',
+                validator: ValidationUtils.validateState,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _pincodeController,
-            label: 'Pincode',
-            keyboardType: TextInputType.number),
+          controller: _pincodeController,
+          label: 'Pincode',
+          keyboardType: TextInputType.number,
+          validator: ValidationUtils.validatePincode,
+        ),
         const SizedBox(height: 12),
         RegistrationMapPicker(
           addressController: _addressController,
@@ -515,24 +647,36 @@ class _BloodBankRegistrationScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomTextField(
-            controller: _emergencyController,
-            label: 'Emergency contact',
-            prefixIcon: Icons.emergency_rounded),
+          controller: _emergencyController,
+          label: 'Emergency contact',
+          prefixIcon: Icons.emergency_rounded,
+          keyboardType: TextInputType.phone,
+          inputFormatters: ValidationUtils.mobileInputFormatters(),
+          validator: ValidationUtils.validatePhoneNumber,
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _whatsappController,
-            label: 'WhatsApp number',
-            prefixIcon: Icons.chat_rounded),
+          controller: _whatsappController,
+          label: 'WhatsApp number',
+          prefixIcon: Icons.chat_rounded,
+          keyboardType: TextInputType.phone,
+          inputFormatters: ValidationUtils.mobileInputFormatters(),
+          validator: ValidationUtils.validateOptionalPhone,
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _landlineController,
-            label: 'Landline (optional)',
-            prefixIcon: Icons.phone_outlined),
+          controller: _landlineController,
+          label: 'Landline (optional)',
+          prefixIcon: Icons.phone_outlined,
+        ),
         const SizedBox(height: 12),
         CustomTextField(
-            controller: _emailSupportController,
-            label: 'Email support',
-            prefixIcon: Icons.support_agent_outlined),
+          controller: _emailSupportController,
+          label: 'Email support',
+          prefixIcon: Icons.support_agent_outlined,
+          keyboardType: TextInputType.emailAddress,
+          validator: ValidationUtils.validateOptionalEmail,
+        ),
         const SizedBox(height: 20),
         Text('License & registration documents',
             style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700)),

@@ -4,14 +4,15 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_lists.dart';
 import '../../../../core/constants/nurse_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/text_controller_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../shared/widgets/gender_radio_field.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
@@ -63,6 +64,7 @@ class _NurseChipMultiSelect extends StatelessWidget {
             return FilterChip(
               label: Text(option),
               selected: isSelected,
+              showCheckmark: false,
               onSelected: (value) {
                 final next = List<String>.from(selected);
                 if (value) {
@@ -170,7 +172,7 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
       _emergencyName,
       _emergencyMobile,
     ]) {
-      c.addListener(_sync);
+      addTextChangeListener(c, (_) => _sync());
     }
   }
 
@@ -250,7 +252,7 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
               label: 'First name',
               prefixIcon: Icons.person_outline_rounded,
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  ValidationUtils.validateName(v, fieldName: 'First name'),
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -258,20 +260,12 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
               label: 'Last name',
               prefixIcon: Icons.person_outline_rounded,
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  ValidationUtils.validateName(v, fieldName: 'Last name'),
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
+            GenderRadioField(
               value: _selectedGender,
-              decoration: const InputDecoration(
-                labelText: 'Gender',
-                prefixIcon: Icon(Icons.wc_outlined),
-              ),
-              items: nurseGenders
-                  .map(
-                    (g) => DropdownMenuItem(value: g, child: Text(g)),
-                  )
-                  .toList(),
+              options: nurseGenders,
               onChanged: (value) {
                 setState(() => _selectedGender = value);
                 _sync();
@@ -310,8 +304,10 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
               controller: _emergencyName,
               label: 'Emergency contact name',
               prefixIcon: Icons.contact_emergency_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) => ValidationUtils.validateName(
+                v,
+                fieldName: 'Emergency contact name',
+              ),
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -319,8 +315,8 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
               label: 'Emergency contact mobile',
               keyboardType: TextInputType.phone,
               prefixIcon: Icons.phone_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().length < 10) ? 'Enter valid number' : null,
+              inputFormatters: ValidationUtils.mobileInputFormatters(),
+              validator: ValidationUtils.validatePhoneNumber,
             ),
             const SizedBox(height: 18),
             Text(
@@ -426,7 +422,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
       _specialization,
       _homeVisitFee,
     ]) {
-      c.addListener(_sync);
+      addTextChangeListener(c, (_) => _sync());
     }
   }
 
@@ -506,8 +502,10 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
                 controller: _qualificationOther,
                 label: 'Specify qualification',
                 prefixIcon: Icons.school_outlined,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: (v) => ValidationUtils.validateOrganizationName(
+                  v,
+                  fieldName: 'Qualification',
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -515,8 +513,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
               controller: _registration,
               label: 'State nursing council registration number',
               prefixIcon: Icons.badge_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateMedicalRegNumber,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -530,8 +527,10 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
               controller: _council,
               label: 'State nursing council',
               prefixIcon: Icons.account_balance_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) => ValidationUtils.validateOrganizationName(
+                v,
+                fieldName: 'Nursing council',
+              ),
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -540,11 +539,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               prefixIcon: Icons.work_outline_rounded,
-              validator: (v) {
-                final n = int.tryParse((v ?? '').trim());
-                if (n == null || n < 0) return 'Enter valid experience';
-                return null;
-              },
+              validator: ValidationUtils.validateYearsOfExperience,
             ),
             const SizedBox(height: 12),
             _NurseChipMultiSelect(
@@ -563,8 +558,11 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
               label: 'Specialization',
               hint: 'Elder care, post-op, pediatric, etc.',
               prefixIcon: Icons.medical_information_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) => ValidationUtils.validateRequired(
+                v,
+                fieldName: 'Specialization',
+                minLength: 2,
+              ),
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -573,16 +571,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               prefixIcon: Icons.currency_rupee_rounded,
-              validator: (v) {
-                final fee = int.tryParse((v ?? '').trim());
-                if (fee == null || fee < 1) {
-                  return 'Enter a valid home visit fee';
-                }
-                if (fee > AppConstants.maxConsultationFee) {
-                  return 'Fee cannot exceed ₹${AppConstants.maxConsultationFee}';
-                }
-                return null;
-              },
+              validator: ValidationUtils.validateConsultationFee,
             ),
           ],
         ),
@@ -625,7 +614,7 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
     _serviceRadiusKm = s.serviceRadiusKm;
     _sync();
     for (final c in [_address, _city, _state, _pincode]) {
-      c.addListener(_sync);
+      addTextChangeListener(c, (_) => _sync());
     }
   }
 
@@ -676,24 +665,21 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
               controller: _address,
               label: 'Address',
               prefixIcon: Icons.home_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateAddress,
             ),
             const SizedBox(height: 12),
             CustomTextField(
               controller: _city,
               label: 'City',
               prefixIcon: Icons.location_city_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateCity,
             ),
             const SizedBox(height: 12),
             CustomTextField(
               controller: _state,
               label: 'State',
               prefixIcon: Icons.map_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateState,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -701,8 +687,11 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
               label: 'Pincode',
               keyboardType: TextInputType.number,
               prefixIcon: Icons.pin_drop_outlined,
-              validator: (v) =>
-                  (v ?? '').trim().length == 6 ? null : 'Enter 6-digit pincode',
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
+              validator: ValidationUtils.validatePincode,
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<int>(
@@ -865,7 +854,7 @@ class _NurseStep5BankState extends ConsumerState<NurseStep5Bank>
     _bank = TextEditingController(text: s.bankName);
     _sync();
     for (final c in [_holder, _account, _ifsc, _bank]) {
-      c.addListener(_sync);
+      addTextChangeListener(c, (_) => _sync());
     }
   }
 
@@ -906,8 +895,7 @@ class _NurseStep5BankState extends ConsumerState<NurseStep5Bank>
               controller: _holder,
               label: 'Account holder name',
               prefixIcon: Icons.person_outline_rounded,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateAccountHolderName,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -915,24 +903,21 @@ class _NurseStep5BankState extends ConsumerState<NurseStep5Bank>
               label: 'Account number',
               keyboardType: TextInputType.number,
               prefixIcon: Icons.account_balance_wallet_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().length < 6) ? 'Enter valid account' : null,
+              validator: ValidationUtils.validateAccountNumber,
             ),
             const SizedBox(height: 12),
             CustomTextField(
               controller: _ifsc,
               label: 'IFSC code',
               prefixIcon: Icons.tag_rounded,
-              validator: (v) =>
-                  (v == null || v.trim().length < 8) ? 'Enter valid IFSC' : null,
+              validator: ValidationUtils.validateIfscCode,
             ),
             const SizedBox(height: 12),
             CustomTextField(
               controller: _bank,
               label: 'Bank name',
               prefixIcon: Icons.account_balance_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateBankName,
             ),
             const SizedBox(height: 16),
             _DocumentTile(

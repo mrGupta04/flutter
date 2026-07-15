@@ -280,20 +280,6 @@ class _HospitalVisitBookingScreenState
                         },
                       ),
                       const SizedBox(height: 20),
-                      Text(
-                        'Choose appointment time',
-                        style: AppTextStyles.titleSmall.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Select when you will visit the hospital/clinic',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                       slotsAsync.when(
                         skipLoadingOnReload: true,
                         loading: () => const Padding(

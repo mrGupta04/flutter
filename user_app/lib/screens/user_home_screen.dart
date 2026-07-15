@@ -165,7 +165,9 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                     return _SpecialtyChip(
                       icon: item.icon,
                       label: item.label,
-                      color: item.color,
+                      softColor: item.softColor,
+                      accentColor: item.accentColor,
+                      deepColor: item.deepColor,
                       onTap: () => _openDoctorSearch(
                         context,
                         specialization: item.searchTerm,
@@ -308,13 +310,17 @@ class _SpecialtyChip extends StatelessWidget {
   const _SpecialtyChip({
     required this.icon,
     required this.label,
-    required this.color,
+    required this.softColor,
+    required this.accentColor,
+    required this.deepColor,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final Color color;
+  final Color softColor;
+  final Color accentColor;
+  final Color deepColor;
   final VoidCallback onTap;
 
   @override
@@ -329,13 +335,51 @@ class _SpecialtyChip extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
-                  color: color,
                   shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      softColor,
+                      Color.lerp(softColor, Colors.white, 0.35)!,
+                    ],
+                  ),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.18),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withValues(alpha: 0.16),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 26),
+                child: Center(
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [accentColor, deepColor],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentColor.withValues(alpha: 0.35),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 20),
+                  ),
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -379,13 +423,17 @@ class _SpecialtyItem {
   const _SpecialtyItem({
     required this.icon,
     required this.label,
-    required this.color,
+    required this.softColor,
+    required this.accentColor,
+    required this.deepColor,
     required this.searchTerm,
   });
 
   final IconData icon;
   final String label;
-  final Color color;
+  final Color softColor;
+  final Color accentColor;
+  final Color deepColor;
   final String searchTerm;
 }
 
@@ -443,51 +491,67 @@ const _homeServices = [
 
 const _specialties = [
   _SpecialtyItem(
-    icon: Icons.monitor_heart_outlined,
+    icon: Icons.favorite_rounded,
     label: 'Cardiology',
-    color: Color(0xFFE8F6F3),
+    softColor: Color(0xFFFFEBEE),
+    accentColor: Color(0xFFE53935),
+    deepColor: Color(0xFFC62828),
     searchTerm: 'Cardiology',
   ),
   _SpecialtyItem(
-    icon: Icons.psychology_outlined,
+    icon: Icons.psychology_rounded,
     label: 'Mental',
-    color: Color(0xFFFFF0EE),
+    softColor: Color(0xFFF3E5F5),
+    accentColor: Color(0xFF8E24AA),
+    deepColor: Color(0xFF6A1B9A),
     searchTerm: 'Psychiatry',
   ),
   _SpecialtyItem(
-    icon: Icons.child_care_outlined,
+    icon: Icons.child_care_rounded,
     label: 'Pediatric',
-    color: Color(0xFFE6F5ED),
+    softColor: Color(0xFFE8F5E9),
+    accentColor: Color(0xFF43A047),
+    deepColor: Color(0xFF2E7D32),
     searchTerm: 'Pediatric',
   ),
   _SpecialtyItem(
-    icon: Icons.visibility_outlined,
+    icon: Icons.visibility_rounded,
     label: 'Eye care',
-    color: Color(0xFFE8F1FD),
+    softColor: Color(0xFFE3F2FD),
+    accentColor: Color(0xFF1E88E5),
+    deepColor: Color(0xFF1565C0),
     searchTerm: 'Ophthalmology',
   ),
   _SpecialtyItem(
     icon: Icons.accessibility_new_rounded,
     label: 'Ortho',
-    color: Color(0xFFFFF8E1),
+    softColor: Color(0xFFFFF8E1),
+    accentColor: Color(0xFFFB8C00),
+    deepColor: Color(0xFFEF6C00),
     searchTerm: 'Orthopedics',
   ),
   _SpecialtyItem(
-    icon: Icons.pregnant_woman_outlined,
+    icon: Icons.pregnant_woman_rounded,
     label: 'Gynae',
-    color: Color(0xFFFCE4EC),
+    softColor: Color(0xFFFCE4EC),
+    accentColor: Color(0xFFEC407A),
+    deepColor: Color(0xFFC2185B),
     searchTerm: 'Gynecology',
   ),
   _SpecialtyItem(
-    icon: Icons.healing_outlined,
+    icon: Icons.spa_rounded,
     label: 'Dermat',
-    color: Color(0xFFE8EAF6),
+    softColor: Color(0xFFE8EAF6),
+    accentColor: Color(0xFF5C6BC0),
+    deepColor: Color(0xFF3949AB),
     searchTerm: 'Dermatology',
   ),
   _SpecialtyItem(
-    icon: Icons.coronavirus_outlined,
+    icon: Icons.medical_services_rounded,
     label: 'General',
-    color: Color(0xFFE0F2F1),
+    softColor: Color(0xFFE0F2F1),
+    accentColor: Color(0xFF00897B),
+    deepColor: Color(0xFF00695C),
     searchTerm: 'General Physician',
   ),
 ];

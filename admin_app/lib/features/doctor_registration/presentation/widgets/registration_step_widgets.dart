@@ -8,10 +8,12 @@ import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/text_controller_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/models.dart';
 import '../../../../shared/widgets/app_shell.dart';
+import '../../../../shared/widgets/gender_radio_field.dart';
 import '../../../../shared/widgets/registration_map_picker.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../provider/registration_provider.dart';
@@ -72,33 +74,33 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
     _profileBytes = formState.profileImageBytes;
     _profilePath = formState.profileImagePath;
 
-    _fullNameController.addListener(() {
+    addTextChangeListener(_fullNameController, (text) {
       ref
           .read(registrationFormProvider.notifier)
-          .updatePersonalInfo(fullName: _fullNameController.text);
+          .updatePersonalInfo(fullName: text);
     });
-    _emailController.addListener(() {
+    addTextChangeListener(_emailController, (text) {
       ref
           .read(registrationFormProvider.notifier)
-          .updatePersonalInfo(email: _emailController.text);
+          .updatePersonalInfo(email: text);
     });
-    _mobileController.addListener(() {
+    addTextChangeListener(_mobileController, (text) {
       ref
           .read(registrationFormProvider.notifier)
-          .updatePersonalInfo(mobileNumber: _mobileController.text);
+          .updatePersonalInfo(mobileNumber: text);
     });
-    _aadhaarController.addListener(() {
-      final digits = _aadhaarController.text.replaceAll(RegExp(r'\D'), '');
+    addTextChangeListener(_aadhaarController, (text) {
+      final digits = text.replaceAll(RegExp(r'\D'), '');
       ref.read(registrationFormProvider.notifier).updateAadhaarNumber(digits);
     });
-    _passwordController.addListener(() {
+    addTextChangeListener(_passwordController, (text) {
       ref
           .read(registrationFormProvider.notifier)
-          .updatePersonalInfo(password: _passwordController.text);
+          .updatePersonalInfo(password: text);
     });
-    _confirmPasswordController.addListener(() {
+    addTextChangeListener(_confirmPasswordController, (text) {
       ref.read(registrationFormProvider.notifier).updatePersonalInfo(
-            confirmPassword: _confirmPasswordController.text,
+            confirmPassword: text,
           );
     });
   }
@@ -280,27 +282,9 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
             ),
           ),
           const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _selectedGender,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),
-            dropdownColor: AppColors.white,
-            decoration: const InputDecoration(
-              labelText: 'Gender',
-              prefixIcon: Icon(Icons.person_outline),
-            ),
-            items: AppLists.genders
-                .map(
-                  (gender) => DropdownMenuItem(
-                    value: gender,
-                    child: Text(
-                      gender,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
+          GenderRadioField(
+            value: _selectedGender,
+            options: AppLists.genders,
             onChanged: (value) {
               setState(() {
                 _selectedGender = value;
@@ -310,7 +294,7 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
                   .updatePersonalInfo(gender: value);
             },
             validator: (value) =>
-                value == null ? 'Please select a gender' : null,
+                value == null || value.isEmpty ? 'Please select a gender' : null,
           ),
           const SizedBox(height: 16),
           GestureDetector(
@@ -322,9 +306,7 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
                 hint: 'Select date',
                 prefixIcon: Icons.calendar_today_outlined,
                 suffixIcon: Icons.edit_calendar,
-                validator: (value) => (value == null || value.isEmpty)
-                    ? 'Date of birth is required'
-                    : null,
+                validator: ValidationUtils.validateDateOfBirth,
               ),
             ),
           ),
@@ -483,6 +465,7 @@ class _EmailVerificationSectionState
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(6),
             ],
+            validator: ValidationUtils.validateOtp,
           ),
           const SizedBox(height: 12),
           CustomButton(
@@ -552,15 +535,24 @@ class _Step2ProfessionalDetailsState
         TextEditingController(text: formState.visitSiteFee);
     _bioController = TextEditingController(text: formState.bio);
 
-    _regNumberController.addListener(_syncProfessionalDetails);
-    _councilController.addListener(_syncProfessionalDetails);
-    _qualificationController.addListener(_syncProfessionalDetails);
-    _experienceController.addListener(_syncProfessionalDetails);
-    _clinicController.addListener(_syncProfessionalDetails);
-    _onlineFeeController.addListener(_syncConsultationFees);
-    _homeFeeController.addListener(_syncConsultationFees);
-    _visitSiteFeeController.addListener(_syncConsultationFees);
-    _bioController.addListener(_syncProfessionalDetails);
+    addTextChangeListener(_regNumberController, (_) => _syncProfessionalDetails());
+    addTextChangeListener(_councilController, (_) => _syncProfessionalDetails());
+    addTextChangeListener(
+      _qualificationController,
+      (_) => _syncProfessionalDetails(),
+    );
+    addTextChangeListener(
+      _experienceController,
+      (_) => _syncProfessionalDetails(),
+    );
+    addTextChangeListener(_clinicController, (_) => _syncProfessionalDetails());
+    addTextChangeListener(_onlineFeeController, (_) => _syncConsultationFees());
+    addTextChangeListener(_homeFeeController, (_) => _syncConsultationFees());
+    addTextChangeListener(
+      _visitSiteFeeController,
+      (_) => _syncConsultationFees(),
+    );
+    addTextChangeListener(_bioController, (_) => _syncProfessionalDetails());
   }
 
   void _syncConsultationFees() {
@@ -622,7 +614,10 @@ class _Step2ProfessionalDetailsState
             label: 'Medical Council Name',
             hint: 'Medical Council of India',
             prefixIcon: Icons.account_balance_outlined,
-            validator: ValidationUtils.validateName,
+            validator: (v) => ValidationUtils.validateOrganizationName(
+              v,
+              fieldName: 'Medical council name',
+            ),
           ),
           const SizedBox(height: 20),
           _SearchableMultiSelectPicker(
@@ -642,7 +637,10 @@ class _Step2ProfessionalDetailsState
             label: 'Qualification',
             hint: 'MBBS, MD',
             prefixIcon: Icons.school_outlined,
-            validator: ValidationUtils.validateName,
+            validator: (v) => ValidationUtils.validateOrganizationName(
+              v,
+              fieldName: 'Qualification',
+            ),
           ),
           const SizedBox(height: 16),
           CustomTextField(
@@ -659,7 +657,10 @@ class _Step2ProfessionalDetailsState
             label: 'Hospital / Clinic Name',
             hint: 'Sunrise Clinic',
             prefixIcon: Icons.local_hospital_outlined,
-            validator: ValidationUtils.validateName,
+            validator: (v) => ValidationUtils.validateOrganizationName(
+              v,
+              fieldName: 'Hospital / clinic name',
+            ),
           ),
           const SizedBox(height: 16),
           _SearchableMultiSelectPicker(
@@ -791,10 +792,10 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
     _stateController = TextEditingController(text: formState.state);
     _pincodeController = TextEditingController(text: formState.pincode);
 
-    _addressController.addListener(_syncAddress);
-    _cityController.addListener(_syncAddress);
-    _stateController.addListener(_syncAddress);
-    _pincodeController.addListener(_syncAddress);
+    addTextChangeListener(_addressController, (_) => _syncAddress());
+    addTextChangeListener(_cityController, (_) => _syncAddress());
+    addTextChangeListener(_stateController, (_) => _syncAddress());
+    addTextChangeListener(_pincodeController, (_) => _syncAddress());
   }
 
   void _syncAddress() {
@@ -842,7 +843,7 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
             label: 'City',
             hint: 'Delhi',
             prefixIcon: Icons.location_city_outlined,
-            validator: ValidationUtils.validateName,
+            validator: ValidationUtils.validateCity,
           ),
           const SizedBox(height: 16),
           CustomTextField(
@@ -850,7 +851,7 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
             label: 'State',
             hint: 'Delhi',
             prefixIcon: Icons.map_outlined,
-            validator: ValidationUtils.validateName,
+            validator: ValidationUtils.validateState,
           ),
           const SizedBox(height: 16),
           CustomTextField(
@@ -1132,20 +1133,20 @@ class _Step5BankDetailsState extends ConsumerState<Step5BankDetails>
     _chequeBytes = formState.documentBytes[DocumentType.cancelledCheque];
     _chequeFileName = formState.documentFileNames[DocumentType.cancelledCheque];
 
-    _accountController.addListener(() {
+    addTextChangeListener(_accountController, (text) {
       ref.read(registrationFormProvider.notifier).updateBankDetails(
-            bankAccountNumber: _accountController.text,
+            bankAccountNumber: text,
           );
     });
-    _ifscController.addListener(() {
+    addTextChangeListener(_ifscController, (text) {
       ref
           .read(registrationFormProvider.notifier)
-          .updateBankDetails(ifscCode: _ifscController.text);
+          .updateBankDetails(ifscCode: text);
     });
-    _upiController.addListener(() {
+    addTextChangeListener(_upiController, (text) {
       ref
           .read(registrationFormProvider.notifier)
-          .updateBankDetails(upiId: _upiController.text);
+          .updateBankDetails(upiId: text);
     });
   }
 

@@ -1040,17 +1040,41 @@ class _DualCtaCard extends StatelessWidget {
   }
 }
 
-/// Category grid — 1mg health categories circles.
+/// Category grid — colorful specialty logos.
 class OneMgCategoryGrid extends StatelessWidget {
   const OneMgCategoryGrid({super.key, this.onCategoryTap});
 
   final void Function(String label, String searchTerm)? onCategoryTap;
 
   static final _items = [
-    (Icons.monitor_heart_outlined, 'Cardiology', const Color(0xFFE8F6F3)),
-    (Icons.psychology_outlined, 'Mental', const Color(0xFFFFF0EE)),
-    (Icons.child_care_outlined, 'Pediatric', const Color(0xFFE6F5ED)),
-    (Icons.visibility_outlined, 'Eye Care', const Color(0xFFE8F1FD)),
+    (
+      Icons.favorite_rounded,
+      'Cardiology',
+      const Color(0xFFFFEBEE),
+      const Color(0xFFE53935),
+      const Color(0xFFC62828),
+    ),
+    (
+      Icons.psychology_rounded,
+      'Mental',
+      const Color(0xFFF3E5F5),
+      const Color(0xFF8E24AA),
+      const Color(0xFF6A1B9A),
+    ),
+    (
+      Icons.child_care_rounded,
+      'Pediatric',
+      const Color(0xFFE8F5E9),
+      const Color(0xFF43A047),
+      const Color(0xFF2E7D32),
+    ),
+    (
+      Icons.visibility_rounded,
+      'Eye Care',
+      const Color(0xFFE3F2FD),
+      const Color(0xFF1E88E5),
+      const Color(0xFF1565C0),
+    ),
   ];
 
   @override
@@ -1076,10 +1100,34 @@ class OneMgCategoryGrid extends StatelessWidget {
                         width: 56,
                         height: 56,
                         decoration: BoxDecoration(
-                          color: item.$3,
                           shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              item.$3,
+                              Color.lerp(item.$3, Colors.white, 0.35)!,
+                            ],
+                          ),
+                          border: Border.all(
+                            color: item.$4.withValues(alpha: 0.18),
+                          ),
                         ),
-                        child: Icon(item.$1, color: AppColors.primary, size: 26),
+                        child: Center(
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(11),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [item.$4, item.$5],
+                              ),
+                            ),
+                            child: Icon(item.$1, color: Colors.white, size: 18),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(

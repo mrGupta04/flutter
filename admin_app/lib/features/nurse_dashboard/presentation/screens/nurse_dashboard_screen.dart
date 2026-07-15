@@ -10,6 +10,7 @@ import '../../../../data/models/doctor_booking_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../auth/provider/provider_auth_provider.dart';
 import '../../../doctor_registration/presentation/widgets/weekly_availability_picker.dart';
 import '../../provider/nurse_dashboard_provider.dart';
 
@@ -30,6 +31,11 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
     });
   }
 
+  Future<void> _logout() async {
+    await ref.read(providerAuthProvider.notifier).logout();
+    if (mounted) context.go(AppConstants.routeProviderLanding);
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboard = ref.watch(nurseDashboardProvider);
@@ -44,9 +50,15 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
             onPressed: dashboard.isLoading
                 ? null
                 : () => ref.read(nurseDashboardProvider.notifier).refreshAll(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Sign out',
+            onPressed: _logout,
           ),
         ],
       ),

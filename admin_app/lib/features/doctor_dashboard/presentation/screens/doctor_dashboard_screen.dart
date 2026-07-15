@@ -838,25 +838,43 @@ class _DashboardContent extends StatelessWidget {
                 Row(
                   children: [
                     Container(
+                      width: 78,
+                      height: 78,
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: AppColors.white.withValues(alpha: 0.6),
                           width: 2,
                         ),
                       ),
-                      child: CircleAvatar(
-                        radius: 36,
-                        backgroundColor: AppColors.white,
-                        backgroundImage: doctor!.profilePicture != null &&
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: doctor!.profilePicture != null &&
                                 doctor!.profilePicture!.startsWith('http')
-                            ? NetworkImage(doctor!.profilePicture!)
-                            : null,
-                        child: doctor!.profilePicture == null
-                            ? const Icon(Icons.person_rounded,
-                                color: AppColors.primary, size: 36)
-                            : null,
+                            ? Image.network(
+                                doctor!.profilePicture!,
+                                width: 72,
+                                height: 72,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const ColoredBox(
+                                  color: AppColors.white,
+                                  child: Icon(
+                                    Icons.person_rounded,
+                                    color: AppColors.primary,
+                                    size: 36,
+                                  ),
+                                ),
+                              )
+                            : const ColoredBox(
+                                color: AppColors.white,
+                                child: Icon(
+                                  Icons.person_rounded,
+                                  color: AppColors.primary,
+                                  size: 36,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 16),

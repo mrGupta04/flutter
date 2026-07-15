@@ -53,13 +53,14 @@ class ProfilePicturePicker extends StatelessWidget {
               width: 96,
               height: 96,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(16),
                 color: AppColors.grey100,
                 border: Border.all(
                   color: AppColors.primary.withValues(alpha: 0.3),
                 ),
               ),
-              child: ClipOval(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
                 child: hasImage
                     ? Image.memory(imageBytes!, fit: BoxFit.cover)
                     : Icon(Icons.person, size: 48, color: AppColors.grey400),

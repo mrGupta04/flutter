@@ -21,7 +21,12 @@ function assertEmbeddedDocumentsVerified(documents, label = 'document') {
   }
 }
 
-async function verifyEmbeddedDocument(Model, entityId, documentId) {
+function documentPlain(doc) {
+  if (!doc) return null;
+  return typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
+}
+
+async function findEmbeddedDocument(Model, entityId, documentId) {
   const entity = await Model.findOne({ id: entityId });
   if (!entity) {
     const err = new Error('Provider not found');
@@ -29,22 +34,38 @@ async function verifyEmbeddedDocument(Model, entityId, documentId) {
     throw err;
   }
 
-  const docs = [...(entity.documents || [])];
-  const idx = docs.findIndex((d) => d.id === documentId);
-  if (idx < 0) {
+  const doc = (entity.documents || []).find((d) => d.id === documentId);
+  if (!doc) {
     const err = new Error('Document not found');
     err.statusCode = 404;
     throw err;
   }
 
-  docs[idx] = {
-    ...docs[idx],
-    verificationStatus: 'verified',
-    rejectionReason: null,
-  };
+  return { entity, doc };
+}
 
-  await Model.updateOne({ id: entityId }, { $set: { documents: docs } });
-  return docs[idx];
+async function verifyEmbeddedDocument(Model, entityId, documentId) {
+  await findEmbeddedDocument(Model, entityId, documentId);
+
+  // Use positional $set — spreading Mongoose subdocs drops schema fields.
+  const result = await Model.updateOne(
+    { id: entityId, 'documents.id': documentId },
+    {
+      $set: {
+        'documents.$.verificationStatus': 'verified',
+        'documents.$.rejectionReason': null,
+      },
+    },
+  );
+
+  if (result.matchedCount === 0) {
+    const err = new Error('Document not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const { doc } = await findEmbeddedDocument(Model, entityId, documentId);
+  return documentPlain(doc);
 }
 
 async function rejectEmbeddedDocument(
@@ -53,29 +74,26 @@ async function rejectEmbeddedDocument(
   documentId,
   rejectionReason,
 ) {
-  const entity = await Model.findOne({ id: entityId });
-  if (!entity) {
-    const err = new Error('Provider not found');
-    err.statusCode = 404;
-    throw err;
-  }
+  await findEmbeddedDocument(Model, entityId, documentId);
 
-  const docs = [...(entity.documents || [])];
-  const idx = docs.findIndex((d) => d.id === documentId);
-  if (idx < 0) {
+  const result = await Model.updateOne(
+    { id: entityId, 'documents.id': documentId },
+    {
+      $set: {
+        'documents.$.verificationStatus': 'rejected',
+        'documents.$.rejectionReason': String(rejectionReason || '').trim(),
+      },
+    },
+  );
+
+  if (result.matchedCount === 0) {
     const err = new Error('Document not found');
     err.statusCode = 404;
     throw err;
   }
 
-  docs[idx] = {
-    ...docs[idx],
-    verificationStatus: 'rejected',
-    rejectionReason: rejectionReason.trim(),
-  };
-
-  await Model.updateOne({ id: entityId }, { $set: { documents: docs } });
-  return docs[idx];
+  const { doc } = await findEmbeddedDocument(Model, entityId, documentId);
+  return documentPlain(doc);
 }
 
 module.exports = {

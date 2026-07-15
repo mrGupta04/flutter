@@ -140,7 +140,7 @@ class DoctorListingCard extends StatelessWidget {
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
-                      fontSize: 9,
+                      fontSize: 11,
                     ),
                   ),
                 ],

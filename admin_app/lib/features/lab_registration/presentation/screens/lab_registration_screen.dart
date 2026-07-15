@@ -163,20 +163,26 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
   bool _validateCurrentStep() {
     switch (_step) {
       case 0:
-        if (_labNameController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Lab name is required.');
+        final labNameError = ValidationUtils.validateOrganizationName(
+          _labNameController.text,
+          fieldName: 'Lab name',
+        );
+        if (labNameError != null) {
+          SnackBarHelper.showError(context, labNameError);
           return false;
         }
-        if (_ownerController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Owner / manager name is required.');
+        final ownerError = ValidationUtils.validateName(
+          _ownerController.text,
+          fieldName: 'Owner / manager name',
+        );
+        if (ownerError != null) {
+          SnackBarHelper.showError(context, ownerError);
           return false;
         }
-        if (_emailController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Email is required.');
-          return false;
-        }
-        if (ValidationUtils.validateEmail(_emailController.text.trim()) != null) {
-          SnackBarHelper.showError(context, 'Enter a valid email address.');
+        final emailError =
+            ValidationUtils.validateEmail(_emailController.text.trim());
+        if (emailError != null) {
+          SnackBarHelper.showError(context, emailError);
           return false;
         }
         final mobileError = ValidationUtils.validatePhoneNumber(
@@ -187,21 +193,52 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           SnackBarHelper.showError(context, mobileError);
           return false;
         }
-        if (_passwordController.text.length < AppConstants.minPasswordLength) {
-          SnackBarHelper.showError(
-            context,
-            'Password must be at least ${AppConstants.minPasswordLength} characters.',
+        final passwordError =
+            ValidationUtils.validatePassword(_passwordController.text);
+        if (passwordError != null) {
+          SnackBarHelper.showError(context, passwordError);
+          return false;
+        }
+        final confirmError = ValidationUtils.validatePasswordMatch(
+          _passwordController.text,
+          _confirmPasswordController.text,
+        );
+        if (confirmError != null) {
+          SnackBarHelper.showError(context, confirmError);
+          return false;
+        }
+        final addressError =
+            ValidationUtils.validateAddress(_addressController.text);
+        if (addressError != null) {
+          SnackBarHelper.showError(context, addressError);
+          return false;
+        }
+        final cityError = ValidationUtils.validateCity(_cityController.text);
+        if (cityError != null) {
+          SnackBarHelper.showError(context, cityError);
+          return false;
+        }
+        final pincodeError =
+            ValidationUtils.validatePincode(_pincodeController.text);
+        if (pincodeError != null) {
+          SnackBarHelper.showError(context, pincodeError);
+          return false;
+        }
+        if (_yearController.text.trim().isNotEmpty) {
+          final yearError = ValidationUtils.validateYear(
+            _yearController.text,
+            fieldName: 'Year established',
+            minYear: 1950,
           );
-          return false;
+          if (yearError != null) {
+            SnackBarHelper.showError(context, yearError);
+            return false;
+          }
         }
-        if (_passwordController.text != _confirmPasswordController.text) {
-          SnackBarHelper.showError(context, 'Passwords do not match.');
-          return false;
-        }
-        if (_addressController.text.trim().isEmpty ||
-            _cityController.text.trim().isEmpty ||
-            _pincodeController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Complete address details are required.');
+        final gstError =
+            ValidationUtils.validateOptionalGstin(_gstController.text);
+        if (gstError != null) {
+          SnackBarHelper.showError(context, gstError);
           return false;
         }
         return true;
@@ -216,7 +253,12 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
         }
         return true;
       case 2:
-        final requiredTypes = ['registration_certificate', 'owner_id', 'address_proof', 'pan_card'];
+        final requiredTypes = [
+          'registration_certificate',
+          'owner_id',
+          'address_proof',
+          'pan_card',
+        ];
         for (final type in requiredTypes) {
           if (!_pendingDocs.any((d) => d.type == type)) {
             SnackBarHelper.showError(context, 'Upload all required documents.');
@@ -231,11 +273,33 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
         }
         return true;
       case 7:
-        if (_accountHolderController.text.trim().isEmpty ||
-            _bankNameController.text.trim().isEmpty ||
-            _accountNumberController.text.trim().isEmpty ||
-            _ifscController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Complete bank details are required.');
+        final holderError =
+            ValidationUtils.validateAccountHolderName(_accountHolderController.text);
+        if (holderError != null) {
+          SnackBarHelper.showError(context, holderError);
+          return false;
+        }
+        final bankError =
+            ValidationUtils.validateBankName(_bankNameController.text);
+        if (bankError != null) {
+          SnackBarHelper.showError(context, bankError);
+          return false;
+        }
+        final accountError =
+            ValidationUtils.validateAccountNumber(_accountNumberController.text);
+        if (accountError != null) {
+          SnackBarHelper.showError(context, accountError);
+          return false;
+        }
+        final ifscError = ValidationUtils.validateIfscCode(_ifscController.text);
+        if (ifscError != null) {
+          SnackBarHelper.showError(context, ifscError);
+          return false;
+        }
+        final upiError =
+            ValidationUtils.validateOptionalUpiId(_upiController.text);
+        if (upiError != null) {
+          SnackBarHelper.showError(context, upiError);
           return false;
         }
         return true;
@@ -748,13 +812,18 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           controller: _labNameController,
           label: 'Lab name',
           prefixIcon: Icons.biotech_outlined,
-          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+          validator: (v) => ValidationUtils.validateOrganizationName(
+            v,
+            fieldName: 'Lab name',
+          ),
         ),
         const SizedBox(height: 12),
         CustomTextField(
           controller: _ownerController,
           label: 'Owner / Manager name',
           prefixIcon: Icons.person_outline_rounded,
+          validator: (v) =>
+              ValidationUtils.validateName(v, fieldName: 'Owner / manager name'),
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -762,6 +831,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           label: 'Email address',
           keyboardType: TextInputType.emailAddress,
           prefixIcon: Icons.email_outlined,
+          validator: ValidationUtils.validateEmail,
         ),
         const SizedBox(height: 12),
         MobileNumberField(
@@ -775,6 +845,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           label: 'Password',
           obscureText: true,
           prefixIcon: Icons.lock_outline_rounded,
+          validator: ValidationUtils.validatePassword,
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -782,6 +853,10 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           label: 'Confirm password',
           obscureText: true,
           prefixIcon: Icons.lock_outline_rounded,
+          validator: (v) => ValidationUtils.validatePasswordMatch(
+            _passwordController.text,
+            v,
+          ),
         ),
         const SizedBox(height: 16),
         Text('Address details', style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700)),
@@ -819,6 +894,14 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
                 label: 'Year established',
                 keyboardType: TextInputType.number,
                 prefixIcon: Icons.calendar_today_outlined,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  return ValidationUtils.validateYear(
+                    v,
+                    fieldName: 'Year established',
+                    minYear: 1950,
+                  );
+                },
               ),
             ),
             const SizedBox(width: 10),
@@ -848,12 +931,17 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           controller: _gstController,
           label: 'GST number (optional)',
           prefixIcon: Icons.receipt_long_outlined,
+          validator: ValidationUtils.validateOptionalGstin,
         ),
         const SizedBox(height: 12),
         CustomTextField(
           controller: _licenseController,
           label: 'License / Certification number',
           prefixIcon: Icons.verified_outlined,
+          validator: (v) => ValidationUtils.validateLicenseNumber(
+            v,
+            fieldName: 'License number',
+          ),
         ),
         const SizedBox(height: 16),
         Text('Working details', style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700)),
@@ -941,6 +1029,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
             return FilterChip(
               label: Text(f, style: const TextStyle(fontSize: 12)),
               selected: selected,
+              showCheckmark: false,
               onSelected: (v) => setState(() {
                 if (v) {
                   _facilities.add(f);
@@ -962,6 +1051,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
             return FilterChip(
               label: Text(c, style: const TextStyle(fontSize: 12)),
               selected: selected,
+              showCheckmark: false,
               onSelected: (v) => setState(() {
                 if (v) {
                   _supportedCategories.add(c);
@@ -1054,6 +1144,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
               FilterChip(
                 label: const Text('All'),
                 selected: _testCategoryFilter == null,
+                showCheckmark: false,
                 onSelected: (_) => setState(() => _testCategoryFilter = null),
               ),
               const SizedBox(width: 6),
@@ -1063,6 +1154,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
                   child: FilterChip(
                     label: Text(c.label, style: const TextStyle(fontSize: 11)),
                     selected: _testCategoryFilter == c,
+                    showCheckmark: false,
                     onSelected: (_) =>
                         setState(() => _testCategoryFilter = c),
                   ),
@@ -1191,6 +1283,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
               return FilterChip(
                 label: Text(scan, style: const TextStyle(fontSize: 12)),
                 selected: added,
+                showCheckmark: false,
                 onSelected: (v) => setState(() {
                   if (v) {
                     _offeredScans.add(LabOfferedScanReg(
@@ -1338,12 +1431,14 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           controller: _accountHolderController,
           label: 'Account holder name',
           prefixIcon: Icons.account_balance_outlined,
+          validator: ValidationUtils.validateAccountHolderName,
         ),
         const SizedBox(height: 12),
         CustomTextField(
           controller: _bankNameController,
           label: 'Bank name',
           prefixIcon: Icons.account_balance_wallet_outlined,
+          validator: ValidationUtils.validateBankName,
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -1351,18 +1446,21 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           label: 'Account number',
           keyboardType: TextInputType.number,
           prefixIcon: Icons.numbers_outlined,
+          validator: ValidationUtils.validateAccountNumber,
         ),
         const SizedBox(height: 12),
         CustomTextField(
           controller: _ifscController,
           label: 'IFSC code',
           prefixIcon: Icons.code_outlined,
+          validator: ValidationUtils.validateIfscCode,
         ),
         const SizedBox(height: 12),
         CustomTextField(
           controller: _upiController,
           label: 'UPI ID (optional)',
           prefixIcon: Icons.payment_outlined,
+          validator: ValidationUtils.validateOptionalUpiId,
         ),
         const SizedBox(height: 12),
         _DocUploadTile(

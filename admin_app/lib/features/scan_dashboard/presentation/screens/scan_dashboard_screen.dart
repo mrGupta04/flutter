@@ -9,6 +9,7 @@ import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/scan_center_model.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../auth/provider/provider_auth_provider.dart';
 import '../../provider/scan_dashboard_provider.dart';
 
 class ScanDashboardScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,11 @@ class _ScanDashboardScreenState extends ConsumerState<ScanDashboardScreen> {
     });
   }
 
+  Future<void> _logout() async {
+    await ref.read(providerAuthProvider.notifier).logout();
+    if (mounted) context.go(AppConstants.routeProviderLanding);
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboard = ref.watch(scanDashboardProvider);
@@ -43,9 +49,15 @@ class _ScanDashboardScreenState extends ConsumerState<ScanDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
             onPressed: dashboard.isLoading
                 ? null
                 : () => ref.read(scanDashboardProvider.notifier).refreshAll(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Sign out',
+            onPressed: _logout,
           ),
         ],
       ),

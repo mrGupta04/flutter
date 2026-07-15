@@ -2,27 +2,33 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../data/lab_test_icons.dart';
-import '../../data/models/lab_test_model.dart';
+import '../../data/lab_catalog_metadata.dart';
 
-class LabTestCard extends StatelessWidget {
-  const LabTestCard({
+/// 1mg-style health package card used on lab detail / package lists.
+class LabPackageCard extends StatelessWidget {
+  const LabPackageCard({
     super.key,
-    required this.test,
-    required this.onBookNow,
+    required this.package,
+    required this.onTap,
+    this.onAdd,
+    this.compact = false,
   });
 
-  final LabTest test;
-  final VoidCallback onBookNow;
+  final LabHealthPackage package;
+  final VoidCallback onTap;
+  final VoidCallback? onAdd;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final price = test.effectivePrice;
-    final original = test.displayOriginalPrice;
-    final discount = test.discountPercent;
+    final discount = package.discountPercent;
+    final subtitle = package.subtitle ?? '${package.testCount} included tests';
+    final highlight = package.description ??
+        'Includes ${package.testCount} carefully selected lab tests';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      width: compact ? 300 : null,
+      margin: EdgeInsets.only(bottom: compact ? 0 : 12, right: compact ? 12 : 0),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: AppDecorations.borderRadiusLg,
@@ -33,34 +39,62 @@ class LabTestCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onBookNow,
+          onTap: onTap,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _TestThumb(test: test),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        width: 72,
+                        height: 56,
+                        color: AppColors.primaryLight,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.asset(
+                              'assets/images/home_cards/lab_tests.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const SizedBox.shrink(),
+                            ),
+                            Container(
+                              color: AppColors.primary.withValues(alpha: 0.28),
+                            ),
+                            const Center(
+                              child: Icon(
+                                Icons.biotech_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            test.name,
-                            maxLines: 2,
+                            package.name,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.titleSmall.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
-                              height: 1.25,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            test.subtitleLabel,
+                            subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.labelMedium.copyWith(
@@ -78,7 +112,7 @@ class LabTestCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                test.testsCountLabel,
+                                package.testsCountLabel,
                                 style: AppTextStyles.labelSmall.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.grey700,
@@ -96,7 +130,7 @@ class LabTestCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                test.reportTimeCompact,
+                                package.reportTimeCompact,
                                 style: AppTextStyles.labelSmall.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.grey700,
@@ -130,55 +164,51 @@ class LabTestCard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '₹$price',
+                                  '₹${package.discountedPriceInr}',
                                   style: AppTextStyles.titleMedium.copyWith(
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.textPrimary,
                                     height: 1,
                                   ),
                                 ),
-                                if (original > price) ...[
-                                  const SizedBox(width: 8),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '₹${package.originalPriceInr}',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    decoration: TextDecoration.lineThrough,
+                                    color: AppColors.grey500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                if (discount > 0) ...[
+                                  const SizedBox(width: 6),
                                   Text(
-                                    '₹$original',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      decoration: TextDecoration.lineThrough,
-                                      color: AppColors.grey500,
-                                      fontWeight: FontWeight.w500,
+                                    '$discount% OFF',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: const Color(0xFFE91E63),
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                  if (discount != null && discount > 0) ...[
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '$discount% OFF',
-                                      style: AppTextStyles.labelSmall.copyWith(
-                                        color: const Color(0xFFE91E63),
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
                                 ],
                               ],
                             ),
-                            if (original > price) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.local_offer_outlined,
-                                    size: 12,
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.local_offer_outlined,
+                                  size: 12,
+                                  color: AppColors.grey500,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'with coupon',
+                                  style: AppTextStyles.labelSmall.copyWith(
                                     color: AppColors.grey500,
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'with coupon',
-                                    style: AppTextStyles.labelSmall.copyWith(
-                                      color: AppColors.grey500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -186,7 +216,7 @@ class LabTestCard extends StatelessWidget {
                       SizedBox(
                         height: 36,
                         child: FilledButton(
-                          onPressed: onBookNow,
+                          onPressed: onAdd ?? onTap,
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
@@ -221,7 +251,7 @@ class LabTestCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        test.footerHighlight,
+                        highlight,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.labelSmall.copyWith(
@@ -250,54 +280,6 @@ class LabTestCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TestThumb extends StatelessWidget {
-  const _TestThumb({required this.test});
-
-  final LabTest test;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 72,
-        height: 56,
-        color: test.iconColor.withValues(alpha: 0.12),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/images/home_cards/lab_tests.png',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  const SizedBox.shrink(),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    test.iconColor.withValues(alpha: 0.35),
-                    test.iconColor.withValues(alpha: 0.05),
-                  ],
-                ),
-              ),
-            ),
-            Center(
-              child: Icon(
-                test.icon,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -13,7 +13,6 @@ import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
-import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../doctor_registration/provider/nurse_profile_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
@@ -198,13 +197,6 @@ class _NurseHomeVisitBookingScreenState
                           ),
                         ),
                       const SizedBox(height: 20),
-                      Text(
-                        'Choose visit time',
-                        style: AppTextStyles.titleSmall.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
                       slotsAsync.when(
                         skipLoadingOnReload: true,
                         loading: () => const Center(

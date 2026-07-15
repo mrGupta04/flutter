@@ -94,15 +94,41 @@ class ValidationUtils {
   }
 
   /// Validate name
-  static String? validateName(String? name) {
-    if (name == null || name.isEmpty) {
-      return 'Name is required';
+  static String? validateName(String? name, {String fieldName = 'Name'}) {
+    if (name == null || name.trim().isEmpty) {
+      return '$fieldName is required';
     }
-    if (name.length < AppConstants.minNameLength) {
-      return 'Name must be at least ${AppConstants.minNameLength} characters';
+    final trimmed = name.trim();
+    if (trimmed.length < AppConstants.minNameLength) {
+      return '$fieldName must be at least ${AppConstants.minNameLength} characters';
     }
-    if (name.length > AppConstants.maxNameLength) {
-      return 'Name must be less than ${AppConstants.maxNameLength} characters';
+    if (trimmed.length > AppConstants.maxNameLength) {
+      return '$fieldName must be less than ${AppConstants.maxNameLength} characters';
+    }
+    if (!RegExp(r"^[a-zA-Z.\s\-']+$").hasMatch(trimmed)) {
+      return '$fieldName can only contain letters and spaces';
+    }
+    return null;
+  }
+
+  /// Clinic / company / council / bank name — allows digits and common symbols.
+  static String? validateOrganizationName(
+    String? name, {
+    String fieldName = 'Name',
+    int minLength = 2,
+  }) {
+    if (name == null || name.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    final trimmed = name.trim();
+    if (trimmed.length < minLength) {
+      return '$fieldName must be at least $minLength characters';
+    }
+    if (trimmed.length > 120) {
+      return '$fieldName is too long';
+    }
+    if (!RegExp(r"^[a-zA-Z0-9.,&/\s\-']+$").hasMatch(trimmed)) {
+      return 'Enter a valid $fieldName';
     }
     return null;
   }
@@ -259,6 +285,275 @@ class ValidationUtils {
       return 'Bio must be less than ${AppConstants.maxBioLength} characters';
     }
     return null;
+  }
+
+  /// Required non-empty text with optional min length.
+  static String? validateRequired(
+    String? value, {
+    String fieldName = 'This field',
+    int minLength = 1,
+    int? maxLength,
+  }) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    final trimmed = value.trim();
+    if (trimmed.length < minLength) {
+      return '$fieldName must be at least $minLength characters';
+    }
+    if (maxLength != null && trimmed.length > maxLength) {
+      return '$fieldName must be at most $maxLength characters';
+    }
+    return null;
+  }
+
+  /// City name (letters, spaces, hyphens, periods).
+  static String? validateCity(String? city) {
+    if (city == null || city.trim().isEmpty) {
+      return 'City is required';
+    }
+    final trimmed = city.trim();
+    if (trimmed.length < 2) {
+      return 'Enter a valid city name';
+    }
+    if (!RegExp(r"^[a-zA-Z.\s\-']{2,60}$").hasMatch(trimmed)) {
+      return 'City can only contain letters and spaces';
+    }
+    return null;
+  }
+
+  /// State name.
+  static String? validateState(String? state) {
+    if (state == null || state.trim().isEmpty) {
+      return 'State is required';
+    }
+    final trimmed = state.trim();
+    if (trimmed.length < 2) {
+      return 'Enter a valid state name';
+    }
+    if (!RegExp(r"^[a-zA-Z.\s\-']{2,60}$").hasMatch(trimmed)) {
+      return 'State can only contain letters and spaces';
+    }
+    return null;
+  }
+
+  /// Optional email — validates format only when provided.
+  static String? validateOptionalEmail(String? email) {
+    if (email == null || email.trim().isEmpty) return null;
+    return validateEmail(email);
+  }
+
+  /// Optional phone — validates format only when provided.
+  static String? validateOptionalPhone(
+    String? phone, {
+    String countryCode = PhoneCountries.defaultDialCode,
+  }) {
+    if (phone == null || phone.trim().isEmpty) return null;
+    return validatePhoneNumber(phone, countryCode: countryCode);
+  }
+
+  /// Optional UPI — validates format only when provided.
+  static String? validateOptionalUpiId(String? upi) {
+    if (upi == null || upi.trim().isEmpty) return null;
+    return validateUpiId(upi);
+  }
+
+  /// Optional GSTIN — validates format only when provided.
+  static String? validateOptionalGstin(String? gstin) =>
+      validateGstin(gstin, required: false);
+
+  /// Indian GSTIN (15 characters).
+  static String? validateGstin(String? gstin, {bool required = true}) {
+    if (gstin == null || gstin.trim().isEmpty) {
+      return required ? 'GSTIN is required' : null;
+    }
+    final cleaned = gstin.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    if (!RegExp(
+      r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$',
+    ).hasMatch(cleaned)) {
+      return 'Enter a valid 15-character GSTIN';
+    }
+    return null;
+  }
+
+  /// Indian PAN (e.g. ABCDE1234F).
+  static String? validatePan(String? pan, {bool required = true}) {
+    if (pan == null || pan.trim().isEmpty) {
+      return required ? 'PAN is required' : null;
+    }
+    final cleaned = pan.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    if (!RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$').hasMatch(cleaned)) {
+      return 'Enter a valid PAN (e.g. ABCDE1234F)';
+    }
+    return null;
+  }
+
+  /// Bank / account holder name.
+  static String? validateBankName(String? name) {
+    return validateRequired(name, fieldName: 'Bank name', minLength: 2);
+  }
+
+  static String? validateAccountHolderName(String? name) {
+    return validateRequired(
+      name,
+      fieldName: 'Account holder name',
+      minLength: 2,
+    );
+  }
+
+  /// Indian vehicle registration plate (e.g. MH12AB1234 / MH-12-AB-1234).
+  static String? validateVehicleRegistration(String? plate) {
+    if (plate == null || plate.trim().isEmpty) {
+      return 'Vehicle registration number is required';
+    }
+    final cleaned =
+        plate.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    if (!RegExp(r'^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{4}$').hasMatch(cleaned)) {
+      return 'Enter a valid vehicle number (e.g. MH12AB1234)';
+    }
+    return null;
+  }
+
+  /// Indian driving licence number (basic format check).
+  static String? validateDrivingLicense(String? license) {
+    if (license == null || license.trim().isEmpty) {
+      return 'Driving licence number is required';
+    }
+    final cleaned =
+        license.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    if (cleaned.length < 8 || cleaned.length > 20) {
+      return 'Enter a valid driving licence number';
+    }
+    if (!RegExp(r'^[A-Z0-9]{8,20}$').hasMatch(cleaned)) {
+      return 'Driving licence can only contain letters and numbers';
+    }
+    return null;
+  }
+
+  /// Generic license / registration / org ID.
+  static String? validateLicenseNumber(
+    String? value, {
+    String fieldName = 'License number',
+    int minLength = 4,
+  }) {
+    return validateRequired(
+      value,
+      fieldName: fieldName,
+      minLength: minLength,
+      maxLength: 40,
+    );
+  }
+
+  /// Year of establishment or vehicle manufacture.
+  static String? validateYear(
+    String? year, {
+    String fieldName = 'Year',
+    int minYear = 1950,
+  }) {
+    if (year == null || year.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    final y = int.tryParse(year.trim());
+    final current = DateTime.now().year;
+    if (y == null) {
+      return 'Enter a valid $fieldName';
+    }
+    if (y < minYear || y > current) {
+      return '$fieldName must be between $minYear and $current';
+    }
+    return null;
+  }
+
+  /// Date of birth — person must be at least [minAge] years old.
+  static String? validateDateOfBirth(
+    String? value, {
+    int minAge = 18,
+    int maxAge = 100,
+  }) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Date of birth is required';
+    }
+    final parsed = DateTime.tryParse(value.trim()) ??
+        _tryParseDisplayDate(value.trim());
+    if (parsed == null) {
+      return 'Enter a valid date of birth';
+    }
+    final now = DateTime.now();
+    if (parsed.isAfter(now)) {
+      return 'Date of birth cannot be in the future';
+    }
+    var age = now.year - parsed.year;
+    if (now.month < parsed.month ||
+        (now.month == parsed.month && now.day < parsed.day)) {
+      age--;
+    }
+    if (age < minAge) {
+      return 'You must be at least $minAge years old';
+    }
+    if (age > maxAge) {
+      return 'Enter a valid date of birth';
+    }
+    return null;
+  }
+
+  /// Expiry / future-or-today date (yyyy-MM-dd or dd MMM yyyy).
+  static String? validateFutureOrTodayDate(
+    String? value, {
+    String fieldName = 'Date',
+  }) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    final parsed = DateTime.tryParse(value.trim()) ??
+        _tryParseDisplayDate(value.trim());
+    if (parsed == null) {
+      return 'Enter a valid $fieldName';
+    }
+    final today = DateTime.now();
+    final dayOnly = DateTime(parsed.year, parsed.month, parsed.day);
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    if (dayOnly.isBefore(todayOnly)) {
+      return '$fieldName cannot be in the past';
+    }
+    return null;
+  }
+
+  /// Positive number with optional max (fees, capacity, radius, discount).
+  static String? validatePositiveNumber(
+    String? value, {
+    String fieldName = 'Value',
+    num min = 1,
+    num? max,
+    bool allowDecimal = false,
+  }) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    final n = allowDecimal
+        ? double.tryParse(value.trim())
+        : int.tryParse(value.trim());
+    if (n == null) {
+      return 'Enter a valid $fieldName';
+    }
+    if (n < min) {
+      return '$fieldName must be at least $min';
+    }
+    if (max != null && n > max) {
+      return '$fieldName must be at most $max';
+    }
+    return null;
+  }
+
+  static DateTime? _tryParseDisplayDate(String value) {
+    try {
+      return DateFormat('dd MMM yyyy').parseStrict(value);
+    } catch (_) {
+      try {
+        return DateFormat('dd/MM/yyyy').parseStrict(value);
+      } catch (_) {
+        return null;
+      }
+    }
   }
 }
 

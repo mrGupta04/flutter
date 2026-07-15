@@ -106,8 +106,10 @@ class NurseDetailsNotifier extends StateNotifier<NurseDetailsState> {
 
   NurseDetailsNotifier(this.repository) : super(NurseDetailsState());
 
-  Future<void> fetchNurseDetails(String nurseId) async {
-    state = state.copyWith(isLoading: true, error: null);
+  Future<void> fetchNurseDetails(String nurseId, {bool silent = false}) async {
+    if (!silent) {
+      state = state.copyWith(isLoading: true, error: null);
+    }
     final response = await repository.getNurseDetails(nurseId: nurseId);
     final documentsResponse =
         await repository.getNurseDocuments(nurseId: nurseId);
@@ -116,6 +118,7 @@ class NurseDetailsNotifier extends StateNotifier<NurseDetailsState> {
         nurse: response.data,
         documents: documentsResponse.data ?? [],
         isLoading: false,
+        error: null,
       );
     } else {
       state = state.copyWith(
@@ -134,7 +137,13 @@ class NurseDetailsNotifier extends StateNotifier<NurseDetailsState> {
       documentId: documentId,
     );
     if (response.success) {
-      await fetchNurseDetails(nurseId);
+      if (response.data != null) {
+        final docs = state.documents
+            .map((d) => d.id == documentId ? response.data! : d)
+            .toList();
+        state = state.copyWith(documents: docs, error: null);
+      }
+      await fetchNurseDetails(nurseId, silent: true);
       return true;
     }
     state = state.copyWith(error: response.error ?? 'Failed to verify document');
@@ -152,7 +161,13 @@ class NurseDetailsNotifier extends StateNotifier<NurseDetailsState> {
       rejectionReason: reason,
     );
     if (response.success) {
-      await fetchNurseDetails(nurseId);
+      if (response.data != null) {
+        final docs = state.documents
+            .map((d) => d.id == documentId ? response.data! : d)
+            .toList();
+        state = state.copyWith(documents: docs, error: null);
+      }
+      await fetchNurseDetails(nurseId, silent: true);
       return true;
     }
     state = state.copyWith(error: response.error ?? 'Failed to reject document');

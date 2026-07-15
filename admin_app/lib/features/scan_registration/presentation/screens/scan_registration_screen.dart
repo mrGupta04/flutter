@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -116,24 +117,26 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
   bool _validateCurrentStep() {
     switch (_step) {
       case 0:
-        if (_centerNameController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Scan center name is required.');
+        final nameError = ValidationUtils.validateOrganizationName(
+          _centerNameController.text,
+          fieldName: 'Scan center name',
+        );
+        if (nameError != null) {
+          SnackBarHelper.showError(context, nameError);
           return false;
         }
-        if (_ownerController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Owner name is required.');
+        final ownerError = ValidationUtils.validateName(
+          _ownerController.text,
+          fieldName: 'Owner name',
+        );
+        if (ownerError != null) {
+          SnackBarHelper.showError(context, ownerError);
           return false;
         }
-        if (_emailController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Email is required.');
-          return false;
-        }
-        if (ValidationUtils.validateEmail(_emailController.text.trim()) != null) {
-          SnackBarHelper.showError(context, 'Enter a valid email address.');
-          return false;
-        }
-        if (_mobileController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Mobile number is required.');
+        final emailError =
+            ValidationUtils.validateEmail(_emailController.text.trim());
+        if (emailError != null) {
+          SnackBarHelper.showError(context, emailError);
           return false;
         }
         final mobileError = ValidationUtils.validatePhoneNumber(
@@ -144,21 +147,54 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           SnackBarHelper.showError(context, mobileError);
           return false;
         }
-        if (_passwordController.text.length < AppConstants.minPasswordLength) {
-          SnackBarHelper.showError(
-            context,
-            'Password must be at least ${AppConstants.minPasswordLength} characters.',
-          );
+        final passwordError =
+            ValidationUtils.validatePassword(_passwordController.text);
+        if (passwordError != null) {
+          SnackBarHelper.showError(context, passwordError);
           return false;
         }
-        if (_passwordController.text != _confirmPasswordController.text) {
-          SnackBarHelper.showError(context, 'Passwords do not match.');
+        final confirmError = ValidationUtils.validatePasswordMatch(
+          _passwordController.text,
+          _confirmPasswordController.text,
+        );
+        if (confirmError != null) {
+          SnackBarHelper.showError(context, confirmError);
           return false;
         }
-        if (_addressController.text.trim().isEmpty ||
-            _cityController.text.trim().isEmpty ||
-            _pincodeController.text.trim().isEmpty) {
-          SnackBarHelper.showError(context, 'Complete address details are required.');
+        final addressError =
+            ValidationUtils.validateAddress(_addressController.text);
+        if (addressError != null) {
+          SnackBarHelper.showError(context, addressError);
+          return false;
+        }
+        final cityError = ValidationUtils.validateCity(_cityController.text);
+        if (cityError != null) {
+          SnackBarHelper.showError(context, cityError);
+          return false;
+        }
+        final stateError = ValidationUtils.validateState(_stateController.text);
+        if (stateError != null) {
+          SnackBarHelper.showError(context, stateError);
+          return false;
+        }
+        final pincodeError =
+            ValidationUtils.validatePincode(_pincodeController.text);
+        if (pincodeError != null) {
+          SnackBarHelper.showError(context, pincodeError);
+          return false;
+        }
+        final gstError =
+            ValidationUtils.validateOptionalGstin(_gstController.text);
+        if (gstError != null) {
+          SnackBarHelper.showError(context, gstError);
+          return false;
+        }
+        final licenseError = ValidationUtils.validateLicenseNumber(
+          _licenseController.text,
+          fieldName: 'License number',
+        );
+        if (licenseError != null) {
+          SnackBarHelper.showError(context, licenseError);
           return false;
         }
         return true;
@@ -420,13 +456,18 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           controller: _centerNameController,
           label: 'Scan center name',
           prefixIcon: Icons.radar_rounded,
-          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+          validator: (v) => ValidationUtils.validateOrganizationName(
+            v,
+            fieldName: 'Scan center name',
+          ),
         ),
         const SizedBox(height: 12),
         CustomTextField(
           controller: _ownerController,
           label: 'Owner / Manager name',
           prefixIcon: Icons.person_outline_rounded,
+          validator: (v) =>
+              ValidationUtils.validateName(v, fieldName: 'Owner / manager name'),
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -434,6 +475,7 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           label: 'Email address',
           keyboardType: TextInputType.emailAddress,
           prefixIcon: Icons.email_outlined,
+          validator: ValidationUtils.validateEmail,
         ),
         const SizedBox(height: 12),
         MobileNumberField(
@@ -447,6 +489,7 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           label: 'Password',
           obscureText: true,
           prefixIcon: Icons.lock_outline_rounded,
+          validator: ValidationUtils.validatePassword,
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -454,6 +497,48 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           label: 'Confirm password',
           obscureText: true,
           prefixIcon: Icons.lock_outline_rounded,
+          validator: (v) => ValidationUtils.validatePasswordMatch(
+            _passwordController.text,
+            v,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Location',
+          style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        CustomTextField(
+          controller: _addressController,
+          label: 'Address',
+          prefixIcon: Icons.home_outlined,
+          validator: ValidationUtils.validateAddress,
+        ),
+        const SizedBox(height: 12),
+        CustomTextField(
+          controller: _cityController,
+          label: 'City',
+          prefixIcon: Icons.location_city_outlined,
+          validator: ValidationUtils.validateCity,
+        ),
+        const SizedBox(height: 12),
+        CustomTextField(
+          controller: _stateController,
+          label: 'State',
+          prefixIcon: Icons.map_outlined,
+          validator: ValidationUtils.validateState,
+        ),
+        const SizedBox(height: 12),
+        CustomTextField(
+          controller: _pincodeController,
+          label: 'Pincode',
+          keyboardType: TextInputType.number,
+          prefixIcon: Icons.pin_drop_outlined,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(6),
+          ],
+          validator: ValidationUtils.validatePincode,
         ),
         const SizedBox(height: 16),
         RegistrationMapPicker(
@@ -473,12 +558,17 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           controller: _gstController,
           label: 'GST number (optional)',
           prefixIcon: Icons.receipt_long_outlined,
+          validator: ValidationUtils.validateOptionalGstin,
         ),
         const SizedBox(height: 12),
         CustomTextField(
           controller: _licenseController,
           label: 'License / Certification number',
           prefixIcon: Icons.verified_outlined,
+          validator: (v) => ValidationUtils.validateLicenseNumber(
+            v,
+            fieldName: 'License number',
+          ),
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -486,6 +576,11 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           label: 'Operating hours',
           hint: 'e.g. Mon–Sat 7 AM – 8 PM',
           prefixIcon: Icons.schedule_outlined,
+          validator: (v) => ValidationUtils.validateRequired(
+            v,
+            fieldName: 'Operating hours',
+            minLength: 3,
+          ),
         ),
         const SizedBox(height: 12),
         SwitchListTile(
@@ -734,7 +829,10 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
         _ReviewRow('Owner', _ownerController.text),
         _ReviewRow('Email', _emailController.text),
         _ReviewRow('License', _licenseController.text),
+        _ReviewRow('Address', _addressController.text),
         _ReviewRow('City', _cityController.text),
+        _ReviewRow('State', _stateController.text),
+        _ReviewRow('Pincode', _pincodeController.text),
         _ReviewRow('Scans offered', '${_selectedScans.length}'),
         _ReviewRow('Offer', _offerAvailable ? 'Yes' : 'No'),
         _ReviewRow('Documents', '${_pendingDocs.length}'),

@@ -11,6 +11,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/phone_countries.dart';
+import '../../../../core/utils/text_controller_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/ambulance_driver_model.dart';
@@ -83,7 +84,7 @@ class _AmbulanceStep1ServiceOwnerState
       _confirmPassword, _emergency, _license, _registration,
       _pan, _gst, _companyReg,
     ]) {
-      c.addListener(_syncToProvider);
+      addTextChangeListener(c, (_) => _syncToProvider());
     }
   }
 
@@ -151,7 +152,10 @@ class _AmbulanceStep1ServiceOwnerState
               label: 'Service / Company Name',
               hint: 'e.g. City Care Ambulance Services',
               prefixIcon: Icons.local_hospital_outlined,
-              validator: _required,
+              validator: (v) => ValidationUtils.validateOrganizationName(
+                v,
+                fieldName: 'Service / company name',
+              ),
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -159,7 +163,8 @@ class _AmbulanceStep1ServiceOwnerState
               label: 'Owner / Manager Name',
               hint: 'Full legal name',
               prefixIcon: Icons.person_outline_rounded,
-              validator: _required,
+              validator: (v) =>
+                  ValidationUtils.validateName(v, fieldName: 'Owner name'),
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -167,7 +172,10 @@ class _AmbulanceStep1ServiceOwnerState
               label: 'Ambulance Service License Number',
               hint: 'Government-issued license',
               prefixIcon: Icons.badge_outlined,
-              validator: _required,
+              validator: (v) => ValidationUtils.validateLicenseNumber(
+                v,
+                fieldName: 'Service license number',
+              ),
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -175,7 +183,10 @@ class _AmbulanceStep1ServiceOwnerState
               label: 'Company Registration Number',
               hint: 'CIN / LLP / proprietorship number',
               prefixIcon: Icons.confirmation_number_outlined,
-              validator: _required,
+              validator: (v) => ValidationUtils.validateLicenseNumber(
+                v,
+                fieldName: 'Company registration number',
+              ),
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -190,7 +201,7 @@ class _AmbulanceStep1ServiceOwnerState
               label: 'PAN Number',
               hint: 'ABCDE1234F',
               prefixIcon: Icons.credit_card_outlined,
-              validator: _required,
+              validator: ValidationUtils.validatePan,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -198,6 +209,7 @@ class _AmbulanceStep1ServiceOwnerState
               label: 'GST Number',
               hint: '22AAAAA0000A1Z5',
               prefixIcon: Icons.receipt_long_outlined,
+              validator: ValidationUtils.validateOptionalGstin,
             ),
             const SizedBox(height: 18),
             Text('Contact & Login', style: AppTextStyles.titleMedium),
@@ -208,7 +220,7 @@ class _AmbulanceStep1ServiceOwnerState
               hint: 'example@email.com',
               prefixIcon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
-              validator: _emailValidator,
+              validator: ValidationUtils.validateEmail,
             ),
             const SizedBox(height: 12),
             MobileNumberField(
@@ -256,16 +268,6 @@ class _AmbulanceStep1ServiceOwnerState
         ),
       ),
     );
-  }
-
-  String? _required(String? v) =>
-      (v == null || v.trim().isEmpty) ? 'This field is required' : null;
-
-  String? _emailValidator(String? v) {
-    final email = v?.trim() ?? '';
-    if (email.isEmpty) return 'Email is required';
-    if (!email.contains('@')) return 'Enter a valid email';
-    return null;
   }
 }
 
@@ -425,8 +427,7 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
                 label: 'Registration / Plate Number',
                 hint: 'e.g. MH12AB1234',
                 prefixIcon: Icons.confirmation_number_outlined,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: ValidationUtils.validateVehicleRegistration,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -452,8 +453,11 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
                       controller: _make,
                       label: 'Make',
                       hint: 'e.g. Force',
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Make',
+                        minLength: 2,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -462,8 +466,11 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
                       controller: _model,
                       label: 'Model',
                       hint: 'e.g. Traveller',
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Model',
+                        minLength: 1,
+                      ),
                     ),
                   ),
                 ],
@@ -477,11 +484,11 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
                       label: 'Year',
                       hint: '2022',
                       keyboardType: TextInputType.number,
-                      validator: (v) {
-                        final y = int.tryParse((v ?? '').trim());
-                        if (y == null || y < 1990) return 'Invalid year';
-                        return null;
-                      },
+                      validator: (v) => ValidationUtils.validateYear(
+                        v,
+                        fieldName: 'Year',
+                        minYear: 1990,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -500,6 +507,12 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
                 label: 'Patient Capacity',
                 hint: '1 or 2',
                 keyboardType: TextInputType.number,
+                validator: (v) => ValidationUtils.validatePositiveNumber(
+                  v,
+                  fieldName: 'Patient capacity',
+                  min: 1,
+                  max: 10,
+                ),
               ),
               const SizedBox(height: 12),
               Text('Medical Equipment', style: AppTextStyles.labelLarge),
@@ -729,7 +742,7 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
                 hint: 'Driver / EMT name',
                 prefixIcon: Icons.person_outline_rounded,
                 validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    ValidationUtils.validateName(v, fieldName: 'Full name'),
               ),
               const SizedBox(height: 12),
               MobileNumberField(
@@ -744,6 +757,7 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
                 label: 'Email (optional)',
                 hint: 'driver@email.com',
                 prefixIcon: Icons.email_outlined,
+                validator: ValidationUtils.validateOptionalEmail,
               ),
               const SizedBox(height: 12),
               CustomTextField(
@@ -751,6 +765,10 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
                 label: 'Date of Birth',
                 hint: 'DD/MM/YYYY',
                 prefixIcon: Icons.cake_outlined,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  return ValidationUtils.validateDateOfBirth(v, minAge: 18);
+                },
               ),
               const SizedBox(height: 12),
               CustomTextField(
@@ -758,8 +776,7 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
                 label: 'Driving License Number',
                 hint: 'DL number',
                 prefixIcon: Icons.drive_eta_outlined,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: ValidationUtils.validateDrivingLicense,
               ),
               const SizedBox(height: 12),
               CustomTextField(
@@ -767,8 +784,10 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
                 label: 'License Expiry Date',
                 hint: 'DD/MM/YYYY',
                 prefixIcon: Icons.event_outlined,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: (v) => ValidationUtils.validateFutureOrTodayDate(
+                  v,
+                  fieldName: 'License expiry',
+                ),
               ),
               const SizedBox(height: 12),
               CustomTextField(
@@ -783,6 +802,13 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
                 label: 'EMT Certificate Expiry',
                 hint: 'DD/MM/YYYY',
                 prefixIcon: Icons.event_outlined,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  return ValidationUtils.validateFutureOrTodayDate(
+                    v,
+                    fieldName: 'EMT expiry',
+                  );
+                },
               ),
               const SizedBox(height: 12),
               if (widget.vehicles.isNotEmpty)
@@ -1056,7 +1082,7 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
     _available24x7 = s.available24x7;
     _sync();
     for (final c in [_address, _city, _state, _pincode, _serviceArea]) {
-      c.addListener(_sync);
+      addTextChangeListener(c, (_) => _sync());
     }
   }
 
@@ -1099,8 +1125,7 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
               label: 'Base Address',
               hint: 'Full address',
               prefixIcon: Icons.home_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateAddress,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -1108,8 +1133,7 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
               label: 'City',
               hint: 'Your city',
               prefixIcon: Icons.location_city_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateCity,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -1117,8 +1141,7 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
               label: 'State',
               hint: 'Your state',
               prefixIcon: Icons.map_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateState,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -1127,10 +1150,11 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
               hint: '6-digit pincode',
               prefixIcon: Icons.pin_drop_outlined,
               keyboardType: TextInputType.number,
-              validator: (v) {
-                if ((v ?? '').trim().length != 6) return 'Enter valid pincode';
-                return null;
-              },
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
+              validator: ValidationUtils.validatePincode,
             ),
             const SizedBox(height: 16),
             RegistrationMapPicker(
@@ -1156,8 +1180,11 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
               label: 'Service Coverage Area',
               hint: 'Cities/areas you serve',
               prefixIcon: Icons.my_location_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) => ValidationUtils.validateRequired(
+                v,
+                fieldName: 'Service coverage area',
+                minLength: 2,
+              ),
             ),
             const SizedBox(height: 8),
             SwitchListTile(
@@ -1205,7 +1232,7 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
     _bankName = TextEditingController(text: s.bankName);
     _sync();
     for (final c in [_holder, _account, _ifsc, _bankName]) {
-      c.addListener(_sync);
+      addTextChangeListener(c, (_) => _sync());
     }
   }
 
@@ -1249,8 +1276,7 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
               label: 'Account Holder Name',
               hint: 'As per bank records',
               prefixIcon: Icons.person_outline_rounded,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateAccountHolderName,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -1259,8 +1285,7 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
               hint: 'Account number',
               prefixIcon: Icons.account_balance_outlined,
               keyboardType: TextInputType.number,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateAccountNumber,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -1268,8 +1293,7 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
               label: 'IFSC Code',
               hint: 'e.g. SBIN0001234',
               prefixIcon: Icons.code_outlined,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: ValidationUtils.validateIfscCode,
             ),
             const SizedBox(height: 12),
             CustomTextField(
@@ -1277,6 +1301,7 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
               label: 'Bank Name',
               hint: 'e.g. State Bank of India',
               prefixIcon: Icons.account_balance_rounded,
+              validator: ValidationUtils.validateBankName,
             ),
             const SizedBox(height: 20),
             Text('Cancelled Cheque', style: AppTextStyles.titleMedium),

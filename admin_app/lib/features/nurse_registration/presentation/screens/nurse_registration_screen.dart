@@ -247,7 +247,9 @@ class _NurseRegistrationScreenState
   @override
   Widget build(BuildContext context) {
     final currentStep = ref.watch(currentNurseStepProvider);
-    final form = ref.watch(nurseRegistrationFormProvider);
+    final isSubmitting = ref.watch(
+      nurseRegistrationFormProvider.select((s) => s.isSubmitting),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -299,7 +301,7 @@ class _NurseRegistrationScreenState
               onBack: _previousStep,
               onContinue: _submit,
               continueLabel: 'Submit for verification',
-              isLoading: form.isSubmitting,
+              isLoading: isSubmitting,
             ),
             child: NurseStep7Review(onEditStep: _goToStep),
           ),

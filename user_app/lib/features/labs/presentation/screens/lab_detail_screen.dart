@@ -6,7 +6,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/utils/media_url_utils.dart';
@@ -14,9 +13,10 @@ import '../../../../data/models/lab_model.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../data/lab_catalog_metadata.dart';
 import '../../data/lab_model_utils.dart';
-import '../../provider/lab_cart_provider.dart';
 import '../../provider/lab_search_provider.dart';
 import '../widgets/lab_sticky_cart_bar.dart';
+import '../widgets/lab_browse_group_card.dart';
+import '../widgets/lab_package_card.dart';
 import '../widgets/lab_test_tile.dart';
 import 'lab_tests_list_screen.dart';
 
@@ -234,19 +234,20 @@ class _LabDetailBody extends ConsumerWidget {
                 const SizedBox(height: 20),
                 _SectionHeader(
                   title: 'Health Packages',
-                  onSeeAll: () => _openTests(context, title: 'Health Packages'),
+                  onSeeAll: () =>
+                      _openBrowse(context, LabBrowseGroupType.package),
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
-                  height: 170,
-                  child: ListView.separated(
+                  height: 220,
+                  child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: LabCatalogMetadata.healthPackages.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (context, index) {
                       final pkg = LabCatalogMetadata.healthPackages[index];
-                      return _PackageCard(
+                      return LabPackageCard(
                         package: pkg,
+                        compact: true,
                         onTap: () => _openGroupTests(
                           context,
                           title: pkg.name,
@@ -262,7 +263,7 @@ class _LabDetailBody extends ConsumerWidget {
                   onSeeAll: () => _openBrowse(context, LabBrowseGroupType.healthRisk),
                 ),
                 const SizedBox(height: 8),
-                _HorizontalBrowseGroups(
+                LabBrowseGroupScroller(
                   groups: LabCatalogMetadata.healthRisks,
                   onTap: (g) => _openGroupTests(
                     context,
@@ -277,7 +278,7 @@ class _LabDetailBody extends ConsumerWidget {
                       _openBrowse(context, LabBrowseGroupType.healthCondition),
                 ),
                 const SizedBox(height: 8),
-                _HorizontalBrowseGroups(
+                LabBrowseGroupScroller(
                   groups: LabCatalogMetadata.healthConditions,
                   onTap: (g) => _openGroupTests(
                     context,
@@ -291,7 +292,7 @@ class _LabDetailBody extends ConsumerWidget {
                   onSeeAll: () => _openBrowse(context, LabBrowseGroupType.bodyOrgan),
                 ),
                 const SizedBox(height: 8),
-                _HorizontalBrowseGroups(
+                LabBrowseGroupScroller(
                   groups: LabCatalogMetadata.bodyOrgans,
                   onTap: (g) => _openGroupTests(
                     context,
@@ -456,128 +457,6 @@ class _Badge extends StatelessWidget {
           color: color,
           fontWeight: FontWeight.w700,
         ),
-      ),
-    );
-  }
-}
-
-class _PackageCard extends StatelessWidget {
-  const _PackageCard({required this.package, required this.onTap});
-
-  final LabHealthPackage package;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 200,
-      child: Card(
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AppDecorations.borderRadiusMd,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  package.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${package.testCount} tests',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '₹${package.discountedPriceInr}',
-                  style: AppTextStyles.titleSmall.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  '₹${package.originalPriceInr}',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    decoration: TextDecoration.lineThrough,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                Text(
-                  '${package.discountPercent}% off • ${package.reportTime}',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.success,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HorizontalBrowseGroups extends StatelessWidget {
-  const _HorizontalBrowseGroups({required this.groups, required this.onTap});
-
-  final List<LabBrowseGroup> groups;
-  final ValueChanged<LabBrowseGroup> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 110,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: groups.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final g = groups[index];
-          return SizedBox(
-            width: 120,
-            child: Card(
-              child: InkWell(
-                onTap: () => onTap(g),
-                borderRadius: AppDecorations.borderRadiusMd,
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(g.icon, color: AppColors.primary, size: 22),
-                      const SizedBox(height: 6),
-                      Text(
-                        g.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.labelSmall.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'From ₹${g.startingPriceInr}',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }

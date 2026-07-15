@@ -183,19 +183,13 @@ class _DoctorProfileBody extends ConsumerWidget {
                 ? BlinkingLiveAvatarBorder(
                     padding: 4,
                     borderWidth: 3,
-                    child: CircleAvatar(
-                      radius: 48,
-                      backgroundColor: AppColors.white,
-                      backgroundImage: hasImage
-                          ? CachedNetworkImageProvider(imageUrl)
-                          : null,
-                      child: !hasImage
-                          ? const Icon(
-                              Icons.medical_services_rounded,
-                              size: 48,
-                              color: AppColors.primary,
-                            )
-                          : null,
+                    borderRadius: ProviderProfileHero.avatarCornerRadius + 4,
+                    child: ProviderProfilePhoto(
+                      imageUrl: hasImage ? imageUrl : null,
+                      placeholderIcon: Icons.medical_services_rounded,
+                      accentColor: AppColors.primary,
+                      size: 96,
+                      borderWidth: 0,
                     ),
                   )
                 : null,

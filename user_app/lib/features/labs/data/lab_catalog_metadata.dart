@@ -45,6 +45,9 @@ class LabHealthPackage {
     required this.reportTime,
     this.imageUrl,
     this.badge,
+    this.subtitle,
+    this.description,
+    this.parameterCount,
   });
 
   final String id;
@@ -55,8 +58,25 @@ class LabHealthPackage {
   final String reportTime;
   final String? imageUrl;
   final String? badge;
+  final String? subtitle;
+  final String? description;
+  final int? parameterCount;
 
-  int get testCount => testIds.length;
+  int get testCount => parameterCount ?? testIds.length;
+
+  String get testsCountLabel {
+    final count = testCount;
+    return '$count ${count == 1 ? 'TEST' : 'TESTS'}';
+  }
+
+  String get reportTimeCompact {
+    final digits = RegExp(r'(\d+)').allMatches(reportTime).toList();
+    if (digits.isEmpty) return reportTime.toUpperCase();
+    final hours = digits.last.group(1)!;
+    final lower = reportTime.toLowerCase();
+    if (lower.contains('day')) return '$hours DAYS';
+    return '$hours HRS';
+  }
 
   int get discountPercent =>
       (((originalPriceInr - discountedPriceInr) / originalPriceInr) * 100)
@@ -72,12 +92,15 @@ class LabCatalogMetadata {
   static const healthPackages = [
     LabHealthPackage(
       id: 'popular',
-      name: 'Popular Health Packages',
+      name: 'Popular Health Pack',
       testIds: ['basic-checkup', 'comprehensive-checkup'],
       originalPriceInr: 6998,
       discountedPriceInr: 5499,
       reportTime: '24–48 hours',
       badge: 'POPULAR',
+      subtitle: 'CBC, LFT, KFT, Lipid & more',
+      description: 'Most booked checkup combo for everyday health tracking',
+      parameterCount: 70,
     ),
     LabHealthPackage(
       id: 'full-body',
@@ -86,6 +109,9 @@ class LabCatalogMetadata {
       originalPriceInr: 5999,
       discountedPriceInr: 4999,
       reportTime: '48 hours',
+      subtitle: '60+ parameters',
+      description: 'Complete organ panels, vitamins & metabolic markers',
+      parameterCount: 60,
     ),
     LabHealthPackage(
       id: 'womens',
@@ -94,6 +120,9 @@ class LabCatalogMetadata {
       originalPriceInr: 5597,
       discountedPriceInr: 4299,
       reportTime: '48 hours',
+      subtitle: 'Hormones, Iron, Thyroid, Vit D',
+      description: 'Tailored wellness screening designed for women',
+      parameterCount: 45,
     ),
     LabHealthPackage(
       id: 'mens',
@@ -102,6 +131,9 @@ class LabCatalogMetadata {
       originalPriceInr: 3197,
       discountedPriceInr: 2599,
       reportTime: '24 hours',
+      subtitle: 'Heart, Hormone & Metabolic',
+      description: 'Core screening for fitness and heart health in men',
+      parameterCount: 40,
     ),
     LabHealthPackage(
       id: 'senior',
@@ -110,22 +142,31 @@ class LabCatalogMetadata {
       originalPriceInr: 4499,
       discountedPriceInr: 3999,
       reportTime: '48 hours',
+      subtitle: 'Cardiac & Bone markers',
+      description: 'Age-focused panel for adults 60 years and above',
+      parameterCount: 55,
     ),
     LabHealthPackage(
       id: 'diabetes-pkg',
-      name: 'Diabetes Packages',
+      name: 'Diabetes Care',
       testIds: ['fbs', 'ppbs', 'hba1c'],
       originalPriceInr: 697,
       discountedPriceInr: 549,
       reportTime: '12–24 hours',
+      subtitle: 'FBS, PPBS, HbA1c',
+      description: 'Monitors blood sugar control and diabetes risk',
+      parameterCount: 3,
     ),
     LabHealthPackage(
       id: 'thyroid-pkg',
-      name: 'Thyroid Packages',
+      name: 'Thyroid Care',
       testIds: ['thyroid-profile', 'tsh', 'anti-tpo'],
       originalPriceInr: 1697,
-      discountedPriceInr: 1299,
+      discountedPriceInr: 649,
       reportTime: '24 hours',
+      subtitle: 'TSH, T3, T4',
+      description: 'Assesses thyroid function & metabolism health',
+      parameterCount: 31,
     ),
     LabHealthPackage(
       id: 'heart-pkg',
@@ -134,6 +175,9 @@ class LabCatalogMetadata {
       originalPriceInr: 1298,
       discountedPriceInr: 999,
       reportTime: '24 hours',
+      subtitle: 'Lipid & CRP',
+      description: 'Screens cholesterol and inflammation for heart risk',
+      parameterCount: 9,
     ),
     LabHealthPackage(
       id: 'liver-pkg',
@@ -142,6 +186,9 @@ class LabCatalogMetadata {
       originalPriceInr: 1598,
       discountedPriceInr: 1199,
       reportTime: '24 hours',
+      subtitle: 'SGOT, SGPT, Bilirubin',
+      description: 'Evaluates liver enzymes and overall liver health',
+      parameterCount: 12,
     ),
     LabHealthPackage(
       id: 'kidney-pkg',
@@ -150,14 +197,20 @@ class LabCatalogMetadata {
       originalPriceInr: 1398,
       discountedPriceInr: 1099,
       reportTime: '24 hours',
+      subtitle: 'Creatinine, Urea, eGFR',
+      description: 'Checks kidney filtration and waste clearance',
+      parameterCount: 10,
     ),
     LabHealthPackage(
       id: 'vitamin-pkg',
-      name: 'Vitamin Packages',
+      name: 'Vitamin Care',
       testIds: ['vitamin-panel', 'vitamin-d', 'vitamin-b12'],
       originalPriceInr: 4397,
       discountedPriceInr: 3299,
       reportTime: '48 hours',
+      subtitle: 'D, B12, Folate',
+      description: 'Detects common vitamin deficiencies early',
+      parameterCount: 5,
     ),
     LabHealthPackage(
       id: 'cancer-pkg',
@@ -166,6 +219,9 @@ class LabCatalogMetadata {
       originalPriceInr: 1298,
       discountedPriceInr: 999,
       reportTime: '24 hours',
+      subtitle: 'PSA & Inflammation',
+      description: 'Early screening markers for selected cancer risks',
+      parameterCount: 2,
     ),
   ];
 
@@ -175,7 +231,7 @@ class LabCatalogMetadata {
       name: 'Diabetes Risk',
       type: LabBrowseGroupType.healthRisk,
       testIds: ['fbs', 'ppbs', 'hba1c', 'glucose-tolerance'],
-      icon: Icons.bloodtype_rounded,
+      icon: Icons.water_drop_rounded,
     ),
     LabBrowseGroup(
       id: 'heart-risk',
@@ -196,35 +252,35 @@ class LabCatalogMetadata {
       name: 'Liver Disease Risk',
       type: LabBrowseGroupType.healthRisk,
       testIds: ['lft-basic', 'lft-advanced'],
-      icon: Icons.healing_rounded,
+      icon: Icons.local_hospital_rounded,
     ),
     LabBrowseGroup(
       id: 'thyroid-risk',
       name: 'Thyroid Risk',
       type: LabBrowseGroupType.healthRisk,
       testIds: ['thyroid-profile', 'tsh', 'anti-tpo'],
-      icon: Icons.monitor_heart_outlined,
+      icon: Icons.monitor_heart_rounded,
     ),
     LabBrowseGroup(
       id: 'vitamin-risk',
       name: 'Vitamin Deficiency',
       type: LabBrowseGroupType.healthRisk,
       testIds: ['vitamin-d', 'vitamin-b12', 'vitamin-panel'],
-      icon: Icons.wb_sunny_outlined,
+      icon: Icons.wb_sunny_rounded,
     ),
     LabBrowseGroup(
       id: 'cancer-risk',
       name: 'Cancer Screening',
       type: LabBrowseGroupType.healthRisk,
       testIds: ['psa', 'crp'],
-      icon: Icons.health_and_safety_outlined,
+      icon: Icons.health_and_safety_rounded,
     ),
     LabBrowseGroup(
       id: 'obesity-risk',
       name: 'Obesity Risk',
       type: LabBrowseGroupType.healthRisk,
       testIds: ['lipid-basic', 'fbs', 'thyroid-profile'],
-      icon: Icons.monitor_weight_outlined,
+      icon: Icons.monitor_weight_rounded,
     ),
     LabBrowseGroup(
       id: 'hypertension-risk',
@@ -238,7 +294,7 @@ class LabCatalogMetadata {
       name: 'Cholesterol Risk',
       type: LabBrowseGroupType.healthRisk,
       testIds: ['lipid-basic', 'lipid-advanced'],
-      icon: Icons.water_drop_outlined,
+      icon: Icons.opacity_rounded,
     ),
     LabBrowseGroup(
       id: 'bone-risk',
@@ -252,44 +308,44 @@ class LabCatalogMetadata {
       name: 'Hormonal Disorders',
       type: LabBrowseGroupType.healthRisk,
       testIds: ['testosterone', 'progesterone', 'cortisol', 'thyroid-profile'],
-      icon: Icons.science_outlined,
+      icon: Icons.science_rounded,
     ),
   ];
 
   static const healthConditions = [
-    LabBrowseGroup(id: 'diabetes', name: 'Diabetes', type: LabBrowseGroupType.healthCondition, testIds: ['fbs', 'ppbs', 'hba1c'], icon: Icons.bloodtype_rounded),
+    LabBrowseGroup(id: 'diabetes', name: 'Diabetes', type: LabBrowseGroupType.healthCondition, testIds: ['fbs', 'ppbs', 'hba1c'], icon: Icons.water_drop_rounded),
     LabBrowseGroup(id: 'fever', name: 'Fever', type: LabBrowseGroupType.healthCondition, testIds: ['cbc', 'crp'], icon: Icons.thermostat_rounded),
-    LabBrowseGroup(id: 'dengue', name: 'Dengue', type: LabBrowseGroupType.healthCondition, testIds: ['dengue-ns1', 'cbc'], icon: Icons.bug_report_outlined),
-    LabBrowseGroup(id: 'malaria', name: 'Malaria', type: LabBrowseGroupType.healthCondition, testIds: ['cbc'], icon: Icons.coronavirus_outlined),
-    LabBrowseGroup(id: 'covid', name: 'COVID', type: LabBrowseGroupType.healthCondition, testIds: ['rt-pcr', 'rapid-antigen', 'covid-antibody'], icon: Icons.masks_outlined),
+    LabBrowseGroup(id: 'dengue', name: 'Dengue', type: LabBrowseGroupType.healthCondition, testIds: ['dengue-ns1', 'cbc'], icon: Icons.bug_report_rounded),
+    LabBrowseGroup(id: 'malaria', name: 'Malaria', type: LabBrowseGroupType.healthCondition, testIds: ['cbc'], icon: Icons.coronavirus_rounded),
+    LabBrowseGroup(id: 'covid', name: 'COVID', type: LabBrowseGroupType.healthCondition, testIds: ['rt-pcr', 'rapid-antigen', 'covid-antibody'], icon: Icons.masks_rounded),
     LabBrowseGroup(id: 'pregnancy', name: 'Pregnancy', type: LabBrowseGroupType.healthCondition, testIds: ['progesterone', 'cbc'], icon: Icons.pregnant_woman_rounded),
     LabBrowseGroup(id: 'pcos', name: 'PCOS', type: LabBrowseGroupType.healthCondition, testIds: ['testosterone', 'progesterone', 'thyroid-profile'], icon: Icons.female_rounded),
-    LabBrowseGroup(id: 'thyroid', name: 'Thyroid', type: LabBrowseGroupType.healthCondition, testIds: ['thyroid-profile', 'tsh'], icon: Icons.monitor_heart_outlined),
-    LabBrowseGroup(id: 'cholesterol', name: 'Cholesterol', type: LabBrowseGroupType.healthCondition, testIds: ['lipid-basic', 'lipid-advanced'], icon: Icons.favorite_outline_rounded),
-    LabBrowseGroup(id: 'anemia', name: 'Anemia', type: LabBrowseGroupType.healthCondition, testIds: ['cbc', 'iron-studies'], icon: Icons.bloodtype_outlined),
-    LabBrowseGroup(id: 'vitamin-d', name: 'Vitamin D Deficiency', type: LabBrowseGroupType.healthCondition, testIds: ['vitamin-d'], icon: Icons.wb_sunny_outlined),
-    LabBrowseGroup(id: 'vitamin-b12', name: 'Vitamin B12', type: LabBrowseGroupType.healthCondition, testIds: ['vitamin-b12'], icon: Icons.wb_sunny_outlined),
+    LabBrowseGroup(id: 'thyroid', name: 'Thyroid', type: LabBrowseGroupType.healthCondition, testIds: ['thyroid-profile', 'tsh'], icon: Icons.monitor_heart_rounded),
+    LabBrowseGroup(id: 'cholesterol', name: 'Cholesterol', type: LabBrowseGroupType.healthCondition, testIds: ['lipid-basic', 'lipid-advanced'], icon: Icons.favorite_rounded),
+    LabBrowseGroup(id: 'anemia', name: 'Anemia', type: LabBrowseGroupType.healthCondition, testIds: ['cbc', 'iron-studies'], icon: Icons.bloodtype_rounded),
+    LabBrowseGroup(id: 'vitamin-d', name: 'Vitamin D Deficiency', type: LabBrowseGroupType.healthCondition, testIds: ['vitamin-d'], icon: Icons.wb_sunny_rounded),
+    LabBrowseGroup(id: 'vitamin-b12', name: 'Vitamin B12', type: LabBrowseGroupType.healthCondition, testIds: ['vitamin-b12'], icon: Icons.bolt_rounded),
     LabBrowseGroup(id: 'arthritis', name: 'Arthritis', type: LabBrowseGroupType.healthCondition, testIds: ['crp', 'esr'], icon: Icons.accessibility_new_rounded),
-    LabBrowseGroup(id: 'fatty-liver', name: 'Fatty Liver', type: LabBrowseGroupType.healthCondition, testIds: ['lft-basic', 'lft-advanced'], icon: Icons.healing_outlined),
-    LabBrowseGroup(id: 'kidney-disease', name: 'Kidney Disease', type: LabBrowseGroupType.healthCondition, testIds: ['kft-basic', 'kft-advanced'], icon: Icons.filter_alt_outlined),
+    LabBrowseGroup(id: 'fatty-liver', name: 'Fatty Liver', type: LabBrowseGroupType.healthCondition, testIds: ['lft-basic', 'lft-advanced'], icon: Icons.local_hospital_rounded),
+    LabBrowseGroup(id: 'kidney-disease', name: 'Kidney Disease', type: LabBrowseGroupType.healthCondition, testIds: ['kft-basic', 'kft-advanced'], icon: Icons.filter_alt_rounded),
     LabBrowseGroup(id: 'asthma', name: 'Asthma', type: LabBrowseGroupType.healthCondition, testIds: ['ige-total', 'inhalant-allergy'], icon: Icons.air_rounded),
-    LabBrowseGroup(id: 'allergy', name: 'Allergy', type: LabBrowseGroupType.healthCondition, testIds: ['ige-total', 'food-allergy-panel'], icon: Icons.coronavirus_outlined),
+    LabBrowseGroup(id: 'allergy', name: 'Allergy', type: LabBrowseGroupType.healthCondition, testIds: ['ige-total', 'food-allergy-panel'], icon: Icons.spa_rounded),
     LabBrowseGroup(id: 'hypertension', name: 'Hypertension', type: LabBrowseGroupType.healthCondition, testIds: ['lipid-basic', 'kft-basic'], icon: Icons.speed_rounded),
   ];
 
   static const bodyOrgans = [
     LabBrowseGroup(id: 'heart', name: 'Heart', type: LabBrowseGroupType.bodyOrgan, testIds: ['lipid-advanced', 'crp'], icon: Icons.favorite_rounded),
-    LabBrowseGroup(id: 'liver', name: 'Liver', type: LabBrowseGroupType.bodyOrgan, testIds: ['lft-basic', 'lft-advanced'], icon: Icons.healing_rounded),
+    LabBrowseGroup(id: 'liver', name: 'Liver', type: LabBrowseGroupType.bodyOrgan, testIds: ['lft-basic', 'lft-advanced'], icon: Icons.local_hospital_rounded),
     LabBrowseGroup(id: 'kidney', name: 'Kidney', type: LabBrowseGroupType.bodyOrgan, testIds: ['kft-basic', 'kft-advanced'], icon: Icons.filter_alt_rounded),
-    LabBrowseGroup(id: 'brain', name: 'Brain', type: LabBrowseGroupType.bodyOrgan, testIds: ['vitamin-b12', 'thyroid-profile'], icon: Icons.psychology_outlined),
+    LabBrowseGroup(id: 'brain', name: 'Brain', type: LabBrowseGroupType.bodyOrgan, testIds: ['vitamin-b12', 'thyroid-profile'], icon: Icons.psychology_rounded),
     LabBrowseGroup(id: 'lungs', name: 'Lungs', type: LabBrowseGroupType.bodyOrgan, testIds: ['inhalant-allergy', 'rt-pcr'], icon: Icons.air_rounded),
-    LabBrowseGroup(id: 'stomach', name: 'Stomach', type: LabBrowseGroupType.bodyOrgan, testIds: ['stool-routine'], icon: Icons.restaurant_outlined),
+    LabBrowseGroup(id: 'stomach', name: 'Stomach', type: LabBrowseGroupType.bodyOrgan, testIds: ['stool-routine'], icon: Icons.restaurant_rounded),
     LabBrowseGroup(id: 'bones', name: 'Bones', type: LabBrowseGroupType.bodyOrgan, testIds: ['vitamin-d'], icon: Icons.accessibility_new_rounded),
-    LabBrowseGroup(id: 'blood', name: 'Blood', type: LabBrowseGroupType.bodyOrgan, testIds: ['cbc', 'esr', 'blood-group'], icon: Icons.bloodtype_outlined),
-    LabBrowseGroup(id: 'hormones', name: 'Hormones', type: LabBrowseGroupType.bodyOrgan, testIds: ['testosterone', 'progesterone', 'cortisol'], icon: Icons.science_outlined),
-    LabBrowseGroup(id: 'thyroid-organ', name: 'Thyroid', type: LabBrowseGroupType.bodyOrgan, testIds: ['thyroid-profile', 'tsh'], icon: Icons.monitor_heart_outlined),
-    LabBrowseGroup(id: 'eyes', name: 'Eyes', type: LabBrowseGroupType.bodyOrgan, testIds: ['vitamin-d', 'vitamin-b12'], icon: Icons.visibility_outlined),
-    LabBrowseGroup(id: 'skin', name: 'Skin', type: LabBrowseGroupType.bodyOrgan, testIds: ['food-allergy-panel', 'ige-total'], icon: Icons.face_outlined),
+    LabBrowseGroup(id: 'blood', name: 'Blood', type: LabBrowseGroupType.bodyOrgan, testIds: ['cbc', 'esr', 'blood-group'], icon: Icons.bloodtype_rounded),
+    LabBrowseGroup(id: 'hormones', name: 'Hormones', type: LabBrowseGroupType.bodyOrgan, testIds: ['testosterone', 'progesterone', 'cortisol'], icon: Icons.science_rounded),
+    LabBrowseGroup(id: 'thyroid-organ', name: 'Thyroid', type: LabBrowseGroupType.bodyOrgan, testIds: ['thyroid-profile', 'tsh'], icon: Icons.monitor_heart_rounded),
+    LabBrowseGroup(id: 'eyes', name: 'Eyes', type: LabBrowseGroupType.bodyOrgan, testIds: ['vitamin-d', 'vitamin-b12'], icon: Icons.visibility_rounded),
+    LabBrowseGroup(id: 'skin', name: 'Skin', type: LabBrowseGroupType.bodyOrgan, testIds: ['food-allergy-panel', 'ige-total'], icon: Icons.face_rounded),
   ];
 
   static LabBrowseGroup? findGroup(String id) {

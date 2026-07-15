@@ -6,16 +6,18 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/patient_user_model.dart';
 
-/// Profile avatar for the home header (top right).
+/// Profile avatar for the home header and user profile hero.
 class PatientHeaderAvatar extends StatelessWidget {
   const PatientHeaderAvatar({
     super.key,
     required this.user,
     this.size = 36,
+    this.cornerRadius = 10,
   });
 
   final PatientUserModel user;
   final double size;
+  final double cornerRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -25,22 +27,25 @@ class PatientHeaderAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        borderRadius: BorderRadius.circular(cornerRadius),
         border: Border.all(
           color: AppColors.white.withValues(alpha: 0.85),
           width: 2,
         ),
       ),
-      child: ClipOval(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(cornerRadius - 2),
         child: imageUrl.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: imageUrl,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => _InitialsBadge(
+                width: size,
+                height: size,
+                placeholder: (context, url) => _InitialsBadge(
                   initials: user.initials,
                   size: size,
                 ),
-                errorWidget: (_, __, ___) => _InitialsBadge(
+                errorWidget: (context, url, error) => _InitialsBadge(
                   initials: user.initials,
                   size: size,
                 ),
