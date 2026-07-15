@@ -172,12 +172,18 @@ class _ProviderTagRow extends StatelessWidget {
     final visible = tags.take(maxVisible).toList();
     final remaining = tags.length - visible.length;
 
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+    return Row(
       children: [
-        for (final tag in visible) _ProviderTagChip(label: tag),
-        if (remaining > 0) _ProviderTagChip(label: '+$remaining more'),
+        for (var i = 0; i < visible.length; i++) ...[
+          if (i > 0) const SizedBox(width: 4),
+          Flexible(
+            child: _ProviderTagChip(label: visible[i]),
+          ),
+        ],
+        if (remaining > 0) ...[
+          const SizedBox(width: 4),
+          _ProviderTagChip(label: '+$remaining'),
+        ],
       ],
     );
   }
@@ -191,18 +197,21 @@ class _ProviderTagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F4F8),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(color: const Color(0xFFE4E7EC)),
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           color: Color(0xFF374151),
           fontWeight: FontWeight.w600,
-          fontSize: 10,
+          fontSize: 9,
+          height: 1.2,
         ),
       ),
     );

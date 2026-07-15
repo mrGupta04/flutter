@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'care_filter_chip.dart';
 
 /// Horizontally scrollable filter chips for city / specialty filters.
+///
+/// Tapping the selected chip again clears the filter (`onSelected(null)`).
 class HorizontalFilterChips extends StatelessWidget {
   const HorizontalFilterChips({
     super.key,
@@ -13,7 +15,7 @@ class HorizontalFilterChips extends StatelessWidget {
 
   final List<String> labels;
   final String? selected;
-  final ValueChanged<String> onSelected;
+  final ValueChanged<String?> onSelected;
   final double height;
 
   @override
@@ -24,12 +26,13 @@ class HorizontalFilterChips extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: labels.map((label) {
+          final isSelected = selected == label;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: CareFilterChip(
               label: label,
-              selected: selected == label,
-              onTap: () => onSelected(label),
+              selected: isSelected,
+              onTap: () => onSelected(isSelected ? null : label),
             ),
           );
         }).toList(),

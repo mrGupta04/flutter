@@ -135,7 +135,13 @@ async function listNurses({
     filter.city = new RegExp(escapeRegex(city.trim()), 'i');
   }
   if (specialization?.trim()) {
-    filter.specialization = new RegExp(escapeRegex(specialization.trim()), 'i');
+    const regex = new RegExp(escapeRegex(specialization.trim()), 'i');
+    filter.$and = [
+      ...(filter.$and || []),
+      {
+        $or: [{ specialization: regex }, { nursingSkills: regex }],
+      },
+    ];
   }
   if (homeVisit === true || homeVisit === 'true') {
     filter.availableForHomeVisit = true;

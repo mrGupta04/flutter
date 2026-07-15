@@ -48,20 +48,20 @@ String doctorMinExperienceLabel(int? years) {
   return '$years+ years';
 }
 
-/// Nurse specialization filter chips.
+/// Nurse specialization filter chips (matches common registration values).
 const nurseSpecializationFilters = [
-  'Geriatric',
+  'Elder care',
   'Pediatric',
+  'Post-op',
   'ICU',
-  'Post-operative',
   'Home care',
+  'Geriatric',
 ];
 
 /// Nurse gender filter options (matches registration).
 const nurseGenderFilters = [
   'Male',
   'Female',
-  'Group D',
 ];
 
 /// Ambulance vehicle type filter chips.

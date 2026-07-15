@@ -143,9 +143,13 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
           selected: _city,
           onSelected: (city) => setState(() {
             _city = city;
-            _vehicleType = null;
-            _query = null;
-            _controller.text = city;
+            if (city != null) {
+              _vehicleType = null;
+              _query = null;
+              _controller.text = city;
+            } else {
+              _controller.clear();
+            }
           }),
         ),
         const SizedBox(height: 8),
@@ -154,9 +158,13 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
           selected: _vehicleType,
           onSelected: (type) => setState(() {
             _vehicleType = type;
-            _city = null;
-            _query = null;
-            _controller.text = type;
+            if (type != null) {
+              _city = null;
+              _query = null;
+              _controller.text = type;
+            } else {
+              _controller.clear();
+            }
           }),
         ),
         const SizedBox(height: 12),

@@ -12,9 +12,7 @@ import 'blinking_online_badge.dart';
 
 /// Nurse profile card accent — app theme green.
 const Color kNurseCardAccent = AppColors.primary;
-const Color kNurseCardAccentDark = AppColors.primaryDark;
 const Color kNurseCardAccentLight = AppColors.primaryLight;
-const Color kNurseCardAccentChip = AppColors.secondaryLight;
 
 /// Estimated height for nurse cards in home preview lists.
 const double kNurseListingCardHeight = 340;
@@ -395,6 +393,8 @@ class _MetaRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 12,
               color: Color(0xFF6B7280),
@@ -425,92 +425,16 @@ class _NurseSkillChips extends StatelessWidget {
     const maxVisible = 3;
     final visible = skills.take(maxVisible).toList();
     final remaining = skills.length - visible.length;
+    final label = [
+      visible.join(' · '),
+      if (remaining > 0) '+$remaining more',
+    ].join('  ');
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final skill in visible) _NurseSkillChip(label: skill),
-        if (remaining > 0) _NurseMoreSkillsChip(label: '+$remaining more'),
-      ],
+    return _MetaRow(
+      icon: Icons.medical_services_outlined,
+      label: label,
     );
   }
-}
-
-class _NurseSkillChip extends StatelessWidget {
-  const _NurseSkillChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: kNurseCardAccentChip,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _nurseSkillIcon(label),
-            size: 13,
-            color: kNurseCardAccentDark,
-          ),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              color: kNurseCardAccentDark,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NurseMoreSkillsChip extends StatelessWidget {
-  const _NurseMoreSkillsChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: kNurseCardAccent,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-        ),
-      ),
-    );
-  }
-}
-
-IconData _nurseSkillIcon(String skill) {
-  final value = skill.toLowerCase();
-  if (value.contains('elder')) return Icons.person_outline_rounded;
-  if (value.contains('patient') || value.contains('care')) {
-    return Icons.volunteer_activism_rounded;
-  }
-  if (value.contains('injection') || value.contains('iv')) {
-    return Icons.vaccines_rounded;
-  }
-  if (value.contains('wound') || value.contains('dressing')) {
-    return Icons.healing_rounded;
-  }
-  if (value.contains('vital') || value.contains('monitor')) {
-    return Icons.monitor_heart_outlined;
-  }
-  if (value.contains('catheter')) return Icons.water_drop_outlined;
-  return Icons.medical_services_outlined;
 }
 
 class _NurseServiceStatsBar extends StatelessWidget {

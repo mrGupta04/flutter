@@ -219,8 +219,9 @@ function buildDoctorListFilter({
     filter.city = new RegExp(escapeRegex(city.trim()), 'i');
   }
 
-  if (specialization?.trim()) {
-    filter.specializations = new RegExp(escapeRegex(specialization.trim()), 'i');
+  const specializationQuery = specialization?.trim();
+  if (specializationQuery) {
+    filter.specializations = new RegExp(escapeRegex(specializationQuery), 'i');
   }
 
   const consultField = CONSULTATION_TYPE_FIELDS[consultationType];
@@ -230,8 +231,11 @@ function buildDoctorListFilter({
 
   if (publicDisplayable) {
     filter.firstName = { $exists: true, $nin: [null, ''] };
-    filter.specializations = { $exists: true, $not: { $size: 0 } };
     filter.qualification = { $exists: true, $nin: [null, ''] };
+    // Keep specialization search when provided — do not overwrite the regex above.
+    if (!specializationQuery) {
+      filter.specializations = { $exists: true, $not: { $size: 0 } };
+    }
   }
 
   if (search?.trim()) {

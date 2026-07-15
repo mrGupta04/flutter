@@ -189,9 +189,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                   HorizontalFilterChips(
                     labels: nurseGenderFilters,
                     selected: _nurseGender,
-                    onSelected: (g) => setState(() {
-                      _nurseGender = _nurseGender == g ? null : g;
-                    }),
+                    onSelected: (g) => setState(() => _nurseGender = g),
                   ),
                   const SizedBox(height: 8),
                 ],

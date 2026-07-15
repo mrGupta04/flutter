@@ -163,7 +163,7 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
           selected: _city,
           onSelected: (city) => setState(() {
             _city = city;
-            _controller.text = city;
+            _controller.text = city ?? '';
           }),
         ),
         const SizedBox(height: 8),
