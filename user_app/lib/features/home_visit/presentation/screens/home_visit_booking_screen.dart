@@ -12,6 +12,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
+import '../../../../shared/widgets/consultation_booking_price_summary.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/prescription_included_banner.dart';
@@ -319,6 +320,13 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                         DoctorConsultationFeesBanner(
                           doctor: doctor,
                           highlightedType: ConsultationType.bookHome,
+                        ),
+                        const SizedBox(height: 12),
+                        ConsultationBookingPriceSummary(
+                          doctor: doctor,
+                          consultationType: ConsultationType.bookHome,
+                          slotsConsultationFee:
+                              slotsAsync.valueOrNull?.consultationFee,
                         ),
                         const SizedBox(height: 12),
                         const PrescriptionIncludedBanner(compact: true),

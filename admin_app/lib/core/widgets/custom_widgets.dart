@@ -51,17 +51,48 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   late bool _obscureText;
+  late final FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _obscureText = widget.obscureText;
+    _focusNode = FocusNode(debugLabel: 'CustomTextField:${widget.label}');
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus) return;
+    // Keyboard/MediaQuery rebuilds on desktop/mobile can select all on focus.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_focusNode.hasFocus) return;
+      _collapseAccidentalSelectAll();
+    });
+  }
+
+  void _collapseAccidentalSelectAll() {
+    final controller = widget.controller;
+    final text = controller.text;
+    if (text.isEmpty) return;
+    final selection = controller.selection;
+    if (!selection.isValid || selection.isCollapsed) return;
+    if (selection.start == 0 && selection.end == text.length) {
+      controller.selection = TextSelection.collapsed(offset: text.length);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
+      focusNode: _focusNode,
       validator: widget.validator,
       keyboardType: widget.keyboardType,
       maxLines: widget.obscureText ? 1 : widget.maxLines,
@@ -72,6 +103,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       textInputAction: widget.textInputAction,
       onChanged: (_) => widget.onChanged?.call(),
       onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
+      onTap: _collapseAccidentalSelectAll,
       style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: widget.label,

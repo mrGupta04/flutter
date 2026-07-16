@@ -15,7 +15,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/gender_radio_field.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
-import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/registration_location_input.dart';
 import '../../../doctor_registration/presentation/widgets/weekly_availability_picker.dart';
 import '../../provider/nurse_registration_provider.dart';
 
@@ -597,6 +597,8 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
   double? _lat;
   double? _lng;
   int? _serviceRadiusKm;
+  RegistrationLocationInputMode _locationMode =
+      RegistrationLocationInputMode.map;
 
   @override
   bool get wantKeepAlive => true;
@@ -655,74 +657,21 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
             ),
             const SizedBox(height: 6),
             Text(
-              'Patients see your city. Distance is used when they request a home visit.',
+              'Patients see your city. Add your base by typing or using GPS, then choose how far you travel for home visits.',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 16),
-            CustomTextField(
-              controller: _address,
-              label: 'Address',
-              prefixIcon: Icons.home_outlined,
-              validator: ValidationUtils.validateAddress,
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _city,
-              label: 'City',
-              prefixIcon: Icons.location_city_outlined,
-              validator: ValidationUtils.validateCity,
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _state,
-              label: 'State',
-              prefixIcon: Icons.map_outlined,
-              validator: ValidationUtils.validateState,
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _pincode,
-              label: 'Pincode',
-              keyboardType: TextInputType.number,
-              prefixIcon: Icons.pin_drop_outlined,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(6),
-              ],
-              validator: ValidationUtils.validatePincode,
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<int>(
-              value: _serviceRadiusKm,
-              decoration: const InputDecoration(
-                labelText: 'Service radius (km)',
-                prefixIcon: Icon(Icons.radar_outlined),
-                helperText: 'How far you can travel for home visits',
-              ),
-              items: nurseServiceRadiusOptions
-                  .map(
-                    (km) => DropdownMenuItem(
-                      value: km,
-                      child: Text('$km km'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                setState(() => _serviceRadiusKm = value);
-                _sync();
-              },
-              validator: (v) => v == null ? 'Select service radius' : null,
-            ),
-            const SizedBox(height: 16),
-            RegistrationMapPicker(
+            RegistrationLocationBlock(
+              mode: _locationMode,
+              onModeChanged: (mode) => setState(() => _locationMode = mode),
               addressController: _address,
               cityController: _city,
               stateController: _state,
               pincodeController: _pincode,
-              initialLatitude: _lat,
-              initialLongitude: _lng,
+              latitude: _lat,
+              longitude: _lng,
               onLocationChanged: (lat, lng) {
                 setState(() {
                   _lat = lat;
@@ -730,8 +679,78 @@ class _NurseStep3LocationState extends ConsumerState<NurseStep3Location>
                 });
                 _sync();
               },
-              emptyHint: 'Pin your base location on the map.',
-              webTitle: 'Base location',
+              mapEmptyHint: 'Pin your base location on the map.',
+              mapWebTitle: 'Base location',
+              footer: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Home visit radius',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'How far can you travel? Patients within this distance can request you.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FormField<int>(
+                    initialValue: _serviceRadiusKm,
+                    validator: (v) =>
+                        v == null ? 'Select how far you can travel' : null,
+                    builder: (field) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: nurseServiceRadiusOptions.map((km) {
+                              final selected = _serviceRadiusKm == km;
+                              return ChoiceChip(
+                                label: Text('$km km'),
+                                selected: selected,
+                                selectedColor: AppColors.primaryLight,
+                                labelStyle: AppTextStyles.labelMedium.copyWith(
+                                  color: selected
+                                      ? AppColors.primary
+                                      : AppColors.textPrimary,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                                side: BorderSide(
+                                  color: selected
+                                      ? AppColors.primary
+                                      : AppColors.grey300,
+                                ),
+                                onSelected: (_) {
+                                  setState(() => _serviceRadiusKm = km);
+                                  field.didChange(km);
+                                  _sync();
+                                },
+                              );
+                            }).toList(),
+                          ),
+                          if (field.hasError) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              field.errorText!,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),

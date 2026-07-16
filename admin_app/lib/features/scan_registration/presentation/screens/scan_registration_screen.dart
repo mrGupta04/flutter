@@ -15,7 +15,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/scan_center_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
-import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/registration_location_input.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../core/models/provider_type.dart';
 import '../../../provider/provider/provider_status_sync.dart';
@@ -56,6 +56,8 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
   bool _available24x7 = false;
   double? _latitude;
   double? _longitude;
+  RegistrationLocationInputMode _locationMode =
+      RegistrationLocationInputMode.manual;
   Uint8List? _logoBytes;
   String? _logoFileName;
 
@@ -508,46 +510,15 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
-        CustomTextField(
-          controller: _addressController,
-          label: 'Address',
-          prefixIcon: Icons.home_outlined,
-          validator: ValidationUtils.validateAddress,
-        ),
-        const SizedBox(height: 12),
-        CustomTextField(
-          controller: _cityController,
-          label: 'City',
-          prefixIcon: Icons.location_city_outlined,
-          validator: ValidationUtils.validateCity,
-        ),
-        const SizedBox(height: 12),
-        CustomTextField(
-          controller: _stateController,
-          label: 'State',
-          prefixIcon: Icons.map_outlined,
-          validator: ValidationUtils.validateState,
-        ),
-        const SizedBox(height: 12),
-        CustomTextField(
-          controller: _pincodeController,
-          label: 'Pincode',
-          keyboardType: TextInputType.number,
-          prefixIcon: Icons.pin_drop_outlined,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(6),
-          ],
-          validator: ValidationUtils.validatePincode,
-        ),
-        const SizedBox(height: 16),
-        RegistrationMapPicker(
+        RegistrationLocationBlock(
+          mode: _locationMode,
+          onModeChanged: (mode) => setState(() => _locationMode = mode),
           addressController: _addressController,
           cityController: _cityController,
           stateController: _stateController,
           pincodeController: _pincodeController,
-          initialLatitude: _latitude,
-          initialLongitude: _longitude,
+          latitude: _latitude,
+          longitude: _longitude,
           onLocationChanged: (lat, lng) => setState(() {
             _latitude = lat;
             _longitude = lng;

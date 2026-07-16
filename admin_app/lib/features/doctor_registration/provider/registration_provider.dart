@@ -149,6 +149,9 @@ class RegistrationFormState {
   final String onlineConsultFee;
   final String homeVisitFee;
   final String visitSiteFee;
+  final String onlineConsultOfferFee;
+  final String homeVisitOfferFee;
+  final String visitSiteOfferFee;
   final List<String> languagesSpoken;
   final String bio;
   final bool offersOnlineConsult;
@@ -213,6 +216,9 @@ class RegistrationFormState {
     this.onlineConsultFee = '',
     this.homeVisitFee = '',
     this.visitSiteFee = '',
+    this.onlineConsultOfferFee = '',
+    this.homeVisitOfferFee = '',
+    this.visitSiteOfferFee = '',
     this.languagesSpoken = const ['English'],
     this.bio = '',
     this.offersOnlineConsult = false,
@@ -312,6 +318,9 @@ class RegistrationFormState {
     String? onlineConsultFee,
     String? homeVisitFee,
     String? visitSiteFee,
+    String? onlineConsultOfferFee,
+    String? homeVisitOfferFee,
+    String? visitSiteOfferFee,
     List<String>? languagesSpoken,
     String? bio,
     bool? offersOnlineConsult,
@@ -372,6 +381,10 @@ class RegistrationFormState {
       onlineConsultFee: onlineConsultFee ?? this.onlineConsultFee,
       homeVisitFee: homeVisitFee ?? this.homeVisitFee,
       visitSiteFee: visitSiteFee ?? this.visitSiteFee,
+      onlineConsultOfferFee:
+          onlineConsultOfferFee ?? this.onlineConsultOfferFee,
+      homeVisitOfferFee: homeVisitOfferFee ?? this.homeVisitOfferFee,
+      visitSiteOfferFee: visitSiteOfferFee ?? this.visitSiteOfferFee,
       languagesSpoken: languagesSpoken ?? this.languagesSpoken,
       bio: bio ?? this.bio,
       offersOnlineConsult: offersOnlineConsult ?? this.offersOnlineConsult,
@@ -638,6 +651,9 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
       onlineConsultFee: online ? state.onlineConsultFee : '',
       homeVisitFee: home ? state.homeVisitFee : '',
       visitSiteFee: visit ? state.visitSiteFee : '',
+      onlineConsultOfferFee: online ? state.onlineConsultOfferFee : '',
+      homeVisitOfferFee: home ? state.homeVisitOfferFee : '',
+      visitSiteOfferFee: visit ? state.visitSiteOfferFee : '',
     );
   }
 
@@ -645,11 +661,17 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     String? onlineConsultFee,
     String? homeVisitFee,
     String? visitSiteFee,
+    String? onlineConsultOfferFee,
+    String? homeVisitOfferFee,
+    String? visitSiteOfferFee,
   }) {
     state = state.copyWith(
       onlineConsultFee: onlineConsultFee,
       homeVisitFee: homeVisitFee,
       visitSiteFee: visitSiteFee,
+      onlineConsultOfferFee: onlineConsultOfferFee,
+      homeVisitOfferFee: homeVisitOfferFee,
+      visitSiteOfferFee: visitSiteOfferFee,
     );
   }
 
@@ -1086,6 +1108,15 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
       visitSiteFee: state.offersVisitSite
           ? InputSanitizer.sanitizeInt(state.visitSiteFee)
           : null,
+      onlineConsultOfferFee: state.offersOnlineConsult
+          ? InputSanitizer.sanitizeInt(state.onlineConsultOfferFee)
+          : null,
+      homeVisitOfferFee: state.offersBookHome
+          ? InputSanitizer.sanitizeInt(state.homeVisitOfferFee)
+          : null,
+      visitSiteOfferFee: state.offersVisitSite
+          ? InputSanitizer.sanitizeInt(state.visitSiteOfferFee)
+          : null,
       languagesSpoken: state.languagesSpoken,
       bio: InputSanitizer.sanitizeMultiline(state.bio),
       address: InputSanitizer.sanitizeMultiline(state.address),
@@ -1119,17 +1150,26 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
 
   int? _minimumSelectedConsultationFee() {
     final fees = <int>[];
+    void addEffective(String regularText, String offerText) {
+      final regular = InputSanitizer.sanitizeInt(regularText);
+      final offer = InputSanitizer.sanitizeInt(offerText);
+      if (offer != null &&
+          offer > 0 &&
+          (regular == null || offer < regular)) {
+        fees.add(offer);
+      } else if (regular != null) {
+        fees.add(regular);
+      }
+    }
+
     if (state.offersOnlineConsult) {
-      final fee = InputSanitizer.sanitizeInt(state.onlineConsultFee);
-      if (fee != null) fees.add(fee);
+      addEffective(state.onlineConsultFee, state.onlineConsultOfferFee);
     }
     if (state.offersBookHome) {
-      final fee = InputSanitizer.sanitizeInt(state.homeVisitFee);
-      if (fee != null) fees.add(fee);
+      addEffective(state.homeVisitFee, state.homeVisitOfferFee);
     }
     if (state.offersVisitSite) {
-      final fee = InputSanitizer.sanitizeInt(state.visitSiteFee);
-      if (fee != null) fees.add(fee);
+      addEffective(state.visitSiteFee, state.visitSiteOfferFee);
     }
     if (fees.isEmpty) return null;
     return fees.reduce((a, b) => a < b ? a : b);

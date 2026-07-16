@@ -12,10 +12,12 @@ class NurseModel {
   final String? countryCode;
   final String? profilePicture;
   final String? gender;
+  final DateTime? dateOfBirth;
   final List<String>? languagesSpoken;
   final String? qualification;
   final String? registrationNumber;
   final String? nursingCouncil;
+  final String? nuid;
   final int? yearsOfExperience;
   final String? specialization;
   final List<String>? nursingSkills;
@@ -50,10 +52,12 @@ class NurseModel {
     this.countryCode,
     this.profilePicture,
     this.gender,
+    this.dateOfBirth,
     this.languagesSpoken,
     this.qualification,
     this.registrationNumber,
     this.nursingCouncil,
+    this.nuid,
     this.yearsOfExperience,
     this.specialization,
     this.nursingSkills,
@@ -89,10 +93,12 @@ class NurseModel {
       countryCode: json['countryCode'] as String? ?? PhoneCountries.defaultDialCode,
       profilePicture: json['profilePicture'] as String?,
       gender: json['gender'] as String?,
+      dateOfBirth: _parseDateTime(json['dateOfBirth']),
       languagesSpoken: _parseStringList(json['languagesSpoken']),
       qualification: json['qualification'] as String?,
       registrationNumber: json['registrationNumber'] as String?,
       nursingCouncil: json['nursingCouncil'] as String?,
+      nuid: json['nuid'] as String?,
       yearsOfExperience: _parseInt(json['yearsOfExperience']),
       specialization: json['specialization'] as String?,
       nursingSkills: _parseStringList(json['nursingSkills']),
@@ -154,10 +160,12 @@ class NurseModel {
     String? mobileNumber,
     String? profilePicture,
     String? gender,
+    DateTime? dateOfBirth,
     List<String>? languagesSpoken,
     String? qualification,
     String? registrationNumber,
     String? nursingCouncil,
+    String? nuid,
     int? yearsOfExperience,
     String? specialization,
     List<String>? nursingSkills,
@@ -184,10 +192,12 @@ class NurseModel {
       mobileNumber: mobileNumber ?? this.mobileNumber,
       profilePicture: profilePicture ?? this.profilePicture,
       gender: gender ?? this.gender,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       languagesSpoken: languagesSpoken ?? this.languagesSpoken,
       qualification: qualification ?? this.qualification,
       registrationNumber: registrationNumber ?? this.registrationNumber,
       nursingCouncil: nursingCouncil ?? this.nursingCouncil,
+      nuid: nuid ?? this.nuid,
       yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
       specialization: specialization ?? this.specialization,
       nursingSkills: nursingSkills ?? this.nursingSkills,

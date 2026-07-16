@@ -67,9 +67,40 @@ function getProviderInfo() {
   };
 }
 
+/**
+ * Refund a captured Razorpay payment (partial or full).
+ * @param {{ paymentId: string, amountInPaise?: number, notes?: object }} opts
+ * amountInPaise omitted = full refund
+ */
+async function createRefund({ paymentId, amountInPaise, notes = {} }) {
+  if (!paymentId) {
+    const err = new Error('Payment id is required for refund');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (isMockMode()) {
+    return {
+      id: `rfnd_mock_${Date.now()}`,
+      payment_id: paymentId,
+      amount: amountInPaise ?? null,
+      status: 'processed',
+      mock: true,
+    };
+  }
+
+  const razorpay = getRazorpayClient();
+  const payload = { notes };
+  if (amountInPaise != null && Number.isFinite(amountInPaise) && amountInPaise > 0) {
+    payload.amount = Math.round(amountInPaise);
+  }
+  return razorpay.payments.refund(paymentId, payload);
+}
+
 module.exports = {
   createOrder,
   verifyPaymentSignature,
+  createRefund,
   getProviderInfo,
   isMockMode,
   assertRazorpayConfigured,

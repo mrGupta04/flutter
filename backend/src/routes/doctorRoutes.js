@@ -76,6 +76,9 @@ function mapBodyToDoctor(body) {
     onlineConsultFee: body.onlineConsultFee,
     homeVisitFee: body.homeVisitFee,
     visitSiteFee: body.visitSiteFee,
+    onlineConsultOfferFee: body.onlineConsultOfferFee,
+    homeVisitOfferFee: body.homeVisitOfferFee,
+    visitSiteOfferFee: body.visitSiteOfferFee,
     offersOnlineConsult: body.offersOnlineConsult,
     offersBookHome: body.offersBookHome,
     offersVisitSite: body.offersVisitSite,
@@ -968,5 +971,8 @@ router.post('/upload-hospital-photo', upload.single('file'), async (req, res) =>
     return sendError(res, err.message || 'Upload failed', 500);
   }
 });
+
+const { attachProviderFeatureRoutes } = require('./providerFeatureRoutes');
+attachProviderFeatureRoutes(router, 'doctor');
 
 module.exports = router;

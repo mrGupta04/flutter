@@ -16,6 +16,8 @@ class DoctorBookingModel {
     this.patientCity,
     this.patientState,
     this.patientPincode,
+    this.patientLatitude,
+    this.patientLongitude,
     this.visitReason,
     this.consultationFee,
     this.appointmentCode,
@@ -33,6 +35,9 @@ class DoctorBookingModel {
     this.distanceKm,
     this.paymentStatus,
   });
+
+  final double? patientLatitude;
+  final double? patientLongitude;
 
   final double? distanceKm;
   final String? paymentStatus;
@@ -121,6 +126,8 @@ class DoctorBookingModel {
       patientCity: json['patientCity'] as String?,
       patientState: json['patientState'] as String?,
       patientPincode: json['patientPincode'] as String?,
+      patientLatitude: (json['patientLatitude'] as num?)?.toDouble(),
+      patientLongitude: (json['patientLongitude'] as num?)?.toDouble(),
       visitReason: json['visitReason'] as String?,
       consultationFee: _parseInt(json['consultationFee']),
       appointmentCode: json['appointmentCode'] as String?,

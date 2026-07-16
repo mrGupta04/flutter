@@ -30,11 +30,40 @@ class MobileNumberField extends StatefulWidget {
 
 class _MobileNumberFieldState extends State<MobileNumberField> {
   late PhoneCountry _selectedCountry;
+  late final FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _selectedCountry = PhoneCountries.findByDialCode(widget.countryCode);
+    _focusNode = FocusNode(debugLabel: 'MobileNumberField');
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_focusNode.hasFocus) return;
+      _collapseAccidentalSelectAll();
+    });
+  }
+
+  void _collapseAccidentalSelectAll() {
+    final controller = widget.mobileController;
+    final text = controller.text;
+    if (text.isEmpty) return;
+    final selection = controller.selection;
+    if (!selection.isValid || selection.isCollapsed) return;
+    if (selection.start == 0 && selection.end == text.length) {
+      controller.selection = TextSelection.collapsed(offset: text.length);
+    }
   }
 
   @override
@@ -135,11 +164,13 @@ class _MobileNumberFieldState extends State<MobileNumberField> {
   Widget _buildPhoneField() {
     return TextFormField(
       controller: widget.mobileController,
+      focusNode: _focusNode,
       validator: _validate,
       keyboardType: TextInputType.phone,
       inputFormatters: ValidationUtils.mobileInputFormatters(
         countryCode: _selectedCountry.dialCode,
       ),
+      onTap: _collapseAccidentalSelectAll,
       style: AppTextStyles.bodyLarge.copyWith(
         color: AppColors.textPrimary,
       ),

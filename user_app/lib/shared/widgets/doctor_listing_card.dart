@@ -86,6 +86,7 @@ class DoctorListingCard extends StatelessWidget {
     final isVerified =
         doctor.verificationStatus == VerificationStatus.verified;
     final fee = _displayFee;
+    final displayOriginalFee = _displayOriginalFee;
     final slotAction = _slotAction;
     final slotAvailable = _slotAvailable;
     final languages = doctor.languagesSpoken ?? const <String>[];
@@ -168,7 +169,7 @@ class DoctorListingCard extends StatelessWidget {
             else
               MarketplacePriceActionRow(
                 price: fee,
-                originalPrice: originalFee,
+                originalPrice: displayOriginalFee,
                 availabilityLabel: availabilityText,
                 onButtonPressed: slotAction,
                 buttonEnabled:
@@ -179,7 +180,7 @@ class DoctorListingCard extends StatelessWidget {
             const SizedBox(height: 14),
             MarketplacePriceActionRow(
               price: fee,
-              originalPrice: originalFee,
+              originalPrice: displayOriginalFee,
               showButton: false,
             ),
           ],
@@ -229,9 +230,17 @@ class DoctorListingCard extends StatelessWidget {
 
   int? get _displayFee {
     if (consultationFilter != null) {
-      return doctor.feeForConsultationType(consultationFilter!);
+      return doctor.effectiveFeeForConsultationType(consultationFilter!);
     }
     return doctor.lowestConsultationFee;
+  }
+
+  int? get _displayOriginalFee {
+    if (originalFee != null) return originalFee;
+    if (consultationFilter != null) {
+      return doctor.originalFeeForConsultationType(consultationFilter!);
+    }
+    return null;
   }
 
   bool get _slotAvailable {

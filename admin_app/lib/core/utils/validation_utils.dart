@@ -180,6 +180,22 @@ class ValidationUtils {
     return null;
   }
 
+  /// Optional offer/discount price; must be lower than the regular fee when set.
+  static String? validateOptionalOfferFee(String? offerFee, String? regularFee) {
+    if (offerFee == null || offerFee.trim().isEmpty) return null;
+    final offer = int.tryParse(offerFee.trim());
+    if (offer == null) return 'Please enter a valid offer price';
+    if (offer <= 0) return 'Offer price must be greater than 0';
+    if (offer > AppConstants.maxConsultationFee) {
+      return 'Offer price is too high';
+    }
+    final regular = int.tryParse(regularFee?.trim() ?? '');
+    if (regular != null && offer >= regular) {
+      return 'Offer price must be less than the regular fee';
+    }
+    return null;
+  }
+
   /// Validate address
   static String? validateAddress(String? address) {
     if (address == null || address.isEmpty) {

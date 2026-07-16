@@ -16,10 +16,12 @@ import '../../../../data/models/doctor_booking_model.dart';
 import '../../../../data/models/previous_report_model.dart';
 import '../../../../data/models/doctor_document_model.dart';
 import '../../../../data/models/doctor_model.dart';
+import '../../../../data/services/dio_service.dart';
 import '../../../../features/doctor_registration/provider/registration_provider.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/provider_document_status_section.dart';
+import '../../../../shared/widgets/patient_location_map_card.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../doctor_registration/presentation/widgets/weekly_availability_picker.dart';
 import '../../../video_consult/presentation/widgets/join_video_consult_button.dart';
@@ -35,13 +37,34 @@ class DoctorDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
+  int _unreadNotifications = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(doctorDashboardProvider.notifier).loadProfile();
       DoctorPresenceService.instance.goOnline();
+      _loadUnreadNotifications();
     });
+  }
+
+  Future<void> _loadUnreadNotifications() async {
+    try {
+      final response =
+          await DioService().get(AppConstants.endpointDoctorNotifications);
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      if (!mounted) return;
+      setState(() {
+        _unreadNotifications = (data['unreadCount'] as num?)?.toInt() ?? 0;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _openNotifications() async {
+    await context.push('${AppConstants.routeProviderNotifications}?role=doctor');
+    if (mounted) _loadUnreadNotifications();
   }
 
   @override
@@ -67,6 +90,22 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
       appBar: AppBar(
         title: const Text('My practice'),
         actions: [
+          IconButton(
+            icon: Badge(
+              isLabelVisible: _unreadNotifications > 0,
+              label: Text('$_unreadNotifications'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            tooltip: 'Notifications',
+            onPressed: _openNotifications,
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            tooltip: 'Earnings',
+            onPressed: () => context.push(
+              '${AppConstants.routeProviderEarnings}?role=doctor',
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh updates',
@@ -1433,7 +1472,7 @@ class _ProfessionalProfileSection extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              bio!,
+              bio,
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textPrimary,
                 height: 1.45,
@@ -2208,6 +2247,18 @@ class _PendingHomeVisitRequestCard extends StatelessWidget {
               ),
             ),
           ],
+          if (booking.isHomeVisit &&
+              booking.patientLatitude != null &&
+              booking.patientLongitude != null) ...[
+            const SizedBox(height: 10),
+            PatientLocationMapCard(
+              latitude: booking.patientLatitude!,
+              longitude: booking.patientLongitude!,
+              addressLine: booking.patientLocationLine,
+              title: 'Patient location',
+              mapHeight: 170,
+            ),
+          ],
           if (booking.visitReason != null &&
               booking.visitReason!.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -2455,6 +2506,108 @@ class _BookingCard extends StatelessWidget {
               icon: Icons.social_distance_rounded,
               text: '${booking.distanceKm} km from you',
             ),
+          if (booking.isHomeVisit &&
+              booking.patientLatitude != null &&
+              booking.patientLongitude != null) ...[
+            const SizedBox(height: 10),
+            PatientLocationMapCard(
+              latitude: booking.patientLatitude!,
+              longitude: booking.patientLongitude!,
+              addressLine: booking.patientLocationLine,
+              title: 'Patient location',
+              mapHeight: 150,
+            ),
+          ],
+          if (booking.isHomeVisit && booking.status == 'confirmed') ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: () async {
+                    try {
+                      await DioService().post(
+                        AppConstants.endpointDoctorVisitProgress(booking.id),
+                        data: {'progress': 'en_route'},
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Marked on the way')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('$e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('On the way'),
+                ),
+                OutlinedButton(
+                  onPressed: () async {
+                    try {
+                      await DioService().post(
+                        AppConstants.endpointDoctorVisitProgress(booking.id),
+                        data: {'progress': 'arrived'},
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Marked arrived')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('$e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Arrived'),
+                ),
+                OutlinedButton(
+                  onPressed: () async {
+                    try {
+                      await DioService().post(
+                        AppConstants.endpointDoctorVisitProgress(booking.id),
+                        data: {'progress': 'completed'},
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Marked completed')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('$e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Completed'),
+                ),
+              ],
+            ),
+          ],
+          if (!isPast && booking.status == 'confirmed') ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push(
+                  '${AppConstants.routeProviderBookingChat}'
+                  '?role=doctor&bookingId=${booking.id}'
+                  '&title=${Uri.encodeComponent(booking.patientName ?? "Patient")}',
+                ),
+                icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                label: const Text('Chat with patient'),
+              ),
+            ),
+          ],
           if (booking.visitReason != null &&
               booking.visitReason!.trim().isNotEmpty)
             _BookingDetailRow(

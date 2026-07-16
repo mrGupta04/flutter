@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const ConsultationFeedback = require('./models/ConsultationFeedback');
 const ConsultationBooking = require('./models/ConsultationBooking');
 const Doctor = require('./models/Doctor');
+const Nurse = require('./models/Nurse');
 const Patient = require('./models/Patient');
 
 async function findFeedbackByBookingId(bookingId) {
@@ -38,13 +39,14 @@ async function assertBookingForPatient(bookingId, patientId) {
 
 function isSessionEligibleForFeedback(booking, now = new Date()) {
   const slotEnd = new Date(booking.slotEnd);
-  // Online consult: only after the booked slot ends (not when the call is cut early).
   if (booking.consultationType === 'online_consult') {
     return slotEnd <= now;
   }
   if (booking.consultationType === 'visit_site') {
     return Boolean(booking.appointmentVerifiedAt) || slotEnd <= now;
   }
+  // Home visit (doctor or nurse): after slot end, or when visit marked completed
+  if (booking.visitProgress === 'completed') return true;
   return slotEnd <= now;
 }
 
@@ -86,7 +88,37 @@ async function listPublicDoctorFeedback(doctorId, { limit = 20 } = {}) {
   }));
 }
 
+async function listPublicNurseFeedback(nurseId, { limit = 20 } = {}) {
+  if (!nurseId) return [];
+
+  const safeLimit = Math.min(50, Math.max(1, Number(limit) || 20));
+  const rows = await ConsultationFeedback.find({
+    nurseId,
+    status: 'submitted',
+    rating: { $gte: 1, $lte: 5 },
+  })
+    .sort({ createdAt: -1 })
+    .limit(safeLimit)
+    .lean();
+
+  if (!rows.length) return [];
+
+  const patientIds = [...new Set(rows.map((row) => row.patientId).filter(Boolean))];
+  const patients = await Patient.find({ id: { $in: patientIds } }).lean();
+  const patientMap = new Map(patients.map((p) => [p.id, p]));
+
+  return rows.map((row) => ({
+    id: row.id,
+    rating: row.rating,
+    comment: String(row.comment || '').trim() || `Rated ${row.rating} stars`,
+    consultationType: row.consultationType,
+    patientDisplayName: formatPatientDisplayName(patientMap.get(row.patientId)),
+    createdAt: row.createdAt,
+  }));
+}
+
 async function updateDoctorRatingAggregate(doctorId) {
+  if (!doctorId) return;
   const stats = await ConsultationFeedback.aggregate([
     {
       $match: {
@@ -116,6 +148,37 @@ async function updateDoctorRatingAggregate(doctorId) {
   );
 }
 
+async function updateNurseRatingAggregate(nurseId) {
+  if (!nurseId) return;
+  const stats = await ConsultationFeedback.aggregate([
+    {
+      $match: {
+        nurseId,
+        status: 'submitted',
+        rating: { $gte: 1, $lte: 5 },
+      },
+    },
+    {
+      $group: {
+        _id: '$nurseId',
+        averageRating: { $avg: '$rating' },
+        ratingCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const row = stats[0];
+  await Nurse.updateOne(
+    { id: nurseId },
+    {
+      $set: {
+        averageRating: row ? Math.round(row.averageRating * 10) / 10 : null,
+        ratingCount: row ? row.ratingCount : 0,
+      },
+    },
+  );
+}
+
 async function submitConsultationFeedback({
   bookingId,
   patientId,
@@ -136,18 +199,26 @@ async function submitConsultationFeedback({
     throw err;
   }
 
+  if (!booking.doctorId && !booking.nurseId) {
+    const err = new Error('Booking has no provider to rate');
+    err.statusCode = 400;
+    throw err;
+  }
+
   const feedback = await ConsultationFeedback.create({
     id: uuidv4(),
     bookingId,
     patientId,
-    doctorId: booking.doctorId,
+    doctorId: booking.doctorId || undefined,
+    nurseId: booking.nurseId || undefined,
     consultationType: booking.consultationType,
     rating,
     comment: comment?.trim() || undefined,
     status: 'submitted',
   });
 
-  await updateDoctorRatingAggregate(booking.doctorId);
+  if (booking.doctorId) await updateDoctorRatingAggregate(booking.doctorId);
+  if (booking.nurseId) await updateNurseRatingAggregate(booking.nurseId);
   return feedback.toObject();
 }
 
@@ -168,7 +239,8 @@ async function dismissConsultationFeedback({ bookingId, patientId }) {
     id: uuidv4(),
     bookingId,
     patientId,
-    doctorId: booking.doctorId,
+    doctorId: booking.doctorId || undefined,
+    nurseId: booking.nurseId || undefined,
     consultationType: booking.consultationType,
     status: 'dismissed',
   });
@@ -194,6 +266,7 @@ module.exports = {
   findFeedbackByBookingId,
   findFeedbackByBookingIds,
   listPublicDoctorFeedback,
+  listPublicNurseFeedback,
   submitConsultationFeedback,
   dismissConsultationFeedback,
   feedbackFieldsForBooking,

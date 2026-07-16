@@ -15,6 +15,8 @@ import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/blinking_online_badge.dart';
 import '../../../../shared/widgets/doctor_consultation_booking_section.dart';
 import '../../../../shared/widgets/doctor_feedback_carousel.dart';
+import '../../../../shared/widgets/doctor_hospital_map_card.dart';
+import '../../../../shared/widgets/favorite_toggle_button.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/provider_profile_widgets.dart';
 import '../../provider/doctor_feedback_provider.dart';
@@ -49,6 +51,10 @@ class DoctorProfileScreen extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('Doctor profile'),
           actions: [
+            FavoriteToggleButton(
+              providerType: 'doctor',
+              providerId: doctor.id ?? doctorId,
+            ),
             IconButton(
               tooltip: 'Share profile',
               icon: const Icon(Icons.share_outlined),
@@ -292,6 +298,8 @@ class _DoctorProfileBody extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            DoctorHospitalMapCard(doctor: doctor),
           ],
           if (hospitalPhotos.isNotEmpty) ...[
             const SizedBox(height: 16),

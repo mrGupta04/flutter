@@ -120,9 +120,11 @@ function formatNurseBookingResponse(booking, nurse) {
     weekStartDate: booking.weekStartDate,
     consultationFee: booking.consultationFee,
     status: booking.status,
+    visitProgress: booking.visitProgress || null,
     label: formatSlotLabel(booking.slotStart, booking.slotEnd),
     nurseName,
     createdAt: booking.createdAt,
+    timeline: require('./bookingLifecycleHelpers').buildVisitTimeline(booking),
   };
 }
 
@@ -569,6 +571,7 @@ async function createNurseHomeVisitRequest(payload) {
     existingHold.approvalExpiresAt = approvalExpiresAt;
     existingHold.paymentStatus = 'pending';
     await existingHold.save();
+    await notifyNurseOfHomeVisitRequest(existingHold);
     return formatNurseBookingResponse(existingHold, nurse);
   }
 
@@ -607,7 +610,27 @@ async function createNurseHomeVisitRequest(payload) {
     approvalExpiresAt,
   });
 
+  await notifyNurseOfHomeVisitRequest(booking);
   return formatNurseBookingResponse(booking, nurse);
+}
+
+async function notifyNurseOfHomeVisitRequest(booking) {
+  try {
+    const { createAndPushNotification } = require('./notificationRepositories');
+    const { formatSlotLabel } = require('../utils/slotDateTime');
+    if (!booking.nurseId) return;
+    const slotLabel = formatSlotLabel(booking.slotStart, booking.slotEnd);
+    await createAndPushNotification({
+      userId: booking.nurseId,
+      userType: 'nurse',
+      title: 'New home visit request',
+      body: `${booking.patientName} requested a visit (${slotLabel}). Approve or decline.`,
+      type: 'home_visit_request',
+      data: { bookingId: booking.id, action: 'home_visit_request' },
+    });
+  } catch (err) {
+    console.error('[NurseHomeVisitRequest] notify failed:', err.message);
+  }
 }
 
 async function approveNurseHomeVisitRequest(bookingId, nurseId) {
@@ -638,7 +661,33 @@ async function approveNurseHomeVisitRequest(bookingId, nurseId) {
   booking.paymentExpiresAt = new Date(
     Date.now() + HOME_VISIT_PAYMENT_HOURS * 60 * 60 * 1000,
   );
+  const { appendStatusHistory } = require('./bookingLifecycleHelpers');
+  appendStatusHistory(booking, 'approved_pending_payment', 'nurse');
   await booking.save();
+
+  if (booking.patientId) {
+    try {
+      const { createAndPushNotification } = require('./notificationRepositories');
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: 'Nurse visit approved',
+        body: 'Your nurse approved the visit. Please pay to confirm.',
+        type: 'booking_approved',
+        data: { bookingId: booking.id },
+      });
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: 'Payment due',
+        body: 'Complete payment to confirm your nurse home visit.',
+        type: 'payment_due',
+        data: { bookingId: booking.id },
+      });
+    } catch (err) {
+      console.error('[NurseApprove] notify failed:', err.message);
+    }
+  }
 
   const nurse = await findNurseById(nurseId);
   return formatNurseBookingResponse(booking, nurse);
@@ -670,7 +719,27 @@ async function rejectNurseHomeVisitRequest(bookingId, nurseId) {
   booking.status = 'cancelled';
   booking.paymentStatus = 'failed';
   booking.doctorRejectedAt = new Date();
+  booking.cancelledAt = new Date();
+  booking.cancelledBy = 'nurse';
+  const { appendStatusHistory } = require('./bookingLifecycleHelpers');
+  appendStatusHistory(booking, 'cancelled', 'nurse');
   await booking.save();
+
+  if (booking.patientId) {
+    try {
+      const { createAndPushNotification } = require('./notificationRepositories');
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: 'Nurse visit declined',
+        body: 'Your nurse could not accept this home visit request.',
+        type: 'booking_rejected',
+        data: { bookingId: booking.id },
+      });
+    } catch (err) {
+      console.error('[NurseReject] notify failed:', err.message);
+    }
+  }
 
   const nurse = await findNurseById(nurseId);
   return formatNurseBookingResponse(booking, nurse);

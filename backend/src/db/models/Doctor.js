@@ -26,6 +26,9 @@ const doctorSchema = new mongoose.Schema(
     onlineConsultFee: Number,
     homeVisitFee: Number,
     visitSiteFee: Number,
+    onlineConsultOfferFee: Number,
+    homeVisitOfferFee: Number,
+    visitSiteOfferFee: Number,
     offersOnlineConsult: { type: Boolean, default: false },
     offersBookHome: { type: Boolean, default: false },
     offersVisitSite: { type: Boolean, default: false },
@@ -66,6 +69,7 @@ const doctorSchema = new mongoose.Schema(
     lastActiveAt: { type: Date, default: null, index: true },
     averageRating: { type: Number, default: null },
     ratingCount: { type: Number, default: 0 },
+    fcmTokens: { type: [String], default: [] },
   },
   { timestamps: true },
 );

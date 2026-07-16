@@ -77,6 +77,40 @@ class AppConstants {
       '/nurse/slot-hold/$holdId';
   static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
 
+  // Provider shared features (doctor & nurse)
+  static const String endpointDoctorEarnings = '/doctor/earnings';
+  static const String endpointNurseEarnings = '/nurse/earnings';
+  static const String endpointDoctorNotifications = '/doctor/notifications';
+  static const String endpointNurseNotifications = '/nurse/notifications';
+  static const String endpointDoctorDeviceToken = '/doctor/device-token';
+  static const String endpointNurseDeviceToken = '/nurse/device-token';
+  static const String endpointDoctorNotificationsReadAll =
+      '/doctor/notifications/read-all';
+  static const String endpointNurseNotificationsReadAll =
+      '/nurse/notifications/read-all';
+  static String endpointDoctorNotificationRead(String id) =>
+      '/doctor/notifications/$id/read';
+  static String endpointNurseNotificationRead(String id) =>
+      '/nurse/notifications/$id/read';
+  static String endpointDoctorVisitProgress(String bookingId) =>
+      '/doctor/bookings/$bookingId/visit-progress';
+  static String endpointNurseVisitProgress(String bookingId) =>
+      '/nurse/bookings/$bookingId/visit-progress';
+  static String endpointDoctorBookingChat(String bookingId) =>
+      '/doctor/bookings/$bookingId/chat';
+  static String endpointNurseBookingChat(String bookingId) =>
+      '/nurse/bookings/$bookingId/chat';
+  static String endpointNurseVisitNote(String bookingId) =>
+      '/nurse/bookings/$bookingId/visit-note';
+  static String endpointDoctorBookingCancel(String bookingId) =>
+      '/doctor/bookings/$bookingId/cancel';
+  static String endpointNurseBookingCancel(String bookingId) =>
+      '/nurse/bookings/$bookingId/cancel';
+  static String endpointDoctorBookingTimeline(String bookingId) =>
+      '/doctor/bookings/$bookingId/timeline';
+  static String endpointNurseBookingTimeline(String bookingId) =>
+      '/nurse/bookings/$bookingId/timeline';
+
   // Ambulance API Endpoints
   static const String endpointRegisterAmbulance = '/ambulance/register';
   static const String endpointAmbulanceUploadProfile = '/ambulance/upload-profile';
@@ -289,6 +323,9 @@ class AppConstants {
   static const String routeBloodBankDashboard = '/blood-bank-dashboard';
   static const String routeDoctorDashboard = '/doctor-dashboard';
   static const String routeNurseDashboard = '/nurse-dashboard';
+  static const String routeProviderEarnings = '/provider-earnings';
+  static const String routeProviderNotifications = '/provider-notifications';
+  static const String routeProviderBookingChat = '/provider-booking-chat';
   static const String routeVideoConsult = '/video-consult';
   static const String routeAdminLogin = '/admin-login';
   static const String routeAdminDashboard = '/admin-dashboard';

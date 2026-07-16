@@ -107,9 +107,33 @@ class PatientBookingStats {
   }
 }
 
+class BookingTimelineStep {
+  final String key;
+  final String label;
+  final bool done;
+  final DateTime? at;
+
+  const BookingTimelineStep({
+    required this.key,
+    required this.label,
+    required this.done,
+    this.at,
+  });
+
+  factory BookingTimelineStep.fromJson(Map<String, dynamic> json) {
+    return BookingTimelineStep(
+      key: json['key']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
+      done: json['done'] as bool? ?? false,
+      at: json['at'] != null ? DateTime.tryParse(json['at'].toString()) : null,
+    );
+  }
+}
+
 class PatientBookingModel {
   final String id;
   final String doctorId;
+  final String? nurseId;
   final String doctorName;
   final String? doctorProfilePicture;
   final String serviceType;
@@ -121,6 +145,7 @@ class PatientBookingModel {
   final int? consultationFee;
   final String status;
   final String? paymentStatus;
+  final String? visitProgress;
   final double? distanceKm;
   final String? clinicName;
   final String? clinicAddress;
@@ -141,11 +166,14 @@ class PatientBookingModel {
   final String? prescriptionFileName;
   final bool prescriptionPending;
   final bool prescriptionProcessing;
+  final bool hasVisitNote;
   final List<PreviousReportModel> previousReports;
+  final List<BookingTimelineStep> timeline;
 
   const PatientBookingModel({
     required this.id,
     required this.doctorId,
+    this.nurseId,
     required this.doctorName,
     this.doctorProfilePicture,
     this.serviceType = 'doctor',
@@ -157,6 +185,7 @@ class PatientBookingModel {
     this.consultationFee,
     required this.status,
     this.paymentStatus,
+    this.visitProgress,
     this.distanceKm,
     this.clinicName,
     this.clinicAddress,
@@ -177,7 +206,9 @@ class PatientBookingModel {
     this.prescriptionFileName,
     this.prescriptionPending = false,
     this.prescriptionProcessing = false,
+    this.hasVisitNote = false,
     this.previousReports = const [],
+    this.timeline = const [],
   });
 
   bool get isClinicVisit => consultationType == 'visit_site';
@@ -185,6 +216,8 @@ class PatientBookingModel {
   bool get isHomeVisit => consultationType == 'book_home';
 
   bool get isOnlineConsult => consultationType == 'online_consult';
+
+  bool get isNurseVisit => serviceType == 'nurse';
 
   bool get isPrescriptionEligible => isOnlineConsult || isHomeVisit;
 
@@ -197,13 +230,33 @@ class PatientBookingModel {
   bool get needsHomeVisitPayment =>
       isHomeVisit && isApprovedPendingPayment;
 
+  bool get isConfirmed => status == 'confirmed';
+
+  bool get canChat => isConfirmed;
+
+  bool get canCancel =>
+      isAwaitingDoctorApproval ||
+      isApprovedPendingPayment ||
+      status == 'pending' ||
+      isConfirmed;
+
+  String get providerId =>
+      (isNurseVisit ? nurseId : doctorId) ?? doctorId;
+
   String get statusLabel {
     if (isAwaitingDoctorApproval) {
-      return 'Waiting for doctor approval';
+      return isNurseVisit
+          ? 'Waiting for nurse approval'
+          : 'Waiting for doctor approval';
     }
     if (isApprovedPendingPayment) {
       return 'Approved — pay to confirm';
     }
+    if (visitProgress == 'en_route') {
+      return isNurseVisit ? 'Nurse on the way' : 'Doctor on the way';
+    }
+    if (visitProgress == 'arrived') return 'Provider arrived';
+    if (visitProgress == 'completed') return 'Visit completed';
     if (status == 'confirmed') return 'Confirmed';
     if (status == 'cancelled') return 'Cancelled';
     return status;
@@ -220,12 +273,16 @@ class PatientBookingModel {
       throw FormatException('Missing booking id');
     }
 
+    final timelineRaw = json['timeline'] as List<dynamic>? ?? [];
+
     return PatientBookingModel(
       id: id,
       doctorId: (json['doctorId'] as String?) ??
           (json['nurseId'] as String?) ??
           '',
+      nurseId: json['nurseId'] as String?,
       doctorName: json['doctorName'] as String? ??
+          json['nurseName'] as String? ??
           json['labName'] as String? ??
           json['centerName'] as String? ??
           json['institutionName'] as String? ??
@@ -240,6 +297,7 @@ class PatientBookingModel {
       consultationFee: (json['consultationFee'] as num?)?.toInt(),
       status: json['status'] as String? ?? 'confirmed',
       paymentStatus: json['paymentStatus'] as String?,
+      visitProgress: json['visitProgress'] as String?,
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       clinicName: json['clinicName'] as String?,
       clinicAddress: json['clinicAddress'] as String?,
@@ -265,8 +323,13 @@ class PatientBookingModel {
       prescriptionFileName: json['prescriptionFileName'] as String?,
       prescriptionPending: json['prescriptionPending'] as bool? ?? false,
       prescriptionProcessing: json['prescriptionProcessing'] as bool? ?? false,
+      hasVisitNote: json['hasVisitNote'] as bool? ?? false,
       previousReports: (json['previousReports'] as List<dynamic>? ?? [])
           .map((e) => PreviousReportModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      timeline: timelineRaw
+          .whereType<Map>()
+          .map((e) => BookingTimelineStep.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
     );
   }

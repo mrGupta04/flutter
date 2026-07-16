@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const ConsultationBooking = require('./models/ConsultationBooking');
-const { findDoctorById, getConsultationFeeForType } = require('./repositories');
+const { findDoctorById, getConsultationFeeForType, getRegularConsultationFeeForType } = require('./repositories');
 const { findNurseById } = require('./nurseRepositories');
 const { normalizeUploadUrl } = require('../utils/uploadUrl');
 const { findAvailabilityForActiveWeek } = require('./availabilityRepositories');
@@ -367,6 +367,10 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
     weekStartDate: weekStart.toISOString(),
     weekEndDate: weekEnd.toISOString(),
     consultationFee: getConsultationFeeForType(doctor, consultationType),
+    regularConsultationFee: getRegularConsultationFeeForType(
+      doctor,
+      consultationType,
+    ),
     slots: bookable,
     totalBookable: bookable.length,
     totalAvailableInWeek: (availability.slots || []).filter((s) => s.available).length,
@@ -415,6 +419,7 @@ function formatBookingResponse(booking, doctor) {
     weekStartDate: booking.weekStartDate,
     consultationFee: booking.consultationFee,
     status: booking.status,
+    visitProgress: booking.visitProgress || null,
     label: formatSlotLabel(booking.slotStart, booking.slotEnd),
     doctorName,
     clinicName: doctor.clinicName,
@@ -424,6 +429,7 @@ function formatBookingResponse(booking, doctor) {
     ...bookingPaymentFields(booking),
     ...videoJoinFields(booking),
     ...bookingPreviousReportsFields(booking),
+    timeline: require('./bookingLifecycleHelpers').buildVisitTimeline(booking),
   };
 }
 
@@ -682,7 +688,16 @@ async function confirmBookingAfterPayment({
     throw err;
   }
 
+  const isNurseBooking =
+    booking.providerType === 'nurse' ||
+    (Boolean(booking.nurseId) && !booking.doctorId);
+
   if (booking.status === 'confirmed' && booking.paymentStatus === 'paid') {
+    if (isNurseBooking) {
+      const nurse = await findNurseById(booking.nurseId);
+      const { formatNurseBookingResponse } = require('./nurseBookingRepositories');
+      return formatNurseBookingResponse(booking, nurse);
+    }
     const doctor = await findDoctorById(booking.doctorId);
     return formatBookingResponse(booking, doctor);
   }
@@ -712,11 +727,22 @@ async function confirmBookingAfterPayment({
     throw err;
   }
 
-  const doctor = await findDoctorById(booking.doctorId);
-  if (!doctor) {
-    const err = new Error('Doctor not found');
-    err.statusCode = 404;
-    throw err;
+  let doctor = null;
+  let nurse = null;
+  if (isNurseBooking) {
+    nurse = await findNurseById(booking.nurseId);
+    if (!nurse) {
+      const err = new Error('Nurse not found');
+      err.statusCode = 404;
+      throw err;
+    }
+  } else {
+    doctor = await findDoctorById(booking.doctorId);
+    if (!doctor) {
+      const err = new Error('Doctor not found');
+      err.statusCode = 404;
+      throw err;
+    }
   }
 
   if (booking.consultationType === 'visit_site' && !booking.appointmentCode) {
@@ -734,14 +760,48 @@ async function confirmBookingAfterPayment({
   booking.razorpaySignature = razorpaySignature;
   booking.amountPaid = booking.consultationFee;
   booking.paidAt = new Date();
+  const { appendStatusHistory } = require('./bookingLifecycleHelpers');
+  appendStatusHistory(booking, 'confirmed', 'patient');
   await booking.save();
 
-  if (booking.consultationType === 'online_consult') {
+  if (booking.consultationType === 'online_consult' && doctor) {
     notifyBookingConfirmed({ booking: booking.toObject(), doctor }).catch((err) => {
       console.error('[booking] Notification failed:', err.message);
     });
   }
 
+  if (booking.patientId) {
+    try {
+      const { createAndPushNotification } = require('./notificationRepositories');
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: 'Payment confirmed',
+        body: 'Your visit is confirmed. See you soon.',
+        type: 'booking_approved',
+        data: { bookingId: booking.id },
+      });
+      const providerId = isNurseBooking ? booking.nurseId : booking.doctorId;
+      const userType = isNurseBooking ? 'nurse' : 'doctor';
+      if (providerId) {
+        await createAndPushNotification({
+          userId: providerId,
+          userType,
+          title: 'New confirmed booking',
+          body: `${booking.patientName} paid and confirmed their visit.`,
+          type: 'booking_approved',
+          data: { bookingId: booking.id },
+        });
+      }
+    } catch (err) {
+      console.error('[booking] payment notify failed:', err.message);
+    }
+  }
+
+  if (isNurseBooking) {
+    const { formatNurseBookingResponse } = require('./nurseBookingRepositories');
+    return formatNurseBookingResponse(booking, nurse);
+  }
   return formatBookingResponse(booking, doctor);
 }
 
@@ -1087,7 +1147,7 @@ async function createHomeVisitRequest(payload) {
     existingHold.approvalExpiresAt = approvalExpiresAt;
     existingHold.paymentStatus = 'pending';
     await existingHold.save();
-    const doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
+    await notifyProviderOfHomeVisitRequest(existingHold, 'doctor');
     return formatBookingResponse(existingHold, doctor);
   }
 
@@ -1125,7 +1185,36 @@ async function createHomeVisitRequest(payload) {
     approvalExpiresAt,
   });
 
+  await notifyProviderOfHomeVisitRequest(booking, 'doctor');
   return formatBookingResponse(booking, doctor);
+}
+
+async function notifyProviderOfHomeVisitRequest(booking, userType) {
+  try {
+    const { createAndPushNotification } = require('./notificationRepositories');
+    const { appendStatusHistory } = require('./bookingLifecycleHelpers');
+    const { formatSlotLabel } = require('../utils/slotDateTime');
+    if (booking.statusHistory == null || !Array.isArray(booking.statusHistory)) {
+      // Document from create may be plain; skip mutate if lean
+    } else {
+      appendStatusHistory(booking, 'awaiting_doctor_approval', 'patient');
+      if (typeof booking.save === 'function') await booking.save();
+    }
+    const providerId =
+      userType === 'nurse' ? booking.nurseId : booking.doctorId;
+    if (!providerId) return;
+    const slotLabel = formatSlotLabel(booking.slotStart, booking.slotEnd);
+    await createAndPushNotification({
+      userId: providerId,
+      userType,
+      title: 'New home visit request',
+      body: `${booking.patientName} requested a visit (${slotLabel}). Approve or decline.`,
+      type: 'home_visit_request',
+      data: { bookingId: booking.id, action: 'home_visit_request' },
+    });
+  } catch (err) {
+    console.error('[HomeVisitRequest] notify failed:', err.message);
+  }
 }
 
 async function approveHomeVisitRequest(bookingId, doctorId) {
@@ -1156,7 +1245,33 @@ async function approveHomeVisitRequest(bookingId, doctorId) {
   booking.paymentExpiresAt = new Date(
     Date.now() + HOME_VISIT_PAYMENT_HOURS * 60 * 60 * 1000,
   );
+  const { appendStatusHistory } = require('./bookingLifecycleHelpers');
+  appendStatusHistory(booking, 'approved_pending_payment', 'doctor');
   await booking.save();
+
+  if (booking.patientId) {
+    try {
+      const { createAndPushNotification } = require('./notificationRepositories');
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: 'Home visit approved',
+        body: 'Your doctor approved the visit. Please pay to confirm.',
+        type: 'booking_approved',
+        data: { bookingId: booking.id },
+      });
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: 'Payment due',
+        body: 'Complete payment to confirm your home visit.',
+        type: 'payment_due',
+        data: { bookingId: booking.id },
+      });
+    } catch (err) {
+      console.error('[Approve] notify failed:', err.message);
+    }
+  }
 
   const doctor = await findDoctorById(doctorId);
   return formatBookingResponse(booking, doctor);
@@ -1188,7 +1303,27 @@ async function rejectHomeVisitRequest(bookingId, doctorId) {
   booking.status = 'cancelled';
   booking.paymentStatus = 'failed';
   booking.doctorRejectedAt = new Date();
+  booking.cancelledAt = new Date();
+  booking.cancelledBy = 'doctor';
+  const { appendStatusHistory } = require('./bookingLifecycleHelpers');
+  appendStatusHistory(booking, 'cancelled', 'doctor');
   await booking.save();
+
+  if (booking.patientId) {
+    try {
+      const { createAndPushNotification } = require('./notificationRepositories');
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: 'Home visit declined',
+        body: 'Your doctor could not accept this home visit request.',
+        type: 'booking_rejected',
+        data: { bookingId: booking.id },
+      });
+    } catch (err) {
+      console.error('[Reject] notify failed:', err.message);
+    }
+  }
 
   const doctor = await findDoctorById(doctorId);
   return formatBookingResponse(booking, doctor);
@@ -1202,9 +1337,31 @@ async function createPaymentOrderForBooking(bookingId) {
     throw err;
   }
 
-  if (booking.status === 'pending' && booking.razorpayOrderId) {
+  const isNurseBooking =
+    booking.providerType === 'nurse' ||
+    (Boolean(booking.nurseId) && !booking.doctorId);
+
+  async function providerDisplayName() {
+    if (isNurseBooking) {
+      const nurse = await findNurseById(booking.nurseId);
+      if (!nurse) {
+        const err = new Error('Nurse not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      return `${nurse.firstName || ''} ${nurse.lastName || ''}`.trim() || 'Nurse';
+    }
     const doctor = await findDoctorById(booking.doctorId);
-    const doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
+    if (!doctor) {
+      const err = new Error('Doctor not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    return `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim() || 'Doctor';
+  }
+
+  if (booking.status === 'pending' && booking.razorpayOrderId) {
+    const doctorName = await providerDisplayName();
     return { booking, doctorName };
   }
 
@@ -1226,8 +1383,7 @@ async function createPaymentOrderForBooking(bookingId) {
   booking.status = 'pending';
   await booking.save();
 
-  const doctor = await findDoctorById(booking.doctorId);
-  const doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
+  const doctorName = await providerDisplayName();
   return { booking, doctorName };
 }
 
@@ -1303,6 +1459,12 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
   const prescriptionMap = await findPrescriptionsByBookingIds(
     bookings.map((b) => b.id),
   );
+  const {
+    findVisitNotesByBookingIds,
+    nurseVisitNoteFieldsForBooking,
+  } = require('./nurseVisitNoteRepositories');
+  const { buildVisitTimeline } = require('./bookingLifecycleHelpers');
+  const visitNoteMap = await findVisitNotesByBookingIds(bookings.map((b) => b.id));
 
   const results = [];
   for (const b of bookings) {
@@ -1348,16 +1510,19 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
       consultationFee: b.consultationFee,
       status: b.status,
       paymentStatus: b.paymentStatus,
+      visitProgress: b.visitProgress || null,
       distanceKm: b.distanceKm ?? null,
       clinicName: provider.clinicName,
       clinicAddress: provider.clinicAddress,
       createdAt: b.createdAt,
       isUpcoming: new Date(b.slotEnd) >= now,
+      timeline: buildVisitTimeline(b),
       ...bookingAppointmentFields(b),
       ...videoJoinFields(b, now),
       ...feedbackFieldsForBooking(b, feedbackMap, now),
       ...bookingPreviousReportsFields(b),
       ...prescriptionFieldsForBooking(b, prescriptionMap.get(b.id), now),
+      ...nurseVisitNoteFieldsForBooking(b, visitNoteMap),
     });
   }
 

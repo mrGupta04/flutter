@@ -20,6 +20,9 @@ import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart'
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../data/repositories/booking_lifecycle_repository.dart';
+import '../../../../data/services/dio_service.dart';
+import '../widgets/reschedule_booking_sheet.dart';
 
 class UserDashboardScreen extends ConsumerStatefulWidget {
   const UserDashboardScreen({super.key});
@@ -106,6 +109,11 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                 : null,
             actions: [
               IconButton(
+                tooltip: 'Notifications',
+                onPressed: () => context.push(AppConstants.routeNotifications),
+                icon: const Icon(Icons.notifications_outlined),
+              ),
+              IconButton(
                 tooltip: 'Edit profile',
                 onPressed: user == null
                     ? null
@@ -124,12 +132,20 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: (value) async {
-                  if (value == 'logout') {
+                  if (value == 'favorites') {
+                    if (context.mounted) {
+                      context.push(AppConstants.routeFavorites);
+                    }
+                  } else if (value == 'logout') {
                     await ref.read(patientAuthProvider.notifier).logout();
                     if (context.mounted) context.go(AppConstants.routeUserHome);
                   }
                 },
                 itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'favorites',
+                    child: Text('Favorites'),
+                  ),
                   const PopupMenuItem(
                     value: 'logout',
                     child: Text('Log out'),
@@ -924,6 +940,84 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          context.push(
+                            '${AppConstants.routeBookingTimeline}?bookingId=${booking.id}',
+                          );
+                        },
+                        icon: const Icon(Icons.timeline, size: 16),
+                        label: const Text('Track'),
+                      ),
+                      if (booking.canChat)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            context.push(
+                              '${AppConstants.routeBookingChat}?bookingId=${booking.id}&title=${Uri.encodeComponent(booking.doctorName)}',
+                            );
+                          },
+                          icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                          label: const Text('Chat'),
+                        ),
+                      if (booking.hasVisitNote)
+                        OutlinedButton.icon(
+                          onPressed: () => _showVisitNote(context, booking.id),
+                          icon: const Icon(Icons.note_alt_outlined, size: 16),
+                          label: const Text('Care summary'),
+                        ),
+                      if (booking.canCancel && isUpcoming)
+                        OutlinedButton.icon(
+                          onPressed: () => _cancelBooking(context, ref),
+                          icon: const Icon(Icons.cancel_outlined, size: 16),
+                          label: const Text('Cancel'),
+                        ),
+                      if (booking.canCancel &&
+                          isUpcoming &&
+                          (booking.isConfirmed ||
+                              booking.isApprovedPendingPayment ||
+                              booking.status == 'pending'))
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final ok = await showRescheduleBookingSheet(
+                              context,
+                              booking: booking,
+                            );
+                            if (ok && onRefresh != null) await onRefresh!();
+                            if (ok && context.mounted) {
+                              SnackBarHelper.showSuccess(
+                                context,
+                                'Visit rescheduled',
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.event_repeat, size: 16),
+                          label: const Text('Reschedule'),
+                        ),
+                      if (!isUpcoming &&
+                          (booking.serviceType == 'doctor' ||
+                              booking.serviceType == 'nurse'))
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            if (booking.isNurseVisit) {
+                              context.push(
+                                '${AppConstants.routeNurseProfile}?id=${booking.providerId}',
+                              );
+                            } else {
+                              context.push(
+                                '${AppConstants.routeDoctorProfile}?id=${booking.providerId}',
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.replay, size: 16),
+                          label: const Text('Book again'),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -931,6 +1025,101 @@ class _BookingCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _cancelBooking(BuildContext context, WidgetRef ref) async {
+    final repo = BookingLifecycleRepository();
+    try {
+      final policy = await repo.fetchPolicy(booking.id);
+      if (!context.mounted) return;
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Cancel booking?'),
+          content: Text(policy.message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Keep'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Cancel booking'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+      await repo.cancel(booking.id);
+      if (context.mounted) {
+        SnackBarHelper.showSuccess(context, 'Booking cancelled');
+      }
+      if (onRefresh != null) await onRefresh!();
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarHelper.showError(
+          context,
+          e.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
+  }
+
+  Future<void> _showVisitNote(BuildContext context, String bookingId) async {
+    try {
+      final dio = DioService();
+      final response =
+          await dio.get(AppConstants.endpointPatientVisitNote(bookingId));
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      if (!context.mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Care summary',
+                style: AppTextStyles.titleMedium.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(data['careSummary']?.toString() ?? ''),
+              if ((data['vitals']?.toString() ?? '').isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text('Vitals: ${data['vitals']}'),
+              ],
+              if ((data['proceduresDone']?.toString() ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Procedures: ${data['proceduresDone']}'),
+              ],
+              if ((data['advice']?.toString() ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Advice: ${data['advice']}'),
+              ],
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarHelper.showError(
+          context,
+          e.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
   }
 }
 

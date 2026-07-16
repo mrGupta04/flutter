@@ -7,23 +7,25 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
+import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/bookable_slot_model.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
+import '../../../../shared/widgets/appointment_code_display.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
+import '../../../../shared/widgets/consultation_booking_price_summary.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
+import '../../../../shared/widgets/doctor_hospital_map_card.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/prescription_included_banner.dart';
 import '../../../../shared/widgets/previous_reports_picker.dart';
-import '../../../user_auth/provider/patient_auth_provider.dart';
-import '../../../../core/utils/user_auth_guard.dart';
-import '../../provider/online_consult_provider.dart';
 import '../../../hospital_visit/provider/hospital_visit_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
+import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../online_consult_navigation.dart';
-import '../../../../shared/widgets/appointment_code_display.dart';
+import '../../provider/online_consult_provider.dart';
 
 class OnlineConsultBookingScreen extends ConsumerStatefulWidget {
   const OnlineConsultBookingScreen({super.key, required this.doctorId});
@@ -364,6 +366,13 @@ class _OnlineConsultBookingScreenState
                       onTypeSelected: (type) =>
                           _onConsultationTypeSelected(type, doctor),
                     ),
+                    const SizedBox(height: 12),
+                    ConsultationBookingPriceSummary(
+                      doctor: doctor,
+                      consultationType: _selectedType,
+                      slotsConsultationFee:
+                          slotsAsync.valueOrNull?.consultationFee,
+                    ),
                     if (!_isHospitalVisit) ...[
                       const SizedBox(height: 12),
                       const PrescriptionIncludedBanner(compact: true),
@@ -602,20 +611,24 @@ class _OnlineConsultBookingScreenState
                 label: selectedSlot != null
                     ? (_isHospitalVisit
                         ? (() {
-                            final fee = slotsAsync.valueOrNull?.consultationFee ??
-                                doctor.feeForConsultationType(
-                                  ConsultationType.visitSite,
-                                );
+                            final fee = resolvePayableConsultationFee(
+                              doctor: doctor,
+                              type: ConsultationType.visitSite,
+                              slotsConsultationFee:
+                                  slotsAsync.valueOrNull?.consultationFee,
+                            );
                             return fee != null && fee > 0
                                 ? 'Pay ₹$fee & book visit'
                                 : 'Pay & book visit';
                           })()
                         : _payButtonLabel(
                             selectedSlot,
-                            slotsAsync.valueOrNull?.consultationFee ??
-                                doctor.feeForConsultationType(
-                                  ConsultationType.onlineConsult,
-                                ),
+                            resolvePayableConsultationFee(
+                              doctor: doctor,
+                              type: ConsultationType.onlineConsult,
+                              slotsConsultationFee:
+                                  slotsAsync.valueOrNull?.consultationFee,
+                            ),
                           ))
                     : (_isHospitalVisit
                         ? 'Select appointment time'
@@ -784,6 +797,12 @@ class _DoctorHeader extends StatelessWidget {
                   ],
                 ],
               ),
+            ),
+            const SizedBox(height: 12),
+            DoctorHospitalMapCard(
+              doctor: doctor,
+              clinicName: clinicName,
+              clinicAddress: clinicAddress,
             ),
           ],
         ],

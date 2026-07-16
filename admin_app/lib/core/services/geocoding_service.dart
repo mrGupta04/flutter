@@ -30,6 +30,83 @@ class GeocodingService {
     ),
   );
 
+  /// Address text → coordinates (for manual address entry).
+  static Future<GeocodedPlace> forwardGeocode({
+    required String address,
+    String? city,
+    String? state,
+    String? pincode,
+  }) async {
+    final queryParts = [
+      address.trim(),
+      if (city != null && city.trim().isNotEmpty) city.trim(),
+      if (state != null && state.trim().isNotEmpty) state.trim(),
+      if (pincode != null && pincode.trim().isNotEmpty) pincode.trim(),
+      'India',
+    ];
+    final query = queryParts.join(', ');
+    if (address.trim().isEmpty) {
+      throw GeocodingFailure('Enter an address first.');
+    }
+
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        'https://nominatim.openstreetmap.org/search',
+        queryParameters: {
+          'q': query,
+          'format': 'json',
+          'addressdetails': 1,
+          'limit': 1,
+          'countrycodes': 'in',
+        },
+      );
+
+      final list = response.data;
+      if (list == null || list.isEmpty) {
+        throw GeocodingFailure(
+          'Could not find that address on the map. Check spelling or try map pin.',
+        );
+      }
+
+      final first = list.first;
+      if (first is! Map<String, dynamic>) {
+        throw GeocodingFailure('Could not find that address on the map.');
+      }
+
+      final lat = double.tryParse('${first['lat']}');
+      final lon = double.tryParse('${first['lon']}');
+      if (lat == null || lon == null) {
+        throw GeocodingFailure('Could not find that address on the map.');
+      }
+
+      final addr = first['address'];
+      final resolved = addr is Map<String, dynamic>
+          ? _fromNominatimAddress(addr, first['display_name'] as String?)
+          : ResolvedAddress(
+              address: address.trim(),
+              city: city?.trim() ?? '',
+              state: state?.trim() ?? '',
+              pincode: pincode?.trim() ?? '',
+            );
+
+      return GeocodedPlace(
+        latitude: lat,
+        longitude: lon,
+        address: resolved,
+      );
+    } on DioException catch (e) {
+      throw GeocodingFailure(
+        e.response?.statusCode == 429
+            ? 'Too many address lookups. Wait a moment and try again.'
+            : 'Could not look up address. Check your internet connection.',
+      );
+    } on GeocodingFailure {
+      rethrow;
+    } catch (_) {
+      throw GeocodingFailure('Could not look up that address.');
+    }
+  }
+
   static Future<ResolvedAddress> reverseGeocode({
     required double latitude,
     required double longitude,
@@ -146,6 +223,19 @@ class GeocodingService {
     }
     return null;
   }
+}
+
+/// Coordinates plus resolved address from a forward geocode search.
+class GeocodedPlace {
+  const GeocodedPlace({
+    required this.latitude,
+    required this.longitude,
+    required this.address,
+  });
+
+  final double latitude;
+  final double longitude;
+  final ResolvedAddress address;
 }
 
 class GeocodingFailure implements Exception {

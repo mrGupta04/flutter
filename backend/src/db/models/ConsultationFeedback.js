@@ -5,7 +5,8 @@ const consultationFeedbackSchema = new mongoose.Schema(
     id: { type: String, required: true, unique: true, index: true },
     bookingId: { type: String, required: true, unique: true, index: true },
     patientId: { type: String, required: true, index: true },
-    doctorId: { type: String, required: true, index: true },
+    doctorId: { type: String, index: true },
+    nurseId: { type: String, index: true },
     consultationType: {
       type: String,
       enum: ['online_consult', 'book_home', 'visit_site'],

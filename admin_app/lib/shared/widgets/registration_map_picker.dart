@@ -6,6 +6,7 @@ import '../../core/services/geocoding_service.dart';
 import '../../core/services/location_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/text_controller_utils.dart';
 import '../../core/widgets/custom_widgets.dart';
 
 /// Map + GPS picker that auto-fills address fields from reverse geocoding.
@@ -83,10 +84,18 @@ class _RegistrationMapPickerState extends State<RegistrationMapPicker> {
   }
 
   void _fillAddressFields(ResolvedAddress resolved) {
-    widget.addressController?.text = resolved.address;
-    widget.cityController?.text = resolved.city;
-    widget.stateController?.text = resolved.state;
-    widget.pincodeController?.text = resolved.pincode;
+    if (widget.addressController != null) {
+      setControllerText(widget.addressController!, resolved.address);
+    }
+    if (widget.cityController != null) {
+      setControllerText(widget.cityController!, resolved.city);
+    }
+    if (widget.stateController != null) {
+      setControllerText(widget.stateController!, resolved.state);
+    }
+    if (widget.pincodeController != null) {
+      setControllerText(widget.pincodeController!, resolved.pincode);
+    }
     widget.onAddressResolved?.call(
       address: resolved.address,
       city: resolved.city,

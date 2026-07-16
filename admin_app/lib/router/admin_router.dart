@@ -35,6 +35,9 @@ import '../features/doctor_registration/presentation/screens/application_submitt
 import '../features/doctor_registration/presentation/screens/registration_form_screen.dart';
 import '../features/nurse_registration/presentation/screens/nurse_application_submitted_screen.dart';
 import '../features/nurse_dashboard/presentation/screens/nurse_dashboard_screen.dart';
+import '../features/earnings/presentation/screens/provider_earnings_screen.dart';
+import '../features/notifications/presentation/screens/provider_notifications_screen.dart';
+import '../features/booking_chat/presentation/screens/provider_booking_chat_screen.dart';
 import '../features/nurse_registration/presentation/screens/nurse_registration_screen.dart';
 import '../features/auth/presentation/screens/provider_auth_gate_screen.dart';
 import '../features/auth/presentation/screens/provider_login_screen.dart';
@@ -266,6 +269,45 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           state,
           const NurseDashboardScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeProviderEarnings,
+        name: 'providerEarnings',
+        pageBuilder: (context, state) {
+          final role = state.uri.queryParameters['role'] ?? 'doctor';
+          return slidePage(
+            state,
+            ProviderEarningsScreen(role: role),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeProviderNotifications,
+        name: 'providerNotifications',
+        pageBuilder: (context, state) {
+          final role = state.uri.queryParameters['role'] ?? 'doctor';
+          return slidePage(
+            state,
+            ProviderNotificationsScreen(role: role),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeProviderBookingChat,
+        name: 'providerBookingChat',
+        pageBuilder: (context, state) {
+          final role = state.uri.queryParameters['role'] ?? 'doctor';
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          final title = state.uri.queryParameters['title'] ?? 'Chat';
+          return slidePage(
+            state,
+            ProviderBookingChatScreen(
+              bookingId: bookingId,
+              role: role,
+              title: title,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeScanDashboard,

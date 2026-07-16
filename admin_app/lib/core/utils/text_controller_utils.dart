@@ -20,3 +20,11 @@ VoidCallback addTextChangeListener(
   controller.addListener(listener);
   return listener;
 }
+
+/// Sets controller text with the caret at the end (does not select all).
+void setControllerText(TextEditingController controller, String text) {
+  controller.value = TextEditingValue(
+    text: text,
+    selection: TextSelection.collapsed(offset: text.length),
+  );
+}

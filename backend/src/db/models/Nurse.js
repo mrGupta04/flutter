@@ -43,6 +43,7 @@ const nurseSchema = new mongoose.Schema(
     averageRating: { type: Number, default: null },
     ratingCount: { type: Number, default: 0 },
     lastActiveAt: { type: Date, default: null, index: true },
+    fcmTokens: { type: [String], default: [] },
   },
   { timestamps: true },
 );

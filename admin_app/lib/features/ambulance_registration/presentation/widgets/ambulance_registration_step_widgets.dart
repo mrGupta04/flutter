@@ -17,7 +17,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/ambulance_driver_model.dart';
 import '../../../../data/models/ambulance_vehicle_model.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
-import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/registration_location_input.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../provider/ambulance_registration_provider.dart';
 
@@ -1064,6 +1064,8 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
   double? _lat;
   double? _lng;
   bool _available24x7 = false;
+  RegistrationLocationInputMode _locationMode =
+      RegistrationLocationInputMode.manual;
 
   @override
   bool get wantKeepAlive => true;
@@ -1120,50 +1122,17 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
           children: [
             Text('Location & Coverage', style: AppTextStyles.titleLarge),
             const SizedBox(height: 16),
-            CustomTextField(
-              controller: _address,
-              label: 'Base Address',
-              hint: 'Full address',
-              prefixIcon: Icons.home_outlined,
-              validator: ValidationUtils.validateAddress,
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _city,
-              label: 'City',
-              hint: 'Your city',
-              prefixIcon: Icons.location_city_outlined,
-              validator: ValidationUtils.validateCity,
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _state,
-              label: 'State',
-              hint: 'Your state',
-              prefixIcon: Icons.map_outlined,
-              validator: ValidationUtils.validateState,
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _pincode,
-              label: 'Pincode',
-              hint: '6-digit pincode',
-              prefixIcon: Icons.pin_drop_outlined,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(6),
-              ],
-              validator: ValidationUtils.validatePincode,
-            ),
-            const SizedBox(height: 16),
-            RegistrationMapPicker(
+            RegistrationLocationBlock(
+              mode: _locationMode,
+              onModeChanged: (mode) => setState(() => _locationMode = mode),
               addressController: _address,
               cityController: _city,
               stateController: _state,
               pincodeController: _pincode,
-              initialLatitude: _lat,
-              initialLongitude: _lng,
+              addressLabel: 'Base Address',
+              addressHint: 'Full address',
+              latitude: _lat,
+              longitude: _lng,
               onLocationChanged: (lat, lng) {
                 setState(() {
                   _lat = lat;
@@ -1171,30 +1140,34 @@ class _AmbulanceStep5LocationState extends ConsumerState<AmbulanceStep5Location>
                 });
                 _sync();
               },
-              emptyHint: 'Pin your base/dispatch location on the map.',
-              webTitle: 'Base location',
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _serviceArea,
-              label: 'Service Coverage Area',
-              hint: 'Cities/areas you serve',
-              prefixIcon: Icons.my_location_outlined,
-              validator: (v) => ValidationUtils.validateRequired(
-                v,
-                fieldName: 'Service coverage area',
-                minLength: 2,
+              mapEmptyHint: 'Pin your base/dispatch location on the map.',
+              mapWebTitle: 'Base location',
+              footer: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomTextField(
+                    controller: _serviceArea,
+                    label: 'Service Coverage Area',
+                    hint: 'Cities/areas you serve',
+                    prefixIcon: Icons.my_location_outlined,
+                    validator: (v) => ValidationUtils.validateRequired(
+                      v,
+                      fieldName: 'Service coverage area',
+                      minLength: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Available 24x7'),
+                    value: _available24x7,
+                    onChanged: (v) {
+                      setState(() => _available24x7 = v);
+                      _sync();
+                    },
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Available 24x7'),
-              value: _available24x7,
-              onChanged: (v) {
-                setState(() => _available24x7 = v);
-                _sync();
-              },
             ),
           ],
         ),

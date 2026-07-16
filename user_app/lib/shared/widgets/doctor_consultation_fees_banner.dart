@@ -23,13 +23,22 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onlineFee = doctor.offersOnlineConsult
-        ? doctor.feeForConsultationType(ConsultationType.onlineConsult)
+        ? doctor.effectiveFeeForConsultationType(ConsultationType.onlineConsult)
+        : null;
+    final onlineOriginal = doctor.offersOnlineConsult
+        ? doctor.originalFeeForConsultationType(ConsultationType.onlineConsult)
         : null;
     final visitFee = doctor.offersVisitSite
-        ? doctor.feeForConsultationType(ConsultationType.visitSite)
+        ? doctor.effectiveFeeForConsultationType(ConsultationType.visitSite)
+        : null;
+    final visitOriginal = doctor.offersVisitSite
+        ? doctor.originalFeeForConsultationType(ConsultationType.visitSite)
         : null;
     final homeFee = doctor.offersBookHome
-        ? doctor.feeForConsultationType(ConsultationType.bookHome)
+        ? doctor.effectiveFeeForConsultationType(ConsultationType.bookHome)
+        : null;
+    final homeOriginal = doctor.offersBookHome
+        ? doctor.originalFeeForConsultationType(ConsultationType.bookHome)
         : null;
 
     if (onlineFee == null && visitFee == null && homeFee == null) {
@@ -65,6 +74,7 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                         icon: Icons.videocam_rounded,
                         label: 'Online consult',
                         fee: onlineFee,
+                        originalFee: onlineOriginal,
                         highlighted:
                             highlightedType == ConsultationType.onlineConsult,
                         onTap: onTypeSelected != null && doctor.offersOnlineConsult
@@ -78,6 +88,7 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                         icon: Icons.local_hospital_rounded,
                         label: 'Hospital visit',
                         fee: visitFee,
+                        originalFee: visitOriginal,
                         highlighted:
                             highlightedType == ConsultationType.visitSite,
                         onTap: onTypeSelected != null && doctor.offersVisitSite
@@ -92,6 +103,7 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                   icon: Icons.home_rounded,
                   label: 'Home visit',
                   fee: homeFee,
+                  originalFee: homeOriginal,
                   highlighted: highlightedType == ConsultationType.bookHome,
                   fullWidth: true,
                   onTap: onTypeSelected != null && doctor.offersBookHome
@@ -109,6 +121,7 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                       icon: Icons.videocam_rounded,
                       label: 'Online consult',
                       fee: onlineFee,
+                      originalFee: onlineOriginal,
                       highlighted:
                           highlightedType == ConsultationType.onlineConsult,
                       onTap: onTypeSelected != null && doctor.offersOnlineConsult
@@ -125,6 +138,7 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                       icon: Icons.local_hospital_rounded,
                       label: 'Hospital visit',
                       fee: visitFee,
+                      originalFee: visitOriginal,
                       highlighted:
                           highlightedType == ConsultationType.visitSite,
                       onTap: onTypeSelected != null && doctor.offersVisitSite
@@ -140,6 +154,7 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                       icon: Icons.home_rounded,
                       label: 'Home visit',
                       fee: homeFee,
+                      originalFee: homeOriginal,
                       highlighted: highlightedType == ConsultationType.bookHome,
                       onTap: onTypeSelected != null && doctor.offersBookHome
                           ? () => onTypeSelected!(ConsultationType.bookHome)
@@ -152,6 +167,7 @@ class DoctorConsultationFeesBanner extends StatelessWidget {
                       icon: Icons.home_rounded,
                       label: 'Home visit',
                       fee: homeFee,
+                      originalFee: homeOriginal,
                       highlighted: highlightedType == ConsultationType.bookHome,
                       onTap: onTypeSelected != null && doctor.offersBookHome
                           ? () => onTypeSelected!(ConsultationType.bookHome)
@@ -172,6 +188,7 @@ class _FeeTile extends StatelessWidget {
     required this.label,
     required this.fee,
     required this.highlighted,
+    this.originalFee,
     this.fullWidth = false,
     this.onTap,
   });
@@ -179,6 +196,7 @@ class _FeeTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final int fee;
+  final int? originalFee;
   final bool highlighted;
   final bool fullWidth;
   final VoidCallback? onTap;
@@ -214,12 +232,26 @@ class _FeeTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            FormattingUtils.formatConsultationFee(fee),
-            style: AppTextStyles.titleSmall.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.primaryDark,
-            ),
+          Row(
+            children: [
+              Text(
+                FormattingUtils.formatConsultationFee(fee),
+                style: AppTextStyles.titleSmall.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+              if (originalFee != null && originalFee! > fee) ...[
+                const SizedBox(width: 6),
+                Text(
+                  FormattingUtils.formatConsultationFee(originalFee!),
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),

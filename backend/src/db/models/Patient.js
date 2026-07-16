@@ -15,6 +15,7 @@ const patientSchema = new mongoose.Schema(
     aadhaarLast4: { type: String, required: true },
     profilePicture: { type: String, required: true },
     aadhaarCardUrl: { type: String, required: true },
+    fcmTokens: { type: [String], default: [] },
   },
   { timestamps: true },
 );

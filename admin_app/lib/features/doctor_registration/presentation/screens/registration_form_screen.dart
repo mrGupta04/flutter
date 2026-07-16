@@ -175,12 +175,36 @@ class _RegistrationFormScreenState
         );
         return false;
       }
+      if (formState.offersOnlineConsult &&
+          ValidationUtils.validateOptionalOfferFee(
+                formState.onlineConsultOfferFee,
+                formState.onlineConsultFee,
+              ) !=
+              null) {
+        SnackBarHelper.showError(
+          context,
+          'Online offer price must be less than the regular online fee.',
+        );
+        return false;
+      }
       if (formState.offersVisitSite &&
           ValidationUtils.validateConsultationFee(formState.visitSiteFee) !=
               null) {
         SnackBarHelper.showError(
           context,
           'Enter a valid fee for hospital visit.',
+        );
+        return false;
+      }
+      if (formState.offersVisitSite &&
+          ValidationUtils.validateOptionalOfferFee(
+                formState.visitSiteOfferFee,
+                formState.visitSiteFee,
+              ) !=
+              null) {
+        SnackBarHelper.showError(
+          context,
+          'Hospital visit offer must be less than the regular hospital fee.',
         );
         return false;
       }
@@ -193,13 +217,25 @@ class _RegistrationFormScreenState
         );
         return false;
       }
+      if (formState.offersBookHome &&
+          ValidationUtils.validateOptionalOfferFee(
+                formState.homeVisitOfferFee,
+                formState.homeVisitFee,
+              ) !=
+              null) {
+        SnackBarHelper.showError(
+          context,
+          'Home visit offer must be less than the regular home visit fee.',
+        );
+        return false;
+      }
     }
 
     if (step == 3) {
       if (formState.latitude == null || formState.longitude == null) {
         SnackBarHelper.showError(
           context,
-          'Please select the clinic location on the map.',
+          'Please pin the clinic on the map, or locate your typed address.',
         );
         return false;
       }

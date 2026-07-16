@@ -1139,5 +1139,8 @@ router.post('/upload-document', upload.single('file'), async (req, res) => {
 
 
 
+const { attachProviderFeatureRoutes } = require('./providerFeatureRoutes');
+attachProviderFeatureRoutes(router, 'nurse');
+
 module.exports = router;
 

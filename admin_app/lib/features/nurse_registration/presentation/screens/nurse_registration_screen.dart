@@ -166,7 +166,7 @@ class _NurseRegistrationScreenState
       if (form.latitude == null || form.longitude == null) {
         SnackBarHelper.showError(
           context,
-          'Please select your location on the map.',
+          'Please pin your location on the map, or locate your typed address.',
         );
         return false;
       }

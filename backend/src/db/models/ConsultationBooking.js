@@ -64,6 +64,8 @@ const consultationBookingSchema = new mongoose.Schema(
     razorpayOrderId: { type: String, index: true },
     razorpayPaymentId: String,
     razorpaySignature: String,
+    razorpayRefundId: String,
+    refundedAt: Date,
     amountPaid: Number,
     currency: { type: String, default: 'INR' },
     paidAt: Date,
@@ -85,6 +87,30 @@ const consultationBookingSchema = new mongoose.Schema(
         uploadedAt: { type: Date, default: Date.now },
       },
     ],
+    /** Home-visit progress after confirmation. */
+    visitProgress: {
+      type: String,
+      enum: ['en_route', 'arrived', 'completed'],
+      default: undefined,
+    },
+    statusHistory: [
+      {
+        status: { type: String, required: true },
+        at: { type: Date, default: Date.now },
+        by: String,
+      },
+    ],
+    cancelledAt: Date,
+    cancelledBy: {
+      type: String,
+      enum: ['patient', 'doctor', 'nurse', 'system'],
+    },
+    cancellationReason: String,
+    refundEligible: Boolean,
+    refundPercent: Number,
+    noShowMarkedAt: Date,
+    noShowFeePercent: Number,
+    reminderSentAt: { type: Date, default: null, index: true },
   },
   { timestamps: true },
 );

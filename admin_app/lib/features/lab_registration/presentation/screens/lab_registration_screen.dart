@@ -14,7 +14,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/lab_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
-import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/registration_location_input.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../core/models/provider_type.dart';
 import '../../../provider/provider/provider_status_sync.dart';
@@ -56,6 +56,8 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
   bool _available24x7 = false;
   double? _latitude;
   double? _longitude;
+  RegistrationLocationInputMode _locationMode =
+      RegistrationLocationInputMode.manual;
   Uint8List? _logoBytes;
   String? _logoFileName;
   Uint8List? _coverBytes;
@@ -859,31 +861,59 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        Text('Address details', style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        CustomTextField(controller: _buildingController, label: 'Building name', prefixIcon: Icons.business_outlined),
-        const SizedBox(height: 12),
-        CustomTextField(controller: _streetController, label: 'Street', prefixIcon: Icons.signpost_outlined),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: CustomTextField(controller: _areaController, label: 'Area', prefixIcon: Icons.location_city_outlined)),
-            const SizedBox(width: 10),
-            Expanded(child: CustomTextField(controller: _landmarkController, label: 'Landmark', prefixIcon: Icons.place_outlined)),
-          ],
+        Text(
+          'Address details',
+          style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 12),
-        RegistrationMapPicker(
+        const SizedBox(height: 8),
+        RegistrationLocationBlock(
+          mode: _locationMode,
+          onModeChanged: (mode) => setState(() => _locationMode = mode),
           addressController: _addressController,
           cityController: _cityController,
           stateController: _stateController,
           pincodeController: _pincodeController,
-          initialLatitude: _latitude,
-          initialLongitude: _longitude,
+          latitude: _latitude,
+          longitude: _longitude,
           onLocationChanged: (lat, lng) => setState(() {
             _latitude = lat;
             _longitude = lng;
           }),
+          extraManualTop: Column(
+            children: [
+              CustomTextField(
+                controller: _buildingController,
+                label: 'Building name',
+                prefixIcon: Icons.business_outlined,
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _streetController,
+                label: 'Street',
+                prefixIcon: Icons.signpost_outlined,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomTextField(
+                      controller: _areaController,
+                      label: 'Area',
+                      prefixIcon: Icons.location_city_outlined,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: CustomTextField(
+                      controller: _landmarkController,
+                      label: 'Landmark',
+                      prefixIcon: Icons.place_outlined,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         Row(

@@ -10,6 +10,8 @@ import '../../../../data/models/doctor_booking_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/patient_location_map_card.dart';
+import '../../../../data/services/dio_service.dart';
 import '../../../auth/provider/provider_auth_provider.dart';
 import '../../../doctor_registration/presentation/widgets/weekly_availability_picker.dart';
 import '../../provider/nurse_dashboard_provider.dart';
@@ -23,12 +25,33 @@ class NurseDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
+  int _unreadNotifications = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(nurseDashboardProvider.notifier).refreshAll();
+      _loadUnreadNotifications();
     });
+  }
+
+  Future<void> _loadUnreadNotifications() async {
+    try {
+      final response =
+          await DioService().get(AppConstants.endpointNurseNotifications);
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      if (!mounted) return;
+      setState(() {
+        _unreadNotifications = (data['unreadCount'] as num?)?.toInt() ?? 0;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _openNotifications() async {
+    await context.push('${AppConstants.routeProviderNotifications}?role=nurse');
+    if (mounted) _loadUnreadNotifications();
   }
 
   Future<void> _logout() async {
@@ -48,6 +71,22 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
       appBar: AppBar(
         title: const Text('My home visits'),
         actions: [
+          IconButton(
+            icon: Badge(
+              isLabelVisible: _unreadNotifications > 0,
+              label: Text('$_unreadNotifications'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            tooltip: 'Notifications',
+            onPressed: _openNotifications,
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            tooltip: 'Earnings',
+            onPressed: () => context.push(
+              '${AppConstants.routeProviderEarnings}?role=nurse',
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh',
@@ -316,6 +355,10 @@ class _PendingRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final addressLine = booking.patientLocationLine;
+    final hasCoords =
+        booking.patientLatitude != null && booking.patientLongitude != null;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
@@ -336,15 +379,31 @@ class _PendingRequestCard extends StatelessWidget {
                 color: AppColors.textSecondary,
               ),
             ),
-            if (booking.patientAddress != null) ...[
+            if (addressLine != null) ...[
               const SizedBox(height: 6),
               Text(
-                [
-                  booking.patientAddress,
-                  booking.patientCity,
-                  booking.patientPincode,
-                ].where((e) => (e ?? '').isNotEmpty).join(', '),
+                addressLine,
                 style: AppTextStyles.bodySmall,
+              ),
+            ],
+            if (booking.distanceKm != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Distance: ${booking.distanceKm} km',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            if (hasCoords) ...[
+              const SizedBox(height: 10),
+              PatientLocationMapCard(
+                latitude: booking.patientLatitude!,
+                longitude: booking.patientLongitude!,
+                addressLine: addressLine,
+                title: 'Patient location',
+                mapHeight: 170,
               ),
             ],
             if (booking.visitReason != null &&
@@ -382,14 +441,237 @@ class _BookingTile extends StatelessWidget {
 
   final DoctorBookingModel booking;
 
+  Future<void> _setProgress(BuildContext context, String progress) async {
+    try {
+      await DioService().post(
+        AppConstants.endpointNurseVisitProgress(booking.id),
+        data: {'progress': progress},
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Marked as ${progress.replaceAll('_', ' ')}')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _writeVisitNote(BuildContext context) async {
+    final summaryCtrl = TextEditingController();
+    final vitalsCtrl = TextEditingController();
+    final proceduresCtrl = TextEditingController();
+    final adviceCtrl = TextEditingController();
+    var followUpNeeded = false;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Care summary',
+                  style: AppTextStyles.titleSmall.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: summaryCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Care summary *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: vitalsCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Vitals (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: proceduresCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Procedures done (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: adviceCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Advice (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: followUpNeeded,
+                  onChanged: (v) =>
+                      setModalState(() => followUpNeeded = v ?? false),
+                  title: const Text('Follow-up visit needed'),
+                ),
+                const SizedBox(height: 8),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Save & share with patient'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok != true || summaryCtrl.text.trim().isEmpty) return;
+    try {
+      await DioService().post(
+        AppConstants.endpointNurseVisitNote(booking.id),
+        data: {
+          'careSummary': summaryCtrl.text.trim(),
+          if (vitalsCtrl.text.trim().isNotEmpty) 'vitals': vitalsCtrl.text.trim(),
+          if (proceduresCtrl.text.trim().isNotEmpty)
+            'proceduresDone': proceduresCtrl.text.trim(),
+          if (adviceCtrl.text.trim().isNotEmpty) 'advice': adviceCtrl.text.trim(),
+          'followUpNeeded': followUpNeeded,
+        },
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Care summary shared with patient')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final addressLine = booking.patientLocationLine;
+    final hasCoords =
+        booking.patientLatitude != null && booking.patientLongitude != null;
+    final isConfirmed = booking.status == 'confirmed';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: const Icon(Icons.home_outlined, color: AppColors.primary),
-        title: Text(booking.patientName ?? 'Patient'),
-        subtitle: Text(booking.subtitle ?? ''),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.home_outlined, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        booking.patientName ?? 'Patient',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        booking.subtitle ?? '',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (addressLine != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                addressLine,
+                style: AppTextStyles.bodySmall,
+              ),
+            ],
+            if (booking.distanceKm != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${booking.distanceKm} km from you',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            if (hasCoords) ...[
+              const SizedBox(height: 10),
+              PatientLocationMapCard(
+                latitude: booking.patientLatitude!,
+                longitude: booking.patientLongitude!,
+                addressLine: addressLine,
+                title: 'Patient location',
+                mapHeight: 150,
+              ),
+            ],
+            if (isConfirmed) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => _setProgress(context, 'en_route'),
+                    child: const Text('On the way'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => _setProgress(context, 'arrived'),
+                    child: const Text('Arrived'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => _setProgress(context, 'completed'),
+                    child: const Text('Completed'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => _writeVisitNote(context),
+                    child: const Text('Care summary'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push(
+                      '${AppConstants.routeProviderBookingChat}'
+                      '?role=nurse&bookingId=${booking.id}'
+                      '&title=${Uri.encodeComponent(booking.patientName ?? "Patient")}',
+                    ),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                    label: const Text('Chat'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

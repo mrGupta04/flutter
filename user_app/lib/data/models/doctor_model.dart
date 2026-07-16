@@ -32,6 +32,9 @@ class DoctorModel {
   final int? onlineConsultFee;
   final int? homeVisitFee;
   final int? visitSiteFee;
+  final int? onlineConsultOfferFee;
+  final int? homeVisitOfferFee;
+  final int? visitSiteOfferFee;
   final bool offersOnlineConsult;
   final bool offersBookHome;
   final bool offersVisitSite;
@@ -102,6 +105,9 @@ class DoctorModel {
     this.onlineConsultFee,
     this.homeVisitFee,
     this.visitSiteFee,
+    this.onlineConsultOfferFee,
+    this.homeVisitOfferFee,
+    this.visitSiteOfferFee,
     this.offersOnlineConsult = false,
     this.offersBookHome = false,
     this.offersVisitSite = false,
@@ -182,9 +188,44 @@ class DoctorModel {
     }
   }
 
+  int? offerFeeForConsultationType(ConsultationType type) {
+    switch (type) {
+      case ConsultationType.onlineConsult:
+        return onlineConsultOfferFee;
+      case ConsultationType.bookHome:
+        return homeVisitOfferFee;
+      case ConsultationType.visitSite:
+        return visitSiteOfferFee;
+    }
+  }
+
+  /// Payable fee: offer price when it is lower than the regular fee.
+  int? effectiveFeeForConsultationType(ConsultationType type) {
+    final regular = feeForConsultationType(type);
+    final offer = offerFeeForConsultationType(type);
+    if (offer != null && offer > 0 && (regular == null || offer < regular)) {
+      return offer;
+    }
+    return regular;
+  }
+
+  /// Strikethrough (regular) price when an offer is active for [type].
+  int? originalFeeForConsultationType(ConsultationType type) {
+    final regular = feeForConsultationType(type);
+    final offer = offerFeeForConsultationType(type);
+    if (offer != null &&
+        offer > 0 &&
+        regular != null &&
+        regular > 0 &&
+        offer < regular) {
+      return regular;
+    }
+    return null;
+  }
+
   int? get lowestConsultationFee {
     final fees = availableConsultationTypes
-        .map(feeForConsultationType)
+        .map(effectiveFeeForConsultationType)
         .whereType<int>()
         .where((fee) => fee > 0)
         .toList();
@@ -277,6 +318,9 @@ class DoctorModel {
       onlineConsultFee: _parseInt(json['onlineConsultFee']),
       homeVisitFee: _parseInt(json['homeVisitFee']),
       visitSiteFee: _parseInt(json['visitSiteFee']),
+      onlineConsultOfferFee: _parseInt(json['onlineConsultOfferFee']),
+      homeVisitOfferFee: _parseInt(json['homeVisitOfferFee']),
+      visitSiteOfferFee: _parseInt(json['visitSiteOfferFee']),
       offersOnlineConsult: json['offersOnlineConsult'] as bool? ?? false,
       offersBookHome: json['offersBookHome'] as bool? ?? false,
       offersVisitSite: json['offersVisitSite'] as bool? ?? false,
@@ -342,6 +386,9 @@ class DoctorModel {
       'onlineConsultFee': onlineConsultFee,
       'homeVisitFee': homeVisitFee,
       'visitSiteFee': visitSiteFee,
+      'onlineConsultOfferFee': onlineConsultOfferFee,
+      'homeVisitOfferFee': homeVisitOfferFee,
+      'visitSiteOfferFee': visitSiteOfferFee,
       'offersOnlineConsult': offersOnlineConsult,
       'offersBookHome': offersBookHome,
       'offersVisitSite': offersVisitSite,
@@ -402,6 +449,9 @@ class DoctorModel {
     int? onlineConsultFee,
     int? homeVisitFee,
     int? visitSiteFee,
+    int? onlineConsultOfferFee,
+    int? homeVisitOfferFee,
+    int? visitSiteOfferFee,
     bool? offersOnlineConsult,
     bool? offersBookHome,
     bool? offersVisitSite,
@@ -459,6 +509,10 @@ class DoctorModel {
       onlineConsultFee: onlineConsultFee ?? this.onlineConsultFee,
       homeVisitFee: homeVisitFee ?? this.homeVisitFee,
       visitSiteFee: visitSiteFee ?? this.visitSiteFee,
+      onlineConsultOfferFee:
+          onlineConsultOfferFee ?? this.onlineConsultOfferFee,
+      homeVisitOfferFee: homeVisitOfferFee ?? this.homeVisitOfferFee,
+      visitSiteOfferFee: visitSiteOfferFee ?? this.visitSiteOfferFee,
       offersOnlineConsult: offersOnlineConsult ?? this.offersOnlineConsult,
       offersBookHome: offersBookHome ?? this.offersBookHome,
       offersVisitSite: offersVisitSite ?? this.offersVisitSite,

@@ -193,6 +193,24 @@ async function finalizeAndDeliverPrescription({
     }
   }
 
+  if (booking.patientId) {
+    try {
+      const {
+        createAndPushNotification,
+      } = require('../db/notificationRepositories');
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: 'Prescription ready',
+        body: `Dr. ${doctorName} has shared your prescription.`,
+        type: 'prescription_ready',
+        data: { bookingId: booking.id },
+      });
+    } catch (notifyErr) {
+      console.error('[prescription] Push failed:', notifyErr.message);
+    }
+  }
+
   return {
     prescription: formatPrescriptionResponse(finalized, doctor, booking),
     email: emailResult,

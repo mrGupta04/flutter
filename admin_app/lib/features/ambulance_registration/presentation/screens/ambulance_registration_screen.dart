@@ -191,7 +191,7 @@ class _AmbulanceRegistrationScreenState
       if (form.latitude == null || form.longitude == null) {
         SnackBarHelper.showError(
           context,
-          'Please select your base location on the map.',
+          'Please pin your base location on the map, or locate your typed address.',
         );
         return false;
       }

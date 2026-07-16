@@ -14,7 +14,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/models.dart';
 import '../../../../shared/widgets/app_shell.dart';
 import '../../../../shared/widgets/gender_radio_field.dart';
-import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/registration_location_input.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../provider/registration_provider.dart';
 import 'weekly_availability_picker.dart';
@@ -510,6 +510,9 @@ class _Step2ProfessionalDetailsState
   late TextEditingController _onlineFeeController;
   late TextEditingController _homeFeeController;
   late TextEditingController _visitSiteFeeController;
+  late TextEditingController _onlineOfferFeeController;
+  late TextEditingController _homeOfferFeeController;
+  late TextEditingController _visitSiteOfferFeeController;
   late TextEditingController _bioController;
 
   @override
@@ -533,6 +536,12 @@ class _Step2ProfessionalDetailsState
     _homeFeeController = TextEditingController(text: formState.homeVisitFee);
     _visitSiteFeeController =
         TextEditingController(text: formState.visitSiteFee);
+    _onlineOfferFeeController =
+        TextEditingController(text: formState.onlineConsultOfferFee);
+    _homeOfferFeeController =
+        TextEditingController(text: formState.homeVisitOfferFee);
+    _visitSiteOfferFeeController =
+        TextEditingController(text: formState.visitSiteOfferFee);
     _bioController = TextEditingController(text: formState.bio);
 
     addTextChangeListener(_regNumberController, (_) => _syncProfessionalDetails());
@@ -552,6 +561,18 @@ class _Step2ProfessionalDetailsState
       _visitSiteFeeController,
       (_) => _syncConsultationFees(),
     );
+    addTextChangeListener(
+      _onlineOfferFeeController,
+      (_) => _syncConsultationFees(),
+    );
+    addTextChangeListener(
+      _homeOfferFeeController,
+      (_) => _syncConsultationFees(),
+    );
+    addTextChangeListener(
+      _visitSiteOfferFeeController,
+      (_) => _syncConsultationFees(),
+    );
     addTextChangeListener(_bioController, (_) => _syncProfessionalDetails());
   }
 
@@ -560,6 +581,9 @@ class _Step2ProfessionalDetailsState
           onlineConsultFee: _onlineFeeController.text,
           homeVisitFee: _homeFeeController.text,
           visitSiteFee: _visitSiteFeeController.text,
+          onlineConsultOfferFee: _onlineOfferFeeController.text,
+          homeVisitOfferFee: _homeOfferFeeController.text,
+          visitSiteOfferFee: _visitSiteOfferFeeController.text,
         );
   }
 
@@ -584,6 +608,9 @@ class _Step2ProfessionalDetailsState
     _onlineFeeController.dispose();
     _homeFeeController.dispose();
     _visitSiteFeeController.dispose();
+    _onlineOfferFeeController.dispose();
+    _homeOfferFeeController.dispose();
+    _visitSiteOfferFeeController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -719,6 +746,9 @@ class _Step2ProfessionalDetailsState
               onlineFeeController: _onlineFeeController,
               homeFeeController: _homeFeeController,
               visitSiteFeeController: _visitSiteFeeController,
+              onlineOfferFeeController: _onlineOfferFeeController,
+              homeOfferFeeController: _homeOfferFeeController,
+              visitSiteOfferFeeController: _visitSiteOfferFeeController,
             ),
           ],
         ],
@@ -743,6 +773,8 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
   late TextEditingController _cityController;
   late TextEditingController _stateController;
   late TextEditingController _pincodeController;
+  RegistrationLocationInputMode _locationMode =
+      RegistrationLocationInputMode.manual;
 
   @override
   bool get wantKeepAlive => true;
@@ -829,49 +861,16 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
         children: [
           Text('Clinic Address', style: AppTextStyles.titleLarge),
           const SizedBox(height: 16),
-          CustomTextField(
-            controller: _addressController,
-            label: 'Address',
-            hint: 'Street, building, area',
-            prefixIcon: Icons.location_on_outlined,
-            maxLines: 2,
-            validator: ValidationUtils.validateAddress,
-          ),
-          const SizedBox(height: 16),
-          CustomTextField(
-            controller: _cityController,
-            label: 'City',
-            hint: 'Delhi',
-            prefixIcon: Icons.location_city_outlined,
-            validator: ValidationUtils.validateCity,
-          ),
-          const SizedBox(height: 16),
-          CustomTextField(
-            controller: _stateController,
-            label: 'State',
-            hint: 'Delhi',
-            prefixIcon: Icons.map_outlined,
-            validator: ValidationUtils.validateState,
-          ),
-          const SizedBox(height: 16),
-          CustomTextField(
-            controller: _pincodeController,
-            label: 'Pincode',
-            hint: '110001',
-            prefixIcon: Icons.pin_drop_outlined,
-            keyboardType: TextInputType.number,
-            validator: ValidationUtils.validatePincode,
-          ),
-          const SizedBox(height: 20),
-          Text('Map Location', style: AppTextStyles.titleMedium),
-          const SizedBox(height: 8),
-          RegistrationMapPicker(
+          RegistrationLocationBlock(
+            mode: _locationMode,
+            onModeChanged: (mode) => setState(() => _locationMode = mode),
             addressController: _addressController,
             cityController: _cityController,
             stateController: _stateController,
             pincodeController: _pincodeController,
-            initialLatitude: ref.watch(registrationFormProvider).latitude,
-            initialLongitude: ref.watch(registrationFormProvider).longitude,
+            addressMaxLines: 2,
+            latitude: formState.latitude,
+            longitude: formState.longitude,
             onLocationChanged: (lat, lng) => ref
                 .read(registrationFormProvider.notifier)
                 .setLocation(latitude: lat, longitude: lng),
@@ -887,9 +886,9 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
                       stateName: state,
                       pincode: pincode,
                     ),
-            emptyHint:
+            mapEmptyHint:
                 'Tap the map or use current location to pin your clinic.',
-            webTitle: 'Clinic map location',
+            mapWebTitle: 'Clinic map location',
           ),
           const SizedBox(height: 24),
           Text('Hospital Photos', style: AppTextStyles.titleMedium),
@@ -1637,10 +1636,28 @@ class Step7ReviewSubmit extends ConsumerWidget {
               _ReviewItem('Clinic', formState.clinicName),
               if (formState.offersOnlineConsult)
                 _ReviewItem('Online fee (INR)', formState.onlineConsultFee),
+              if (formState.offersOnlineConsult &&
+                  formState.onlineConsultOfferFee.trim().isNotEmpty)
+                _ReviewItem(
+                  'Online offer (INR)',
+                  formState.onlineConsultOfferFee,
+                ),
               if (formState.offersVisitSite)
                 _ReviewItem('Hospital visit fee (INR)', formState.visitSiteFee),
+              if (formState.offersVisitSite &&
+                  formState.visitSiteOfferFee.trim().isNotEmpty)
+                _ReviewItem(
+                  'Hospital visit offer (INR)',
+                  formState.visitSiteOfferFee,
+                ),
               if (formState.offersBookHome)
                 _ReviewItem('Home visit fee (INR)', formState.homeVisitFee),
+              if (formState.offersBookHome &&
+                  formState.homeVisitOfferFee.trim().isNotEmpty)
+                _ReviewItem(
+                  'Home visit offer (INR)',
+                  formState.homeVisitOfferFee,
+                ),
               _ReviewItem(
                 'Languages',
                 formState.languagesSpoken.join(', '),
@@ -1934,6 +1951,9 @@ class _ConsultationFeesSection extends StatelessWidget {
     required this.onlineFeeController,
     required this.homeFeeController,
     required this.visitSiteFeeController,
+    required this.onlineOfferFeeController,
+    required this.homeOfferFeeController,
+    required this.visitSiteOfferFeeController,
   });
 
   final bool offersOnlineConsult;
@@ -1942,6 +1962,9 @@ class _ConsultationFeesSection extends StatelessWidget {
   final TextEditingController onlineFeeController;
   final TextEditingController homeFeeController;
   final TextEditingController visitSiteFeeController;
+  final TextEditingController onlineOfferFeeController;
+  final TextEditingController homeOfferFeeController;
+  final TextEditingController visitSiteOfferFeeController;
 
   @override
   Widget build(BuildContext context) {
@@ -1957,7 +1980,7 @@ class _ConsultationFeesSection extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Set a fee for each consultation type you offer.',
+          'Set a regular fee and an optional offer/discount price for each type you offer.',
           style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
         ),
         if (offersOnlineConsult) ...[
@@ -1970,6 +1993,18 @@ class _ConsultationFeesSection extends StatelessWidget {
             keyboardType: TextInputType.number,
             validator: ValidationUtils.validateConsultationFee,
           ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            controller: onlineOfferFeeController,
+            label: 'Online offer price (optional)',
+            hint: '399',
+            prefixIcon: Icons.local_offer_outlined,
+            keyboardType: TextInputType.number,
+            validator: (v) => ValidationUtils.validateOptionalOfferFee(
+              v,
+              onlineFeeController.text,
+            ),
+          ),
         ],
         if (offersVisitSite) ...[
           const SizedBox(height: 16),
@@ -1981,6 +2016,18 @@ class _ConsultationFeesSection extends StatelessWidget {
             keyboardType: TextInputType.number,
             validator: ValidationUtils.validateConsultationFee,
           ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            controller: visitSiteOfferFeeController,
+            label: 'Hospital visit offer price (optional)',
+            hint: '499',
+            prefixIcon: Icons.local_offer_outlined,
+            keyboardType: TextInputType.number,
+            validator: (v) => ValidationUtils.validateOptionalOfferFee(
+              v,
+              visitSiteFeeController.text,
+            ),
+          ),
         ],
         if (offersBookHome) ...[
           const SizedBox(height: 16),
@@ -1991,6 +2038,18 @@ class _ConsultationFeesSection extends StatelessWidget {
             prefixIcon: Icons.home_outlined,
             keyboardType: TextInputType.number,
             validator: ValidationUtils.validateConsultationFee,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            controller: homeOfferFeeController,
+            label: 'Home visit offer price (optional)',
+            hint: '699',
+            prefixIcon: Icons.local_offer_outlined,
+            keyboardType: TextInputType.number,
+            validator: (v) => ValidationUtils.validateOptionalOfferFee(
+              v,
+              homeFeeController.text,
+            ),
           ),
         ],
       ],

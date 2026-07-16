@@ -102,6 +102,10 @@ async function upsertDoctor(data) {
     onlineConsultFee: data.onlineConsultFee ?? existing?.onlineConsultFee,
     homeVisitFee: data.homeVisitFee ?? existing?.homeVisitFee,
     visitSiteFee: data.visitSiteFee ?? existing?.visitSiteFee,
+    onlineConsultOfferFee:
+      data.onlineConsultOfferFee ?? existing?.onlineConsultOfferFee,
+    homeVisitOfferFee: data.homeVisitOfferFee ?? existing?.homeVisitOfferFee,
+    visitSiteOfferFee: data.visitSiteOfferFee ?? existing?.visitSiteOfferFee,
     offersOnlineConsult:
       data.offersOnlineConsult ?? existing?.offersOnlineConsult ?? false,
     offersBookHome: data.offersBookHome ?? existing?.offersBookHome ?? false,
@@ -186,7 +190,33 @@ const CONSULTATION_TYPE_FEE_FIELDS = {
   visit_site: 'visitSiteFee',
 };
 
+const CONSULTATION_TYPE_OFFER_FEE_FIELDS = {
+  online_consult: 'onlineConsultOfferFee',
+  book_home: 'homeVisitOfferFee',
+  visit_site: 'visitSiteOfferFee',
+};
+
 function getConsultationFeeForType(doctor, consultationType) {
+  if (!doctor) return null;
+  const typeField = CONSULTATION_TYPE_FEE_FIELDS[consultationType];
+  const offerField = CONSULTATION_TYPE_OFFER_FEE_FIELDS[consultationType];
+  const regular =
+    typeField && doctor[typeField] != null && doctor[typeField] >= 1
+      ? doctor[typeField]
+      : doctor.consultationFee != null && doctor.consultationFee >= 1
+        ? doctor.consultationFee
+        : null;
+  const offer =
+    offerField && doctor[offerField] != null && doctor[offerField] >= 1
+      ? doctor[offerField]
+      : null;
+  if (offer != null && (regular == null || offer < regular)) {
+    return offer;
+  }
+  return regular;
+}
+
+function getRegularConsultationFeeForType(doctor, consultationType) {
   if (!doctor) return null;
   const typeField = CONSULTATION_TYPE_FEE_FIELDS[consultationType];
   if (typeField && doctor[typeField] != null && doctor[typeField] >= 1) {
@@ -442,6 +472,7 @@ module.exports = {
   touchDoctorPresence,
   clearDoctorPresence,
   getConsultationFeeForType,
+  getRegularConsultationFeeForType,
   getDoctorProfileMissingFields,
   isDoctorProfileCompleteForApproval,
   isDoctorProfilePublicDisplayable,

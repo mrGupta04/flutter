@@ -49,6 +49,33 @@ class AppConstants {
   static String endpointConsultationPrescription(String bookingId) =>
       '/consultations/$bookingId/prescription';
 
+  // Patient notifications / favorites / booking lifecycle
+  static const String endpointPatientNotifications = '/patient/notifications';
+  static String endpointPatientNotificationRead(String id) =>
+      '/patient/notifications/$id/read';
+  static const String endpointPatientNotificationsReadAll =
+      '/patient/notifications/read-all';
+  static const String endpointPatientDeviceToken = '/patient/device-token';
+  static const String endpointPatientFavorites = '/patient/favorites';
+  static String endpointPatientFavoriteCheck(
+          String providerType, String providerId) =>
+      '/patient/favorites/check/$providerType/$providerId';
+  static String endpointPatientFavoriteDelete(
+          String providerType, String providerId) =>
+      '/patient/favorites/$providerType/$providerId';
+  static String endpointPatientBookingTimeline(String bookingId) =>
+      '/patient/bookings/$bookingId/timeline';
+  static String endpointPatientBookingCancel(String bookingId) =>
+      '/patient/bookings/$bookingId/cancel';
+  static String endpointPatientBookingReschedule(String bookingId) =>
+      '/patient/bookings/$bookingId/reschedule';
+  static String endpointPatientBookingCancellationPolicy(String bookingId) =>
+      '/patient/bookings/$bookingId/cancellation-policy';
+  static String endpointPatientBookingChat(String bookingId) =>
+      '/patient/bookings/$bookingId/chat';
+  static String endpointPatientVisitNote(String bookingId) =>
+      '/patient/bookings/$bookingId/visit-note';
+
   // Nurse API Endpoints (patient discovery)
   static const String endpointGetNurseProfile = '/nurse/profile';
   static const String endpointVerifiedNurses = '/nurse/verified';
@@ -58,6 +85,7 @@ class AppConstants {
   static String endpointNurseSlotHoldRelease(String holdId) =>
       '/nurse/slot-hold/$holdId';
   static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
+  static const String endpointNurseFeedback = '/nurse/feedback';
 
   // Ambulance API Endpoints (patient discovery)
   static const String endpointVerifiedAmbulances = '/ambulance/verified';
@@ -144,6 +172,11 @@ class AppConstants {
   static const String routeHomeVisitBooking = '/home-visit';
   static const String routeNurseHomeVisitBooking = '/nurse-home-visit';
   static const String routeVideoConsult = '/video-consult';
+  static const String routeNotifications = '/notifications';
+  static const String routeFavorites = '/favorites';
+  static const String routeBookingChat = '/booking-chat';
+  static const String routeBookingTimeline = '/booking-timeline';
+  static const String routeVisitNote = '/visit-note';
 
   // Lab API Endpoints (patient discovery)
   static const String endpointGetLabProfile = '/lab/profile';

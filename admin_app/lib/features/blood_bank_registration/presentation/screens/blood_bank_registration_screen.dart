@@ -13,7 +13,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
-import '../../../../shared/widgets/registration_map_picker.dart';
+import '../../../../shared/widgets/registration_location_input.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../core/models/provider_type.dart';
 import '../../../provider/provider/provider_status_sync.dart';
@@ -53,6 +53,8 @@ class _BloodBankRegistrationScreenState
   String _countryCode = PhoneCountries.defaultDialCode;
   double? _latitude;
   double? _longitude;
+  RegistrationLocationInputMode _locationMode =
+      RegistrationLocationInputMode.manual;
   Uint8List? _profileBytes;
   String? _profileFileName;
   Uint8List? _logoBytes;
@@ -237,7 +239,10 @@ class _BloodBankRegistrationScreenState
           return false;
         }
         if (_latitude == null || _longitude == null) {
-          SnackBarHelper.showError(context, 'Select location on map.');
+          SnackBarHelper.showError(
+            context,
+            'Pin on the map or tap “Locate address on map” after entering your address.',
+          );
           return false;
         }
         return true;
@@ -590,53 +595,22 @@ class _BloodBankRegistrationScreenState
           prefixIcon: Icons.notes_outlined,
         ),
         const SizedBox(height: 12),
-        CustomTextField(
-          controller: _addressController,
-          label: 'Address',
-          prefixIcon: Icons.home_outlined,
-          validator: ValidationUtils.validateAddress,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: CustomTextField(
-                controller: _cityController,
-                label: 'City',
-                validator: ValidationUtils.validateCity,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: CustomTextField(
-                controller: _stateController,
-                label: 'State',
-                validator: ValidationUtils.validateState,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        CustomTextField(
-          controller: _pincodeController,
-          label: 'Pincode',
-          keyboardType: TextInputType.number,
-          validator: ValidationUtils.validatePincode,
-        ),
-        const SizedBox(height: 12),
-        RegistrationMapPicker(
+        RegistrationLocationBlock(
+          mode: _locationMode,
+          onModeChanged: (mode) => setState(() => _locationMode = mode),
           addressController: _addressController,
           cityController: _cityController,
           stateController: _stateController,
           pincodeController: _pincodeController,
-          initialLatitude: _latitude,
-          initialLongitude: _longitude,
+          compactCityState: true,
+          latitude: _latitude,
+          longitude: _longitude,
           onLocationChanged: (lat, lng) => setState(() {
             _latitude = lat;
             _longitude = lng;
           }),
-          emptyHint: 'Pin your blood bank on the map.',
-          webTitle: 'Blood bank location',
+          mapEmptyHint: 'Pin your blood bank on the map.',
+          mapWebTitle: 'Blood bank location',
         ),
       ],
     );

@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/doctor_location_utils.dart';
 import '../../../../core/utils/media_url_utils.dart';
+import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/bookable_slot_model.dart';
@@ -14,14 +16,15 @@ import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/appointment_code_display.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
+import '../../../../shared/widgets/consultation_booking_price_summary.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
+import '../../../../shared/widgets/doctor_hospital_map_card.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
-import '../../../user_auth/provider/patient_auth_provider.dart';
-import '../../../../core/utils/user_auth_guard.dart';
-import '../../provider/hospital_visit_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
+import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../provider/hospital_visit_provider.dart';
 
 class HospitalVisitBookingScreen extends ConsumerStatefulWidget {
   const HospitalVisitBookingScreen({super.key, required this.doctorId});
@@ -175,6 +178,14 @@ class _HospitalVisitBookingScreenState
             ),
           ),
           actions: [
+            if (doctorHasMapLocation(doctor))
+              TextButton.icon(
+                onPressed: () {
+                  openDoctorDirectionsInGoogleMaps(context, doctor);
+                },
+                icon: const Icon(Icons.directions_rounded),
+                label: const Text('Navigate'),
+              ),
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
@@ -278,6 +289,13 @@ class _HospitalVisitBookingScreenState
                             openHomeVisitBooking(context, doctor);
                           }
                         },
+                      ),
+                      const SizedBox(height: 12),
+                      ConsultationBookingPriceSummary(
+                        doctor: doctor,
+                        consultationType: ConsultationType.visitSite,
+                        slotsConsultationFee:
+                            slotsAsync.valueOrNull?.consultationFee,
                       ),
                       const SizedBox(height: 20),
                       slotsAsync.when(
@@ -454,10 +472,12 @@ class _HospitalVisitBookingScreenState
               child: CustomButton(
                 label: bookingState.selectedSlot != null
                     ? _payButtonLabel(
-                        slotsAsync.valueOrNull?.consultationFee ??
-                            doctor.feeForConsultationType(
-                              ConsultationType.visitSite,
-                            ),
+                        resolvePayableConsultationFee(
+                          doctor: doctor,
+                          type: ConsultationType.visitSite,
+                          slotsConsultationFee:
+                              slotsAsync.valueOrNull?.consultationFee,
+                        ),
                       )
                     : 'Select appointment time',
                 icon: Icons.payments_rounded,
@@ -617,6 +637,12 @@ class _DoctorClinicHeader extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          DoctorHospitalMapCard(
+            doctor: doctor,
+            clinicName: clinicName,
+            clinicAddress: clinicAddress,
           ),
         ],
       ),

@@ -13,6 +13,7 @@ const bloodBankRoutes = require('./routes/bloodBankRoutes');
 const labRoutes = require('./routes/labRoutes');
 const scanRoutes = require('./routes/scanRoutes');
 const patientRoutes = require('./routes/patientRoutes');
+const patientFeatureRoutes = require('./routes/patientFeatureRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const { getProviderInfo: getRazorpayInfo } = require('./services/razorpayService');
@@ -26,6 +27,9 @@ const {
 const {
   startPrescriptionAutoSendScheduler,
 } = require('./services/prescriptionAutoSendService');
+const {
+  startVisitReminderScheduler,
+} = require('./services/visitReminderService');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const app = express();
@@ -79,6 +83,7 @@ app.use('/api/v1/blood-bank', bloodBankRoutes);
 app.use('/api/v1/lab', labRoutes);
 app.use('/api/v1/scan', scanRoutes);
 app.use('/api/v1/patient', patientRoutes);
+app.use('/api/v1/patient', patientFeatureRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/consultations', consultationRoutes);
 app.use((req, res) => {
@@ -138,6 +143,7 @@ async function start() {
 
   void verifySmtpAtStartup();
   startPrescriptionAutoSendScheduler();
+  startVisitReminderScheduler();
 }
 
 async function verifySmtpAtStartup() {

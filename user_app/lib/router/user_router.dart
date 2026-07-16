@@ -26,6 +26,10 @@ import '../features/user_auth/presentation/screens/user_register_screen.dart';
 import '../features/user_dashboard/presentation/screens/edit_patient_profile_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_dashboard_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
+import '../features/notifications/presentation/screens/notifications_screen.dart';
+import '../features/favorites/presentation/screens/favorites_screen.dart';
+import '../features/booking_chat/presentation/screens/booking_chat_screen.dart';
+import '../features/booking_timeline/presentation/screens/booking_timeline_screen.dart';
 import '../features/labs/presentation/screens/lab_explore_screen.dart';
 import '../features/labs/presentation/screens/lab_detail_screen.dart';
 import '../features/labs/presentation/screens/lab_cart_screen.dart';
@@ -70,6 +74,47 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           state,
           const UserDashboardScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeNotifications,
+        name: 'notifications',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const NotificationsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeFavorites,
+        name: 'favorites',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const FavoritesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBookingChat,
+        name: 'bookingChat',
+        pageBuilder: (context, state) {
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          return slidePage(
+            state,
+            BookingChatScreen(
+              bookingId: bookingId,
+              title: state.uri.queryParameters['title'] ?? 'Chat',
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeBookingTimeline,
+        name: 'bookingTimeline',
+        pageBuilder: (context, state) {
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          return slidePage(
+            state,
+            BookingTimelineScreen(bookingId: bookingId),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeUserEditProfile,

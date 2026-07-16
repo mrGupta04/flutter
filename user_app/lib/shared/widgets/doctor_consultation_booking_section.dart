@@ -38,7 +38,8 @@ class DoctorConsultationBookingSection extends StatelessWidget {
           if (i > 0) const SizedBox(height: 12),
           _ConsultationOptionCard(
             type: types[i],
-            fee: doctor.feeForConsultationType(types[i]),
+            fee: doctor.effectiveFeeForConsultationType(types[i]),
+            originalFee: doctor.originalFeeForConsultationType(types[i]),
             onTap: () => onBook(types[i]),
           ),
         ],
@@ -56,10 +57,12 @@ class _ConsultationOptionCard extends StatelessWidget {
     required this.type,
     required this.fee,
     required this.onTap,
+    this.originalFee,
   });
 
   final ConsultationType type;
   final int? fee;
+  final int? originalFee;
   final VoidCallback onTap;
 
   bool get _isHospitalVisit => type == ConsultationType.visitSite;
@@ -70,6 +73,9 @@ class _ConsultationOptionCard extends StatelessWidget {
     final priceLabel = fee != null && fee! > 0
         ? FormattingUtils.formatConsultationFee(fee!)
         : 'Fee on request';
+    final showStrike = originalFee != null &&
+        fee != null &&
+        originalFee! > fee!;
 
     return Material(
       color: Colors.transparent,
@@ -142,12 +148,25 @@ class _ConsultationOptionCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      priceLabel,
-                      style: AppTextStyles.titleSmall.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primaryDark,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          priceLabel,
+                          style: AppTextStyles.titleSmall.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                        if (showStrike)
+                          Text(
+                            FormattingUtils.formatConsultationFee(originalFee!),
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.textSecondary,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
