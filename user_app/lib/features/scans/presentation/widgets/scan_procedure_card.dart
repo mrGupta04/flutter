@@ -4,6 +4,7 @@ import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../data/models/scan_procedure_model.dart';
+import '../../data/scan_procedure_icons.dart';
 
 class ScanProcedureCard extends StatelessWidget {
   const ScanProcedureCard({
@@ -33,16 +34,7 @@ class ScanProcedureCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: AppDecorations.iconTile(AppColors.secondaryLight),
-                  child: const Icon(
-                    Icons.radar_rounded,
-                    color: AppColors.secondary,
-                    size: 22,
-                  ),
-                ),
+                ScanProcedureThumb(procedure: procedure),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -56,11 +48,21 @@ class ScanProcedureCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
+                        procedure.category.label,
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: procedure.iconColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
                         procedure.description,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                           height: 1.4,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

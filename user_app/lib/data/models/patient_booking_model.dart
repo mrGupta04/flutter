@@ -169,6 +169,11 @@ class PatientBookingModel {
   final bool hasVisitNote;
   final List<PreviousReportModel> previousReports;
   final List<BookingTimelineStep> timeline;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
+  final double? liveLatitude;
+  final double? liveLongitude;
+  final DateTime? liveLocationUpdatedAt;
 
   const PatientBookingModel({
     required this.id,
@@ -209,8 +214,23 @@ class PatientBookingModel {
     this.hasVisitNote = false,
     this.previousReports = const [],
     this.timeline = const [],
+    this.pickupLatitude,
+    this.pickupLongitude,
+    this.liveLatitude,
+    this.liveLongitude,
+    this.liveLocationUpdatedAt,
   });
 
+  bool get canTrackAmbulanceLive {
+    if (serviceType != 'ambulance') return false;
+    const liveStatuses = {
+      'accepted',
+      'dispatched',
+      'en_route',
+      'arrived',
+    };
+    return liveStatuses.contains(status);
+  }
   bool get isClinicVisit => consultationType == 'visit_site';
 
   bool get isHomeVisit => consultationType == 'book_home';
@@ -230,6 +250,18 @@ class PatientBookingModel {
   bool get needsHomeVisitPayment =>
       isHomeVisit && isApprovedPendingPayment;
 
+  /// Lab/scan confirmed (or requested) but still unpaid online.
+  bool get needsLabOrScanPayment {
+    if (serviceType != 'lab' && serviceType != 'scan') return false;
+    if (paymentStatus == 'paid' || paymentStatus == 'pay_at_lab' || paymentStatus == 'pay_at_center') {
+      return false;
+    }
+    return paymentStatus == 'pending' &&
+        (status == 'confirmed' ||
+            status == 'pending' ||
+            status == 'requested');
+  }
+
   bool get isConfirmed => status == 'confirmed';
 
   bool get canChat => isConfirmed;
@@ -244,6 +276,42 @@ class PatientBookingModel {
       (isNurseVisit ? nurseId : doctorId) ?? doctorId;
 
   String get statusLabel {
+    if (serviceType == 'lab') {
+      if (status == 'pending' || status == 'requested') {
+        return 'Waiting for lab confirmation';
+      }
+      if (status == 'confirmed') return 'Lab confirmed';
+      if (status == 'sample_collected') return 'Sample collected';
+      if (status == 'processing') return 'Processing';
+      if (status == 'report_ready') return 'Report ready';
+      if (status == 'completed') return 'Completed';
+      if (status == 'cancelled') return 'Cancelled';
+      if (status == 'rejected') return 'Rejected by lab';
+    }
+    if (serviceType == 'scan') {
+      if (status == 'pending' || status == 'requested') {
+        return 'Waiting for scan center confirmation';
+      }
+      if (status == 'confirmed') return 'Scan confirmed';
+      if (status == 'in_progress') return 'Scan in progress';
+      if (status == 'report_ready') return 'Report ready';
+      if (status == 'completed') return 'Completed';
+      if (status == 'cancelled') return 'Cancelled';
+      if (status == 'rejected') return 'Rejected by center';
+    }
+    if (serviceType == 'ambulance') {
+      if (status == 'pending' || status == 'requested') {
+        return 'Ambulance requested';
+      }
+      if (status == 'accepted') return 'Ambulance accepted';
+      if (status == 'dispatched' || status == 'en_route') {
+        return 'Ambulance on the way';
+      }
+      if (status == 'arrived') return 'Ambulance arrived';
+      if (status == 'completed') return 'Trip completed';
+      if (status == 'cancelled') return 'Cancelled';
+      if (status == 'rejected') return 'Request declined';
+    }
     if (isAwaitingDoctorApproval) {
       return isNurseVisit
           ? 'Waiting for nurse approval'
@@ -331,6 +399,13 @@ class PatientBookingModel {
           .whereType<Map>()
           .map((e) => BookingTimelineStep.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
+      pickupLatitude: (json['pickupLatitude'] as num?)?.toDouble(),
+      pickupLongitude: (json['pickupLongitude'] as num?)?.toDouble(),
+      liveLatitude: (json['liveLatitude'] as num?)?.toDouble(),
+      liveLongitude: (json['liveLongitude'] as num?)?.toDouble(),
+      liveLocationUpdatedAt: json['liveLocationUpdatedAt'] != null
+          ? DateTime.tryParse(json['liveLocationUpdatedAt'].toString())
+          : null,
     );
   }
 

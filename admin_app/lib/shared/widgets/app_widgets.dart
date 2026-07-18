@@ -246,7 +246,7 @@ class VerificationBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -259,14 +259,16 @@ class VerificationBadge extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.verified_rounded, size: 16, color: textColor),
+          Icon(Icons.verified_rounded, size: 15, color: textColor),
           const SizedBox(width: 6),
           Text(
             status,
             style: AppTextStyles.labelMedium.copyWith(
               color: textColor,
               fontWeight: FontWeight.w700,
+              height: 1.1,
             ),
           ),
         ],

@@ -9,6 +9,7 @@ import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/home_provider_preview.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../ambulance/presentation/widgets/ambulance_action_sheet.dart';
 import '../../provider/ambulance_search_provider.dart';
 
 class VerifiedAmbulancesSection extends ConsumerStatefulWidget {
@@ -86,8 +87,13 @@ class _VerifiedAmbulancesSectionState
                   const SizedBox(height: 8),
                   HomeProviderScrollList(
                     itemCount: items.length,
-                    itemBuilder: (context, i) =>
-                        AmbulanceListingCard(ambulance: items[i]),
+                    itemBuilder: (context, i) => AmbulanceListingCard(
+                      ambulance: items[i],
+                      onTap: () => showAmbulanceActionSheet(
+                        context,
+                        ambulance: items[i],
+                      ),
+                    ),
                   ),
                 ],
               ),

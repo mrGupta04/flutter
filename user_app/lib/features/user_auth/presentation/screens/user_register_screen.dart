@@ -35,6 +35,7 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
   final _ageController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _referralController = TextEditingController();
 
   Uint8List? _profileBytes;
   String _profileFileName = 'profile.jpg';
@@ -42,6 +43,7 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
   String _aadhaarCardFileName = 'aadhaar.jpg';
   String? _gender;
   String _countryCode = PhoneCountries.defaultDialCode;
+  bool _acknowledged = false;
 
   @override
   void dispose() {
@@ -52,6 +54,7 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
     _ageController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 
@@ -63,6 +66,13 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
   }
 
   Future<void> _submit() async {
+    if (!_acknowledged) {
+      SnackBarHelper.showError(
+        context,
+        'Please acknowledge the terms before creating your account.',
+      );
+      return;
+    }
     if (_profileBytes == null || _profileBytes!.isEmpty) {
       SnackBarHelper.showError(context, 'Profile picture is required');
       return;
@@ -91,6 +101,9 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
           profilePictureFileName: _profileFileName,
           aadhaarCardBytes: _aadhaarCardBytes!.toList(),
           aadhaarCardFileName: _aadhaarCardFileName,
+          referralCode: _referralController.text.trim().isEmpty
+              ? null
+              : _referralController.text.trim(),
         );
 
     if (!mounted) return;
@@ -250,11 +263,45 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _referralController,
+                label: 'Referral code (optional)',
+                prefixIcon: Icons.card_giftcard_outlined,
+              ),
               const SizedBox(height: 24),
+              Text(
+                'Acknowledgment',
+                style: AppTextStyles.titleSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Please confirm the following before creating your account.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: AppColors.primary,
+                value: _acknowledged,
+                onChanged: (value) {
+                  setState(() => _acknowledged = value ?? false);
+                },
+                title: Text(
+                  'I acknowledge that all information provided is true and accurate, and I agree to the terms and conditions.',
+                  style: AppTextStyles.bodySmall,
+                ),
+              ),
+              const SizedBox(height: 16),
               CustomButton(
                 label: 'Create account',
                 icon: Icons.person_add_alt_1_rounded,
                 isLoading: auth.isLoading,
+                isEnabled: _acknowledged,
                 onPressed: _submit,
               ),
               const SizedBox(height: 16),

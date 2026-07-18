@@ -88,6 +88,7 @@ class NurseHomeVisitRepository {
     String? patientNotes,
     double? patientLatitude,
     double? patientLongitude,
+    String? couponCode,
     required int dayOfWeek,
     required int startHour,
     required DateTime slotStart,
@@ -112,6 +113,8 @@ class NurseHomeVisitRepository {
             'patientNotes': patientNotes,
           if (patientLatitude != null) 'patientLatitude': patientLatitude,
           if (patientLongitude != null) 'patientLongitude': patientLongitude,
+          if (couponCode != null && couponCode.isNotEmpty)
+            'couponCode': couponCode.trim().toUpperCase(),
           'dayOfWeek': dayOfWeek,
           'startHour': startHour,
           'slotStart': slotStart.toIso8601String(),

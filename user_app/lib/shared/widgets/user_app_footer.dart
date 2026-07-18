@@ -154,7 +154,16 @@ class UserScrollFooter extends StatelessWidget {
                 child: _FooterLink(
                   icon: Icons.support_agent_outlined,
                   label: 'Support',
-                  onTap: () {},
+                  onTap: () async {
+                    final loggedIn =
+                        await TokenStorage.instance.isPatientLoggedIn();
+                    if (!context.mounted) return;
+                    if (!loggedIn) {
+                      context.push(AppConstants.routeUserLogin);
+                      return;
+                    }
+                    context.push(AppConstants.routeSupportTickets);
+                  },
                 ),
               ),
               const SizedBox(width: 10),

@@ -167,6 +167,7 @@ class OnlineConsultBookingNotifier extends StateNotifier<OnlineConsultBookingSta
     required String patientMobile,
     String? patientEmail,
     String? patientNotes,
+    String? couponCode,
   }) async {
     final slot = state.selectedSlot;
     if (slot == null) {
@@ -184,6 +185,7 @@ class OnlineConsultBookingNotifier extends StateNotifier<OnlineConsultBookingSta
         patientMobile: patientMobile,
         patientEmail: patientEmail,
         patientNotes: patientNotes,
+        couponCode: couponCode,
         previousReports: state.pendingReports,
       );
       if (booking != null) {

@@ -35,6 +35,7 @@ class LabRegistrationScreen extends ConsumerStatefulWidget {
 class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
   final _labId = const Uuid().v4();
   int _step = 0;
+  bool _acknowledged = false;
 
   // Step 1 — business
   final _labNameController = TextEditingController();
@@ -365,6 +366,13 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
   }
 
   Future<void> _submit() async {
+    if (!_acknowledged) {
+      SnackBarHelper.showError(
+        context,
+        'Please acknowledge the terms before submitting.',
+      );
+      return;
+    }
     if (_selectedTests.isEmpty) {
       SnackBarHelper.showError(context, 'Select at least one diagnostic test.');
       return;
@@ -731,13 +739,19 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
       'Bank details and final review',
     ];
 
-    return Scaffold(
+    return PopScope(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _back();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Lab registration'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
+          onPressed: _step > 0 ? _back : () => context.pop(),
         ),
       ),
       body: RegistrationStepPage(
@@ -752,6 +766,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           continueLabel:
               _step == _totalSteps - 1 ? 'Submit application' : 'Continue',
           isLoading: regState.isSubmitting,
+          isEnabled: _step != _totalSteps - 1 || _acknowledged,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -767,6 +782,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           },
         ),
       ),
+    ),
     );
   }
 
@@ -1528,6 +1544,11 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
             'appear in Find Care → Labs for patients to book tests and scans.',
             style: AppTextStyles.bodySmall.copyWith(height: 1.4),
           ),
+        ),
+        const SizedBox(height: 16),
+        RegistrationAcknowledgmentSection(
+          value: _acknowledged,
+          onChanged: (value) => setState(() => _acknowledged = value),
         ),
       ],
     );

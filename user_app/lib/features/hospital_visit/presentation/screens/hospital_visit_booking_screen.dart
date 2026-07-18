@@ -47,6 +47,7 @@ class _HospitalVisitBookingScreenState
   final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _reasonController = TextEditingController();
+  final _couponController = TextEditingController();
   String? _selectedDateKey;
 
   static const _slotsQueryType = 'visit_site';
@@ -91,6 +92,7 @@ class _HospitalVisitBookingScreenState
     _stateController.dispose();
     _pincodeController.dispose();
     _reasonController.dispose();
+    _couponController.dispose();
     super.dispose();
   }
 
@@ -110,6 +112,9 @@ class _HospitalVisitBookingScreenState
           patientPincode: _pincodeController.text.trim(),
           patientState: _stateController.text.trim(),
           visitReason: _reasonController.text.trim(),
+          couponCode: _couponController.text.trim().isEmpty
+              ? null
+              : _couponController.text.trim(),
         );
 
     if (!mounted) return;
@@ -461,6 +466,13 @@ class _HospitalVisitBookingScreenState
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 12),
+                      CustomTextField(
+                        controller: _couponController,
+                        label: 'Coupon code (optional)',
+                        prefixIcon: Icons.local_offer_outlined,
+                        hint: 'Try CARE10 or FIRST100',
                       ),
                     ],
                   ),

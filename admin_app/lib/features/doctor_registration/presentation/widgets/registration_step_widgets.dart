@@ -14,6 +14,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/models.dart';
 import '../../../../shared/widgets/app_shell.dart';
 import '../../../../shared/widgets/gender_radio_field.dart';
+import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/registration_location_input.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../provider/registration_provider.dart';
@@ -1567,7 +1568,7 @@ class _AvailabilityTypeHeader extends StatelessWidget {
   }
 }
 
-class Step7ReviewSubmit extends ConsumerWidget {
+class Step7ReviewSubmit extends ConsumerStatefulWidget {
   const Step7ReviewSubmit({
     super.key,
     required this.onSubmit,
@@ -1578,7 +1579,14 @@ class Step7ReviewSubmit extends ConsumerWidget {
   final void Function(int step) onEdit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<Step7ReviewSubmit> createState() => _Step7ReviewSubmitState();
+}
+
+class _Step7ReviewSubmitState extends ConsumerState<Step7ReviewSubmit> {
+  bool _acknowledged = false;
+
+  @override
+  Widget build(BuildContext context) {
     final formState = ref.watch(registrationFormProvider);
     final registrationState = ref.watch(doctorRegistrationProvider);
 
@@ -1593,7 +1601,7 @@ class Step7ReviewSubmit extends ConsumerWidget {
           ),
           _ReviewSection(
             title: 'Personal Information',
-            onEdit: () => onEdit(1),
+            onEdit: () => widget.onEdit(1),
             items: [
               _ReviewItem('Full Name', formState.fullName),
               _ReviewItem(
@@ -1620,7 +1628,7 @@ class Step7ReviewSubmit extends ConsumerWidget {
           ),
           _ReviewSection(
             title: 'Professional Details',
-            onEdit: () => onEdit(2),
+            onEdit: () => widget.onEdit(2),
             items: [
               _ReviewItem(
                 'Medical Reg. No',
@@ -1674,7 +1682,7 @@ class Step7ReviewSubmit extends ConsumerWidget {
           ),
           _ReviewSection(
             title: 'Clinic Address',
-            onEdit: () => onEdit(3),
+            onEdit: () => widget.onEdit(3),
             items: [
               _ReviewItem('Address', formState.address),
               _ReviewItem('City', formState.city),
@@ -1688,7 +1696,7 @@ class Step7ReviewSubmit extends ConsumerWidget {
           ),
           _ReviewSection(
             title: 'Documents',
-            onEdit: () => onEdit(4),
+            onEdit: () => widget.onEdit(4),
             items: [
               _ReviewItem(
                 'Medical License',
@@ -1720,7 +1728,7 @@ class Step7ReviewSubmit extends ConsumerWidget {
           ),
           _ReviewSection(
             title: 'Weekly availability',
-            onEdit: () => onEdit(6),
+            onEdit: () => widget.onEdit(6),
             items: [
               if (formState.offersOnlineConsult)
                 _ReviewItem(
@@ -1741,7 +1749,7 @@ class Step7ReviewSubmit extends ConsumerWidget {
           ),
           _ReviewSection(
             title: 'Payout details',
-            onEdit: () => onEdit(5),
+            onEdit: () => widget.onEdit(5),
             items: [
               _ReviewItem('Payout method', formState.payoutMethod.label),
               _ReviewItem('Account number', formState.bankAccountNumber),
@@ -1756,11 +1764,21 @@ class Step7ReviewSubmit extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ModernCard(
+              child: RegistrationAcknowledgmentSection(
+                value: _acknowledged,
+                onChanged: (value) => setState(() => _acknowledged = value),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           CustomButton(
             label: 'Submit Application',
             isLoading: registrationState.isLoading || formState.isSubmitting,
-            onPressed: () async => onSubmit(),
+            isEnabled: _acknowledged,
+            onPressed: () async => widget.onSubmit(),
           ),
           if (registrationState.error != null) ...[
             const SizedBox(height: 12),
@@ -2543,9 +2561,10 @@ class _ReviewSection extends StatelessWidget {
             ...items.map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 3,
+                      SizedBox(
+                        width: 128,
                         child: Text(
                           item.label,
                           style: AppTextStyles.bodySmall.copyWith(
@@ -2553,8 +2572,8 @@ class _ReviewSection extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        flex: 4,
                         child: Text(
                           item.value.isEmpty ? '-' : item.value,
                           style: AppTextStyles.bodyMedium,

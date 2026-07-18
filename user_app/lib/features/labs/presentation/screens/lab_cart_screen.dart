@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
+import '../../../../data/repositories/lab_repository.dart';
+import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../data/lab_test_icons.dart';
 import '../../data/lab_tests_catalog.dart';
 import '../../data/models/lab_test_model.dart';
@@ -23,6 +27,7 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
   SampleCollectionOption? _collectionOption;
   DateTime? _selectedDate;
   bool _isSubmitting = false;
+  final _addressController = TextEditingController();
 
   static const _timeSlots = [
     '07:00 AM - 09:00 AM',
@@ -39,6 +44,12 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
     super.initState();
     _selectedDate = DateTime.now().add(const Duration(days: 1));
     _selectedSlot = _timeSlots.first;
+  }
+
+  @override
+  void dispose() {
+    _addressController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickDate() async {
@@ -58,13 +69,78 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
       return;
     }
 
+    final labId = cart.labId;
+    if (labId == null || labId.isEmpty) {
+      custom.SnackBarHelper.showError(
+        context,
+        'Please select a lab before booking.',
+      );
+      return;
+    }
+
+    if (_collectionOption == SampleCollectionOption.homeVisit &&
+        _addressController.text.trim().length < 5) {
+      custom.SnackBarHelper.showError(
+        context,
+        'Enter your home collection address.',
+      );
+      return;
+    }
+
+    final loggedIn = await ensureUserLoggedIn(
+      context,
+      message: 'Please log in to book lab tests and track your reports.',
+    );
+    if (!loggedIn || !mounted) return;
+
+    final user = ref.read(patientAuthProvider).user;
+    if (user == null) {
+      custom.SnackBarHelper.showError(context, 'Please log in again.');
+      return;
+    }
+
     setState(() => _isSubmitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
+    final response = await LabRepository().createBooking(
+      labId: labId,
+      patientName: user.fullName,
+      patientMobile: user.mobileNumber,
+      patientEmail: user.email,
+      patientId: user.id,
+      countryCode: user.countryCode.isEmpty
+          ? PhoneCountries.defaultDialCode
+          : user.countryCode,
+      collectionType: _collectionOption == SampleCollectionOption.homeVisit
+          ? 'home_collection'
+          : 'lab_visit',
+      collectionAddress: _collectionOption == SampleCollectionOption.homeVisit
+          ? _addressController.text.trim()
+          : null,
+      scheduledDate: _selectedDate!,
+      timeSlot: _selectedSlot!,
+      items: cart.items
+          .map(
+            (i) => {
+              'testId': i.testId,
+              'testName': i.testName,
+              'price': i.priceInr,
+            },
+          )
+          .toList(),
+      totalAmount: cart.subtotal,
+    );
+
     if (!mounted) return;
-
     setState(() => _isSubmitting = false);
-    ref.read(labCartProvider.notifier).clear();
 
+    if (!response.success) {
+      custom.SnackBarHelper.showError(
+        context,
+        response.error ?? 'Could not submit lab booking',
+      );
+      return;
+    }
+
+    ref.read(labCartProvider.notifier).clear();
     final dateStr = DateFormat('EEE, dd MMM yyyy').format(_selectedDate!);
     context.go(
       '${AppConstants.routeLabBookingConfirmation}?'
@@ -130,7 +206,7 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: custom.CustomButton(
-              label: 'Confirm & Book • ₹${cart.subtotal}',
+              label: 'Request booking • ₹${cart.subtotal}',
               icon: Icons.check_rounded,
               isLoading: _isSubmitting,
               isEnabled: _collectionOption != null &&
@@ -211,6 +287,41 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
                 () => _collectionOption = SampleCollectionOption.onsite,
               ),
             ),
+          if (_collectionOption == SampleCollectionOption.homeVisit) ...[
+            const SizedBox(height: 12),
+            if ((ref.watch(patientAuthProvider).user?.savedAddresses ??
+                    const [])
+                .isNotEmpty) ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final a in ref
+                          .watch(patientAuthProvider)
+                          .user
+                          ?.savedAddresses ??
+                      const [])
+                    ActionChip(
+                      label: Text(a.label),
+                      onPressed: () {
+                        _addressController.text = a.displayLine;
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            TextField(
+              controller: _addressController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Home collection address',
+                hintText: 'Flat, street, landmark, city',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.home_outlined),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Text(
             'Preferred date',

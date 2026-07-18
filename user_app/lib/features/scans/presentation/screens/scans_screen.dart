@@ -7,8 +7,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/top_categories_grid.dart';
 import '../../data/models/scan_procedure_model.dart';
 import '../../data/scans_catalog.dart';
+import '../../data/scan_procedure_icons.dart';
+import '../../data/scan_modality_logos.dart';
 import '../widgets/scan_procedure_card.dart';
 
 class ScansScreen extends StatefulWidget {
@@ -176,6 +179,33 @@ class _ScansScreenState extends State<ScansScreen> {
                         compact: true,
                       ),
                       const SizedBox(height: 16),
+                      TopCategoriesGrid(
+                        items: [
+                          ScanCategory.mri,
+                          ScanCategory.ct,
+                          ScanCategory.xray,
+                          ScanCategory.ultrasound,
+                          ScanCategory.pet,
+                          ScanCategory.mammography,
+                        ].map((category) {
+                          final isSelected = _selectedCategory == category;
+                          return TopCategoryItem(
+                            title: category.label,
+                            softColor: category.softColor,
+                            accentColor: category.iconColor,
+                            selected: isSelected,
+                            illustration: ScanModalityLogoIcon.forCategory(
+                              category,
+                              size: 52,
+                              color: category.iconColor,
+                            ),
+                            onTap: () => _selectCategory(
+                              isSelected ? null : category,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
                       if (_selectedCategory != null)
                         _CategorySection(
                           category: _selectedCategory!,
@@ -228,11 +258,7 @@ class _CategorySection extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 10, top: 4),
           child: Row(
             children: [
-              Icon(
-                _categoryIcon(category),
-                size: 20,
-                color: AppColors.primary,
-              ),
+              ScanCategoryLogoBadge(category: category, size: 28),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -261,30 +287,6 @@ class _CategorySection extends StatelessWidget {
         const SizedBox(height: 8),
       ],
     );
-  }
-
-  IconData _categoryIcon(ScanCategory category) {
-    return switch (category) {
-      ScanCategory.mri => Icons.view_in_ar_outlined,
-      ScanCategory.xray => Icons.radio_button_checked_outlined,
-      ScanCategory.ct => Icons.layers_outlined,
-      ScanCategory.ultrasound => Icons.waves_outlined,
-      ScanCategory.pet => Icons.biotech_outlined,
-      ScanCategory.mammography => Icons.favorite_border_rounded,
-      ScanCategory.ecg => Icons.monitor_heart_outlined,
-      ScanCategory.eeg => Icons.psychology_outlined,
-      ScanCategory.echo => Icons.favorite_outline_rounded,
-      ScanCategory.doppler => Icons.water_outlined,
-      ScanCategory.dexa => Icons.accessibility_new_outlined,
-      ScanCategory.fluoroscopy => Icons.video_camera_back_outlined,
-      ScanCategory.endoscopy => Icons.medical_services_outlined,
-      ScanCategory.colonoscopy => Icons.healing_outlined,
-      ScanCategory.bronchoscopy => Icons.air_outlined,
-      ScanCategory.tmt => Icons.directions_run_outlined,
-      ScanCategory.ncv => Icons.cable_outlined,
-      ScanCategory.emg => Icons.electric_bolt_outlined,
-      ScanCategory.other => Icons.medical_information_outlined,
-    };
   }
 }
 

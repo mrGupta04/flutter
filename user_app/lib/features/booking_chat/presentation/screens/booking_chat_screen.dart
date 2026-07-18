@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -26,37 +28,44 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
   bool _loading = true;
   bool _sending = false;
   String? _error;
+  Timer? _poll;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(initial: true);
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) => _pollNew());
   }
 
   @override
   void dispose() {
+    _poll?.cancel();
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  DateTime? get _lastCreatedAt {
+    if (_messages.isEmpty) return null;
+    return _messages.last.createdAt;
+  }
+
+  Future<void> _load({bool initial = false}) async {
+    if (initial) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final messages = await _repo.list(widget.bookingId);
       if (!mounted) return;
       setState(() {
         _messages = messages;
         _loading = false;
+        _error = null;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scroll.hasClients) {
-          _scroll.jumpTo(_scroll.position.maxScrollExtent);
-        }
-      });
+      _scrollToEnd();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -64,6 +73,36 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _pollNew() async {
+    if (_loading || _sending) return;
+    try {
+      final newer = await _repo.list(
+        widget.bookingId,
+        after: _lastCreatedAt,
+      );
+      if (!mounted || newer.isEmpty) return;
+      final existingIds = _messages.map((m) => m.id).toSet();
+      final toAdd =
+          newer.where((m) => !existingIds.contains(m.id)).toList();
+      if (toAdd.isEmpty) return;
+      setState(() => _messages = [..._messages, ...toAdd]);
+      _scrollToEnd();
+    } catch (_) {
+      // Keep last good state while polling.
+    }
+  }
+
+  void _scrollToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scroll.hasClients) return;
+      _scroll.animateTo(
+        _scroll.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   Future<void> _send() async {
@@ -77,15 +116,7 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
         _messages = [..._messages, msg];
         _sending = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scroll.hasClients) {
-          _scroll.animateTo(
-            _scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+      _scrollToEnd();
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
@@ -96,7 +127,16 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: () => _load(initial: true),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -133,7 +173,8 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
                                   ),
                                   constraints: BoxConstraints(
                                     maxWidth:
-                                        MediaQuery.of(context).size.width * 0.75,
+                                        MediaQuery.of(context).size.width *
+                                            0.75,
                                   ),
                                   decoration: BoxDecoration(
                                     color: mine

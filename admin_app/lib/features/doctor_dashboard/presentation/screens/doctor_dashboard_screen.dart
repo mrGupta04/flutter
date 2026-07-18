@@ -12,6 +12,7 @@ import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/media_url_utils.dart';
+import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_booking_model.dart';
 import '../../../../data/models/previous_report_model.dart';
 import '../../../../data/models/doctor_document_model.dart';
@@ -147,12 +148,17 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                             ),
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
                               child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   const Icon(
                                     Icons.hourglass_top_rounded,
                                     color: AppColors.warning,
+                                    size: 22,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -160,12 +166,15 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                                       'Verification pending — you can still update your profile and availability. Tap for status.',
                                       style: AppTextStyles.bodySmall.copyWith(
                                         color: AppColors.textPrimary,
+                                        height: 1.35,
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   const Icon(
                                     Icons.chevron_right_rounded,
                                     color: AppColors.textSecondary,
+                                    size: 22,
                                   ),
                                 ],
                               ),
@@ -657,8 +666,23 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
     if (doctor == null) return;
     final parentContext = context;
 
-    final feeController = TextEditingController(
-      text: doctor.consultationFee?.toString() ?? '',
+    final onlineFeeController = TextEditingController(
+      text: doctor.onlineConsultFee?.toString() ??
+          (doctor.offersOnlineConsult
+              ? doctor.consultationFee?.toString() ?? ''
+              : ''),
+    );
+    final visitFeeController = TextEditingController(
+      text: doctor.visitSiteFee?.toString() ??
+          (doctor.offersVisitSite
+              ? doctor.consultationFee?.toString() ?? ''
+              : ''),
+    );
+    final homeFeeController = TextEditingController(
+      text: doctor.homeVisitFee?.toString() ??
+          (doctor.offersBookHome
+              ? doctor.consultationFee?.toString() ?? ''
+              : ''),
     );
     final bioController = TextEditingController(text: doctor.bio ?? '');
 
@@ -673,58 +697,167 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
           top: 8,
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Edit profile',
-              style: AppTextStyles.headlineSmall.copyWith(
-                fontWeight: FontWeight.w800,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Edit profile',
+                style: AppTextStyles.headlineSmall.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            CustomTextField(
-              controller: feeController,
-              label: 'Consultation fee (₹)',
-              prefixIcon: Icons.currency_rupee_rounded,
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              controller: bioController,
-              label: 'About you',
-              maxLines: 4,
-              minLines: 3,
-            ),
-            const SizedBox(height: 24),
-            CustomButton(
-              label: 'Save',
-              isLoading: ref.read(doctorDashboardProvider).isUpdating,
-              onPressed: () async {
-                final updated = doctor.copyWith(
-                  consultationFee: int.tryParse(feeController.text),
-                  bio: bioController.text,
-                );
-                final success = await ref
-                    .read(doctorDashboardProvider.notifier)
-                    .updateProfile(updated);
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  SnackBarHelper.showSuccess(
-                    parentContext,
-                    success
-                        ? AppConstants.successProfileUpdated
-                        : 'Update failed',
+              const SizedBox(height: 8),
+              Text(
+                'Update fees for each consultation type you offer.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              if (doctor.offersOnlineConsult) ...[
+                const SizedBox(height: 20),
+                CustomTextField(
+                  controller: onlineFeeController,
+                  label: 'Online consult fee (₹)',
+                  prefixIcon: Icons.videocam_outlined,
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+              if (doctor.offersVisitSite) ...[
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: visitFeeController,
+                  label: 'Hospital visit fee (₹)',
+                  prefixIcon: Icons.local_hospital_outlined,
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+              if (doctor.offersBookHome) ...[
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: homeFeeController,
+                  label: 'Home visit fee (₹)',
+                  prefixIcon: Icons.home_outlined,
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+              if (!doctor.hasAnyConsultationOption) ...[
+                const SizedBox(height: 20),
+                CustomTextField(
+                  controller: onlineFeeController,
+                  label: 'Consultation fee (₹)',
+                  prefixIcon: Icons.currency_rupee_rounded,
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+              const SizedBox(height: 16),
+              CustomTextField(
+                controller: bioController,
+                label: 'About you',
+                maxLines: 4,
+                minLines: 3,
+              ),
+              const SizedBox(height: 24),
+              CustomButton(
+                label: 'Save',
+                isLoading: ref.read(doctorDashboardProvider).isUpdating,
+                onPressed: () async {
+                  final onlineFee = int.tryParse(onlineFeeController.text.trim());
+                  final visitFee = int.tryParse(visitFeeController.text.trim());
+                  final homeFee = int.tryParse(homeFeeController.text.trim());
+                  final fees = <int>[
+                    if (doctor.offersOnlineConsult && onlineFee != null)
+                      onlineFee,
+                    if (doctor.offersVisitSite && visitFee != null) visitFee,
+                    if (doctor.offersBookHome && homeFee != null) homeFee,
+                  ];
+                  final updated = doctor.copyWith(
+                    onlineConsultFee:
+                        doctor.offersOnlineConsult ? onlineFee : doctor.onlineConsultFee,
+                    visitSiteFee:
+                        doctor.offersVisitSite ? visitFee : doctor.visitSiteFee,
+                    homeVisitFee:
+                        doctor.offersBookHome ? homeFee : doctor.homeVisitFee,
+                    consultationFee: fees.isNotEmpty
+                        ? fees.reduce((a, b) => a < b ? a : b)
+                        : onlineFee ?? doctor.consultationFee,
+                    bio: bioController.text,
                   );
-                }
-              },
-            ),
-          ],
+                  final success = await ref
+                      .read(doctorDashboardProvider.notifier)
+                      .updateProfile(updated);
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
+                  if (!parentContext.mounted) return;
+                  if (success) {
+                    SnackBarHelper.showSuccess(
+                      parentContext,
+                      'Profile updated',
+                    );
+                  } else {
+                    SnackBarHelper.showError(
+                      parentContext,
+                      ref.read(doctorDashboardProvider).error ??
+                          'Could not update profile',
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+bool _doctorHasServiceFees(DoctorModel doctor) {
+  if (doctor.offersOnlineConsult &&
+      (doctor.effectiveFeeForConsultationType(ConsultationType.onlineConsult) ??
+              0) >
+          0) {
+    return true;
+  }
+  if (doctor.offersVisitSite &&
+      (doctor.effectiveFeeForConsultationType(ConsultationType.visitSite) ??
+              0) >
+          0) {
+    return true;
+  }
+  if (doctor.offersBookHome &&
+      (doctor.effectiveFeeForConsultationType(ConsultationType.bookHome) ?? 0) >
+          0) {
+    return true;
+  }
+  return doctor.consultationFee != null && doctor.consultationFee! > 0;
+}
+
+String? _doctorFeesSummary(DoctorModel doctor) {
+  final parts = <String>[];
+  if (doctor.offersOnlineConsult) {
+    final fee =
+        doctor.effectiveFeeForConsultationType(ConsultationType.onlineConsult);
+    if (fee != null && fee > 0) {
+      parts.add('Online ${FormattingUtils.formatConsultationFee(fee)}');
+    }
+  }
+  if (doctor.offersVisitSite) {
+    final fee =
+        doctor.effectiveFeeForConsultationType(ConsultationType.visitSite);
+    if (fee != null && fee > 0) {
+      parts.add('Clinic ${FormattingUtils.formatConsultationFee(fee)}');
+    }
+  }
+  if (doctor.offersBookHome) {
+    final fee =
+        doctor.effectiveFeeForConsultationType(ConsultationType.bookHome);
+    if (fee != null && fee > 0) {
+      parts.add('Home ${FormattingUtils.formatConsultationFee(fee)}');
+    }
+  }
+  if (parts.isEmpty) return null;
+  return parts.join(' · ');
 }
 
 String _availabilityWeekLabel(DoctorDashboardState dashboard) {
@@ -851,7 +984,7 @@ class _DashboardContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: AppColors.gradientHero),
               borderRadius: AppDecorations.borderRadiusXl,
@@ -875,26 +1008,27 @@ class _DashboardContent extends StatelessWidget {
                   ),
                 ),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      width: 78,
-                      height: 78,
-                      padding: const EdgeInsets.all(3),
+                      width: 72,
+                      height: 72,
+                      padding: const EdgeInsets.all(2.5),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: AppColors.white.withValues(alpha: 0.6),
+                          color: AppColors.white.withValues(alpha: 0.65),
                           width: 2,
                         ),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(11),
                         child: doctor!.profilePicture != null &&
                                 doctor!.profilePicture!.startsWith('http')
                             ? Image.network(
                                 doctor!.profilePicture!,
-                                width: 72,
-                                height: 72,
+                                width: 67,
+                                height: 67,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) =>
                                     const ColoredBox(
@@ -902,7 +1036,7 @@ class _DashboardContent extends StatelessWidget {
                                   child: Icon(
                                     Icons.person_rounded,
                                     color: AppColors.primary,
-                                    size: 36,
+                                    size: 32,
                                   ),
                                 ),
                               )
@@ -911,21 +1045,24 @@ class _DashboardContent extends StatelessWidget {
                                 child: Icon(
                                   Icons.person_rounded,
                                   color: AppColors.primary,
-                                  size: 36,
+                                  size: 32,
                                 ),
                               ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             doctor!.fullName,
                             style: AppTextStyles.titleLarge.copyWith(
                               color: AppColors.white,
                               fontWeight: FontWeight.w800,
+                              height: 1.2,
                               shadows: [
                                 Shadow(
                                   color: Colors.black.withValues(alpha: 0.25),
@@ -942,6 +1079,7 @@ class _DashboardContent extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.white.withValues(alpha: 0.95),
+                              height: 1.3,
                               shadows: [
                                 Shadow(
                                   color: Colors.black.withValues(alpha: 0.2),
@@ -1100,9 +1238,7 @@ class _DashboardContent extends StatelessWidget {
           ServiceBenefitCard(
             icon: Icons.settings_rounded,
             title: 'Consultation settings',
-            subtitle: doctor!.consultationFee != null
-                ? FormattingUtils.formatConsultationFee(doctor!.consultationFee!)
-                : 'Set your fee',
+            subtitle: _doctorFeesSummary(doctor!) ?? 'Set your fees',
             color: AppColors.offer,
             onTap: onEditProfile,
           ),
@@ -1111,7 +1247,7 @@ class _DashboardContent extends StatelessWidget {
           const SizedBox(height: 16),
           _TodayChecklistSection(
             isVerified: isVerified,
-            hasFee: doctor!.consultationFee != null,
+            hasFee: _doctorHasServiceFees(doctor!),
             hasBio: (doctor!.bio?.trim().isNotEmpty ?? false),
             onEditProfile: onEditProfile,
             onUploadDegree: () => onUpload(DocumentType.degreeCertificate),
@@ -1543,10 +1679,31 @@ class _ConsultationServicesOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final services = <String>[
-      if (doctor.offersOnlineConsult) 'Online consult',
-      if (doctor.offersVisitSite) 'Clinic visit',
-      if (doctor.offersBookHome) 'Home visit',
+    final serviceFees = <({String label, IconData icon, int? fee})>[
+      if (doctor.offersOnlineConsult)
+        (
+          label: 'Online consult',
+          icon: Icons.videocam_rounded,
+          fee: doctor.effectiveFeeForConsultationType(
+            ConsultationType.onlineConsult,
+          ),
+        ),
+      if (doctor.offersVisitSite)
+        (
+          label: 'Clinic visit',
+          icon: Icons.local_hospital_rounded,
+          fee: doctor.effectiveFeeForConsultationType(
+            ConsultationType.visitSite,
+          ),
+        ),
+      if (doctor.offersBookHome)
+        (
+          label: 'Home visit',
+          icon: Icons.home_rounded,
+          fee: doctor.effectiveFeeForConsultationType(
+            ConsultationType.bookHome,
+          ),
+        ),
     ];
     final clinicLine = [
       doctor.clinicName,
@@ -1569,39 +1726,18 @@ class _ConsultationServicesOverview extends StatelessWidget {
             style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 12),
-          if (services.isNotEmpty)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: services.map((label) {
-                final icon = label.contains('Online')
-                    ? Icons.videocam_rounded
-                    : label.contains('Clinic')
-                        ? Icons.local_hospital_rounded
-                        : Icons.home_rounded;
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(20),
+          if (serviceFees.isNotEmpty)
+            Column(
+              children: [
+                for (var i = 0; i < serviceFees.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 8),
+                  _ServiceFeeRow(
+                    icon: serviceFees[i].icon,
+                    label: serviceFees[i].label,
+                    fee: serviceFees[i].fee,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 14, color: AppColors.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.primaryDark,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
+                ],
+              ],
             )
           else
             Text(
@@ -1610,16 +1746,8 @@ class _ConsultationServicesOverview extends StatelessWidget {
                 color: AppColors.textSecondary,
               ),
             ),
-          if (doctor.consultationFee != null) ...[
-            const SizedBox(height: 12),
-            _OverviewRow(
-              icon: Icons.payments_outlined,
-              label: 'Consultation fee',
-              value: FormattingUtils.formatConsultationFee(doctor.consultationFee!),
-            ),
-          ],
           if (clinicLine.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             _OverviewRow(
               icon: Icons.local_hospital_outlined,
               label: 'Clinic',
@@ -1634,6 +1762,64 @@ class _ConsultationServicesOverview extends StatelessWidget {
               value: FormattingUtils.formatPhoneNumber(doctor.mobileNumber!),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceFeeRow extends StatelessWidget {
+  const _ServiceFeeRow({
+    required this.icon,
+    required this.label,
+    required this.fee,
+  });
+
+  final IconData icon;
+  final String label;
+  final int? fee;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTextStyles.labelMedium.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          Text(
+            fee != null && fee! > 0
+                ? FormattingUtils.formatConsultationFee(fee!)
+                : 'Set fee',
+            style: AppTextStyles.titleSmall.copyWith(
+              fontWeight: FontWeight.w800,
+              color: fee != null && fee! > 0
+                  ? AppColors.primaryDark
+                  : AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );

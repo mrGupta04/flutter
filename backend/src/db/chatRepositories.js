@@ -36,9 +36,16 @@ async function assertChatParticipant(bookingId, auth) {
   return { booking, isPatient, isDoctor, isNurse };
 }
 
-async function listChatMessages(bookingId, auth) {
+async function listChatMessages(bookingId, auth, { after } = {}) {
   await assertChatParticipant(bookingId, auth);
-  const messages = await BookingChatMessage.find({ bookingId })
+  const filter = { bookingId };
+  if (after) {
+    const afterDate = new Date(after);
+    if (!Number.isNaN(afterDate.getTime())) {
+      filter.createdAt = { $gt: afterDate };
+    }
+  }
+  const messages = await BookingChatMessage.find(filter)
     .sort({ createdAt: 1 })
     .limit(200)
     .lean();
@@ -77,6 +84,14 @@ async function sendChatMessage(bookingId, auth, body) {
     senderId,
     body: text,
   });
+
+  const payload = message.toObject();
+  try {
+    const { emitChatMessage } = require('../services/chatRealtime');
+    emitChatMessage(bookingId, payload);
+  } catch (_) {
+    // Realtime fan-out is best-effort.
+  }
 
   // Notify the other party
   try {

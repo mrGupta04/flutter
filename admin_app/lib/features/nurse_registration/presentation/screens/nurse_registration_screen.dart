@@ -23,6 +23,7 @@ class _NurseRegistrationScreenState
     extends ConsumerState<NurseRegistrationScreen> {
   late PageController _pageController;
   late List<GlobalKey<FormState>> _formKeys;
+  bool _acknowledged = false;
 
   static const _stepTitles = [
     ('Personal details', 'Name, DOB, languages & emergency contact'),
@@ -76,6 +77,13 @@ class _NurseRegistrationScreenState
   }
 
   Future<void> _submit() async {
+    if (!_acknowledged) {
+      SnackBarHelper.showError(
+        context,
+        'Please acknowledge the terms before submitting.',
+      );
+      return;
+    }
     if (!_validateStep(totalNurseRegistrationSteps)) return;
     final ok = await ref
         .read(nurseRegistrationFormProvider.notifier)
@@ -251,7 +259,13 @@ class _NurseRegistrationScreenState
       nurseRegistrationFormProvider.select((s) => s.isSubmitting),
     );
 
-    return Scaffold(
+    return PopScope(
+      canPop: currentStep <= 1,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _previousStep();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Nurse onboarding'),
@@ -302,11 +316,19 @@ class _NurseRegistrationScreenState
               onContinue: _submit,
               continueLabel: 'Submit for verification',
               isLoading: isSubmitting,
+              isEnabled: _acknowledged,
             ),
-            child: NurseStep7Review(onEditStep: _goToStep),
+            child: NurseStep7Review(
+              onEditStep: _goToStep,
+              acknowledged: _acknowledged,
+              onAcknowledgedChanged: (value) {
+                setState(() => _acknowledged = value);
+              },
+            ),
           ),
         ],
       ),
+    ),
     );
   }
 }

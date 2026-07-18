@@ -29,6 +29,18 @@ function toPatient(doc) {
     aadhaarLast4: d.aadhaarLast4,
     profilePicture: d.profilePicture,
     aadhaarCardUrl: d.aadhaarCardUrl,
+    referralCode: d.referralCode || null,
+    rewardPoints: d.rewardPoints || 0,
+    referredByCode: d.referredByCode || null,
+    familyMembers: Array.isArray(d.familyMembers) ? d.familyMembers : [],
+    savedAddresses: Array.isArray(d.savedAddresses) ? d.savedAddresses : [],
+    medicalProfile: d.medicalProfile || {
+      bloodGroup: null,
+      allergies: [],
+      chronicDiseases: [],
+      currentMedications: [],
+      notes: null,
+    },
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
@@ -157,6 +169,12 @@ async function registerPatient(data) {
   }
 
   const id = uuidv4();
+  const {
+    buildReferralCodeFromId,
+    applyReferralOnRegister,
+  } = require('./rewardRepositories');
+  const referralCode = buildReferralCodeFromId(id);
+
   await Patient.create({
     id,
     firstName: validated.firstName,
@@ -171,7 +189,23 @@ async function registerPatient(data) {
     aadhaarLast4: validated.aadhaar.slice(-4),
     profilePicture: validated.profilePicture,
     aadhaarCardUrl: validated.aadhaarCardUrl,
+    referralCode,
+    rewardPoints: 0,
   });
+
+  const incomingReferral = data.referralCode
+    ? String(data.referralCode).trim()
+    : '';
+  if (incomingReferral) {
+    try {
+      await applyReferralOnRegister(id, incomingReferral);
+    } catch (err) {
+      if (err.statusCode === 400) {
+        throw err;
+      }
+      console.error('[patient] referral apply failed:', err.message);
+    }
+  }
 
   return findPatientById(id);
 }
@@ -297,12 +331,176 @@ async function updatePatient(patientId, data) {
     updates.passwordHash = hashPassword(password);
   }
 
+  if (data.medicalProfile != null && typeof data.medicalProfile === 'object') {
+    const mp = data.medicalProfile;
+    updates.medicalProfile = {
+      bloodGroup: mp.bloodGroup != null ? String(mp.bloodGroup).trim() : doc.medicalProfile?.bloodGroup,
+      allergies: Array.isArray(mp.allergies)
+        ? mp.allergies.map((a) => String(a).trim()).filter(Boolean)
+        : doc.medicalProfile?.allergies || [],
+      chronicDiseases: Array.isArray(mp.chronicDiseases)
+        ? mp.chronicDiseases.map((a) => String(a).trim()).filter(Boolean)
+        : doc.medicalProfile?.chronicDiseases || [],
+      currentMedications: Array.isArray(mp.currentMedications)
+        ? mp.currentMedications.map((a) => String(a).trim()).filter(Boolean)
+        : doc.medicalProfile?.currentMedications || [],
+      notes: mp.notes != null ? String(mp.notes).trim() : doc.medicalProfile?.notes,
+      insuranceProvider:
+        mp.insuranceProvider != null
+          ? String(mp.insuranceProvider).trim()
+          : doc.medicalProfile?.insuranceProvider,
+      insurancePolicyNumber:
+        mp.insurancePolicyNumber != null
+          ? String(mp.insurancePolicyNumber).trim()
+          : doc.medicalProfile?.insurancePolicyNumber,
+      insuranceMemberId:
+        mp.insuranceMemberId != null
+          ? String(mp.insuranceMemberId).trim()
+          : doc.medicalProfile?.insuranceMemberId,
+      insuranceValidUntil:
+        mp.insuranceValidUntil != null
+          ? String(mp.insuranceValidUntil).trim()
+          : doc.medicalProfile?.insuranceValidUntil,
+    };
+  }
+
   if (Object.keys(updates).length === 0) {
     return findPatientById(patientId);
   }
 
   await Patient.updateOne({ id: patientId }, { $set: updates });
   return findPatientById(patientId);
+}
+
+async function upsertFamilyMember(patientId, member) {
+  const doc = await Patient.findOne({ id: patientId });
+  if (!doc) {
+    const err = new Error('Patient not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  const name = String(member.name || '').trim();
+  if (name.length < 2) {
+    const err = new Error('Family member name is required');
+    err.statusCode = 400;
+    throw err;
+  }
+  const members = Array.isArray(doc.familyMembers) ? [...doc.familyMembers] : [];
+  const id = member.id || uuidv4();
+  const payload = {
+    id,
+    name,
+    relationship: member.relationship || 'other',
+    age: member.age != null ? Number(member.age) : undefined,
+    gender: member.gender ? String(member.gender).trim() : undefined,
+    mobileNumber: member.mobileNumber
+      ? String(member.mobileNumber).trim()
+      : undefined,
+    bloodGroup: member.bloodGroup ? String(member.bloodGroup).trim() : undefined,
+  };
+  const idx = members.findIndex((m) => m.id === id);
+  if (idx >= 0) members[idx] = payload;
+  else members.push(payload);
+  doc.familyMembers = members;
+  await doc.save();
+  return toPatient(doc);
+}
+
+async function deleteFamilyMember(patientId, memberId) {
+  const doc = await Patient.findOne({ id: patientId });
+  if (!doc) {
+    const err = new Error('Patient not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  doc.familyMembers = (doc.familyMembers || []).filter((m) => m.id !== memberId);
+  await doc.save();
+  return toPatient(doc);
+}
+
+async function upsertSavedAddress(patientId, address) {
+  const doc = await Patient.findOne({ id: patientId });
+  if (!doc) {
+    const err = new Error('Patient not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  const addressLine = String(address.addressLine || '').trim();
+  if (addressLine.length < 5) {
+    const err = new Error('Address is required');
+    err.statusCode = 400;
+    throw err;
+  }
+  let addresses = Array.isArray(doc.savedAddresses) ? [...doc.savedAddresses] : [];
+  const id = address.id || uuidv4();
+  const isDefault = Boolean(address.isDefault);
+  if (isDefault) {
+    addresses = addresses.map((a) => ({
+      ...((a.toObject && a.toObject()) || a),
+      isDefault: false,
+    }));
+  }
+  const payload = {
+    id,
+    label: String(address.label || 'Home').trim(),
+    addressLine,
+    city: address.city ? String(address.city).trim() : undefined,
+    state: address.state ? String(address.state).trim() : undefined,
+    pincode: address.pincode ? String(address.pincode).trim() : undefined,
+    latitude: address.latitude != null ? Number(address.latitude) : undefined,
+    longitude: address.longitude != null ? Number(address.longitude) : undefined,
+    isDefault: isDefault || addresses.length === 0,
+  };
+  const idx = addresses.findIndex((a) => a.id === id);
+  if (idx >= 0) addresses[idx] = payload;
+  else addresses.push(payload);
+  doc.savedAddresses = addresses;
+  await doc.save();
+  return toPatient(doc);
+}
+
+async function deleteSavedAddress(patientId, addressId) {
+  const doc = await Patient.findOne({ id: patientId });
+  if (!doc) {
+    const err = new Error('Patient not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  doc.savedAddresses = (doc.savedAddresses || []).filter((a) => a.id !== addressId);
+  if (doc.savedAddresses.length && !doc.savedAddresses.some((a) => a.isDefault)) {
+    doc.savedAddresses[0].isDefault = true;
+  }
+  await doc.save();
+  return toPatient(doc);
+}
+
+async function listPatientsForAdmin({ page = 1, pageSize = 20, search = '' } = {}) {
+  const filter = {};
+  if (search) {
+    const q = String(search).trim();
+    filter.$or = [
+      { firstName: new RegExp(q, 'i') },
+      { lastName: new RegExp(q, 'i') },
+      { email: new RegExp(q, 'i') },
+      { mobileNumber: new RegExp(q.replace(/\D/g, ''), 'i') },
+    ];
+  }
+  const totalCount = await Patient.countDocuments(filter);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const docs = await Patient.find(filter)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * pageSize)
+    .limit(pageSize);
+  return {
+    patients: docs.map(toPatient),
+    pagination: {
+      currentPage: page,
+      totalPages,
+      pageSize,
+      totalCount,
+      hasNextPage: page < totalPages,
+    },
+  };
 }
 
 async function loginPatient(email, password) {
@@ -330,4 +528,9 @@ module.exports = {
   findPatientById,
   findPatientByEmail,
   toPatient,
+  upsertFamilyMember,
+  deleteFamilyMember,
+  upsertSavedAddress,
+  deleteSavedAddress,
+  listPatientsForAdmin,
 };

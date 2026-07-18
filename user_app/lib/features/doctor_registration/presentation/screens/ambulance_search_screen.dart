@@ -13,6 +13,7 @@ import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
+import '../../../ambulance/presentation/widgets/ambulance_action_sheet.dart';
 import '../../provider/ambulance_search_provider.dart';
 import '../../provider/care_filter_constants.dart';
 
@@ -218,7 +219,13 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
               separatorBuilder: (context, index) =>
                   const SizedBox(height: kDoctorCardSpacing),
               itemBuilder: (context, index) =>
-                  AmbulanceListingCard(ambulance: items[index]),
+                  AmbulanceListingCard(
+                    ambulance: items[index],
+                    onTap: () => showAmbulanceActionSheet(
+                      context,
+                      ambulance: items[index],
+                    ),
+                  ),
             ),
           ),
         ];

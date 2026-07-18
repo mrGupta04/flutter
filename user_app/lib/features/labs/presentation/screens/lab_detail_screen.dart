@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,10 +42,60 @@ class LabDetailScreen extends ConsumerWidget {
   }
 }
 
-class _LabDetailBody extends ConsumerWidget {
+class _LabDetailBody extends ConsumerStatefulWidget {
   const _LabDetailBody({required this.lab});
 
   final LabModel lab;
+
+  @override
+  ConsumerState<_LabDetailBody> createState() => _LabDetailBodyState();
+}
+
+class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
+  late final TextEditingController _searchController;
+  Timer? _debounce;
+  String _query = '';
+
+  LabModel get lab => widget.lab;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() => _query = value.trim());
+    });
+  }
+
+  bool _matchesQuery(String text) {
+    if (_query.isEmpty) return true;
+    return text.toLowerCase().contains(_query.toLowerCase());
+  }
+
+  List<LabHealthPackage> get _filteredPackages =>
+      LabCatalogMetadata.healthPackages
+          .where(
+            (pkg) =>
+                _matchesQuery(pkg.name) ||
+                _matchesQuery(pkg.subtitle ?? '') ||
+                _matchesQuery(pkg.description ?? ''),
+          )
+          .toList();
+
+  List<LabBrowseGroup> _filteredGroups(List<LabBrowseGroup> groups) =>
+      groups.where((g) => _matchesQuery(g.name) || _matchesQuery(g.subtitle ?? '')).toList();
 
   Future<void> _callLab() async {
     final phone = lab.mobileNumber;
@@ -71,13 +123,25 @@ class _LabDetailBody extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final bannerUrl = lab.labImages?.isNotEmpty == true
         ? MediaUrlUtils.resolve(lab.labImages!.first)
         : '';
     final logoUrl = MediaUrlUtils.resolve(lab.profilePicture);
     final distance = formatNearbyDistanceLabel(lab.distanceKm);
-    final tests = labTestsForLab(lab);
+    final tests = labTestsForLab(lab, query: _query.isEmpty ? null : _query);
+    final packages = _filteredPackages;
+    final healthRisks = _filteredGroups(LabCatalogMetadata.healthRisks);
+    final healthConditions =
+        _filteredGroups(LabCatalogMetadata.healthConditions);
+    final bodyOrgans = _filteredGroups(LabCatalogMetadata.bodyOrgans);
+    final isSearching = _query.isNotEmpty;
+    final previewTests = isSearching ? tests : tests.take(5).toList();
+    final hasAnyResults = packages.isNotEmpty ||
+        healthRisks.isNotEmpty ||
+        healthConditions.isNotEmpty ||
+        bodyOrgans.isNotEmpty ||
+        tests.isNotEmpty;
 
     return CustomScrollView(
       slivers: [
@@ -231,138 +295,227 @@ class _LabDetailBody extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                _SectionHeader(
-                  title: 'Health Packages',
-                  onSeeAll: () =>
-                      _openBrowse(context, LabBrowseGroupType.package),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 220,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: LabCatalogMetadata.healthPackages.length,
-                    itemBuilder: (context, index) {
-                      final pkg = LabCatalogMetadata.healthPackages[index];
-                      return LabPackageCard(
-                        package: pkg,
-                        compact: true,
-                        onTap: () => _openGroupTests(
-                          context,
-                          title: pkg.name,
-                          testIds: pkg.testIds,
-                        ),
-                      );
-                    },
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Search tests, packages, or categories...',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: AppColors.grey50,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 1.5,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
-                const SizedBox(height: 20),
-                _SectionHeader(
-                  title: 'Tests by Health Risk',
-                  onSeeAll: () => _openBrowse(context, LabBrowseGroupType.healthRisk),
-                ),
-                const SizedBox(height: 8),
-                LabBrowseGroupScroller(
-                  groups: LabCatalogMetadata.healthRisks,
-                  onTap: (g) => _openGroupTests(
-                    context,
-                    title: g.name,
-                    testIds: g.testIds,
+                if (isSearching && !hasAnyResults) ...[
+                  const SizedBox(height: 32),
+                  Icon(
+                    Icons.search_off_rounded,
+                    size: 40,
+                    color: AppColors.textSecondary.withValues(alpha: 0.6),
                   ),
-                ),
-                const SizedBox(height: 20),
-                _SectionHeader(
-                  title: 'Tests by Health Condition',
-                  onSeeAll: () =>
-                      _openBrowse(context, LabBrowseGroupType.healthCondition),
-                ),
-                const SizedBox(height: 8),
-                LabBrowseGroupScroller(
-                  groups: LabCatalogMetadata.healthConditions,
-                  onTap: (g) => _openGroupTests(
-                    context,
-                    title: g.name,
-                    testIds: g.testIds,
+                  const SizedBox(height: 12),
+                  Text(
+                    'No tests found for "$_query"',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                _SectionHeader(
-                  title: 'Tests by Body Organ',
-                  onSeeAll: () => _openBrowse(context, LabBrowseGroupType.bodyOrgan),
-                ),
-                const SizedBox(height: 8),
-                LabBrowseGroupScroller(
-                  groups: LabCatalogMetadata.bodyOrgans,
-                  onTap: (g) => _openGroupTests(
-                    context,
-                    title: g.name,
-                    testIds: g.testIds,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _SectionHeader(
-                  title: 'All Individual Tests',
-                  onSeeAll: () => _openTests(context, title: 'All Tests'),
-                ),
-                const SizedBox(height: 8),
-                ...tests.take(5).map(
+                ] else ...[
+                  if (packages.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      title: 'Health Packages',
+                      onSeeAll: isSearching
+                          ? null
+                          : () =>
+                              _openBrowse(context, LabBrowseGroupType.package),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 220,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: packages.length,
+                        itemBuilder: (context, index) {
+                          final pkg = packages[index];
+                          return LabPackageCard(
+                            package: pkg,
+                            compact: true,
+                            onTap: () => _openGroupTests(
+                              context,
+                              title: pkg.name,
+                              testIds: pkg.testIds,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  if (healthRisks.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      title: 'Tests by Health Risk',
+                      onSeeAll: isSearching
+                          ? null
+                          : () => _openBrowse(
+                                context,
+                                LabBrowseGroupType.healthRisk,
+                              ),
+                    ),
+                    const SizedBox(height: 8),
+                    LabBrowseGroupScroller(
+                      groups: healthRisks,
+                      onTap: (g) => _openGroupTests(
+                        context,
+                        title: g.name,
+                        testIds: g.testIds,
+                      ),
+                    ),
+                  ],
+                  if (healthConditions.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      title: 'Tests by Health Condition',
+                      onSeeAll: isSearching
+                          ? null
+                          : () => _openBrowse(
+                                context,
+                                LabBrowseGroupType.healthCondition,
+                              ),
+                    ),
+                    const SizedBox(height: 8),
+                    LabBrowseGroupScroller(
+                      groups: healthConditions,
+                      onTap: (g) => _openGroupTests(
+                        context,
+                        title: g.name,
+                        testIds: g.testIds,
+                      ),
+                    ),
+                  ],
+                  if (bodyOrgans.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      title: 'Tests by Body Organ',
+                      onSeeAll: isSearching
+                          ? null
+                          : () => _openBrowse(
+                                context,
+                                LabBrowseGroupType.bodyOrgan,
+                              ),
+                    ),
+                    const SizedBox(height: 8),
+                    LabBrowseGroupScroller(
+                      groups: bodyOrgans,
+                      onTap: (g) => _openGroupTests(
+                        context,
+                        title: g.name,
+                        testIds: g.testIds,
+                      ),
+                    ),
+                  ],
+                  if (previewTests.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      title: isSearching
+                          ? 'Matching Tests'
+                          : 'All Individual Tests',
+                      onSeeAll: isSearching
+                          ? null
+                          : () => _openTests(context, title: 'All Tests'),
+                    ),
+                    const SizedBox(height: 8),
+                    ...previewTests.map(
                       (test) => LabTestTile(
                         lab: lab,
                         test: test,
                         offered: resolveOfferedTest(lab, test),
-                        onBookNow: () => context.push(AppConstants.routeLabCart),
+                        onBookNow: () =>
+                            context.push(AppConstants.routeLabCart),
                       ),
                     ),
-                if (tests.length > 5)
-                  TextButton(
-                    onPressed: () => _openTests(context, title: 'All Tests'),
-                    child: Text('View all ${tests.length} tests'),
-                  ),
-                const SizedBox(height: 20),
-                _InfoBlock(
-                  title: 'About the Lab',
-                  body: lab.accreditation != null
-                      ? 'Accredited diagnostic laboratory offering ${lab.enabledTestCount} tests with ${lab.supportsHomeCollection ? 'home collection' : 'lab visit'} services.'
-                      : 'Verified diagnostic laboratory with professional sample collection and digital reports.',
-                ),
-                if (lab.accreditation != null)
-                  _InfoBlock(
-                    title: 'Certifications',
-                    body: lab.accreditation!,
-                  ),
-                _InfoBlock(
-                  title: 'Home Collection',
-                  body: lab.supportsHomeCollection
-                      ? 'Certified phlebotomists collect samples at your doorstep in available time slots.'
-                      : 'Visit the lab for sample collection.',
-                ),
-                _InfoBlock(
-                  title: 'Report Delivery',
-                  body:
-                      'Digital reports delivered via app and email. Typical turnaround: ${lab.reportDeliverySummary}.',
-                ),
-                const SizedBox(height: 20),
-                MarketplaceSectionTitle(title: 'Customer Reviews'),
-                const SizedBox(height: 8),
-                ...LabCatalogMetadata.mockReviews.map(
-                  (r) => _ReviewTile(
-                    name: r.$1,
-                    rating: r.$2,
-                    comment: r.$3,
-                    time: r.$4,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                MarketplaceSectionTitle(title: 'FAQs'),
-                const SizedBox(height: 8),
-                ...LabCatalogMetadata.labFaqs.map(
-                  (faq) => _FaqTile(question: faq.$1, answer: faq.$2),
-                ),
-                const SizedBox(height: 20),
-                MarketplaceSectionTitle(title: 'Similar Labs Nearby'),
-                const SizedBox(height: 8),
-                _SimilarLabsSection(currentLabId: lab.id ?? ''),
+                    if (!isSearching && tests.length > 5)
+                      TextButton(
+                        onPressed: () =>
+                            _openTests(context, title: 'All Tests'),
+                        child: Text('View all ${tests.length} tests'),
+                      ),
+                  ],
+                  if (!isSearching) ...[
+                    const SizedBox(height: 20),
+                    _InfoBlock(
+                      title: 'About the Lab',
+                      body: lab.accreditation != null
+                          ? 'Accredited diagnostic laboratory offering ${lab.enabledTestCount} tests with ${lab.supportsHomeCollection ? 'home collection' : 'lab visit'} services.'
+                          : 'Verified diagnostic laboratory with professional sample collection and digital reports.',
+                    ),
+                    if (lab.accreditation != null)
+                      _InfoBlock(
+                        title: 'Certifications',
+                        body: lab.accreditation!,
+                      ),
+                    _InfoBlock(
+                      title: 'Home Collection',
+                      body: lab.supportsHomeCollection
+                          ? 'Certified phlebotomists collect samples at your doorstep in available time slots.'
+                          : 'Visit the lab for sample collection.',
+                    ),
+                    _InfoBlock(
+                      title: 'Report Delivery',
+                      body:
+                          'Digital reports delivered via app and email. Typical turnaround: ${lab.reportDeliverySummary}.',
+                    ),
+                    const SizedBox(height: 20),
+                    MarketplaceSectionTitle(title: 'Customer Reviews'),
+                    const SizedBox(height: 8),
+                    ...LabCatalogMetadata.mockReviews.map(
+                      (r) => _ReviewTile(
+                        name: r.$1,
+                        rating: r.$2,
+                        comment: r.$3,
+                        time: r.$4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    MarketplaceSectionTitle(title: 'FAQs'),
+                    const SizedBox(height: 8),
+                    ...LabCatalogMetadata.labFaqs.map(
+                      (faq) =>
+                          _FaqTile(question: faq.$1, answer: faq.$2),
+                    ),
+                    const SizedBox(height: 20),
+                    MarketplaceSectionTitle(title: 'Similar Labs Nearby'),
+                    const SizedBox(height: 8),
+                    _SimilarLabsSection(currentLabId: lab.id ?? ''),
+                  ],
+                ],
                 const SizedBox(height: 80),
               ],
             ),

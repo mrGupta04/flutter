@@ -28,6 +28,7 @@ class PatientAuthRepository {
     required String profilePictureFileName,
     required Uint8List aadhaarCardBytes,
     required String aadhaarCardFileName,
+    String? referralCode,
   }) async {
     try {
       final formData = FormData();
@@ -42,6 +43,8 @@ class PatientAuthRepository {
         MapEntry('age', age.toString()),
         MapEntry('gender', gender),
         MapEntry('aadhaarNumber', aadhaarNumber),
+        if (referralCode != null && referralCode.trim().isNotEmpty)
+          MapEntry('referralCode', referralCode.trim().toUpperCase()),
       ]);
       formData.files.addAll([
         MapEntry(
@@ -97,6 +100,174 @@ class PatientAuthRepository {
         message: body['message'] as String?,
         statusCode: body['statusCode'] as int? ?? 200,
         data: user,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> forgotPassword({
+    required String email,
+  }) async {
+    try {
+      final response = await _dio.post(
+        AppConstants.endpointPatientForgotPassword,
+        data: {'email': email},
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'];
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: data is Map<String, dynamic> ? data : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        AppConstants.endpointPatientResetPassword,
+        data: {
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'];
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: data is Map<String, dynamic> ? data : null,
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<PatientUserModel>> updateMedicalProfile(
+    MedicalProfileModel profile,
+  ) async {
+    try {
+      final response = await _dio.put(
+        AppConstants.endpointPatientMedicalProfile,
+        data: profile.toJson(),
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      final user = PatientUserModel.fromJson(data);
+      await _persistUserSession(user);
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: user,
+        statusCode: body['statusCode'] as int? ?? 200,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<PatientUserModel>> saveFamilyMember(
+    FamilyMemberModel member,
+  ) async {
+    try {
+      final isUpdate = member.id.isNotEmpty;
+      final response = isUpdate
+          ? await _dio.put(
+              AppConstants.endpointPatientFamilyMember(member.id),
+              data: member.toJson(),
+            )
+          : await _dio.post(
+              AppConstants.endpointPatientFamilyMembers,
+              data: member.toJson(),
+            );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      final user = PatientUserModel.fromJson(data);
+      await _persistUserSession(user);
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: user,
+        statusCode: body['statusCode'] as int? ?? 200,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<PatientUserModel>> deleteFamilyMember(String id) async {
+    try {
+      final response =
+          await _dio.delete(AppConstants.endpointPatientFamilyMember(id));
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      final user = PatientUserModel.fromJson(data);
+      await _persistUserSession(user);
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: user,
+        statusCode: body['statusCode'] as int? ?? 200,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<PatientUserModel>> saveAddress(
+    SavedAddressModel address,
+  ) async {
+    try {
+      final isUpdate = address.id.isNotEmpty;
+      final response = isUpdate
+          ? await _dio.put(
+              AppConstants.endpointPatientAddress(address.id),
+              data: address.toJson(),
+            )
+          : await _dio.post(
+              AppConstants.endpointPatientAddresses,
+              data: address.toJson(),
+            );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      final user = PatientUserModel.fromJson(data);
+      await _persistUserSession(user);
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: user,
+        statusCode: body['statusCode'] as int? ?? 200,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<PatientUserModel>> deleteAddress(String id) async {
+    try {
+      final response =
+          await _dio.delete(AppConstants.endpointPatientAddress(id));
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      final user = PatientUserModel.fromJson(data);
+      await _persistUserSession(user);
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: user,
+        statusCode: body['statusCode'] as int? ?? 200,
       );
     } on DioException catch (e) {
       return _handleError(e);

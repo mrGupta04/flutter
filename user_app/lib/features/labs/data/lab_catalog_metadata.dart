@@ -348,6 +348,25 @@ class LabCatalogMetadata {
     LabBrowseGroup(id: 'skin', name: 'Skin', type: LabBrowseGroupType.bodyOrgan, testIds: ['food-allergy-panel', 'ige-total'], icon: Icons.face_rounded),
   ];
 
+  /// Featured marketplace-style Top Categories (title + browse group).
+  static const topCategories = <(String title, String groupId)>[
+    ('Diabetes', 'diabetes'),
+    ('Digestive Care', 'liver'),
+    ('Heart Care', 'heart'),
+    ('Respiratory Care', 'lungs'),
+    ('Kidney Care', 'kidney'),
+    ('Joints & Muscle Care', 'bones'),
+  ];
+
+  static List<(String title, LabBrowseGroup group)> get featuredTopCategories {
+    final out = <(String, LabBrowseGroup)>[];
+    for (final entry in topCategories) {
+      final group = findGroup(entry.$2);
+      if (group != null) out.add((entry.$1, group));
+    }
+    return out;
+  }
+
   static LabBrowseGroup? findGroup(String id) {
     for (final g in [...healthRisks, ...healthConditions, ...bodyOrgans]) {
       if (g.id == id) return g;

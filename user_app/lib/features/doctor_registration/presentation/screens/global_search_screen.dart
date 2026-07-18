@@ -20,6 +20,7 @@ import '../../provider/global_search_provider.dart';
 import '../../provider/nurse_live_status_provider.dart';
 import '../../../../core/utils/doctor_location_utils.dart';
 import '../../../../core/utils/provider_location_utils.dart';
+import '../../../ambulance/presentation/widgets/ambulance_action_sheet.dart';
 import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 import 'nurse_profile_screen.dart';
@@ -297,7 +298,13 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                     .map(
                       (a) => Padding(
                         padding: const EdgeInsets.only(bottom: kDoctorCardSpacing),
-                        child: AmbulanceListingCard(ambulance: a),
+                        child: AmbulanceListingCard(
+                          ambulance: a,
+                          onTap: () => showAmbulanceActionSheet(
+                            context,
+                            ambulance: a,
+                          ),
+                        ),
                       ),
                     )
                     .toList(),

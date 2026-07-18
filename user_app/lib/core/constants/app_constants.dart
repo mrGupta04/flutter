@@ -87,8 +87,20 @@ class AppConstants {
   static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
   static const String endpointNurseFeedback = '/nurse/feedback';
 
-  // Ambulance API Endpoints (patient discovery)
+  // Ambulance API Endpoints (patient discovery & booking)
   static const String endpointVerifiedAmbulances = '/ambulance/verified';
+  static const String endpointAmbulanceBookings = '/ambulance/bookings';
+  static String endpointAmbulanceBooking(String bookingId) =>
+      '/ambulance/bookings/$bookingId';
+  static String endpointAmbulanceBookingLocation(String bookingId) =>
+      '/ambulance/bookings/$bookingId/location';
+
+  // Rewards / referrals
+  static const String endpointPatientRewards = '/patient/rewards';
+  static const String endpointPatientRewardsRedeem = '/patient/rewards/redeem';
+
+  // CMS banners (public)
+  static const String endpointCmsBanners = '/cms/banners';
 
   // Blood Bank API Endpoints (patient discovery & booking)
   static const String endpointVerifiedBloodBanks = '/blood-bank/verified';
@@ -139,6 +151,10 @@ class AppConstants {
   static const String routeUserHome = '/user-home';
   static const String routeUserLogin = '/user-login';
   static const String routeUserRegister = '/user-register';
+  static const String routeForgotPassword = '/forgot-password';
+  static const String routeHealthProfile = '/user/health-profile';
+  static const String routeSupportTickets = '/user/support';
+  static const String routeUserRewards = '/user/rewards';
   static const String routeUserDashboard = '/user/dashboard';
   static const String routeUserEditProfile = '/user/edit-profile';
   /// Legacy hyphen paths (redirect to slash paths).
@@ -152,6 +168,7 @@ class AppConstants {
   static const String routeNurseSearch = '/nurse-search';
   static const String routeNurseProfile = '/nurse-profile';
   static const String routeAmbulanceSearch = '/ambulance-search';
+  static const String routeAmbulanceTrack = '/ambulance-track';
   static const String routeBloodBankSearch = '/blood-bank-search';
   static const String routeBloodBanks = '/blood-banks';
   static const String routeBloodBankDetail = '/blood-bank';
@@ -178,9 +195,28 @@ class AppConstants {
   static const String routeBookingTimeline = '/booking-timeline';
   static const String routeVisitNote = '/visit-note';
 
-  // Lab API Endpoints (patient discovery)
+  // Lab API Endpoints (patient discovery & booking)
   static const String endpointGetLabProfile = '/lab/profile';
   static const String endpointVerifiedLabs = '/lab/verified';
+  static const String endpointLabBookings = '/lab/bookings';
+
+  // Patient password recovery
+  static const String endpointPatientForgotPassword = '/patient/forgot-password';
+  static const String endpointPatientResetPassword = '/patient/reset-password';
+  static const String endpointPatientMedicalProfile = '/patient/medical-profile';
+  static const String endpointPatientFamilyMembers = '/patient/family-members';
+  static String endpointPatientFamilyMember(String id) =>
+      '/patient/family-members/$id';
+  static const String endpointPatientAddresses = '/patient/addresses';
+  static String endpointPatientAddress(String id) => '/patient/addresses/$id';
+  static const String endpointPatientSupportTickets = '/patient/support-tickets';
+  static const String endpointPatientValidateCoupon = '/patient/coupons/validate';
+  static const String endpointLabPaymentsCreateOrder = '/lab/payments/create-order';
+  static const String endpointLabPaymentsVerify = '/lab/payments/verify';
+  static const String endpointScanBookings = '/scan/bookings';
+  static const String endpointScanPaymentsCreateOrder =
+      '/scan/payments/create-order';
+  static const String endpointScanPaymentsVerify = '/scan/payments/verify';
 
   // Scan API Endpoints (patient discovery)
   static const String endpointGetScanCenterProfile = '/scan/profile';

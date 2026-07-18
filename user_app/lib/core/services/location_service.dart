@@ -1,4 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+
+import '../widgets/enable_location_services_dialog.dart';
 
 /// Thrown when the device cannot provide a current position.
 class LocationFailure implements Exception {
@@ -48,6 +51,74 @@ class LocationService {
       permission = await requestPermission();
     }
     return permission;
+  }
+
+  /// Shows the Enable Location Services dialog when GPS is off, opens settings
+  /// on Turn On, then requests runtime permission if needed.
+  ///
+  /// Returns `true` when the app can read the device location.
+  static Future<bool> ensureReady(BuildContext context) async {
+    if (!await isServiceEnabled()) {
+      if (!context.mounted) return false;
+      final turnOn = await EnableLocationServicesDialog.show(context);
+      if (!turnOn) return false;
+      await openLocationSettings();
+      if (!await isServiceEnabled()) {
+        return false;
+      }
+    }
+
+    var permission = await checkPermission();
+    if (permissionGranted(permission)) return true;
+
+    if (permission == LocationPermission.deniedForever) {
+      if (!context.mounted) return false;
+      final turnOn = await EnableLocationServicesDialog.show(
+        context,
+        title: 'Enable Location Services',
+        message:
+            "This app requires location access to function properly. Please enable location permission by clicking the 'Turn On' button below.",
+      );
+      if (!turnOn) return false;
+      await openAppSettings();
+      permission = await checkPermission();
+      return permissionGranted(permission);
+    }
+
+    if (permission == LocationPermission.denied) {
+      permission = await requestPermission();
+      if (permissionGranted(permission)) return true;
+
+      if (permission == LocationPermission.deniedForever && context.mounted) {
+        final turnOn = await EnableLocationServicesDialog.show(
+          context,
+          title: 'Enable Location Services',
+          message:
+              "This app requires location access to function properly. Please enable location permission by clicking the 'Turn On' button below.",
+        );
+        if (turnOn) {
+          await openAppSettings();
+          permission = await checkPermission();
+          return permissionGranted(permission);
+        }
+      }
+      return false;
+    }
+
+    return permissionGranted(permission);
+  }
+
+  /// Ensures location is ready (with dialog if needed), then reads GPS.
+  /// Returns `null` if the user cancels or location stays unavailable.
+  static Future<({double latitude, double longitude})?>
+      getCurrentPositionWithPrompt(BuildContext context) async {
+    final ready = await ensureReady(context);
+    if (!ready || !context.mounted) return null;
+    try {
+      return await getCurrentPosition(requestPermissionIfNeeded: false);
+    } on LocationFailure {
+      return null;
+    }
   }
 
   static Future<({double latitude, double longitude})> getCurrentPosition({

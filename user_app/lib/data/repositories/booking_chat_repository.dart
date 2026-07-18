@@ -39,10 +39,14 @@ class BookingChatRepository {
 
   final DioService _dio;
 
-  Future<List<ChatMessage>> list(String bookingId) async {
+  Future<List<ChatMessage>> list(String bookingId, {DateTime? after}) async {
     try {
-      final response =
-          await _dio.get(AppConstants.endpointPatientBookingChat(bookingId));
+      final response = await _dio.get(
+        AppConstants.endpointPatientBookingChat(bookingId),
+        queryParameters: {
+          if (after != null) 'after': after.toUtc().toIso8601String(),
+        },
+      );
       final body = response.data as Map<String, dynamic>;
       final data = body['data'] as List<dynamic>? ?? [];
       return data

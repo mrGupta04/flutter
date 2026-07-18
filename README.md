@@ -2,6 +2,8 @@
 
 Doctor onboarding: two self-contained **Flutter** apps + **Node.js/Express** API + **MongoDB Atlas**.
 
+**What is implemented:** see [IMPLEMENTATION.md](./IMPLEMENTATION.md) for a full feature inventory (patient, provider, admin, API) and MVP limitations.
+
 ## Repository layout
 
 | Path | Purpose |

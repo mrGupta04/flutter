@@ -18,6 +18,13 @@ const { upload, filePublicUrl } = require('../middleware/multerUpload');
 const { loginProvider } = require('../utils/providerAuth');
 const { toScanCenter } = require('../db/scanCenterMappers');
 const { validateMobile } = require('../utils/mobile');
+const {
+  createScanBooking,
+  listScanBookingsForCenter,
+  updateScanBookingStatus,
+  createPaymentOrderForScanBooking,
+  confirmScanBookingAfterPayment,
+} = require('../db/scanBookingRepositories');
 
 const router = express.Router();
 
@@ -321,6 +328,117 @@ router.post('/register', async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Registration failed', 500);
+  }
+});
+
+router.post('/bookings', authOptional, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const booking = await createScanBooking({
+      ...body,
+      patientId: body.patientId || req.auth?.patientId,
+      patientEmail: body.patientEmail || req.auth?.email,
+    });
+    return res.status(201).json({
+      success: true,
+      message:
+        'Scan booking request submitted. The center will confirm your slot shortly.',
+      statusCode: 201,
+      data: booking,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to create scan booking',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.get('/bookings', authOptional, async (req, res) => {
+  try {
+    const scanCenterId = req.query.scanCenterId || req.auth?.scanCenterId;
+    if (!scanCenterId) {
+      return sendError(res, 'scanCenterId is required', 400);
+    }
+    const bookings = await listScanBookingsForCenter(scanCenterId);
+    return sendSuccess(res, { data: bookings });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to load bookings', 500);
+  }
+});
+
+router.post('/bookings/:bookingId/status', authOptional, async (req, res) => {
+  try {
+    const scanCenterId = req.body?.scanCenterId || req.auth?.scanCenterId;
+    if (!scanCenterId) {
+      return sendError(res, 'scanCenterId is required', 400);
+    }
+    const booking = await updateScanBookingStatus({
+      bookingId: req.params.bookingId,
+      scanCenterId,
+      status: req.body?.status,
+      rejectionReason: req.body?.rejectionReason,
+      reportUrl: req.body?.reportUrl,
+    });
+    return sendSuccess(res, { message: 'Booking status updated', data: booking });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to update booking',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.post('/payments/create-order', authOptional, async (req, res) => {
+  try {
+    const bookingId = req.body?.bookingId;
+    if (!bookingId) return sendError(res, 'bookingId is required', 400);
+    const result = await createPaymentOrderForScanBooking(bookingId);
+    return sendSuccess(res, {
+      message: 'Payment order created',
+      data: {
+        bookingId: result.booking.id,
+        razorpayOrderId: result.razorpayOrder.id,
+        amount: result.amountInPaise,
+        currency: result.razorpayOrder.currency || 'INR',
+        keyId: result.keyId,
+        mock: result.mock,
+        prefillName: result.prefill.name,
+        prefillEmail: result.prefill.email,
+        prefillContact: result.prefill.contact,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to create payment',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.post('/payments/verify', authOptional, async (req, res) => {
+  try {
+    const booking = await confirmScanBookingAfterPayment({
+      bookingId: req.body?.bookingId || req.body?.orderId,
+      razorpayOrderId: req.body?.razorpayOrderId,
+      razorpayPaymentId: req.body?.razorpayPaymentId,
+      razorpaySignature: req.body?.razorpaySignature,
+    });
+    return sendSuccess(res, { message: 'Payment verified', data: booking });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Payment verification failed',
+      err.statusCode || 500,
+    );
   }
 });
 

@@ -611,6 +611,21 @@ async function createPendingBookingForPayment(payload, holdMinutes = 15) {
   } = validated;
 
   const paymentExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000);
+  let consultationFee = getConsultationFeeForType(doctor, consultationType);
+  let couponCode;
+  let discountAmount = 0;
+
+  if (payload.couponCode) {
+    const { validateCoupon } = require('./couponRepositories');
+    const couponResult = await validateCoupon({
+      code: payload.couponCode,
+      orderAmountInr: consultationFee,
+      applicableTo: 'consultation',
+    });
+    discountAmount = couponResult.discountAmount;
+    consultationFee = couponResult.finalAmount;
+    couponCode = couponResult.coupon.code;
+  }
 
   const existingHold = await ConsultationBooking.findOne({
     doctorId: payload.doctorId,
@@ -639,6 +654,9 @@ async function createPendingBookingForPayment(payload, holdMinutes = 15) {
     existingHold.visitReason = visitReason ? String(visitReason).trim() : undefined;
     existingHold.paymentExpiresAt = paymentExpiresAt;
     existingHold.paymentStatus = 'pending';
+    existingHold.consultationFee = consultationFee;
+    existingHold.couponCode = couponCode;
+    existingHold.discountAmount = discountAmount;
     await existingHold.save();
     const doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
     return { booking: existingHold, doctorName };
@@ -663,7 +681,9 @@ async function createPendingBookingForPayment(payload, holdMinutes = 15) {
     slotStart,
     slotEnd,
     weekStartDate: weekStart,
-    consultationFee: getConsultationFeeForType(doctor, consultationType),
+    consultationFee,
+    couponCode,
+    discountAmount,
     status: 'pending',
     paymentStatus: 'pending',
     paymentProvider: 'razorpay',
@@ -763,6 +783,24 @@ async function confirmBookingAfterPayment({
   const { appendStatusHistory } = require('./bookingLifecycleHelpers');
   appendStatusHistory(booking, 'confirmed', 'patient');
   await booking.save();
+
+  if (booking.couponCode) {
+    try {
+      const { incrementCouponUsage } = require('./couponRepositories');
+      await incrementCouponUsage(booking.couponCode);
+    } catch (err) {
+      console.error('[booking] coupon usage increment failed:', err.message);
+    }
+  }
+
+  if (booking.patientId) {
+    try {
+      const { awardBookingPoints } = require('./rewardRepositories');
+      await awardBookingPoints(booking.patientId, 20);
+    } catch (err) {
+      console.error('[booking] reward points award failed:', err.message);
+    }
+  }
 
   if (booking.consultationType === 'online_consult' && doctor) {
     notifyBookingConfirmed({ booking: booking.toObject(), doctor }).catch((err) => {
@@ -1146,6 +1184,9 @@ async function createHomeVisitRequest(payload) {
     existingHold.distanceKm = distance ?? undefined;
     existingHold.approvalExpiresAt = approvalExpiresAt;
     existingHold.paymentStatus = 'pending';
+    if (payload.couponCode) {
+      existingHold.couponCode = String(payload.couponCode).trim().toUpperCase();
+    }
     await existingHold.save();
     await notifyProviderOfHomeVisitRequest(existingHold, 'doctor');
     return formatBookingResponse(existingHold, doctor);
@@ -1178,6 +1219,9 @@ async function createHomeVisitRequest(payload) {
     slotEnd,
     weekStartDate: weekStart,
     consultationFee: getConsultationFeeForType(doctor, consultationType),
+    couponCode: payload.couponCode
+      ? String(payload.couponCode).trim().toUpperCase()
+      : undefined,
     status: 'awaiting_doctor_approval',
     paymentStatus: 'pending',
     paymentProvider: 'razorpay',
@@ -1329,7 +1373,7 @@ async function rejectHomeVisitRequest(bookingId, doctorId) {
   return formatBookingResponse(booking, doctor);
 }
 
-async function createPaymentOrderForBooking(bookingId) {
+async function createPaymentOrderForBooking(bookingId, { couponCode } = {}) {
   const booking = await ConsultationBooking.findOne({ id: bookingId });
   if (!booking) {
     const err = new Error('Booking not found');
@@ -1378,6 +1422,21 @@ async function createPaymentOrderForBooking(bookingId) {
     const err = new Error('Payment window expired. Please request again.');
     err.statusCode = 410;
     throw err;
+  }
+
+  const codeToApply = couponCode || booking.couponCode;
+  if (codeToApply && !(booking.discountAmount > 0)) {
+    const baseFee =
+      Number(booking.consultationFee) + Number(booking.discountAmount || 0);
+    const { validateCoupon } = require('./couponRepositories');
+    const couponResult = await validateCoupon({
+      code: codeToApply,
+      orderAmountInr: baseFee,
+      applicableTo: 'consultation',
+    });
+    booking.discountAmount = couponResult.discountAmount;
+    booking.consultationFee = couponResult.finalAmount;
+    booking.couponCode = couponResult.coupon.code;
   }
 
   booking.status = 'pending';
@@ -1525,6 +1584,66 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
       ...nurseVisitNoteFieldsForBooking(b, visitNoteMap),
     });
   }
+
+  try {
+    const {
+      listLabBookingsForPatient,
+      toPatientBookingShape: toLabPatientShape,
+    } = require('./labBookingRepositories');
+    const labBookings = await listLabBookingsForPatient({
+      patientId,
+      patientMobile: mobileNumber,
+      patientEmail,
+    });
+    for (const lb of labBookings) {
+      results.push(toLabPatientShape(lb));
+    }
+  } catch (err) {
+    console.error('Failed to merge lab bookings into patient history', err);
+  }
+
+  try {
+    const {
+      listAmbulanceBookingsForPatient,
+      toPatientBookingShape: toAmbulancePatientShape,
+    } = require('./ambulanceBookingRepositories');
+    const ambulanceBookings = await listAmbulanceBookingsForPatient({
+      patientId,
+      patientMobile: mobileNumber,
+      patientEmail,
+    });
+    for (const ab of ambulanceBookings) {
+      results.push(toAmbulancePatientShape(ab));
+    }
+  } catch (err) {
+    console.error(
+      'Failed to merge ambulance bookings into patient history',
+      err,
+    );
+  }
+
+  try {
+    const {
+      listScanBookingsForPatient,
+      toPatientBookingShape: toScanPatientShape,
+    } = require('./scanBookingRepositories');
+    const scanBookings = await listScanBookingsForPatient({
+      patientId,
+      patientMobile: mobileNumber,
+      patientEmail,
+    });
+    for (const sb of scanBookings) {
+      results.push(toScanPatientShape(sb));
+    }
+  } catch (err) {
+    console.error('Failed to merge scan bookings into patient history', err);
+  }
+
+  results.sort((a, b) => {
+    const aTime = new Date(a.slotStart || a.createdAt || 0).getTime();
+    const bTime = new Date(b.slotStart || b.createdAt || 0).getTime();
+    return bTime - aTime;
+  });
 
   return results;
 }

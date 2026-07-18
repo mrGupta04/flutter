@@ -801,6 +801,7 @@ class RegistrationStepActions extends StatelessWidget {
     required this.onContinue,
     required this.continueLabel,
     this.isLoading = false,
+    this.isEnabled = true,
     this.continueIcon,
   });
 
@@ -809,6 +810,7 @@ class RegistrationStepActions extends StatelessWidget {
   final VoidCallback onContinue;
   final String continueLabel;
   final bool isLoading;
+  final bool isEnabled;
   final IconData? continueIcon;
 
   @override
@@ -831,9 +833,54 @@ class RegistrationStepActions extends StatelessWidget {
             label: continueLabel,
             icon: continueIcon,
             isLoading: isLoading,
+            isEnabled: isEnabled,
             onPressed: onContinue,
             height: 50,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Shared acknowledgment checkbox used on registration review / submit steps.
+class RegistrationAcknowledgmentSection extends StatelessWidget {
+  const RegistrationAcknowledgmentSection({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  static const label =
+      'I acknowledge that all information provided is true and accurate, and I agree to the partner terms and conditions.';
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Acknowledgment',
+          style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Please confirm the following before submitting your application.',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          activeColor: AppColors.primary,
+          value: value,
+          onChanged: (v) => onChanged(v ?? false),
+          title: Text(label, style: AppTextStyles.bodySmall),
         ),
       ],
     );

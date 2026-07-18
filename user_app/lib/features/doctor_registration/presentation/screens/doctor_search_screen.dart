@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -17,6 +16,7 @@ import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
+import '../../../../core/widgets/enable_location_services_dialog.dart';
 import '../../provider/care_filter_constants.dart';
 import '../../provider/doctor_search_provider.dart';
 import '../../provider/doctor_live_status_provider.dart';
@@ -125,129 +125,31 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
   }
 
   Future<bool> _ensureLocationAccess() async {
-    if (!await LocationService.isServiceEnabled()) {
-      if (!mounted) return false;
-      final openSettings = await _showLocationPermissionDialog(
-        title: 'Turn on location',
-        message:
-            'Location services are off. Enable GPS or location to find doctors near you.',
-        confirmLabel: 'Open settings',
-      );
-      if (openSettings) {
-        await LocationService.openLocationSettings();
-      }
-      return false;
-    }
-
-    var permission = await LocationService.checkPermission();
-    if (LocationService.permissionGranted(permission)) {
-      return true;
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      if (!mounted) return false;
-      final openSettings = await _showLocationPermissionDialog(
-        title: 'Location access blocked',
-        message:
-            'Allow location access in app settings to find clinic and home-visit doctors near you.',
-        confirmLabel: 'Open settings',
-      );
-      if (openSettings) {
-        await LocationService.openAppSettings();
-      }
-      return false;
-    }
-
     if (!mounted) return false;
-    final allow = await _showLocationPermissionDialog(
-      title: 'Allow location access',
-      message:
-          'We use your location to show clinic and home-visit doctors nearest to you. '
-          'Your exact location is only used to sort nearby results.',
-      confirmLabel: 'Allow location',
-      cancelLabel: 'Not now',
-    );
-    if (!allow) return false;
-
-    permission = await LocationService.requestPermission();
-    if (LocationService.permissionGranted(permission)) {
-      return true;
-    }
-
-    if (!mounted) return false;
-    if (permission == LocationPermission.deniedForever) {
-      final openSettings = await _showLocationPermissionDialog(
-        title: 'Location access blocked',
-        message:
-            'Allow location access in app settings to find doctors near you.',
-        confirmLabel: 'Open settings',
-      );
-      if (openSettings) {
-        await LocationService.openAppSettings();
-      }
-      return false;
-    }
-
-    custom.SnackBarHelper.showError(
-      context,
-      'Location permission denied. Allow access when prompted, then try again.',
-    );
-    return false;
+    return LocationService.ensureReady(context);
   }
 
   Future<void> _handleLocationFailure(LocationFailure error) async {
     final message = error.message.toLowerCase();
-    if (message.contains('blocked') || message.contains('denied')) {
-      final openSettings = await _showLocationPermissionDialog(
-        title: 'Location access needed',
-        message: error.message,
-        confirmLabel: 'Open settings',
-      );
-      if (openSettings) {
-        await LocationService.openAppSettings();
-      }
+    if (message.contains('turned off') || message.contains('disabled')) {
+      if (!mounted) return;
+      final turnOn = await EnableLocationServicesDialog.show(context);
+      if (turnOn) await LocationService.openLocationSettings();
       return;
     }
 
-    if (message.contains('turned off') || message.contains('disabled')) {
-      final openSettings = await _showLocationPermissionDialog(
-        title: 'Turn on location',
-        message: error.message,
-        confirmLabel: 'Open settings',
+    if (message.contains('blocked') || message.contains('denied')) {
+      if (!mounted) return;
+      final turnOn = await EnableLocationServicesDialog.show(
+        context,
+        message:
+            "This app requires location access to function properly. Please enable location permission by clicking the 'Turn On' button below.",
       );
-      if (openSettings) {
-        await LocationService.openLocationSettings();
-      }
+      if (turnOn) await LocationService.openAppSettings();
       return;
     }
 
     custom.SnackBarHelper.showError(context, error.message);
-  }
-
-  Future<bool> _showLocationPermissionDialog({
-    required String title,
-    required String message,
-    required String confirmLabel,
-    String cancelLabel = 'Cancel',
-  }) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(cancelLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(confirmLabel),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
   }
 
   DoctorSearchParams get _params => DoctorSearchParams(

@@ -53,6 +53,66 @@ class AmbulanceRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> requestAmbulance({
+    required String ambulanceId,
+    required String patientName,
+    required String patientMobile,
+    required String pickupAddress,
+    String? patientEmail,
+    String? patientId,
+    String? pickupCity,
+    String? pickupPincode,
+    double? pickupLatitude,
+    double? pickupLongitude,
+    String? dropAddress,
+    String? notes,
+    String? vehicleTypeRequested,
+    bool isEmergency = true,
+    String countryCode = '91',
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAmbulanceBookings,
+        data: {
+          'ambulanceId': ambulanceId,
+          'patientName': patientName,
+          'patientMobile': patientMobile,
+          if (patientEmail != null && patientEmail.isNotEmpty)
+            'patientEmail': patientEmail,
+          if (patientId != null && patientId.isNotEmpty) 'patientId': patientId,
+          'pickupAddress': pickupAddress,
+          if (pickupCity != null) 'pickupCity': pickupCity,
+          if (pickupPincode != null) 'pickupPincode': pickupPincode,
+          if (pickupLatitude != null) 'pickupLatitude': pickupLatitude,
+          if (pickupLongitude != null) 'pickupLongitude': pickupLongitude,
+          if (dropAddress != null) 'dropAddress': dropAddress,
+          if (notes != null) 'notes': notes,
+          if (vehicleTypeRequested != null)
+            'vehicleTypeRequested': vehicleTypeRequested,
+          'isEmergency': isEmergency,
+          'countryCode': countryCode,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        statusCode: body['statusCode'] as int? ?? 201,
+        message: body['message'] as String?,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (_) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
+    }
+  }
+
   ApiResponse<T> _handleError<T>(DioException error) {
     String message = AppConstants.errorSomethingWentWrong;
     int statusCode = 500;

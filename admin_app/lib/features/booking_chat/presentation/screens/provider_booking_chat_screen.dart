@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -55,6 +57,7 @@ class _ProviderBookingChatScreenState extends State<ProviderBookingChatScreen> {
   bool _loading = true;
   bool _sending = false;
   String? _error;
+  Timer? _poll;
 
   String get _endpoint => widget.role == 'nurse'
       ? AppConstants.endpointNurseBookingChat(widget.bookingId)
@@ -66,14 +69,19 @@ class _ProviderBookingChatScreenState extends State<ProviderBookingChatScreen> {
   void initState() {
     super.initState();
     _load();
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) => _pollNew());
   }
 
   @override
   void dispose() {
+    _poll?.cancel();
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
   }
+
+  DateTime? get _lastCreatedAt =>
+      _messages.isEmpty ? null : _messages.last.createdAt;
 
   Future<void> _load() async {
     setState(() {
@@ -111,6 +119,40 @@ class _ProviderBookingChatScreenState extends State<ProviderBookingChatScreen> {
     }
   }
 
+  Future<void> _pollNew() async {
+    if (_loading || _sending) return;
+    try {
+      final response = await _dio.get(
+        _endpoint,
+        queryParameters: {
+          if (_lastCreatedAt != null)
+            'after': _lastCreatedAt!.toUtc().toIso8601String(),
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as List<dynamic>? ?? [];
+      final newer = data
+          .whereType<Map>()
+          .map((e) => ChatMessage.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      if (!mounted || newer.isEmpty) return;
+      final existingIds = _messages.map((m) => m.id).toSet();
+      final toAdd =
+          newer.where((m) => !existingIds.contains(m.id)).toList();
+      if (toAdd.isEmpty) return;
+      setState(() => _messages = [..._messages, ...toAdd]);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scroll.hasClients) {
+          _scroll.animateTo(
+            _scroll.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } catch (_) {}
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
@@ -137,7 +179,8 @@ class _ProviderBookingChatScreenState extends State<ProviderBookingChatScreen> {
     } catch (e) {
       setState(() => _sending = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
       }
     }
   }
@@ -182,7 +225,8 @@ class _ProviderBookingChatScreenState extends State<ProviderBookingChatScreen> {
                                   ),
                                   constraints: BoxConstraints(
                                     maxWidth:
-                                        MediaQuery.of(context).size.width * 0.75,
+                                        MediaQuery.of(context).size.width *
+                                            0.75,
                                   ),
                                   decoration: BoxDecoration(
                                     color: mine

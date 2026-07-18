@@ -378,7 +378,13 @@ class _RegistrationFormScreenState
   Widget build(BuildContext context) {
     final currentStep = ref.watch(currentRegistrationStepProvider);
 
-    return Scaffold(
+    return PopScope(
+      canPop: currentStep <= 1,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _previousStep();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Doctor onboarding'),
@@ -436,6 +442,7 @@ class _RegistrationFormScreenState
           ),
         ],
       ),
+    ),
     );
   }
 }

@@ -453,6 +453,7 @@ router.post('/home-visit/request', authOptional, async (req, res) => {
       dayOfWeek,
       startHour,
       slotStart,
+      couponCode,
     } = req.body || {};
 
     if (!doctorId) {
@@ -479,6 +480,7 @@ router.post('/home-visit/request', authOptional, async (req, res) => {
       dayOfWeek,
       startHour,
       slotStart,
+      couponCode,
     });
 
     return res.status(201).json({

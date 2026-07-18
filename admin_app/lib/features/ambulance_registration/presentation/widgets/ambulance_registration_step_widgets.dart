@@ -19,6 +19,7 @@ import '../../../../data/models/ambulance_vehicle_model.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_location_input.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
+import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../provider/ambulance_registration_provider.dart';
 
 Widget ambulanceStepScroll({required Widget child}) {
@@ -1314,7 +1315,7 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
   }
 }
 
-class AmbulanceStep7Review extends ConsumerWidget {
+class AmbulanceStep7Review extends ConsumerStatefulWidget {
   const AmbulanceStep7Review({
     super.key,
     required this.onSubmit,
@@ -1325,7 +1326,15 @@ class AmbulanceStep7Review extends ConsumerWidget {
   final void Function(int step) onEdit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AmbulanceStep7Review> createState() =>
+      _AmbulanceStep7ReviewState();
+}
+
+class _AmbulanceStep7ReviewState extends ConsumerState<AmbulanceStep7Review> {
+  bool _acknowledged = false;
+
+  @override
+  Widget build(BuildContext context) {
     final form = ref.watch(ambulanceRegistrationFormProvider);
     return ambulanceStepScroll(
       child: Column(
@@ -1340,7 +1349,7 @@ class AmbulanceStep7Review extends ConsumerWidget {
           const SizedBox(height: 16),
           _ReviewSection(
             title: 'Service',
-            onEdit: () => onEdit(1),
+            onEdit: () => widget.onEdit(1),
             rows: [
               form.serviceName,
               form.ownerName,
@@ -1350,19 +1359,19 @@ class AmbulanceStep7Review extends ConsumerWidget {
           ),
           _ReviewSection(
             title: 'Fleet (${form.vehicles.length} vehicles)',
-            onEdit: () => onEdit(2),
+            onEdit: () => widget.onEdit(2),
             rows: form.vehicles.map((v) => v.displayLabel).toList(),
           ),
           _ReviewSection(
             title: 'Drivers (${form.drivers.length})',
-            onEdit: () => onEdit(3),
+            onEdit: () => widget.onEdit(3),
             rows: form.drivers
                 .map((d) => '${d.fullName} — ${d.drivingLicenseNumber}')
                 .toList(),
           ),
           _ReviewSection(
             title: 'Location',
-            onEdit: () => onEdit(5),
+            onEdit: () => widget.onEdit(5),
             rows: [
               '${form.address}, ${form.city}',
               form.serviceArea,
@@ -1371,7 +1380,7 @@ class AmbulanceStep7Review extends ConsumerWidget {
           ),
           _ReviewSection(
             title: 'Bank',
-            onEdit: () => onEdit(6),
+            onEdit: () => widget.onEdit(6),
             rows: [
               form.bankAccountHolderName,
               '****${form.bankAccountNumber.length > 4 ? form.bankAccountNumber.substring(form.bankAccountNumber.length - 4) : form.bankAccountNumber}',
@@ -1385,11 +1394,17 @@ class AmbulanceStep7Review extends ConsumerWidget {
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
             ),
           ],
+          const SizedBox(height: 12),
+          RegistrationAcknowledgmentSection(
+            value: _acknowledged,
+            onChanged: (value) => setState(() => _acknowledged = value),
+          ),
           const SizedBox(height: 20),
           CustomButton(
             label: 'Submit for Verification',
             isLoading: form.isSubmitting,
-            onPressed: onSubmit,
+            isEnabled: _acknowledged,
+            onPressed: widget.onSubmit,
           ),
         ],
       ),

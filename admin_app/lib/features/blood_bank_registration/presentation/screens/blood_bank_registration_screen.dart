@@ -34,6 +34,7 @@ class _BloodBankRegistrationScreenState
     extends ConsumerState<BloodBankRegistrationScreen> {
   final _bloodBankId = const Uuid().v4();
   int _step = 0;
+  bool _acknowledged = false;
 
   // Step 1
   final _nameController = TextEditingController();
@@ -331,6 +332,13 @@ class _BloodBankRegistrationScreenState
   }
 
   Future<void> _submit() async {
+    if (!_acknowledged) {
+      SnackBarHelper.showError(
+        context,
+        'Please acknowledge the terms before submitting.',
+      );
+      return;
+    }
     if (!_validateCurrentStep()) return;
 
     final bloodBank = BloodBankModel(
@@ -452,9 +460,21 @@ class _BloodBankRegistrationScreenState
       'Confirm details before submitting',
     ];
 
-    return Scaffold(
+    return PopScope(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _back();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Blood bank registration')),
+      appBar: AppBar(
+        title: const Text('Blood bank registration'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: _step > 0 ? _back : () => Navigator.of(context).maybePop(),
+        ),
+      ),
       body: RegistrationStepPage(
         step: _step + 1,
         total: _totalSteps,
@@ -468,6 +488,7 @@ class _BloodBankRegistrationScreenState
           continueLabel:
               _step == _totalSteps - 1 ? 'Submit application' : 'Continue',
           isLoading: regState.isSubmitting,
+          isEnabled: _step != _totalSteps - 1 || _acknowledged,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -480,6 +501,7 @@ class _BloodBankRegistrationScreenState
           },
         ),
       ),
+    ),
     );
   }
 
@@ -906,6 +928,11 @@ class _BloodBankRegistrationScreenState
         Text(
           'By submitting, you agree to admin verification of your license and documents.',
           style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 16),
+        RegistrationAcknowledgmentSection(
+          value: _acknowledged,
+          onChanged: (value) => setState(() => _acknowledged = value),
         ),
       ],
     );

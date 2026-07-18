@@ -11,6 +11,7 @@ import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../provider/lab_search_provider.dart';
 import '../widgets/lab_explore_card.dart';
 import '../widgets/lab_sticky_cart_bar.dart';
+import '../widgets/lab_top_categories_section.dart';
 
 class LabExploreScreen extends ConsumerStatefulWidget {
   const LabExploreScreen({super.key});
@@ -267,6 +268,12 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: LabTopCategoriesSection(),
               ),
             ),
             if (state.isLoading && state.labs.isEmpty)

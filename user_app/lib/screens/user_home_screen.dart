@@ -15,6 +15,27 @@ import '../shared/widgets/health_service_card.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/hero_wallpaper_carousel.dart';
 import '../shared/widgets/user_app_footer.dart';
+import '../data/models/api_response_model.dart';
+import '../data/services/dio_service.dart';
+
+final homeHeroBannersProvider =
+    FutureProvider.autoDispose<List<HeroSlide>>((ref) async {
+  try {
+    final response = await DioService().get(
+      AppConstants.endpointCmsBanners,
+      queryParameters: {'placement': 'home_hero'},
+    );
+    final body = response.data as Map<String, dynamic>;
+    final list = extractApiList(body['data']);
+    return list
+        .whereType<Map>()
+        .map((e) => HeroSlide.fromJson(Map<String, dynamic>.from(e)))
+        .where((s) => s.imageUrl.isNotEmpty && s.title.isNotEmpty)
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+});
 
 /// Patient marketplace home — 1mg Care style dashboard.
 class UserHomeScreen extends ConsumerStatefulWidget {
@@ -43,6 +64,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     final auth = ref.watch(patientAuthProvider);
     final user = auth.user;
     final dash = ref.watch(patientDashboardProvider);
+    final bannersAsync = ref.watch(homeHeroBannersProvider);
     final nextBooking = dash.upcomingBookings.isNotEmpty
         ? dash.upcomingBookings.first
         : null;
@@ -53,6 +75,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: () async {
+          ref.invalidate(homeHeroBannersProvider);
           if (await TokenStorage.instance.isPatientLoggedIn()) {
             await ref.read(patientDashboardProvider.notifier).refreshAll();
           }
@@ -138,10 +161,12 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                 ),
               ),
             ),
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: HeroWallpaperCarousel(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: HeroWallpaperCarousel(
+                  slides: bannersAsync.asData?.value,
+                ),
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),

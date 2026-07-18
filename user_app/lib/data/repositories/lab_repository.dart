@@ -225,6 +225,126 @@ class LabRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> createBooking({
+    required String labId,
+    required String patientName,
+    required String patientMobile,
+    required String collectionType,
+    required DateTime scheduledDate,
+    required String timeSlot,
+    required List<Map<String, dynamic>> items,
+    String? patientEmail,
+    String? patientId,
+    String? collectionAddress,
+    String? collectionCity,
+    String? collectionPincode,
+    String? notes,
+    String? countryCode,
+    int? totalAmount,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointLabBookings,
+        data: {
+          'labId': labId,
+          'patientName': patientName,
+          'patientMobile': patientMobile,
+          if (patientEmail != null) 'patientEmail': patientEmail,
+          if (patientId != null) 'patientId': patientId,
+          'collectionType': collectionType,
+          if (collectionAddress != null) 'collectionAddress': collectionAddress,
+          if (collectionCity != null) 'collectionCity': collectionCity,
+          if (collectionPincode != null) 'collectionPincode': collectionPincode,
+          'scheduledDate': scheduledDate.toIso8601String(),
+          'timeSlot': timeSlot,
+          'items': items,
+          if (notes != null) 'notes': notes,
+          if (countryCode != null) 'countryCode': countryCode,
+          if (totalAmount != null) 'totalAmount': totalAmount,
+          'paymentStatus': 'pending',
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 201,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : null,
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (_) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> createPaymentOrder(
+    String bookingId,
+  ) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointLabPaymentsCreateOrder,
+        data: {'bookingId': bookingId},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : null,
+        statusCode: body['statusCode'] as int? ?? 200,
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> verifyPayment({
+    required String bookingId,
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointLabPaymentsVerify,
+        data: {
+          'bookingId': bookingId,
+          'razorpayOrderId': razorpayOrderId,
+          'razorpayPaymentId': razorpayPaymentId,
+          'razorpaySignature': razorpaySignature,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : null,
+        statusCode: body['statusCode'] as int? ?? 200,
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   ApiResponse<T> _handleError<T>(DioException error) {
     String message = AppConstants.errorSomethingWentWrong;
     int statusCode = 500;

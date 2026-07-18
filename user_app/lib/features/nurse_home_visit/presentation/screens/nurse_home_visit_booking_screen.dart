@@ -39,6 +39,7 @@ class _NurseHomeVisitBookingScreenState
   final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _reasonController = TextEditingController();
+  final _couponController = TextEditingController();
   String? _selectedDateKey;
   double? _patientLatitude;
   double? _patientLongitude;
@@ -75,14 +76,23 @@ class _NurseHomeVisitBookingScreenState
     _stateController.dispose();
     _pincodeController.dispose();
     _reasonController.dispose();
+    _couponController.dispose();
     super.dispose();
   }
 
   Future<void> _useMyLocation() async {
     setState(() => _isFetchingLocation = true);
     try {
-      final position = await LocationService.getCurrentPosition();
+      final position =
+          await LocationService.getCurrentPositionWithPrompt(context);
       if (!mounted) return;
+      if (position == null) {
+        SnackBarHelper.showError(
+          context,
+          'Location is required. Enable location services and try again.',
+        );
+        return;
+      }
       setState(() {
         _patientLatitude = position.latitude;
         _patientLongitude = position.longitude;
@@ -115,6 +125,9 @@ class _NurseHomeVisitBookingScreenState
           visitReason: _reasonController.text.trim(),
           patientLatitude: _patientLatitude,
           patientLongitude: _patientLongitude,
+          couponCode: _couponController.text.trim().isEmpty
+              ? null
+              : _couponController.text.trim(),
         );
 
     if (!mounted) return;
@@ -300,6 +313,13 @@ class _NurseHomeVisitBookingScreenState
                         maxLines: 3,
                         validator: (v) =>
                             (v ?? '').trim().length < 5 ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      CustomTextField(
+                        controller: _couponController,
+                        label: 'Coupon code (optional)',
+                        prefixIcon: Icons.local_offer_outlined,
+                        hint: 'Applied when you pay after approval',
                       ),
                     ],
                   ),

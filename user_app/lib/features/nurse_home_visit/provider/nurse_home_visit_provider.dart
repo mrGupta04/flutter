@@ -114,6 +114,7 @@ class NurseHomeVisitBookingNotifier
     String? visitReason,
     double? patientLatitude,
     double? patientLongitude,
+    String? couponCode,
   }) async {
     final slot = state.selectedSlot;
     if (slot == null) {
@@ -135,6 +136,7 @@ class NurseHomeVisitBookingNotifier
         visitReason: visitReason,
         patientLatitude: patientLatitude,
         patientLongitude: patientLongitude,
+        couponCode: couponCode,
         dayOfWeek: slot.dayOfWeek,
         startHour: slot.startHour,
         slotStart: slot.slotStart,

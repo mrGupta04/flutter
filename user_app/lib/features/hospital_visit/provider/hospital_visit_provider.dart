@@ -119,6 +119,7 @@ class HospitalVisitBookingNotifier
     String? patientState,
     String? visitReason,
     String? patientNotes,
+    String? couponCode,
   }) async {
     final slot = state.selectedSlot;
     if (slot == null) {
@@ -141,6 +142,7 @@ class HospitalVisitBookingNotifier
         patientState: patientState,
         patientPincode: patientPincode,
         visitReason: visitReason,
+        couponCode: couponCode,
       );
       if (booking != null) {
         state = HospitalVisitBookingState(booking: booking);

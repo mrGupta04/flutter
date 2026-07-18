@@ -38,6 +38,7 @@ class BookingPaymentFlow {
     String? patientState,
     String? patientPincode,
     String? visitReason,
+    String? couponCode,
     List<PendingPreviousReport> previousReports = const [],
   }) async {
     final orderRes = await _paymentRepository.createOrder(
@@ -52,6 +53,7 @@ class BookingPaymentFlow {
       patientState: patientState,
       patientPincode: patientPincode,
       visitReason: visitReason,
+      couponCode: couponCode,
       dayOfWeek: slot.dayOfWeek,
       startHour: slot.startHour,
       slotStart: slot.slotStart,

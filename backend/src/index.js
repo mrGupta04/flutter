@@ -16,6 +16,7 @@ const patientRoutes = require('./routes/patientRoutes');
 const patientFeatureRoutes = require('./routes/patientFeatureRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
+const cmsRoutes = require('./routes/cmsRoutes');
 const { getProviderInfo: getRazorpayInfo } = require('./services/razorpayService');
 const { getProviderInfo: getVideoProviderInfo } = require('./services/videoConsultService');
 const { sendSuccess, sendError } = require('./utils/response');
@@ -86,6 +87,7 @@ app.use('/api/v1/patient', patientRoutes);
 app.use('/api/v1/patient', patientFeatureRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/consultations', consultationRoutes);
+app.use('/api/v1/cms', cmsRoutes);
 app.use((req, res) => {
   sendError(res, `Route not found: ${req.method} ${req.path}`, 404);
 });

@@ -283,16 +283,81 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
       final list = extractApiList(body['data']);
       final bookings = list.map((e) {
         final m = e as Map<String, dynamic>;
+        if (type == ProviderType.ambulance) {
+          return ProviderBookingItem(
+            id: m['id']?.toString() ?? '',
+            title: m['patientName']?.toString() ?? 'Emergency request',
+            subtitle: m['pickupAddress']?.toString() ??
+                m['ambulanceServiceName']?.toString() ??
+                '',
+            status: m['status']?.toString() ?? 'requested',
+          );
+        }
         return ProviderBookingItem(
           id: m['id']?.toString() ?? '',
-          title: m['title']?.toString() ?? 'Booking',
-          subtitle: m['subtitle']?.toString() ?? '',
+          title: m['title']?.toString() ??
+              m['patientName']?.toString() ??
+              'Booking',
+          subtitle: m['subtitle']?.toString() ??
+              m['label']?.toString() ??
+              m['timeSlot']?.toString() ??
+              '',
           status: m['status']?.toString() ?? 'pending',
         );
       }).toList();
       state = state.copyWith(bookings: bookings);
     } catch (_) {
       state = state.copyWith(bookings: const []);
+    }
+  }
+
+  Future<bool> updateAmbulanceBookingStatus({
+    required String bookingId,
+    required String status,
+    String? rejectionReason,
+    int? estimatedArrivalMinutes,
+  }) async {
+    final ambulanceId =
+        state.ambulance?.id ?? await TokenStorage.instance.getAmbulanceId();
+    if (ambulanceId == null) return false;
+    try {
+      await _dio.post(
+        '${AppConstants.endpointAmbulanceBookings}/$bookingId/status',
+        data: {
+          'ambulanceId': ambulanceId,
+          'status': status,
+          if (rejectionReason != null) 'rejectionReason': rejectionReason,
+          if (estimatedArrivalMinutes != null)
+            'estimatedArrivalMinutes': estimatedArrivalMinutes,
+        },
+      );
+      await loadBookings();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> shareAmbulanceLiveLocation({
+    required String bookingId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final ambulanceId =
+        state.ambulance?.id ?? await TokenStorage.instance.getAmbulanceId();
+    if (ambulanceId == null) return false;
+    try {
+      await _dio.post(
+        AppConstants.endpointAmbulanceBookingLocation(bookingId),
+        data: {
+          'ambulanceId': ambulanceId,
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      );
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

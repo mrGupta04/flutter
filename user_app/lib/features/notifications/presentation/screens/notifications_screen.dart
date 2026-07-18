@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/repositories/notifications_repository.dart';
@@ -11,6 +13,39 @@ final notificationsProvider =
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
+
+  void _openNotification(BuildContext context, AppNotification n) {
+    final bookingId = n.data['bookingId']?.toString() ?? '';
+    switch (n.type) {
+      case 'chat_message':
+        if (bookingId.isEmpty) return;
+        context.push(
+          '${AppConstants.routeBookingChat}?bookingId=$bookingId&title=${Uri.encodeComponent('Chat')}',
+        );
+        return;
+      case 'payment_due':
+      case 'booking_approved':
+      case 'home_visit_request':
+      case 'en_route':
+      case 'visit_reminder':
+        context.push(AppConstants.routeUserDashboard);
+        return;
+      case 'prescription_ready':
+      case 'visit_note_ready':
+        if (bookingId.isNotEmpty) {
+          context.push(
+            '${AppConstants.routeBookingTimeline}?bookingId=$bookingId',
+          );
+        } else {
+          context.push(AppConstants.routeUserDashboard);
+        }
+        return;
+      default:
+        if (bookingId.isNotEmpty) {
+          context.push(AppConstants.routeUserDashboard);
+        }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -86,6 +121,7 @@ class NotificationsScreen extends ConsumerWidget {
                         ref.invalidate(notificationsProvider);
                       } catch (_) {}
                     }
+                    if (context.mounted) _openNotification(context, n);
                   },
                 ),
               );

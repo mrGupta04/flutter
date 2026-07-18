@@ -64,8 +64,195 @@ const {
 } = require('../db/scanCenterRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const { adminRequired } = require('../middleware/auth');
+const {
+  getAdminMarketplaceOverview,
+  listAdminBookings,
+} = require('../db/adminMarketplaceRepositories');
+const { listPatientsForAdmin, findPatientById } = require('../db/patientRepositories');
 
 const router = express.Router();
+
+// ——— Marketplace overview ———
+router.get('/overview', adminRequired, async (req, res) => {
+  try {
+    const data = await getAdminMarketplaceOverview();
+    return sendSuccess(res, { data });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to load overview', 500);
+  }
+});
+
+router.get('/bookings', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '30', 10));
+    const data = await listAdminBookings({ page, pageSize });
+    return sendSuccess(res, { data: data.bookings, pagination: data.pagination });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list bookings', 500);
+  }
+});
+
+router.get('/patients', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '20', 10));
+    const search = req.query.q || req.query.search || '';
+    const data = await listPatientsForAdmin({ page, pageSize, search });
+    return sendSuccess(res, {
+      data: data.patients,
+      pagination: data.pagination,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list patients', 500);
+  }
+});
+
+router.get('/patients/:id', adminRequired, async (req, res) => {
+  try {
+    const patient = await findPatientById(req.params.id);
+    if (!patient) return sendError(res, 'Patient not found', 404);
+    return sendSuccess(res, { data: patient });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to load patient', 500);
+  }
+});
+
+router.get('/coupons', adminRequired, async (req, res) => {
+  try {
+    const { listCoupons } = require('../db/couponRepositories');
+    const coupons = await listCoupons();
+    return sendSuccess(res, { data: coupons });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list coupons', 500);
+  }
+});
+
+router.post('/coupons', adminRequired, async (req, res) => {
+  try {
+    const { upsertCoupon } = require('../db/couponRepositories');
+    const coupon = await upsertCoupon(req.body || {});
+    return sendSuccess(res, { message: 'Coupon saved', data: coupon });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to save coupon',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.get('/cms/banners', adminRequired, async (req, res) => {
+  try {
+    const { listAllBanners } = require('../db/cmsRepositories');
+    const banners = await listAllBanners(req.query.placement);
+    return sendSuccess(res, { data: banners });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list banners', 500);
+  }
+});
+
+router.post('/cms/banners', adminRequired, async (req, res) => {
+  try {
+    const { upsertBanner } = require('../db/cmsRepositories');
+    const banner = await upsertBanner(req.body || {});
+    return sendSuccess(res, { message: 'Banner saved', data: banner });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to save banner',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.delete('/cms/banners/:id', adminRequired, async (req, res) => {
+  try {
+    const { deleteBanner } = require('../db/cmsRepositories');
+    await deleteBanner(req.params.id);
+    return sendSuccess(res, { message: 'Banner deleted' });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to delete banner',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.get('/support-tickets', adminRequired, async (req, res) => {
+  try {
+    const {
+      listTicketsForAdmin,
+    } = require('../db/supportTicketRepositories');
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '30', 10));
+    const data = await listTicketsForAdmin({
+      status: req.query.status,
+      page,
+      pageSize,
+    });
+    return sendSuccess(res, {
+      data: data.tickets,
+      pagination: data.pagination,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to list tickets', 500);
+  }
+});
+
+router.post('/support-tickets/:ticketId/status', adminRequired, async (req, res) => {
+  try {
+    const {
+      updateTicketStatus,
+    } = require('../db/supportTicketRepositories');
+    const ticket = await updateTicketStatus({
+      ticketId: req.params.ticketId,
+      status: req.body?.status,
+      adminReply: req.body?.adminReply,
+    });
+    return sendSuccess(res, { message: 'Ticket updated', data: ticket });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to update ticket',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.post('/refunds', adminRequired, async (req, res) => {
+  try {
+    const { refundBooking } = require('../db/supportTicketRepositories');
+    const result = await refundBooking({
+      category: req.body?.category,
+      bookingId: req.body?.bookingId,
+      reason: req.body?.reason,
+    });
+    return sendSuccess(res, {
+      message: 'Refund recorded. Payment marked as refunded.',
+      data: result,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to process refund',
+      err.statusCode || 500,
+    );
+  }
+});
 
 // ——— Doctor applications (admin only) ———
 

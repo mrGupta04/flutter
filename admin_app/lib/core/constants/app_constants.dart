@@ -39,6 +39,8 @@ class AppConstants {
       '/consultations/$bookingId/prescription';
   static const String endpointNurseBookings = '/nurse/bookings';
   static const String endpointAmbulanceBookings = '/ambulance/bookings';
+  static String endpointAmbulanceBookingLocation(String bookingId) =>
+      '/ambulance/bookings/$bookingId/location';
   static const String endpointBloodBankBookings = '/blood-bank/bookings';
   static const String endpointBloodBankDashboard = '/blood-bank/dashboard';
   static const String endpointBloodBankEmergency = '/blood-bank/emergency';
@@ -129,6 +131,7 @@ class AppConstants {
   // Lab API Endpoints
   static const String endpointRegisterLab = '/lab/register';
   static const String endpointLabLogin = '/lab/login';
+  static const String endpointLabBookings = '/lab/bookings';
   static const String endpointLabUploadProfile = '/lab/upload-profile';
   static const String endpointLabUploadDocument = '/lab/upload-document';
   static const String endpointLabUploadImage = '/lab/upload-image';
@@ -139,6 +142,7 @@ class AppConstants {
   // Scan API Endpoints
   static const String endpointRegisterScanCenter = '/scan/register';
   static const String endpointScanLogin = '/scan/login';
+  static const String endpointScanBookings = '/scan/bookings';
   static const String endpointScanUploadProfile = '/scan/upload-profile';
   static const String endpointScanUploadDocument = '/scan/upload-document';
   static const String endpointScanUploadImage = '/scan/upload-image';
@@ -211,6 +215,17 @@ class AppConstants {
   static const String endpointAdminBloodOrders = '/admin/blood-orders';
   static const String endpointAdminEmergencyBloodRequests =
       '/admin/emergency-blood-requests';
+  static const String endpointAdminOverview = '/admin/overview';
+  static const String endpointAdminBookings = '/admin/bookings';
+  static const String endpointAdminPatients = '/admin/patients';
+  static String endpointAdminPatient(String id) => '/admin/patients/$id';
+  static const String endpointAdminCoupons = '/admin/coupons';
+  static const String endpointAdminCmsBanners = '/admin/cms/banners';
+  static String endpointAdminCmsBanner(String id) => '/admin/cms/banners/$id';
+  static const String endpointAdminSupportTickets = '/admin/support-tickets';
+  static String endpointAdminSupportTicketStatus(String id) =>
+      '/admin/support-tickets/$id/status';
+  static const String endpointAdminRefunds = '/admin/refunds';
   static const String endpointAdminLabs = '/admin/labs';
   static String endpointAdminLab(String id) => '/admin/labs/$id';
   static String endpointAdminLabApprove(String id) => '/admin/labs/$id/approve';
@@ -329,6 +344,13 @@ class AppConstants {
   static const String routeVideoConsult = '/video-consult';
   static const String routeAdminLogin = '/admin-login';
   static const String routeAdminDashboard = '/admin-dashboard';
+  static const String routeAdminOverview = '/admin-overview';
+  static const String routeAdminBookings = '/admin-bookings';
+  static const String routeAdminPatients = '/admin-patients';
+  static const String routeAdminCoupons = '/admin-coupons';
+  static const String routeAdminCmsBanners = '/admin-cms-banners';
+  static const String routeAdminSupportTickets = '/admin-support-tickets';
+  static const String routeAdminRefunds = '/admin-refunds';
   static const String routeAdminDoctorList = '/admin-doctor-list';
   static const String routeAdminDoctorDetails = '/admin-doctor-details';
   static const String routeAdminNurseList = '/admin-nurse-list';

@@ -44,7 +44,7 @@ class LabBookingConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Booking confirmed!',
+                'Request submitted',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.titleLarge.copyWith(
                   fontWeight: FontWeight.w800,
@@ -52,7 +52,8 @@ class LabBookingConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Your lab test booking at $labName is confirmed.',
+                'Your lab test request at $labName is with the lab for confirmation. '
+                'No payment has been charged yet.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
@@ -63,7 +64,8 @@ class LabBookingConfirmationScreen extends StatelessWidget {
               _DetailRow(label: 'Lab', value: labName),
               _DetailRow(label: 'Date', value: date),
               _DetailRow(label: 'Time slot', value: slot),
-              _DetailRow(label: 'Amount paid', value: '₹$total'),
+              _DetailRow(label: 'Amount due', value: '₹$total'),
+              _DetailRow(label: 'Payment', value: 'Pending — pay after lab confirms'),
               const Spacer(),
               CustomButton(
                 label: 'View My Bookings',

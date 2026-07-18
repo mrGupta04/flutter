@@ -26,6 +26,7 @@ class PaymentRepository {
     String? patientState,
     String? patientPincode,
     String? visitReason,
+    String? couponCode,
   }) async {
     try {
       final response = await _dio.post(
@@ -49,6 +50,8 @@ class PaymentRepository {
             'patientPincode': patientPincode,
           if (visitReason != null && visitReason.isNotEmpty)
             'visitReason': visitReason,
+          if (couponCode != null && couponCode.isNotEmpty)
+            'couponCode': couponCode.trim().toUpperCase(),
           'dayOfWeek': dayOfWeek,
           'startHour': startHour,
           'slotStart': slotStart.toIso8601String(),

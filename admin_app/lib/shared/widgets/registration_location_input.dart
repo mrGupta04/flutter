@@ -59,7 +59,25 @@ class RegistrationLocationModeToggle extends StatelessWidget {
             },
             style: ButtonStyle(
               visualDensity: VisualDensity.compact,
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppColors.primaryLight;
+                }
+                return AppColors.white;
+              }),
               foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppColors.primaryDark;
+                }
+                return AppColors.textSecondary;
+              }),
+              side: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return const BorderSide(color: AppColors.primary);
+                }
+                return const BorderSide(color: AppColors.border);
+              }),
+              iconColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
                   return AppColors.primary;
                 }

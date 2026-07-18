@@ -127,6 +127,7 @@ class PatientAuthNotifier extends StateNotifier<PatientAuthState> {
     required String profilePictureFileName,
     required List<int> aadhaarCardBytes,
     required String aadhaarCardFileName,
+    String? referralCode,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     final res = await _repo.register(
@@ -143,6 +144,7 @@ class PatientAuthNotifier extends StateNotifier<PatientAuthState> {
       profilePictureFileName: profilePictureFileName,
       aadhaarCardBytes: Uint8List.fromList(aadhaarCardBytes),
       aadhaarCardFileName: aadhaarCardFileName,
+      referralCode: referralCode,
     );
     if (res.success && res.data != null) {
       state = PatientAuthState(
@@ -164,6 +166,16 @@ class PatientAuthNotifier extends StateNotifier<PatientAuthState> {
       isInitialized: true,
       user: user,
     );
+  }
+
+  Future<void> refreshProfile() async {
+    final res = await _repo.fetchProfile();
+    if (res.success && res.data != null) {
+      state = PatientAuthState(
+        isInitialized: true,
+        user: res.data,
+      );
+    }
   }
 
   Future<void> logout() async {

@@ -23,8 +23,13 @@ import '../features/doctor_registration/presentation/screens/nurse_profile_scree
 import '../features/doctor_registration/presentation/screens/nurse_search_screen.dart';
 import '../features/user_auth/presentation/screens/user_login_screen.dart';
 import '../features/user_auth/presentation/screens/user_register_screen.dart';
+import '../features/user_auth/presentation/screens/forgot_password_screen.dart';
 import '../features/user_dashboard/presentation/screens/edit_patient_profile_screen.dart';
+import '../features/user_dashboard/presentation/screens/health_profile_screen.dart';
+import '../features/user_dashboard/presentation/screens/support_tickets_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_dashboard_screen.dart';
+import '../features/user_dashboard/presentation/screens/user_rewards_screen.dart';
+import '../features/ambulance/presentation/screens/ambulance_tracking_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/favorites/presentation/screens/favorites_screen.dart';
@@ -65,6 +70,14 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           UserRegisterScreen(
             redirect: state.uri.queryParameters['redirect'],
           ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeForgotPassword,
+        name: 'forgotPassword',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ForgotPasswordScreen(),
         ),
       ),
       GoRoute(
@@ -123,6 +136,41 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           state,
           const EditPatientProfileScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeHealthProfile,
+        name: 'healthProfile',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const HealthProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeSupportTickets,
+        name: 'supportTickets',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const SupportTicketsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeUserRewards,
+        name: 'userRewards',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const UserRewardsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAmbulanceTrack,
+        name: 'ambulanceTrack',
+        pageBuilder: (context, state) {
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          return slidePage(
+            state,
+            AmbulanceTrackingScreen(bookingId: bookingId),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeUserDashboardLegacy,

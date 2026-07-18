@@ -36,13 +36,16 @@ router.post('/create-order', authOptional, async (req, res) => {
       dayOfWeek,
       startHour,
       slotStart,
+      couponCode,
     } = body;
 
     let booking;
     let doctorName;
 
     if (bookingId) {
-      const result = await createPaymentOrderForBooking(bookingId);
+      const result = await createPaymentOrderForBooking(bookingId, {
+        couponCode,
+      });
       booking = result.booking;
       doctorName = result.doctorName;
     } else {
@@ -70,6 +73,7 @@ router.post('/create-order', authOptional, async (req, res) => {
           dayOfWeek,
           startHour,
           slotStart,
+          couponCode,
         },
         PAYMENT_HOLD_MINUTES,
       );

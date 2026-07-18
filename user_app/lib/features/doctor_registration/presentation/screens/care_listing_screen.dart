@@ -20,6 +20,7 @@ import '../../../../shared/widgets/horizontal_filter_chips.dart';
 import 'nurse_profile_screen.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
+import '../../../ambulance/presentation/widgets/ambulance_action_sheet.dart';
 import '../../provider/ambulance_search_provider.dart';
 import '../../provider/blood_bank_search_provider.dart';
 import '../../provider/care_filter_constants.dart';
@@ -574,7 +575,13 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
             const SizedBox(height: 8),
             for (var i = 0; i < items.length; i++) ...[
               if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-              AmbulanceListingCard(ambulance: items[i]),
+              AmbulanceListingCard(
+                ambulance: items[i],
+                onTap: () => showAmbulanceActionSheet(
+                  context,
+                  ambulance: items[i],
+                ),
+              ),
             ],
             const UserScrollFooter(),
           ]),

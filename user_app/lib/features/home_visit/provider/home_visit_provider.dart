@@ -139,6 +139,7 @@ class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
     String? patientNotes,
     double? patientLatitude,
     double? patientLongitude,
+    String? couponCode,
   }) async {
     final slot = state.selectedSlot;
     if (slot == null) {
@@ -161,6 +162,7 @@ class HomeVisitBookingNotifier extends StateNotifier<HomeVisitBookingState> {
         visitReason: visitReason,
         patientLatitude: patientLatitude,
         patientLongitude: patientLongitude,
+        couponCode: couponCode,
         dayOfWeek: slot.dayOfWeek,
         startHour: slot.startHour,
         slotStart: slot.slotStart,

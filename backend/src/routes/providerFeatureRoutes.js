@@ -168,7 +168,9 @@ function attachProviderFeatureRoutes(router, providerType) {
   router.get('/bookings/:bookingId/chat', authRequired, async (req, res) => {
     try {
       if (!requireProvider(req, res)) return;
-      const data = await listChatMessages(req.params.bookingId, req.auth);
+      const data = await listChatMessages(req.params.bookingId, req.auth, {
+        after: req.query.after,
+      });
       return sendSuccess(res, { data });
     } catch (err) {
       const status = err.statusCode || 500;

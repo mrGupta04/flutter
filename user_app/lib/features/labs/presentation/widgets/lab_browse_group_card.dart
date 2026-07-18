@@ -5,6 +5,7 @@ import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/lab_browse_visuals.dart';
 import '../../data/lab_catalog_metadata.dart';
+import 'lab_organ_logos.dart';
 
 /// Colorful browse card for health risks, conditions, and body organs.
 class LabBrowseGroupCard extends StatelessWidget {
@@ -141,10 +142,12 @@ class LabBrowseLogo extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
-              group.icon,
-              color: Colors.white,
-              size: size * 0.48,
+            child: Center(
+              child: LabOrganLogoIcon(
+                groupId: group.id,
+                size: size * 0.55,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

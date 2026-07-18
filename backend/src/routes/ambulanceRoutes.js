@@ -17,10 +17,17 @@ const {
   ensureAmbulanceDocumentsFromProfile,
 } = require('../db/documentVerification');
 const { sendSuccess, sendError } = require('../utils/response');
-const { signToken, authOptional } = require('../middleware/auth');
+const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { upload, filePublicUrl } = require('../middleware/multerUpload');
 const { loginProvider } = require('../utils/providerAuth');
 const { toAmbulance } = require('../db/ambulanceMappers');
+const {
+  createAmbulanceBooking,
+  findAmbulanceBookingById,
+  listAmbulanceBookingsForProvider,
+  updateAmbulanceBookingStatus,
+  updateAmbulanceLiveLocation,
+} = require('../db/ambulanceBookingRepositories');
 
 const router = express.Router();
 
@@ -145,11 +152,152 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/bookings', authOptional, async (req, res) => {
-  const ambulanceId = req.query.ambulanceId || req.auth?.ambulanceId;
-  if (!ambulanceId) {
-    return sendError(res, 'ambulanceId is required', 400);
+  try {
+    const ambulanceId = req.query.ambulanceId || req.auth?.ambulanceId;
+    if (!ambulanceId) {
+      return sendError(res, 'ambulanceId is required', 400);
+    }
+    const bookings = await listAmbulanceBookingsForProvider(ambulanceId);
+    return sendSuccess(res, {
+      data: bookings,
+      message: bookings.length ? undefined : 'No bookings yet',
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to load bookings', 500);
   }
-  return sendSuccess(res, { data: [], message: 'No bookings yet' });
+});
+
+// POST /ambulance/bookings — patient emergency / scheduled request
+router.post('/bookings', authOptional, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const booking = await createAmbulanceBooking({
+      ...body,
+      patientId: body.patientId || req.auth?.patientId,
+      patientEmail: body.patientEmail || req.auth?.email,
+    });
+    return res.status(201).json({
+      success: true,
+      message: 'Ambulance request submitted. The service will contact you shortly.',
+      statusCode: 201,
+      data: booking,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to request ambulance',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.post('/bookings/:bookingId/status', authOptional, async (req, res) => {
+  try {
+    const ambulanceId = req.body?.ambulanceId || req.auth?.ambulanceId;
+    if (!ambulanceId) {
+      return sendError(res, 'ambulanceId is required', 400);
+    }
+    const booking = await updateAmbulanceBookingStatus({
+      bookingId: req.params.bookingId,
+      ambulanceId,
+      status: req.body?.status,
+      rejectionReason: req.body?.rejectionReason,
+      estimatedArrivalMinutes: req.body?.estimatedArrivalMinutes,
+    });
+    return sendSuccess(res, {
+      message: 'Booking status updated',
+      data: booking,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to update booking',
+      err.statusCode || 500,
+    );
+  }
+});
+
+// POST /ambulance/bookings/:bookingId/location — provider pushes live GPS
+router.post('/bookings/:bookingId/location', authRequired, async (req, res) => {
+  try {
+    const ambulanceId = req.body?.ambulanceId || req.auth?.ambulanceId;
+    if (!ambulanceId) {
+      return sendError(res, 'ambulanceId is required', 400);
+    }
+    if (req.auth?.ambulanceId && req.auth.ambulanceId !== ambulanceId) {
+      return sendError(res, 'Not authorized for this ambulance', 403);
+    }
+    const booking = await updateAmbulanceLiveLocation({
+      bookingId: req.params.bookingId,
+      ambulanceId,
+      latitude: req.body?.latitude ?? req.body?.liveLatitude,
+      longitude: req.body?.longitude ?? req.body?.liveLongitude,
+    });
+    return sendSuccess(res, {
+      message: 'Location updated',
+      data: booking,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to update location',
+      err.statusCode || 500,
+    );
+  }
+});
+
+// GET /ambulance/bookings/:bookingId — patient or provider can read
+router.get('/bookings/:bookingId', authRequired, async (req, res) => {
+  try {
+    const booking = await findAmbulanceBookingById(req.params.bookingId);
+    if (!booking) {
+      return sendError(res, 'Booking not found', 404);
+    }
+
+    const isProvider =
+      req.auth?.ambulanceId && req.auth.ambulanceId === booking.ambulanceId;
+
+    let isPatient = false;
+    if (req.auth?.type === 'patient' && req.auth?.patientId) {
+      if (booking.patientId === req.auth.patientId) {
+        isPatient = true;
+      } else if (
+        req.auth.email &&
+        booking.patientEmail &&
+        String(booking.patientEmail).toLowerCase() ===
+          String(req.auth.email).toLowerCase()
+      ) {
+        isPatient = true;
+      } else if (!booking.patientId || booking.patientId === req.auth.patientId) {
+        try {
+          const { findPatientById } = require('../db/patientRepositories');
+          const patient = await findPatientById(req.auth.patientId);
+          if (
+            patient &&
+            booking.patientMobile &&
+            patient.mobileNumber === booking.patientMobile
+          ) {
+            isPatient = true;
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+
+    if (!isProvider && !isPatient) {
+      return sendError(res, 'Not authorized to view this booking', 403);
+    }
+
+    return sendSuccess(res, { data: booking });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to load booking', 500);
+  }
 });
 
 router.put('/profile', authOptional, async (req, res) => {

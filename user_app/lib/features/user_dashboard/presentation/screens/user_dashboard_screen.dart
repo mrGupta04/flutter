@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
@@ -18,11 +19,18 @@ import '../utils/prescription_view_utils.dart';
 import '../../../feedback/presentation/utils/feedback_prompt_helper.dart';
 import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
+import '../../../../data/services/lab_scan_payment_flow.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/repositories/booking_lifecycle_repository.dart';
 import '../../../../data/services/dio_service.dart';
 import '../widgets/reschedule_booking_sheet.dart';
+
+final labScanPaymentFlowProvider = Provider.autoDispose((ref) {
+  final flow = LabScanPaymentFlow();
+  ref.onDispose(flow.dispose);
+  return flow;
+});
 
 class UserDashboardScreen extends ConsumerStatefulWidget {
   const UserDashboardScreen({super.key});
@@ -136,21 +144,47 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                     if (context.mounted) {
                       context.push(AppConstants.routeFavorites);
                     }
+                  } else if (value == 'support') {
+                    if (context.mounted) {
+                      context.push(AppConstants.routeSupportTickets);
+                    }
+                  } else if (value == 'rewards') {
+                    if (context.mounted) {
+                      context.push(AppConstants.routeUserRewards);
+                    }
+                  } else if (value == 'theme') {
+                    ref.read(themeModeProvider.notifier).toggle();
                   } else if (value == 'logout') {
                     await ref.read(patientAuthProvider.notifier).logout();
                     if (context.mounted) context.go(AppConstants.routeUserHome);
                   }
                 },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'favorites',
-                    child: Text('Favorites'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'logout',
-                    child: Text('Log out'),
-                  ),
-                ],
+                itemBuilder: (_) {
+                  final isDark =
+                      ref.read(themeModeProvider) == ThemeMode.dark;
+                  return [
+                    const PopupMenuItem(
+                      value: 'favorites',
+                      child: Text('Favorites'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'support',
+                      child: Text('Support'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'rewards',
+                      child: Text('Rewards'),
+                    ),
+                    PopupMenuItem(
+                      value: 'theme',
+                      child: Text(isDark ? 'Light mode' : 'Dark mode'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'logout',
+                      child: Text('Log out'),
+                    ),
+                  ];
+                },
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -460,6 +494,12 @@ class _ProfileTab extends ConsumerWidget {
           icon: const Icon(Icons.edit_rounded),
           label: const Text('Edit profile'),
         ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: () => context.push(AppConstants.routeHealthProfile),
+          icon: const Icon(Icons.health_and_safety_outlined),
+          label: const Text('Family, addresses & medical'),
+        ),
       ],
     );
   }
@@ -709,6 +749,37 @@ class _BookingCard extends ConsumerWidget {
     }
   }
 
+  Future<void> _payLabOrScan(BuildContext context, WidgetRef ref) async {
+    try {
+      final flow = ref.read(labScanPaymentFlowProvider);
+      if (booking.serviceType == 'scan') {
+        await flow.payScanBooking(
+          bookingId: booking.id,
+          businessName: booking.doctorName,
+        );
+      } else {
+        await flow.payLabBooking(
+          bookingId: booking.id,
+          businessName: booking.doctorName,
+        );
+      }
+      if (context.mounted) {
+        SnackBarHelper.showSuccess(
+          context,
+          'Payment successful. Your booking is paid.',
+        );
+      }
+      if (onRefresh != null) await onRefresh!();
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarHelper.showError(
+          context,
+          e.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dateFmt = DateFormat('EEE, dd MMM yyyy');
@@ -857,6 +928,21 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  if (booking.needsLabOrScanPayment && isUpcoming) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _payLabOrScan(context, ref),
+                        icon: const Icon(Icons.payments_rounded, size: 18),
+                        label: Text(
+                          booking.consultationFee != null
+                              ? 'Pay ₹${booking.consultationFee} now'
+                              : 'Pay now',
+                        ),
+                      ),
+                    ),
+                  ],
                   if (booking.isClinicVisit &&
                       booking.appointmentCode != null &&
                       isUpcoming) ...[
@@ -954,6 +1040,16 @@ class _BookingCard extends ConsumerWidget {
                         icon: const Icon(Icons.timeline, size: 16),
                         label: const Text('Track'),
                       ),
+                      if (booking.canTrackAmbulanceLive)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            context.push(
+                              '${AppConstants.routeAmbulanceTrack}?bookingId=${booking.id}',
+                            );
+                          },
+                          icon: const Icon(Icons.my_location_rounded, size: 16),
+                          label: const Text('Track live'),
+                        ),
                       if (booking.canChat)
                         OutlinedButton.icon(
                           onPressed: () {

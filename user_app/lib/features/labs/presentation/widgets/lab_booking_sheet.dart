@@ -67,15 +67,14 @@ class _LabBookingSheetState extends State<_LabBookingSheet> {
     if (_collectionOption == null || _selectedDate == null) return;
 
     setState(() => _isSubmitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await Future<void>.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     setState(() => _isSubmitting = false);
     Navigator.of(context).pop();
-    custom.SnackBarHelper.showSuccess(
+    custom.SnackBarHelper.showInfo(
       context,
-      '${widget.test.name} booked for ${_formatDate(_selectedDate!)} '
-      '(${_collectionOption!.label}).',
+      'Use Lab Search to pick a verified lab, add tests to cart, then submit a real booking request.',
     );
   }
 

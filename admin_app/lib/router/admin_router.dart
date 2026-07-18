@@ -9,6 +9,7 @@ import '../features/admin/presentation/screens/admin_ambulance_list_screen.dart'
 import '../features/admin/presentation/screens/admin_blood_bank_details_screen.dart';
 import '../features/admin/presentation/screens/admin_blood_bank_list_screen.dart';
 import '../features/admin/presentation/screens/admin_dashboard_screen.dart';
+import '../features/admin/presentation/screens/admin_ops_screens.dart';
 import '../data/models/doctor_model.dart';
 import '../features/admin/presentation/screens/admin_doctor_details_screen.dart';
 import '../features/admin/presentation/screens/admin_doctor_list_screen.dart';
@@ -50,6 +51,13 @@ import '../features/admin/provider/admin_auth_provider.dart';
 
 bool _isAdminProtectedRoute(String location) {
   return location.startsWith(AppConstants.routeAdminDashboard) ||
+      location.startsWith(AppConstants.routeAdminOverview) ||
+      location.startsWith(AppConstants.routeAdminBookings) ||
+      location.startsWith(AppConstants.routeAdminPatients) ||
+      location.startsWith(AppConstants.routeAdminCoupons) ||
+      location.startsWith(AppConstants.routeAdminCmsBanners) ||
+      location.startsWith(AppConstants.routeAdminSupportTickets) ||
+      location.startsWith(AppConstants.routeAdminRefunds) ||
       location.startsWith(AppConstants.routeAdminDoctorList) ||
       location.startsWith(AppConstants.routeAdminDoctorDetails) ||
       location.startsWith(AppConstants.routeAdminNurseList) ||
@@ -347,6 +355,62 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadePage(
           state,
           const AdminDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminOverview,
+        name: 'adminOverview',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminOverviewScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminBookings,
+        name: 'adminBookings',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminBookingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminPatients,
+        name: 'adminPatients',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminPatientsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminSupportTickets,
+        name: 'adminSupportTickets',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminSupportTicketsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminCoupons,
+        name: 'adminCoupons',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminCouponsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminCmsBanners,
+        name: 'adminCmsBanners',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminCmsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminRefunds,
+        name: 'adminRefunds',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminRefundsScreen(),
         ),
       ),
       GoRoute(

@@ -19,10 +19,9 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     final value = prefs.getString(_key);
-    // Marketplace UI uses light surfaces throughout; system/dark mode makes
-    // theme text near-white while backgrounds stay light — invisible on many phones.
     state = switch (value) {
-      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      'system' => ThemeMode.system,
       _ => ThemeMode.light,
     };
   }

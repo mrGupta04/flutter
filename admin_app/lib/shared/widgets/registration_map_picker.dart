@@ -131,8 +131,16 @@ class _RegistrationMapPickerState extends State<RegistrationMapPicker> {
     if (_locating) return;
     setState(() => _locating = true);
     try {
-      final position = await LocationService.getCurrentPosition();
+      final position =
+          await LocationService.getCurrentPositionWithPrompt(context);
       if (!mounted) return;
+      if (position == null) {
+        SnackBarHelper.showError(
+          context,
+          'Location is required. Enable location services and try again.',
+        );
+        return;
+      }
       final latLng = LatLng(position.latitude, position.longitude);
       final addressFilled = await _applyLocationWithAddress(latLng);
       if (mounted && addressFilled) {

@@ -6,6 +6,7 @@ import '../../../../core/models/provider_type.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../core/services/location_service.dart';
 import '../../../../data/models/ambulance_model.dart';
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../data/models/doctor_model.dart';
@@ -195,11 +196,155 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                                   side: const BorderSide(color: AppColors.divider),
                                 ),
                                 title: Text(b.title),
-                                subtitle: Text(b.subtitle),
-                                trailing: Chip(
-                                  label: Text(b.status),
-                                  visualDensity: VisualDensity.compact,
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(b.subtitle),
+                                    if (state.providerType ==
+                                            ProviderType.ambulance &&
+                                        (b.status == 'en_route' ||
+                                            b.status == 'dispatched' ||
+                                            b.status == 'accepted' ||
+                                            b.status == 'arrived')) ...[
+                                      const SizedBox(height: 6),
+                                      TextButton.icon(
+                                        onPressed: () async {
+                                          try {
+                                            final pos = await LocationService
+                                                .getCurrentPositionWithPrompt(
+                                              context,
+                                            );
+                                            if (pos == null) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Location unavailable',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                              return;
+                                            }
+                                            final ok = await ref
+                                                .read(
+                                                  providerProfileProvider
+                                                      .notifier,
+                                                )
+                                                .shareAmbulanceLiveLocation(
+                                                  bookingId: b.id,
+                                                  latitude: pos.latitude,
+                                                  longitude: pos.longitude,
+                                                );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    ok
+                                                        ? 'Location shared'
+                                                        : 'Could not share location',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text('$e'),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.my_location_rounded,
+                                          size: 16,
+                                        ),
+                                        label: const Text('Share location'),
+                                        style: TextButton.styleFrom(
+                                          padding: EdgeInsets.zero,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
+                                isThreeLine: state.providerType ==
+                                        ProviderType.ambulance &&
+                                    (b.status == 'en_route' ||
+                                        b.status == 'dispatched' ||
+                                        b.status == 'accepted' ||
+                                        b.status == 'arrived'),
+                                trailing: state.providerType ==
+                                        ProviderType.ambulance
+                                    ? PopupMenuButton<String>(
+                                        onSelected: (status) async {
+                                          final ok = await ref
+                                              .read(
+                                                providerProfileProvider
+                                                    .notifier,
+                                              )
+                                              .updateAmbulanceBookingStatus(
+                                                bookingId: b.id,
+                                                status: status,
+                                                estimatedArrivalMinutes:
+                                                    status == 'dispatched' ||
+                                                            status == 'en_route'
+                                                        ? 20
+                                                        : null,
+                                              );
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  ok
+                                                      ? 'Updated to $status'
+                                                      : 'Could not update',
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        itemBuilder: (_) => const [
+                                          PopupMenuItem(
+                                            value: 'accepted',
+                                            child: Text('Accept'),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'dispatched',
+                                            child: Text('Dispatch'),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'en_route',
+                                            child: Text('En route'),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'arrived',
+                                            child: Text('Arrived'),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'completed',
+                                            child: Text('Complete'),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'rejected',
+                                            child: Text('Reject'),
+                                          ),
+                                        ],
+                                        child: Chip(
+                                          label: Text(b.status),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      )
+                                    : Chip(
+                                        label: Text(b.status),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
                               ),
                             ),
                           ),
@@ -479,6 +624,7 @@ class _ProfileHeader extends StatelessWidget {
             ),
           ),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CircleAvatar(
                 radius: 36,
@@ -490,16 +636,19 @@ class _ProfileHeader extends StatelessWidget {
                     ? const Icon(Icons.person_rounded, color: AppColors.primary, size: 36)
                     : null,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       name,
                       style: AppTextStyles.titleLarge.copyWith(
                         color: AppColors.white,
                         fontWeight: FontWeight.w800,
+                        height: 1.2,
                         shadows: [
                           Shadow(
                             color: Colors.black.withValues(alpha: 0.25),
@@ -516,6 +665,7 @@ class _ProfileHeader extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.white.withValues(alpha: 0.95),
+                          height: 1.3,
                           shadows: [
                             Shadow(
                               color: Colors.black.withValues(alpha: 0.2),

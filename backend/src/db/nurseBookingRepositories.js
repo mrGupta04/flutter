@@ -570,6 +570,9 @@ async function createNurseHomeVisitRequest(payload) {
     existingHold.distanceKm = distance ?? undefined;
     existingHold.approvalExpiresAt = approvalExpiresAt;
     existingHold.paymentStatus = 'pending';
+    if (payload.couponCode) {
+      existingHold.couponCode = String(payload.couponCode).trim().toUpperCase();
+    }
     await existingHold.save();
     await notifyNurseOfHomeVisitRequest(existingHold);
     return formatNurseBookingResponse(existingHold, nurse);
@@ -603,6 +606,9 @@ async function createNurseHomeVisitRequest(payload) {
     slotEnd,
     weekStartDate: weekStart,
     consultationFee: fee,
+    couponCode: payload.couponCode
+      ? String(payload.couponCode).trim().toUpperCase()
+      : undefined,
     status: 'awaiting_doctor_approval',
     paymentStatus: 'pending',
     paymentProvider: 'razorpay',

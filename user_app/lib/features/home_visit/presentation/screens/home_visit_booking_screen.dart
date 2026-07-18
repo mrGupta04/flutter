@@ -44,6 +44,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
   final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _reasonController = TextEditingController();
+  final _couponController = TextEditingController();
   String? _selectedDateKey;
   double? _patientLatitude;
   double? _patientLongitude;
@@ -76,6 +77,25 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
       if (_mobileController.text.isEmpty && user.mobileNumber.isNotEmpty) {
         _mobileController.text = user.mobileNumber;
       }
+      final address = user.defaultAddress;
+      if (address != null) {
+        if (_addressController.text.isEmpty) {
+          _addressController.text = address.addressLine;
+        }
+        if (_cityController.text.isEmpty && (address.city?.isNotEmpty ?? false)) {
+          _cityController.text = address.city!;
+        }
+        if (_stateController.text.isEmpty &&
+            (address.state?.isNotEmpty ?? false)) {
+          _stateController.text = address.state!;
+        }
+        if (_pincodeController.text.isEmpty &&
+            (address.pincode?.isNotEmpty ?? false)) {
+          _pincodeController.text = address.pincode!;
+        }
+        _patientLatitude ??= address.latitude;
+        _patientLongitude ??= address.longitude;
+      }
     }
   }
 
@@ -89,14 +109,23 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
     _stateController.dispose();
     _pincodeController.dispose();
     _reasonController.dispose();
+    _couponController.dispose();
     super.dispose();
   }
 
   Future<void> _useMyLocation() async {
     setState(() => _isFetchingLocation = true);
     try {
-      final position = await LocationService.getCurrentPosition();
+      final position =
+          await LocationService.getCurrentPositionWithPrompt(context);
       if (!mounted) return;
+      if (position == null) {
+        SnackBarHelper.showError(
+          context,
+          'Location is required. Enable location services and try again.',
+        );
+        return;
+      }
       setState(() {
         _patientLatitude = position.latitude;
         _patientLongitude = position.longitude;
@@ -130,6 +159,9 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
           visitReason: _reasonController.text.trim(),
           patientLatitude: _patientLatitude,
           patientLongitude: _patientLongitude,
+          couponCode: _couponController.text.trim().isEmpty
+              ? null
+              : _couponController.text.trim(),
         );
 
     if (!mounted) return;
@@ -448,6 +480,48 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                           },
                         ),
                         const SizedBox(height: 12),
+                        if ((ref.watch(patientAuthProvider).user?.savedAddresses ??
+                                const [])
+                            .isNotEmpty) ...[
+                          Text(
+                            'Saved addresses',
+                            style: AppTextStyles.labelMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final a in ref
+                                      .watch(patientAuthProvider)
+                                      .user
+                                      ?.savedAddresses ??
+                                  const [])
+                                ActionChip(
+                                  avatar: Icon(
+                                    a.isDefault
+                                        ? Icons.home_rounded
+                                        : Icons.place_outlined,
+                                    size: 16,
+                                  ),
+                                  label: Text(a.label),
+                                  onPressed: () {
+                                    setState(() {
+                                      _addressController.text = a.addressLine;
+                                      _cityController.text = a.city ?? '';
+                                      _stateController.text = a.state ?? '';
+                                      _pincodeController.text = a.pincode ?? '';
+                                      _patientLatitude = a.latitude;
+                                      _patientLongitude = a.longitude;
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         CustomTextField(
                           controller: _addressController,
                           label: 'House / flat / street address',
@@ -518,6 +592,13 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          controller: _couponController,
+                          label: 'Coupon code (optional)',
+                          prefixIcon: Icons.local_offer_outlined,
+                          hint: 'Applied when you pay after approval',
                         ),
                         const SizedBox(height: 20),
                         PreviousReportsPicker(

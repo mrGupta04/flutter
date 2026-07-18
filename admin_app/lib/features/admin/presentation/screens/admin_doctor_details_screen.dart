@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_document_model.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../utils/admin_documents_helper.dart';
@@ -152,14 +153,57 @@ class AdminDoctorDetailsScreen extends ConsumerWidget {
               if (doctor.bio != null && doctor.bio!.trim().isNotEmpty)
                 _DetailRow('About', doctor.bio!),
               _DetailRow('Clinic', doctor.clinicName ?? '-'),
-              _DetailRow(
-                'Fee',
-                doctor.consultationFee != null
-                    ? FormattingUtils.formatConsultationFee(
-                        doctor.consultationFee!,
-                      )
-                    : '-',
-              ),
+              if (doctor.offersOnlineConsult)
+                _DetailRow(
+                  'Online consult fee',
+                  doctor.effectiveFeeForConsultationType(
+                            ConsultationType.onlineConsult,
+                          ) !=
+                          null
+                      ? FormattingUtils.formatConsultationFee(
+                          doctor.effectiveFeeForConsultationType(
+                            ConsultationType.onlineConsult,
+                          )!,
+                        )
+                      : '-',
+                ),
+              if (doctor.offersVisitSite)
+                _DetailRow(
+                  'Hospital visit fee',
+                  doctor.effectiveFeeForConsultationType(
+                            ConsultationType.visitSite,
+                          ) !=
+                          null
+                      ? FormattingUtils.formatConsultationFee(
+                          doctor.effectiveFeeForConsultationType(
+                            ConsultationType.visitSite,
+                          )!,
+                        )
+                      : '-',
+                ),
+              if (doctor.offersBookHome)
+                _DetailRow(
+                  'Home visit fee',
+                  doctor.effectiveFeeForConsultationType(
+                            ConsultationType.bookHome,
+                          ) !=
+                          null
+                      ? FormattingUtils.formatConsultationFee(
+                          doctor.effectiveFeeForConsultationType(
+                            ConsultationType.bookHome,
+                          )!,
+                        )
+                      : '-',
+                ),
+              if (!doctor.hasAnyConsultationOption)
+                _DetailRow(
+                  'Fee',
+                  doctor.consultationFee != null
+                      ? FormattingUtils.formatConsultationFee(
+                          doctor.consultationFee!,
+                        )
+                      : '-',
+                ),
             ],
           ),
           _Section(
@@ -377,8 +421,8 @@ class _DetailRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 2,
+          SizedBox(
+            width: 128,
             child: Text(
               label,
               style: AppTextStyles.bodySmall.copyWith(
@@ -386,9 +430,12 @@ class _DetailRow extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(width: 12),
           Expanded(
-            flex: 3,
-            child: Text(value, style: AppTextStyles.bodyMedium),
+            child: Text(
+              value.isEmpty ? '-' : value,
+              style: AppTextStyles.bodyMedium,
+            ),
           ),
         ],
       ),

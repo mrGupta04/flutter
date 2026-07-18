@@ -44,6 +44,15 @@ class AdminDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   ServiceBenefitCard(
+                    icon: Icons.analytics_rounded,
+                    title: 'Marketplace overview',
+                    subtitle: 'Patients · bookings · revenue · pending KYC',
+                    color: AppColors.primary,
+                    onTap: () =>
+                        context.push(AppConstants.routeAdminOverview),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
                     icon: Icons.people_alt_rounded,
                     title: 'Doctor applications',
                     subtitle: 'Needs review · verify or reject',
@@ -92,6 +101,40 @@ class AdminDashboardScreen extends ConsumerWidget {
                     subtitle: 'Review imaging services · approve or suspend',
                     color: AppColors.secondary,
                     onTap: () => context.push(AppConstants.routeAdminScanList),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.support_agent_rounded,
+                    title: 'Support tickets',
+                    subtitle: 'Patient help desk · status updates',
+                    color: AppColors.primary,
+                    onTap: () =>
+                        context.push(AppConstants.routeAdminSupportTickets),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.local_offer_outlined,
+                    title: 'Coupons',
+                    subtitle: 'Discount codes for marketplace',
+                    color: AppColors.secondary,
+                    onTap: () => context.push(AppConstants.routeAdminCoupons),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.view_carousel_outlined,
+                    title: 'CMS banners',
+                    subtitle: 'Home hero slides for user app',
+                    color: AppColors.primary,
+                    onTap: () =>
+                        context.push(AppConstants.routeAdminCmsBanners),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.currency_exchange_rounded,
+                    title: 'Refunds',
+                    subtitle: 'Record refunds on paid bookings',
+                    color: AppColors.primary,
+                    onTap: () => context.push(AppConstants.routeAdminRefunds),
                   ),
                 ],
               ),

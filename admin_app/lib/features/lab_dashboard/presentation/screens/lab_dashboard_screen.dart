@@ -199,17 +199,10 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
                       ServiceBenefitCard(
                         icon: Icons.assignment_outlined,
                         title: 'Booking management',
-                        subtitle: 'Accept requests, assign staff, upload reports',
+                        subtitle:
+                            '${dashboard.upcomingBookings} open · ₹${dashboard.revenueInr} paid',
                         color: AppColors.primary,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Booking management connects when lab booking API is live.',
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: () => _showBookingsSheet(context, ref, dashboard),
                       ),
                       const SizedBox(height: 10),
                       ServiceBenefitCard(
@@ -223,6 +216,108 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
                     ],
                   ),
                 ),
+    );
+  }
+
+  void _showBookingsSheet(
+    BuildContext context,
+    WidgetRef ref,
+    LabDashboardState dashboard,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final bookings = dashboard.bookings;
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(ctx).height * 0.7,
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Lab bookings',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                  ),
+                ),
+                Expanded(
+                  child: bookings.isEmpty
+                      ? const Center(child: Text('No bookings yet'))
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          itemCount: bookings.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (_, i) {
+                            final b = bookings[i];
+                            return ListTile(
+                              tileColor: AppColors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: AppColors.divider),
+                              ),
+                              title: Text(b.patientName),
+                              subtitle: Text(
+                                '${b.label}\n${b.status} · ${b.paymentStatus} · ₹${b.amount}',
+                              ),
+                              isThreeLine: true,
+                              trailing: PopupMenuButton<String>(
+                                onSelected: (status) async {
+                                  final ok = await ref
+                                      .read(labDashboardProvider.notifier)
+                                      .updateBookingStatus(
+                                        bookingId: b.id,
+                                        status: status,
+                                      );
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          ok
+                                              ? 'Updated to $status'
+                                              : 'Update failed',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'confirmed',
+                                    child: Text('Confirm'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'sample_collected',
+                                    child: Text('Sample collected'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'processing',
+                                    child: Text('Processing'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'report_ready',
+                                    child: Text('Report ready'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'completed',
+                                    child: Text('Complete'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'rejected',
+                                    child: Text('Reject'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

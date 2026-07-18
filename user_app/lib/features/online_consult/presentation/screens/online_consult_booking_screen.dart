@@ -43,6 +43,7 @@ class _OnlineConsultBookingScreenState
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _notesController = TextEditingController();
+  final _couponController = TextEditingController();
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
@@ -90,6 +91,7 @@ class _OnlineConsultBookingScreenState
     _mobileController.dispose();
     _emailController.dispose();
     _notesController.dispose();
+    _couponController.dispose();
     _addressController.dispose();
     _cityController.dispose();
     _stateController.dispose();
@@ -231,6 +233,9 @@ class _OnlineConsultBookingScreenState
           patientMobile: _mobileController.text.trim(),
           patientEmail: _emailController.text.trim(),
           patientNotes: _notesController.text.trim(),
+          couponCode: _couponController.text.trim().isEmpty
+              ? null
+              : _couponController.text.trim(),
         );
 
     if (!mounted) return;
@@ -585,6 +590,13 @@ class _OnlineConsultBookingScreenState
                               prefixIcon: Icons.notes_rounded,
                               maxLines: 3,
                               minLines: 2,
+                            ),
+                            const SizedBox(height: 12),
+                            CustomTextField(
+                              controller: _couponController,
+                              label: 'Coupon code (optional)',
+                              prefixIcon: Icons.local_offer_outlined,
+                              hint: 'Try CARE10 or FIRST100',
                             ),
                             const SizedBox(height: 20),
                             PreviousReportsPicker(

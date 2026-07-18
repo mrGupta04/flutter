@@ -241,7 +241,13 @@ class _AmbulanceRegistrationScreenState
   Widget build(BuildContext context) {
     final currentStep = ref.watch(currentAmbulanceStepProvider);
 
-    return Scaffold(
+    return PopScope(
+      canPop: currentStep <= 1,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _previousStep();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Ambulance onboarding'),
@@ -293,6 +299,7 @@ class _AmbulanceRegistrationScreenState
           ),
         ],
       ),
+    ),
     );
   }
 }

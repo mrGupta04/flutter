@@ -13,6 +13,7 @@ import '../../../../core/utils/text_controller_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/gender_radio_field.dart';
+import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
 import '../../../../shared/widgets/profile_picture_picker.dart';
 import '../../../../shared/widgets/registration_location_input.dart';
@@ -24,6 +25,180 @@ Widget nurseStepScroll({required Widget child}) {
     padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
     child: child,
   );
+}
+
+class _NurseSearchableMultiSelectPicker extends StatefulWidget {
+  const _NurseSearchableMultiSelectPicker({
+    required this.label,
+    required this.hint,
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+    this.prefixIcon,
+    this.helperText,
+  });
+
+  final String label;
+  final String hint;
+  final IconData? prefixIcon;
+  final String? helperText;
+  final List<String> options;
+  final List<String> selected;
+  final ValueChanged<List<String>> onChanged;
+
+  @override
+  State<_NurseSearchableMultiSelectPicker> createState() =>
+      _NurseSearchableMultiSelectPickerState();
+}
+
+class _NurseSearchableMultiSelectPickerState
+    extends State<_NurseSearchableMultiSelectPicker> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<String> get _available => widget.options
+      .where((option) => !widget.selected.contains(option))
+      .toList(growable: false);
+
+  List<String> get _filtered {
+    final query = _searchController.text.trim().toLowerCase();
+    final available = _available;
+    if (query.isEmpty) return available;
+    return available
+        .where((option) => option.toLowerCase().contains(query))
+        .toList(growable: false);
+  }
+
+  void _addOption(String value) {
+    widget.onChanged([...widget.selected, value]);
+    _searchController.clear();
+    setState(() {});
+  }
+
+  void _removeOption(String value) {
+    widget.onChanged(
+      widget.selected.where((item) => item != value).toList(growable: false),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filtered;
+    final query = _searchController.text.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.selected.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: widget.selected.map(_selectedChip).toList(),
+          ),
+          const SizedBox(height: 12),
+        ],
+        TextField(
+          controller: _searchController,
+          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            labelText: widget.label,
+            hintText: widget.hint,
+            helperText: widget.helperText,
+            prefixIcon:
+                widget.prefixIcon != null ? Icon(widget.prefixIcon) : null,
+            suffixIcon: query.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {});
+                    },
+                  )
+                : const Icon(Icons.search_rounded),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 8),
+        if (_available.isEmpty)
+          Text(
+            'All options added',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          )
+        else if (query.isNotEmpty && filtered.isEmpty)
+          Text(
+            'No results found for "$query"',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          )
+        else
+          Container(
+            constraints: const BoxConstraints(maxHeight: 220),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.grey200),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              itemCount: filtered.length,
+              separatorBuilder: (_, _) => const Divider(
+                height: 1,
+                indent: 16,
+                endIndent: 16,
+                color: AppColors.divider,
+              ),
+              itemBuilder: (context, index) {
+                final option = filtered[index];
+                return ListTile(
+                  dense: true,
+                  title: Text(
+                    option,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                  onTap: () => _addOption(option),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _selectedChip(String item) {
+    return InputChip(
+      label: Text(
+        item,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.primaryDark,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      deleteIcon: const Icon(
+        Icons.close_rounded,
+        size: 18,
+        color: AppColors.primaryDark,
+      ),
+      onDeleted: () => _removeOption(item),
+      backgroundColor: AppColors.primaryLight,
+      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+    );
+  }
 }
 
 class _NurseChipMultiSelect extends StatelessWidget {
@@ -282,9 +457,11 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
               },
             ),
             const SizedBox(height: 12),
-            _NurseChipMultiSelect(
+            _NurseSearchableMultiSelectPicker(
               label: 'Languages spoken',
-              helperText: 'Select all languages you can communicate in.',
+              hint: 'Search language',
+              helperText: 'Search and tap to add. You can select more than one.',
+              prefixIcon: Icons.translate_rounded,
               options: AppLists.languages,
               selected: _languages,
               onChanged: (values) {
@@ -1009,9 +1186,16 @@ class NurseStep6Availability extends ConsumerWidget {
 }
 
 class NurseStep7Review extends ConsumerWidget {
-  const NurseStep7Review({super.key, required this.onEditStep});
+  const NurseStep7Review({
+    super.key,
+    required this.onEditStep,
+    required this.acknowledged,
+    required this.onAcknowledgedChanged,
+  });
 
   final void Function(int step) onEditStep;
+  final bool acknowledged;
+  final ValueChanged<bool> onAcknowledgedChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1028,65 +1212,114 @@ class NurseStep7Review extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           _ReviewSection(
-            title: 'Personal',
-            lines: [
-              '${form.firstName} ${form.lastName}'.trim(),
+            title: 'Personal Information',
+            items: [
+              _ReviewItem(
+                'Name',
+                '${form.firstName} ${form.lastName}'.trim(),
+              ),
               if (form.gender != null && form.gender!.isNotEmpty)
-                'Gender: ${form.gender}',
+                _ReviewItem('Gender', form.gender!),
               if (form.dateOfBirth != null)
-                'DOB: ${form.dateOfBirth!.day}/${form.dateOfBirth!.month}/${form.dateOfBirth!.year}',
-              if (form.languagesSpoken.isNotEmpty)
-                'Languages: ${form.languagesSpoken.join(', ')}',
+                _ReviewItem(
+                  'Date of Birth',
+                  FormattingUtils.formatDate(form.dateOfBirth!),
+                ),
+              _ReviewItem(
+                'Languages',
+                form.languagesSpoken.isNotEmpty
+                    ? form.languagesSpoken.join(', ')
+                    : '-',
+              ),
               if (form.emergencyContactName.trim().isNotEmpty)
-                'Emergency: ${form.emergencyContactName} (${form.emergencyContactNumber})',
+                _ReviewItem(
+                  'Emergency contact',
+                  '${form.emergencyContactName} (${form.emergencyContactNumber})',
+                ),
               if (form.mobileNumber.trim().isNotEmpty)
-                '+${form.countryCode} ${form.mobileNumber.trim()}',
-              form.email,
+                _ReviewItem(
+                  'Mobile',
+                  ValidationUtils.formatInternationalPhone(
+                    form.mobileNumber,
+                    countryCode: form.countryCode,
+                  ),
+                ),
+              _ReviewItem('Email', form.email),
             ],
             onEdit: () => onEditStep(1),
           ),
           _ReviewSection(
-            title: 'Professional',
-            lines: [
-              form.resolvedQualification,
-              'Reg: ${form.registrationNumber}',
-              if (form.nuid.trim().isNotEmpty) 'NUID: ${form.nuid}',
-              form.specialization,
+            title: 'Professional Details',
+            items: [
+              _ReviewItem('Qualification', form.resolvedQualification),
+              _ReviewItem('Reg. Number', form.registrationNumber),
+              if (form.nuid.trim().isNotEmpty) _ReviewItem('NUID', form.nuid),
+              _ReviewItem('Council', form.nursingCouncil),
+              _ReviewItem('Specialization', form.specialization),
               if (form.nursingSkills.isNotEmpty)
-                'Skills: ${form.nursingSkills.take(3).join(', ')}${form.nursingSkills.length > 3 ? ' +${form.nursingSkills.length - 3} more' : ''}',
-              'Home visit fee: ₹${form.homeVisitFee}',
+                _ReviewItem(
+                  'Clinical skills',
+                  form.nursingSkills.join(', '),
+                ),
+              _ReviewItem('Home visit fee', '₹${form.homeVisitFee}'),
             ],
             onEdit: () => onEditStep(2),
           ),
           _ReviewSection(
-            title: 'Location',
-            lines: [
-              form.address,
-              '${form.city}, ${form.state} ${form.pincode}'.trim(),
+            title: 'Address',
+            items: [
+              _ReviewItem('Address', form.address),
+              _ReviewItem(
+                'City / State',
+                '${form.city}, ${form.state}'.trim(),
+              ),
+              _ReviewItem('Pincode', form.pincode),
               if (form.serviceRadiusKm != null)
-                'Service radius: ${form.serviceRadiusKm} km',
+                _ReviewItem(
+                  'Service radius',
+                  '${form.serviceRadiusKm} km',
+                ),
             ],
             onEdit: () => onEditStep(3),
           ),
           _ReviewSection(
             title: 'Documents',
-            lines: NurseDocumentType.values
-                .map((t) => '${t.label}: ${form.documentUrls.containsKey(t) || form.documentBytes.containsKey(t) ? 'Ready' : 'Missing'}')
+            items: NurseDocumentType.values
+                .map(
+                  (t) => _ReviewItem(
+                    t.label,
+                    form.documentUrls.containsKey(t) ||
+                            form.documentBytes.containsKey(t)
+                        ? 'Ready'
+                        : 'Missing',
+                  ),
+                )
                 .toList(),
             onEdit: () => onEditStep(4),
           ),
           _ReviewSection(
             title: 'Payout',
-            lines: [
-              form.bankAccountHolderName,
-              '${form.bankName} • ${form.ifscCode}',
+            items: [
+              _ReviewItem('Account holder', form.bankAccountHolderName),
+              _ReviewItem('Bank', form.bankName),
+              _ReviewItem('IFSC', form.ifscCode),
             ],
             onEdit: () => onEditStep(5),
           ),
           _ReviewSection(
             title: 'Availability',
-            lines: ['${form.selectedHomeAvailabilitySlots.length} slots selected'],
+            items: [
+              _ReviewItem(
+                'Home visit slots',
+                '${form.selectedHomeAvailabilitySlots.length} selected',
+              ),
+            ],
             onEdit: () => onEditStep(6),
+          ),
+          const SizedBox(height: 8),
+          RegistrationAcknowledgmentSection(
+            value: acknowledged,
+            onChanged: onAcknowledgedChanged,
           ),
         ],
       ),
@@ -1094,15 +1327,22 @@ class NurseStep7Review extends ConsumerWidget {
   }
 }
 
+class _ReviewItem {
+  const _ReviewItem(this.label, this.value);
+
+  final String label;
+  final String value;
+}
+
 class _ReviewSection extends StatelessWidget {
   const _ReviewSection({
     required this.title,
-    required this.lines,
+    required this.items,
     required this.onEdit,
   });
 
   final String title;
-  final List<String> lines;
+  final List<_ReviewItem> items;
   final VoidCallback onEdit;
 
   @override
@@ -1127,17 +1367,33 @@ class _ReviewSection extends StatelessWidget {
                 TextButton(onPressed: onEdit, child: const Text('Edit')),
               ],
             ),
-            ...lines.where((l) => l.trim().isNotEmpty).map(
-                  (l) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      l,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+            const Divider(height: 20),
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 128,
+                      child: Text(
+                        item.label,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.value.trim().isEmpty ? '-' : item.value,
+                        style: AppTextStyles.bodyMedium,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ),
           ],
         ),
       ),
