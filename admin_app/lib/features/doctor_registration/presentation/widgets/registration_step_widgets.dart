@@ -176,7 +176,11 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final formState = ref.watch(registrationFormProvider);
+    // Only watch country code — watching the full form rebuilds every keystroke
+    // and accidentally selects text in focused fields.
+    final countryCode = ref.watch(
+      registrationFormProvider.select((s) => s.countryCode),
+    );
 
     return registrationStepScroll(
       child: Form(
@@ -196,7 +200,7 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
           const SizedBox(height: 16),
           MobileNumberField(
             mobileController: _mobileController,
-            countryCode: formState.countryCode,
+            countryCode: countryCode,
             onCountryCodeChanged: (code) => ref
                 .read(registrationFormProvider.notifier)
                 .updatePersonalInfo(countryCode: code),

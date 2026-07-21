@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_text_styles.dart';
+import 'full_screen_image_viewer.dart';
 
 /// Gradient hero header for doctor/nurse profile pages.
 class ProviderProfileHero extends StatelessWidget {
@@ -18,6 +19,7 @@ class ProviderProfileHero extends StatelessWidget {
     this.avatarBorder,
     this.trailing,
     this.avatarSize = 96,
+    this.openFullImageOnTap = true,
   });
 
   final String name;
@@ -30,8 +32,19 @@ class ProviderProfileHero extends StatelessWidget {
   final Widget? avatarBorder;
   final Widget? trailing;
   final double avatarSize;
+  final bool openFullImageOnTap;
 
   static const double avatarCornerRadius = 16;
+
+  void _openFullImage(BuildContext context) {
+    final url = imageUrl?.trim() ?? '';
+    if (!openFullImageOnTap || url.isEmpty) return;
+    showFullScreenNetworkImage(
+      context,
+      imageUrl: url,
+      title: name,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +68,7 @@ class ProviderProfileHero extends StatelessWidget {
         ],
       ),
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           Positioned(
             right: -30,
@@ -80,22 +94,57 @@ class ProviderProfileHero extends StatelessWidget {
               ),
             ),
           ),
-          Column(
+          SizedBox(
+            width: double.infinity,
+            child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (trailing != null)
                 Align(alignment: Alignment.topRight, child: trailing!),
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  avatarBorder ??
-                      ProviderProfilePhoto(
-                        imageUrl: hasImage ? imageUrl : null,
-                        placeholderIcon: placeholderIcon,
-                        accentColor: gradientColors.last,
-                        size: avatarSize,
-                      ),
-                  if (avatarOverlay != null) avatarOverlay!,
-                ],
+              Center(
+                child: GestureDetector(
+                  onTap: hasImage ? () => _openFullImage(context) : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      avatarBorder ??
+                          ProviderProfilePhoto(
+                            imageUrl: hasImage ? imageUrl : null,
+                            placeholderIcon: placeholderIcon,
+                            accentColor: gradientColors.last,
+                            size: avatarSize,
+                            fit: BoxFit.contain,
+                          ),
+                      if (avatarOverlay != null) avatarOverlay!,
+                      if (hasImage && openFullImageOnTap)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.fullscreen_rounded,
+                              size: 14,
+                              color: gradientColors.last,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               Text(
@@ -118,15 +167,17 @@ class ProviderProfileHero extends StatelessWidget {
                 ),
               ],
               if (badges.isNotEmpty) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Wrap(
                   alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 8,
                   runSpacing: 8,
                   children: badges,
                 ),
               ],
             ],
+            ),
           ),
         ],
       ),
@@ -144,6 +195,7 @@ class ProviderProfilePhoto extends StatelessWidget {
     this.size = 96,
     this.borderColor,
     this.borderWidth = 3,
+    this.fit = BoxFit.cover,
   });
 
   final String? imageUrl;
@@ -152,6 +204,7 @@ class ProviderProfilePhoto extends StatelessWidget {
   final double size;
   final Color? borderColor;
   final double borderWidth;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +238,8 @@ class ProviderProfilePhoto extends StatelessWidget {
                   imageUrl: imageUrl!,
                   width: size,
                   height: size,
-                  fit: BoxFit.cover,
+                  fit: fit,
+                  alignment: Alignment.topCenter,
                   placeholder: (_, __) => _Placeholder(
                     icon: placeholderIcon,
                     color: accentColor,

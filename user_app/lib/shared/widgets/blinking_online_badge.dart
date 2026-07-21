@@ -5,7 +5,7 @@ import '../../core/theme/app_text_styles.dart';
 /// Red accent for doctors currently live in the app.
 const Color kLiveOnlineColor = AppColors.error;
 
-/// Eye-catching color-blinking "Online now" badge for doctors currently using the app.
+/// Eye-catching color-blinking "Online" badge for doctors currently using the app.
 class BlinkingOnlineBadge extends StatefulWidget {
   const BlinkingOnlineBadge({super.key, this.compact = false});
 
@@ -63,7 +63,7 @@ class _BlinkingOnlineBadgeState extends State<BlinkingOnlineBadge>
               BlinkingOnlineDot(size: widget.compact ? 6 : 7, pulse: glow),
               const SizedBox(width: 5),
               Text(
-                'Online now',
+                'Online',
                 style: AppTextStyles.labelSmall.copyWith(
                   color: Color.lerp(
                     kLiveOnlineColor.withValues(alpha: 0.7),
@@ -84,9 +84,9 @@ class _BlinkingOnlineBadgeState extends State<BlinkingOnlineBadge>
   }
 }
 
-/// Green "Available" badge with blinking dot — shown when a provider is live in the admin app.
+/// Green "Online" badge with blinking dot — shown when a provider is live in the admin app.
 class LiveAvailableBadge extends StatelessWidget {
-  const LiveAvailableBadge({super.key, this.label = 'Available'});
+  const LiveAvailableBadge({super.key, this.label = 'Online'});
 
   final String label;
 

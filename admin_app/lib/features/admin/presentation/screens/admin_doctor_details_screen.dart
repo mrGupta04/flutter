@@ -109,7 +109,7 @@ class AdminDoctorDetailsScreen extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _ProfileHeader(doctor: doctor),
           const SizedBox(height: 24),

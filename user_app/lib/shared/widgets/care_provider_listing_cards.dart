@@ -9,6 +9,7 @@ import '../../data/models/doctor_model.dart';
 import '../../data/models/nurse_model.dart';
 
 import 'blinking_online_badge.dart';
+import 'marketplace_provider_card_ui.dart';
 
 /// Nurse profile card accent — app theme green.
 const Color kNurseCardAccent = AppColors.primary;
@@ -31,7 +32,6 @@ class NurseListingCard extends StatelessWidget {
     this.onOpenMapTap,
     this.distanceLabel,
     this.availabilityLabel,
-    this.originalFee,
   });
 
   final NurseModel nurse;
@@ -42,14 +42,11 @@ class NurseListingCard extends StatelessWidget {
   final VoidCallback? onOpenMapTap;
   final String? distanceLabel;
   final String? availabilityLabel;
-  final int? originalFee;
 
   @override
   Widget build(BuildContext context) {
-    final qualification = nurse.qualification?.trim();
-    final designation = nurse.specialization?.trim().isNotEmpty == true
-        ? nurse.specialization!.trim()
-        : 'Registered Nurse';
+    final designation = nurse.cardDesignationLabel;
+    final qualificationSubtitle = nurse.cardQualificationSubtitle;
     final experience = nurse.yearsOfExperience;
     final city = nurse.city?.trim();
     final state = nurse.state?.trim();
@@ -66,10 +63,7 @@ class NurseListingCard extends StatelessWidget {
     final locationLine = locationParts.join(', ');
     final availabilityText = availabilityLabel?.trim().isNotEmpty == true
         ? availabilityLabel!.trim()
-        : (nurse.shiftAvailability?.trim().isNotEmpty == true
-            ? nurse.shiftAvailability!.trim()
-            : 'Flexible hours');
-    final fee = nurse.homeVisitFee;
+        : (bookable ? 'Weekly slots' : 'Unavailable');
 
     return Material(
       color: Colors.transparent,
@@ -138,11 +132,10 @@ class NurseListingCard extends StatelessWidget {
                                         height: 1.2,
                                       ),
                                     ),
-                                    if (qualification != null &&
-                                        qualification.isNotEmpty) ...[
+                                    if (qualificationSubtitle != null) ...[
                                       const SizedBox(height: 4),
                                       Text(
-                                        qualification,
+                                        qualificationSubtitle,
                                         style: AppTextStyles.bodySmall.copyWith(
                                           color: const Color(0xFF6B7280),
                                           fontSize: 12,
@@ -210,13 +203,20 @@ class NurseListingCard extends StatelessWidget {
                     _NurseServiceStatsBar(
                       serviceType: bookable ? 'Home Visit' : 'Unavailable',
                       availability: availabilityText,
-                      fee: fee,
-                      originalFee: originalFee,
                     ),
                   ],
                 ),
               ),
               if (showActionButtons) ...[
+                if (nurse.effectiveHomeVisitFee != null) ...[
+                  const SizedBox(height: 14),
+                  MarketplacePriceActionRow(
+                    price: nurse.effectiveHomeVisitFee,
+                    originalPrice: nurse.originalHomeVisitFee,
+                    showButton: false,
+                    accentColor: kNurseCardAccent,
+                  ),
+                ],
                 const SizedBox(height: 14),
                 _NurseBookNowButton(
                   enabled: bookable,
@@ -441,19 +441,13 @@ class _NurseServiceStatsBar extends StatelessWidget {
   const _NurseServiceStatsBar({
     required this.serviceType,
     required this.availability,
-    required this.fee,
-    this.originalFee,
   });
 
   final String serviceType;
   final String availability;
-  final int? fee;
-  final int? originalFee;
 
   @override
   Widget build(BuildContext context) {
-    final chargeLabel = fee != null && fee! > 0 ? '₹$fee / Visit' : 'On request';
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: IntrinsicHeight(
@@ -477,14 +471,9 @@ class _NurseServiceStatsBar extends StatelessWidget {
             const _NurseStatDivider(),
             Expanded(
               child: _NurseStatColumn(
-                icon: Icons.account_balance_wallet_outlined,
-                label: 'Charges',
-                value: chargeLabel,
-                strikeValue: originalFee != null &&
-                        fee != null &&
-                        originalFee! > fee!
-                    ? '₹$originalFee'
-                    : null,
+                icon: Icons.access_time_rounded,
+                label: 'Punctuality',
+                value: 'On time',
               ),
             ),
           ],

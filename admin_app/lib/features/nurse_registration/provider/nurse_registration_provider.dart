@@ -39,6 +39,7 @@ class NurseRegistrationFormState {
   final String specialization;
   final List<String> nursingSkills;
   final String homeVisitFee;
+  final String homeVisitOfferFee;
   final String address;
   final String city;
   final String state;
@@ -83,6 +84,7 @@ class NurseRegistrationFormState {
     this.specialization = '',
     this.nursingSkills = const [],
     this.homeVisitFee = '',
+    this.homeVisitOfferFee = '',
     this.address = '',
     this.city = '',
     this.state = '',
@@ -138,6 +140,7 @@ class NurseRegistrationFormState {
     String? specialization,
     List<String>? nursingSkills,
     String? homeVisitFee,
+    String? homeVisitOfferFee,
     String? address,
     String? city,
     String? state,
@@ -183,6 +186,7 @@ class NurseRegistrationFormState {
       specialization: specialization ?? this.specialization,
       nursingSkills: nursingSkills ?? this.nursingSkills,
       homeVisitFee: homeVisitFee ?? this.homeVisitFee,
+      homeVisitOfferFee: homeVisitOfferFee ?? this.homeVisitOfferFee,
       address: address ?? this.address,
       city: city ?? this.city,
       state: state ?? this.state,
@@ -235,6 +239,9 @@ class NurseRegistrationFormState {
       serviceRadiusKm: serviceRadiusKm,
       availableForHomeVisit: true,
       homeVisitFee: int.tryParse(homeVisitFee.trim()),
+      homeVisitOfferFee: homeVisitOfferFee.trim().isEmpty
+          ? null
+          : int.tryParse(homeVisitOfferFee.trim()),
       bankAccountHolderName: bankAccountHolderName.trim(),
       bankAccountNumber: bankAccountNumber.trim(),
       ifscCode: ifscCode.trim(),
@@ -296,6 +303,7 @@ class NurseRegistrationFormNotifier
     String? specialization,
     List<String>? nursingSkills,
     String? homeVisitFee,
+    String? homeVisitOfferFee,
   }) {
     state = state.copyWith(
       qualification: qualification,
@@ -307,6 +315,7 @@ class NurseRegistrationFormNotifier
       specialization: specialization,
       nursingSkills: nursingSkills,
       homeVisitFee: homeVisitFee,
+      homeVisitOfferFee: homeVisitOfferFee,
       submitError: null,
     );
   }

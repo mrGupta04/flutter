@@ -73,8 +73,14 @@ async function getActiveAvailabilityForBooking(nurseId) {
 }
 
 function getNurseHomeVisitFee(nurse) {
-  const fee = Number(nurse?.homeVisitFee);
-  return Number.isFinite(fee) && fee >= 1 ? fee : null;
+  const regular = Number(nurse?.homeVisitFee);
+  const offer = Number(nurse?.homeVisitOfferFee);
+  const regularFee = Number.isFinite(regular) && regular >= 1 ? regular : null;
+  const offerFee = Number.isFinite(offer) && offer >= 1 ? offer : null;
+  if (offerFee != null && (regularFee == null || offerFee < regularFee)) {
+    return offerFee;
+  }
+  return regularFee;
 }
 
 function resolvePatientDistance(nurse, patientLatitude, patientLongitude) {

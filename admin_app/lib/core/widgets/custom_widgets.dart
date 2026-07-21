@@ -52,6 +52,8 @@ class CustomTextField extends StatefulWidget {
 class _CustomTextFieldState extends State<CustomTextField> {
   late bool _obscureText;
   late final FocusNode _focusNode;
+  DateTime? _suppressSelectionUntil;
+  VoidCallback? _controllerListener;
 
   @override
   void initState() {
@@ -59,33 +61,82 @@ class _CustomTextFieldState extends State<CustomTextField> {
     _obscureText = widget.obscureText;
     _focusNode = FocusNode(debugLabel: 'CustomTextField:${widget.label}');
     _focusNode.addListener(_handleFocusChange);
+    _attachController(widget.controller);
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _detachController(oldWidget.controller);
+      _attachController(widget.controller);
+    }
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_handleFocusChange);
+    _detachController(widget.controller);
     _focusNode.dispose();
     super.dispose();
   }
 
+  void _attachController(TextEditingController controller) {
+    void listener() => _collapseAccidentalSelection();
+    _controllerListener = listener;
+    controller.addListener(listener);
+  }
+
+  void _detachController(TextEditingController controller) {
+    final listener = _controllerListener;
+    if (listener != null) {
+      controller.removeListener(listener);
+      _controllerListener = null;
+    }
+  }
+
   void _handleFocusChange() {
-    if (!_focusNode.hasFocus) return;
-    // Keyboard/MediaQuery rebuilds on desktop/mobile can select all on focus.
+    if (!_focusNode.hasFocus) {
+      _suppressSelectionUntil = null;
+      return;
+    }
+    // Desktop/web often select a range (or all) on the focusing click / rebuild.
+    _suppressSelectionUntil =
+        DateTime.now().add(const Duration(milliseconds: 400));
+    _collapseAccidentalSelection();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_focusNode.hasFocus) return;
-      _collapseAccidentalSelectAll();
+      if (!mounted) return;
+      _collapseAccidentalSelection();
     });
   }
 
-  void _collapseAccidentalSelectAll() {
+  void _collapseAccidentalSelection() {
+    final until = _suppressSelectionUntil;
+    if (until == null || DateTime.now().isAfter(until)) return;
+    if (!_focusNode.hasFocus) return;
+
     final controller = widget.controller;
     final text = controller.text;
     if (text.isEmpty) return;
+
     final selection = controller.selection;
     if (!selection.isValid || selection.isCollapsed) return;
-    if (selection.start == 0 && selection.end == text.length) {
-      controller.selection = TextSelection.collapsed(offset: text.length);
-    }
+
+    final caret = selection.extentOffset.clamp(0, text.length);
+    controller.selection = TextSelection.collapsed(offset: caret);
+  }
+
+  void _toggleObscure() {
+    final controller = widget.controller;
+    final selection = controller.selection;
+    setState(() => _obscureText = !_obscureText);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !selection.isValid) return;
+      final text = controller.text;
+      final start = selection.start.clamp(0, text.length);
+      final end = selection.end.clamp(0, text.length);
+      controller.selection = TextSelection(baseOffset: start, extentOffset: end);
+    });
   }
 
   @override
@@ -103,7 +154,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       textInputAction: widget.textInputAction,
       onChanged: (_) => widget.onChanged?.call(),
       onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
-      onTap: _collapseAccidentalSelectAll,
+      onTap: _collapseAccidentalSelection,
       style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: widget.label,
@@ -123,7 +174,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 ),
                 onPressed: () {
                   if (widget.obscureText) {
-                    setState(() => _obscureText = !_obscureText);
+                    _toggleObscure();
                   } else {
                     widget.onSuffixIconPressed?.call();
                   }

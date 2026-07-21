@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -9,6 +10,8 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/scan_center_model.dart';
 import '../../data/models/scan_procedure_model.dart';
 import '../../provider/scan_search_provider.dart';
+import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
+import '../../provider/scan_cart_provider.dart';
 import '../widgets/scan_booking_sheet.dart';
 
 class ScanCenterDetailScreen extends ConsumerWidget {
@@ -27,6 +30,7 @@ class ScanCenterDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: DiagnosticStickyCartBar(centerId: centerId),
       body: asyncCenter.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),
@@ -36,14 +40,14 @@ class ScanCenterDetailScreen extends ConsumerWidget {
   }
 }
 
-class _DetailBody extends StatelessWidget {
+class _DetailBody extends ConsumerWidget {
   const _DetailBody({required this.center, this.scanId});
 
   final ScanCenterModel center;
   final String? scanId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scans = center.offeredScans?.where((s) => s.enabled).toList() ?? [];
     final highlighted = scanId != null ? center.offeredScan(scanId!) : null;
     final distance = formatNearbyDistanceLabel(center.distanceKm);
@@ -169,6 +173,8 @@ class _DetailBody extends StatelessWidget {
                 const SizedBox(height: 10),
                 ...scans.map((scan) {
                   final isHighlighted = highlighted?.scanId == scan.scanId;
+                  final cart = ref.watch(scanCartProvider);
+                  final inCart = cart.contains(scan.scanId);
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(14),
@@ -181,6 +187,7 @@ class _DetailBody extends StatelessWidget {
                       ),
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Column(
@@ -202,6 +209,7 @@ class _DetailBody extends StatelessWidget {
                             ],
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
@@ -219,6 +227,39 @@ class _DetailBody extends StatelessWidget {
                               style: AppTextStyles.titleSmall.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 32,
+                              child: FilledButton(
+                                onPressed: () {
+                                  final added = ref
+                                      .read(scanCartProvider.notifier)
+                                      .addItem(
+                                        center: center,
+                                        item: ScanCartItem.fromOffered(scan),
+                                      );
+                                  if (!added && context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Clear cart from another center before adding scans.',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: inCart
+                                      ? AppColors.success
+                                      : AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                  ),
+                                  minimumSize: const Size(64, 32),
+                                ),
+                                child: Text(inCart ? 'Added' : 'Add'),
                               ),
                             ),
                           ],
@@ -256,8 +297,12 @@ class _DetailBody extends StatelessWidget {
                 ],
                 const SizedBox(height: 20),
                 CustomButton(
-                  label: 'Book now',
-                  icon: Icons.calendar_month_rounded,
+                  label: 'Proceed to cart',
+                  icon: Icons.shopping_cart_outlined,
+                  onPressed: () => context.push(AppConstants.routeLabCart),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
                   onPressed: () {
                     final target = highlighted ??
                         (scans.isNotEmpty ? scans.first : null);
@@ -281,6 +326,8 @@ class _DetailBody extends StatelessWidget {
                       ),
                     );
                   },
+                  icon: const Icon(Icons.calendar_month_rounded, size: 18),
+                  label: const Text('Book single scan'),
                 ),
               ],
             ),

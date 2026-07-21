@@ -32,6 +32,7 @@ class NurseModel {
   final int? serviceRadiusKm;
   final bool? availableForHomeVisit;
   final int? homeVisitFee;
+  final int? homeVisitOfferFee;
   final String? shiftAvailability;
   final String? bankAccountHolderName;
   final String? bankAccountNumber;
@@ -73,6 +74,7 @@ class NurseModel {
     this.serviceRadiusKm,
     this.availableForHomeVisit,
     this.homeVisitFee,
+    this.homeVisitOfferFee,
     this.shiftAvailability,
     this.bankAccountHolderName,
     this.bankAccountNumber,
@@ -124,6 +126,7 @@ class NurseModel {
       serviceRadiusKm: (json['serviceRadiusKm'] as num?)?.toInt(),
       availableForHomeVisit: json['availableForHomeVisit'] as bool? ?? true,
       homeVisitFee: (json['homeVisitFee'] as num?)?.toInt(),
+      homeVisitOfferFee: (json['homeVisitOfferFee'] as num?)?.toInt(),
       shiftAvailability: json['shiftAvailability'] as String?,
       bankAccountHolderName: json['bankAccountHolderName'] as String?,
       bankAccountNumber: json['bankAccountNumber'] as String?,
@@ -177,6 +180,7 @@ class NurseModel {
       if (availableForHomeVisit != null)
         'availableForHomeVisit': availableForHomeVisit,
       if (homeVisitFee != null) 'homeVisitFee': homeVisitFee,
+      if (homeVisitOfferFee != null) 'homeVisitOfferFee': homeVisitOfferFee,
       if (shiftAvailability != null) 'shiftAvailability': shiftAvailability,
       if (bankAccountHolderName != null)
         'bankAccountHolderName': bankAccountHolderName,
@@ -234,6 +238,7 @@ class NurseModel {
     int? serviceRadiusKm,
     bool? availableForHomeVisit,
     int? homeVisitFee,
+    int? homeVisitOfferFee,
     String? shiftAvailability,
     String? bankAccountHolderName,
     String? bankAccountNumber,
@@ -277,6 +282,7 @@ class NurseModel {
       availableForHomeVisit:
           availableForHomeVisit ?? this.availableForHomeVisit,
       homeVisitFee: homeVisitFee ?? this.homeVisitFee,
+      homeVisitOfferFee: homeVisitOfferFee ?? this.homeVisitOfferFee,
       shiftAvailability: shiftAvailability ?? this.shiftAvailability,
       bankAccountHolderName:
           bankAccountHolderName ?? this.bankAccountHolderName,

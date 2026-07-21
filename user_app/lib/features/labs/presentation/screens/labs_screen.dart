@@ -9,6 +9,7 @@ import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../data/lab_test_icons.dart';
+import '../widgets/lab_organ_logos.dart';
 import '../../data/lab_tests_catalog.dart';
 import '../../data/models/lab_test_model.dart';
 import '../widgets/lab_test_card.dart';
@@ -230,10 +231,14 @@ class _CategorySection extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 10, top: 4),
           child: Row(
             children: [
-              Icon(
-                category.icon,
-                size: 20,
-                color: category.iconColor,
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: LabOrganLogoIcon(
+                  logo: labOrganLogoForCategory(category),
+                  size: 18,
+                  color: category.iconColor,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(

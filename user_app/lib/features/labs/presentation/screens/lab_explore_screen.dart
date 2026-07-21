@@ -10,7 +10,8 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../provider/lab_search_provider.dart';
 import '../widgets/lab_explore_card.dart';
-import '../widgets/lab_sticky_cart_bar.dart';
+import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
+import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
 import '../widgets/lab_top_categories_section.dart';
 
 class LabExploreScreen extends ConsumerStatefulWidget {
@@ -215,8 +216,9 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => context.pop(),
         ),
+        actions: const [DiagnosticCartIconButton()],
       ),
-      bottomNavigationBar: const LabStickyCartBar(),
+      bottomNavigationBar: const DiagnosticStickyCartBar(),
       body: RefreshIndicator(
         onRefresh: () => ref.read(labExploreProvider.notifier).load(refresh: true),
         child: CustomScrollView(

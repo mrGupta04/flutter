@@ -80,6 +80,7 @@ async function upsertNurse(data) {
     serviceRadiusKm: data.serviceRadiusKm ?? existing?.serviceRadiusKm,
     availableForHomeVisit: data.availableForHomeVisit ?? existing?.availableForHomeVisit ?? true,
     homeVisitFee: data.homeVisitFee ?? existing?.homeVisitFee,
+    homeVisitOfferFee: data.homeVisitOfferFee ?? existing?.homeVisitOfferFee,
     shiftAvailability: data.shiftAvailability ?? existing?.shiftAvailability,
     bankAccountHolderName: data.bankAccountHolderName ?? existing?.bankAccountHolderName,
     bankAccountNumber: data.bankAccountNumber ?? existing?.bankAccountNumber,

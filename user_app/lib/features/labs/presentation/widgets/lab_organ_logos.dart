@@ -34,10 +34,11 @@ enum LabOrganLogo {
 
 LabOrganLogo labOrganLogoForId(String id) {
   return switch (id) {
-    'kidney-risk' || 'kidney' || 'kidney-disease' => LabOrganLogo.kidney,
-    'liver-risk' || 'liver' || 'fatty-liver' => LabOrganLogo.liver,
+    // Body organs
+    'kidney-risk' || 'kidney' || 'kidney-disease' || 'kft' => LabOrganLogo.kidney,
+    'liver-risk' || 'liver' || 'fatty-liver' || 'lft' => LabOrganLogo.liver,
     'thyroid-risk' || 'thyroid' || 'thyroid-organ' => LabOrganLogo.thyroid,
-    'heart-risk' || 'heart' || 'cholesterol' || 'cholesterol-risk' =>
+    'heart-risk' || 'heart' || 'cholesterol' || 'cholesterol-risk' || 'lipid' =>
       LabOrganLogo.heart,
     'lungs' || 'asthma' => LabOrganLogo.lungs,
     'brain' => LabOrganLogo.brain,
@@ -46,19 +47,63 @@ LabOrganLogo labOrganLogoForId(String id) {
     'bones' || 'bone-risk' || 'arthritis' => LabOrganLogo.bone,
     'eyes' => LabOrganLogo.eye,
     'skin' => LabOrganLogo.skin,
+    'hormonal-risk' || 'hormones' || 'hormone' => LabOrganLogo.hormone,
+
+    // Health conditions & risks
     'diabetes-risk' || 'diabetes' => LabOrganLogo.sugar,
     'fever' => LabOrganLogo.thermometer,
     'dengue' || 'malaria' => LabOrganLogo.mosquito,
     'covid' => LabOrganLogo.virus,
     'pregnancy' || 'pcos' => LabOrganLogo.pregnancy,
-    'vitamin-risk' || 'vitamin-d' => LabOrganLogo.sun,
+    'vitamin-risk' || 'vitamin-d' || 'vitamin' => LabOrganLogo.sun,
     'vitamin-b12' => LabOrganLogo.bolt,
     'allergy' => LabOrganLogo.allergy,
     'obesity-risk' => LabOrganLogo.weight,
     'hypertension-risk' || 'hypertension' => LabOrganLogo.pressure,
     'cancer-risk' => LabOrganLogo.cancer,
-    'hormonal-risk' || 'hormones' => LabOrganLogo.hormone,
+    'urine' => LabOrganLogo.bloodDrop,
+
+    // Health packages
+    'heart-pkg' => LabOrganLogo.heart,
+    'liver-pkg' => LabOrganLogo.liver,
+    'kidney-pkg' => LabOrganLogo.kidney,
+    'diabetes-pkg' => LabOrganLogo.sugar,
+    'thyroid-pkg' => LabOrganLogo.thyroid,
+    'vitamin-pkg' => LabOrganLogo.sun,
+    'cancer-pkg' => LabOrganLogo.cancer,
+    'womens' => LabOrganLogo.pregnancy,
+    'mens' => LabOrganLogo.heart,
+    'senior' => LabOrganLogo.bone,
+    'full-body' || 'popular' => LabOrganLogo.generic,
+    'checkup' || 'other' => LabOrganLogo.generic,
     _ => LabOrganLogo.generic,
+  };
+}
+
+/// Organ logo for an individual lab test id.
+LabOrganLogo labOrganLogoForTestId(String testId) {
+  return switch (testId) {
+    'cbc' || 'esr' || 'blood-group' || 'iron-studies' => LabOrganLogo.bloodDrop,
+    'urine-routine' || 'urine-culture' || 'urine-microalbumin' =>
+      LabOrganLogo.kidney,
+    'thyroid-profile' || 'tsh' || 'anti-tpo' => LabOrganLogo.thyroid,
+    'fbs' || 'ppbs' || 'hba1c' || 'glucose-tolerance' => LabOrganLogo.sugar,
+    'lft-basic' || 'lft-advanced' => LabOrganLogo.liver,
+    'kft-basic' || 'kft-advanced' => LabOrganLogo.kidney,
+    'lipid-basic' || 'lipid-advanced' => LabOrganLogo.heart,
+    'vitamin-d' || 'vitamin-panel' => LabOrganLogo.sun,
+    'vitamin-b12' => LabOrganLogo.bolt,
+    'testosterone' || 'progesterone' || 'cortisol' => LabOrganLogo.hormone,
+    'ige-total' || 'food-allergy-panel' => LabOrganLogo.allergy,
+    'inhalant-allergy' => LabOrganLogo.lungs,
+    'rt-pcr' || 'rapid-antigen' || 'covid-antibody' => LabOrganLogo.virus,
+    'senior-checkup' => LabOrganLogo.bone,
+    'womens-checkup' => LabOrganLogo.pregnancy,
+    'crp' => LabOrganLogo.heart,
+    'psa' => LabOrganLogo.cancer,
+    'stool-routine' => LabOrganLogo.stomach,
+    'dengue-ns1' => LabOrganLogo.mosquito,
+    _ => labOrganLogoForId(testId),
   };
 }
 
@@ -625,14 +670,27 @@ class LabOrganLogoPainter extends CustomPainter {
 class LabOrganLogoIcon extends StatelessWidget {
   const LabOrganLogoIcon({
     super.key,
-    required this.groupId,
+    this.groupId,
+    this.testId,
+    this.logo,
     this.size = 22,
     this.color = Colors.white,
-  });
+  }) : assert(
+          groupId != null || testId != null || logo != null,
+          'Provide groupId, testId, or logo',
+        );
 
-  final String groupId;
+  final String? groupId;
+  final String? testId;
+  final LabOrganLogo? logo;
   final double size;
   final Color color;
+
+  LabOrganLogo get _resolvedLogo {
+    if (logo != null) return logo!;
+    if (testId != null) return labOrganLogoForTestId(testId!);
+    return labOrganLogoForId(groupId ?? '');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -641,7 +699,7 @@ class LabOrganLogoIcon extends StatelessWidget {
       height: size,
       child: CustomPaint(
         painter: LabOrganLogoPainter(
-          logo: labOrganLogoForId(groupId),
+          logo: _resolvedLogo,
           color: color,
         ),
       ),

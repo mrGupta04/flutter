@@ -11,6 +11,8 @@ import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/patient_booking_model.dart';
 import '../../../../shared/widgets/appointment_code_display.dart';
 import '../../../../data/models/patient_user_model.dart';
+import '../../../../features/labs/provider/lab_cart_provider.dart';
+import '../../../../features/scans/provider/scan_cart_provider.dart';
 import '../../../user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../../video_consult/presentation/widgets/join_video_consult_button.dart';
@@ -20,6 +22,7 @@ import '../../../feedback/presentation/utils/feedback_prompt_helper.dart';
 import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../../data/services/lab_scan_payment_flow.dart';
+import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/repositories/booking_lifecycle_repository.dart';
@@ -83,18 +86,6 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
       }
     });
 
-    ref.listen<PatientDashboardState>(patientDashboardProvider, (prev, next) {
-      if (prev?.isLoadingBookings == true &&
-          !next.isLoadingBookings &&
-          next.error == null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            maybeShowPendingFeedbackPrompt(context, next.bookings);
-          }
-        });
-      }
-    });
-
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar:
@@ -116,75 +107,11 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                   )
                 : null,
             actions: [
+              const DiagnosticCartIconButton(iconColor: AppColors.white),
               IconButton(
                 tooltip: 'Notifications',
                 onPressed: () => context.push(AppConstants.routeNotifications),
                 icon: const Icon(Icons.notifications_outlined),
-              ),
-              IconButton(
-                tooltip: 'Edit profile',
-                onPressed: user == null
-                    ? null
-                    : () async {
-                        final updated = await context.push<bool>(
-                          AppConstants.routeUserEditProfile,
-                        );
-                        if (updated == true && mounted) {
-                          await ref
-                              .read(patientDashboardProvider.notifier)
-                              .refreshAll();
-                        }
-                      },
-                icon: const Icon(Icons.edit_outlined),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) async {
-                  if (value == 'favorites') {
-                    if (context.mounted) {
-                      context.push(AppConstants.routeFavorites);
-                    }
-                  } else if (value == 'support') {
-                    if (context.mounted) {
-                      context.push(AppConstants.routeSupportTickets);
-                    }
-                  } else if (value == 'rewards') {
-                    if (context.mounted) {
-                      context.push(AppConstants.routeUserRewards);
-                    }
-                  } else if (value == 'theme') {
-                    ref.read(themeModeProvider.notifier).toggle();
-                  } else if (value == 'logout') {
-                    await ref.read(patientAuthProvider.notifier).logout();
-                    if (context.mounted) context.go(AppConstants.routeUserHome);
-                  }
-                },
-                itemBuilder: (_) {
-                  final isDark =
-                      ref.read(themeModeProvider) == ThemeMode.dark;
-                  return [
-                    const PopupMenuItem(
-                      value: 'favorites',
-                      child: Text('Favorites'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'support',
-                      child: Text('Support'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'rewards',
-                      child: Text('Rewards'),
-                    ),
-                    PopupMenuItem(
-                      value: 'theme',
-                      child: Text(isDark ? 'Light mode' : 'Dark mode'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'logout',
-                      child: Text('Log out'),
-                    ),
-                  ];
-                },
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -272,19 +199,45 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
               preferredSize: const Size.fromHeight(48),
               child: Container(
                 color: AppColors.white,
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorColor: AppColors.primary,
-                  labelColor: AppColors.primary,
-                  unselectedLabelColor: AppColors.textSecondary,
-                  labelStyle: AppTextStyles.labelLarge.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                  tabs: const [
-                    Tab(text: 'Upcoming'),
-                    Tab(text: 'History'),
-                    Tab(text: 'Profile'),
-                  ],
+                child: _DashboardNavRow(
+                  tabController: _tabController,
+                  user: user,
+                  onEdit: user == null
+                      ? null
+                      : () async {
+                          final updated = await context.push<bool>(
+                            AppConstants.routeUserEditProfile,
+                          );
+                          if (updated == true && mounted) {
+                            await ref
+                                .read(patientDashboardProvider.notifier)
+                                .refreshAll();
+                          }
+                        },
+                  onMenuSelected: (value) async {
+                    if (value == 'favorites') {
+                      if (context.mounted) {
+                        context.push(AppConstants.routeFavorites);
+                      }
+                    } else if (value == 'support') {
+                      if (context.mounted) {
+                        context.push(AppConstants.routeSupportTickets);
+                      }
+                    } else if (value == 'rewards') {
+                      if (context.mounted) {
+                        context.push(AppConstants.routeUserRewards);
+                      }
+                    } else if (value == 'theme') {
+                      ref.read(themeModeProvider.notifier).toggle();
+                    } else if (value == 'logout') {
+                      await ref.read(patientAuthProvider.notifier).logout();
+                      if (context.mounted) {
+                        context.go(AppConstants.routeUserHome);
+                      }
+                    }
+                  },
+                  isDarkTheme:
+                      ref.watch(themeModeProvider) == ThemeMode.dark,
                 ),
               ),
             ),
@@ -324,6 +277,212 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
   }
 }
 
+class _DashboardNavRow extends StatelessWidget {
+  const _DashboardNavRow({
+    required this.tabController,
+    required this.user,
+    required this.onEdit,
+    required this.onMenuSelected,
+    required this.isDarkTheme,
+  });
+
+  final TabController tabController;
+  final PatientUserModel? user;
+  final VoidCallback? onEdit;
+  final ValueChanged<String> onMenuSelected;
+  final bool isDarkTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: tabController,
+      builder: (context, _) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _NavChip(
+                        label: 'Upcoming',
+                        selected: tabController.index == 0,
+                        onTap: () => tabController.animateTo(0),
+                      ),
+                      const SizedBox(width: 6),
+                      _NavChip(
+                        label: 'History',
+                        selected: tabController.index == 1,
+                        onTap: () => tabController.animateTo(1),
+                      ),
+                      const SizedBox(width: 6),
+                      _NavChip(
+                        label: 'Profile',
+                        selected: tabController.index == 2,
+                        onTap: () => tabController.animateTo(2),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Edit profile',
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 20),
+                visualDensity: VisualDensity.compact,
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 20),
+                padding: EdgeInsets.zero,
+                onSelected: onMenuSelected,
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'favorites',
+                    child: Text('Favorites'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'support',
+                    child: Text('Support'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'rewards',
+                    child: Text('Rewards'),
+                  ),
+                  PopupMenuItem(
+                    value: 'theme',
+                    child: Text(isDarkTheme ? 'Light mode' : 'Dark mode'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'logout',
+                    child: Text('Log out'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _NavChip extends StatelessWidget {
+  const _NavChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppColors.primarySoft : AppColors.grey50,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? AppColors.primary : AppColors.grey200,
+            ),
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.labelMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              color: selected ? AppColors.primary : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiagnosticCartCard extends StatelessWidget {
+  const _DiagnosticCartCard({
+    required this.labCount,
+    required this.scanCount,
+  });
+
+  final int labCount;
+  final int scanCount;
+
+  int get total => labCount + scanCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => context.push(AppConstants.routeLabCart),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.grey200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Badge(
+                  isLabelVisible: total > 0,
+                  label: Text('$total'),
+                  child: const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My cart',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      total == 0
+                          ? 'Add lab tests or scans to book together'
+                          : '$labCount lab • $scanCount scan${scanCount == 1 ? '' : 's'}',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.grey400),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileTab extends ConsumerWidget {
   const _ProfileTab({
     required this.user,
@@ -347,6 +506,11 @@ class _ProfileTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
       children: [
+        _DiagnosticCartCard(
+          labCount: ref.watch(labCartProvider).itemCount,
+          scanCount: ref.watch(scanCartProvider).itemCount,
+        ),
+        const SizedBox(height: 12),
         if (pendingPrescriptions.isNotEmpty) ...[
           _InfoCard(
             title: 'Pending prescriptions',
@@ -714,7 +878,7 @@ class _BookingCategorySection extends StatelessWidget {
   }
 }
 
-class _BookingCard extends ConsumerWidget {
+class _BookingCard extends ConsumerStatefulWidget {
   const _BookingCard({
     required this.booking,
     required this.isUpcoming,
@@ -727,7 +891,40 @@ class _BookingCard extends ConsumerWidget {
   final Future<void> Function()? onVideoEnded;
   final Future<void> Function()? onRefresh;
 
-  Future<void> _payForBooking(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<_BookingCard> createState() => _BookingCardState();
+}
+
+class _BookingCardState extends ConsumerState<_BookingCard> {
+  late bool _expanded;
+
+  PatientBookingModel get booking => widget.booking;
+  bool get isUpcoming => widget.isUpcoming;
+  Future<void> Function()? get onVideoEnded => widget.onVideoEnded;
+  Future<void> Function()? get onRefresh => widget.onRefresh;
+
+  bool get _showDetails => isUpcoming || _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.isUpcoming;
+  }
+
+  @override
+  void didUpdateWidget(covariant _BookingCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isUpcoming != widget.isUpcoming) {
+      _expanded = widget.isUpcoming;
+    }
+  }
+
+  void _toggleExpanded() {
+    if (isUpcoming) return;
+    setState(() => _expanded = !_expanded);
+  }
+
+  Future<void> _payForBooking(BuildContext context) async {
     try {
       await ref.read(bookingPaymentFlowProvider).payForExistingBooking(
             bookingId: booking.id,
@@ -749,7 +946,7 @@ class _BookingCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _payLabOrScan(BuildContext context, WidgetRef ref) async {
+  Future<void> _payLabOrScan(BuildContext context) async {
     try {
       final flow = ref.read(labScanPaymentFlowProvider);
       if (booking.serviceType == 'scan') {
@@ -781,7 +978,7 @@ class _BookingCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final dateFmt = DateFormat('EEE, dd MMM yyyy');
     final imageUrl = MediaUrlUtils.resolve(booking.doctorProfilePicture);
     final category = PatientBookingCategory.resolve(booking);
@@ -800,9 +997,12 @@ class _BookingCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 10),
       elevation: 0,
       color: AppColors.grey50,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
+      child: InkWell(
+        onTap: isUpcoming ? null : _toggleExpanded,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
@@ -875,7 +1075,29 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  if (booking.status != 'confirmed') ...[
+                  if (!_showDetails && !isUpcoming) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          'Tap to view details',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          _expanded
+                              ? Icons.expand_less_rounded
+                              : Icons.expand_more_rounded,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (_showDetails && booking.status != 'confirmed') ...[
                     const SizedBox(height: 6),
                     Text(
                       booking.statusLabel,
@@ -887,7 +1109,8 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  if (booking.clinicName != null &&
+                  if (_showDetails &&
+                      booking.clinicName != null &&
                       booking.clinicName!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
@@ -897,7 +1120,8 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  if (booking.clinicAddress != null &&
+                  if (_showDetails &&
+                      booking.clinicAddress != null &&
                       booking.clinicAddress!.isNotEmpty)
                     Text(
                       booking.clinicAddress!,
@@ -905,7 +1129,8 @@ class _BookingCard extends ConsumerWidget {
                         color: AppColors.textSecondary,
                       ),
                     ),
-                  if (booking.visitReason != null &&
+                  if (_showDetails &&
+                      booking.visitReason != null &&
                       booking.visitReason!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
@@ -913,12 +1138,12 @@ class _BookingCard extends ConsumerWidget {
                       style: AppTextStyles.bodySmall,
                     ),
                   ],
-                  if (booking.needsHomeVisitPayment && isUpcoming) ...[
+                  if (_showDetails && booking.needsHomeVisitPayment && isUpcoming) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: () => _payForBooking(context, ref),
+                        onPressed: () => _payForBooking(context),
                         icon: const Icon(Icons.payments_rounded, size: 18),
                         label: Text(
                           booking.consultationFee != null
@@ -928,12 +1153,12 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  if (booking.needsLabOrScanPayment && isUpcoming) ...[
+                  if (_showDetails && booking.needsLabOrScanPayment && isUpcoming) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: () => _payLabOrScan(context, ref),
+                        onPressed: () => _payLabOrScan(context),
                         icon: const Icon(Icons.payments_rounded, size: 18),
                         label: Text(
                           booking.consultationFee != null
@@ -943,7 +1168,8 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  if (booking.isClinicVisit &&
+                  if (_showDetails &&
+                      booking.isClinicVisit &&
                       booking.appointmentCode != null &&
                       isUpcoming) ...[
                     const SizedBox(height: 12),
@@ -953,7 +1179,7 @@ class _BookingCard extends ConsumerWidget {
                       compact: true,
                     ),
                   ],
-                  if (booking.isOnlineConsult && isUpcoming) ...[
+                  if (_showDetails && booking.isOnlineConsult && isUpcoming) ...[
                     const SizedBox(height: 12),
                     JoinVideoConsultButton(
                       bookingId: booking.id,
@@ -967,7 +1193,7 @@ class _BookingCard extends ConsumerWidget {
                       onReturned: onVideoEnded,
                     ),
                   ],
-                  if (!isUpcoming && booking.hasPrescription) ...[
+                  if (_showDetails && !isUpcoming && booking.hasPrescription) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
@@ -989,7 +1215,8 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  if (booking.isPrescriptionEligible &&
+                  if (_showDetails &&
+                      booking.isPrescriptionEligible &&
                       !booking.hasPrescription &&
                       (booking.prescriptionPending ||
                           (booking.isOnlineConsult &&
@@ -1002,7 +1229,7 @@ class _BookingCard extends ConsumerWidget {
                       slotLabel: booking.label,
                     ),
                   ],
-                  if (!isUpcoming && booking.canRequestFeedback) ...[
+                  if (_showDetails && !isUpcoming && booking.canRequestFeedback) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
@@ -1026,6 +1253,7 @@ class _BookingCard extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  if (_showDetails) ...[
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -1068,7 +1296,7 @@ class _BookingCard extends ConsumerWidget {
                         ),
                       if (booking.canCancel && isUpcoming)
                         OutlinedButton.icon(
-                          onPressed: () => _cancelBooking(context, ref),
+                          onPressed: () => _cancelBooking(context),
                           icon: const Icon(Icons.cancel_outlined, size: 16),
                           label: const Text('Cancel'),
                         ),
@@ -1114,16 +1342,18 @@ class _BookingCard extends ConsumerWidget {
                         ),
                     ],
                   ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
       ),
+      ),
     );
   }
 
-  Future<void> _cancelBooking(BuildContext context, WidgetRef ref) async {
+  Future<void> _cancelBooking(BuildContext context) async {
     final repo = BookingLifecycleRepository();
     try {
       final policy = await repo.fetchPolicy(booking.id);

@@ -566,6 +566,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
   late final TextEditingController _experience;
   late final TextEditingController _specialization;
   late final TextEditingController _homeVisitFee;
+  late final TextEditingController _homeVisitOfferFee;
   String? _selectedQualification;
   List<String> _selectedSkills = [];
 
@@ -584,6 +585,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
     _experience = TextEditingController(text: s.yearsOfExperience);
     _specialization = TextEditingController(text: s.specialization);
     _homeVisitFee = TextEditingController(text: s.homeVisitFee);
+    _homeVisitOfferFee = TextEditingController(text: s.homeVisitOfferFee);
     _selectedQualification = nurseQualifications.contains(s.qualification)
         ? s.qualification
         : (s.qualification.isNotEmpty ? 'Other' : null);
@@ -598,6 +600,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
       _experience,
       _specialization,
       _homeVisitFee,
+      _homeVisitOfferFee,
     ]) {
       addTextChangeListener(c, (_) => _sync());
     }
@@ -614,6 +617,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
           specialization: _specialization.text,
           nursingSkills: _selectedSkills,
           homeVisitFee: _homeVisitFee.text,
+          homeVisitOfferFee: _homeVisitOfferFee.text,
         );
   }
 
@@ -628,6 +632,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
       _experience,
       _specialization,
       _homeVisitFee,
+      _homeVisitOfferFee,
     ]) {
       c.dispose();
     }
@@ -651,7 +656,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
             ),
             const SizedBox(height: 6),
             Text(
-              'You will offer home nursing visits only. Set your per-visit fee.',
+              'You will offer home nursing visits only. Set your regular fee and an optional offer price.',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
@@ -749,6 +754,19 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               prefixIcon: Icons.currency_rupee_rounded,
               validator: ValidationUtils.validateConsultationFee,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              controller: _homeVisitOfferFee,
+              label: 'Home visit offer price (optional)',
+              hint: '399',
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              prefixIcon: Icons.local_offer_outlined,
+              validator: (v) => ValidationUtils.validateOptionalOfferFee(
+                v,
+                _homeVisitFee.text,
+              ),
             ),
           ],
         ),
@@ -1262,6 +1280,11 @@ class NurseStep7Review extends ConsumerWidget {
                   form.nursingSkills.join(', '),
                 ),
               _ReviewItem('Home visit fee', '₹${form.homeVisitFee}'),
+              if (form.homeVisitOfferFee.trim().isNotEmpty)
+                _ReviewItem(
+                  'Home visit offer',
+                  '₹${form.homeVisitOfferFee}',
+                ),
             ],
             onEdit: () => onEditStep(2),
           ),

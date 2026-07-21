@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
+import '../presentation/widgets/lab_organ_logos.dart';
 import 'models/lab_test_model.dart';
 
 /// Category-level icons for kidney, liver, vitamins, allergy, etc.
@@ -90,6 +91,8 @@ extension LabTestX on LabTest {
 
   Color get iconColor => category.iconColor;
 
+  LabOrganLogo get organLogo => labOrganLogoForTestId(id);
+
   IconData get sampleTypeIcon {
     final sample = sampleType.toLowerCase();
     if (sample.contains('urine')) return Icons.water_drop_outlined;
@@ -99,6 +102,68 @@ extension LabTestX on LabTest {
     }
     if (sample.contains('saliva')) return Icons.mood_outlined;
     return Icons.bloodtype_outlined;
+  }
+}
+
+/// Category header / chip organ logo.
+LabOrganLogo labOrganLogoForCategory(LabTestCategory category) =>
+    labOrganLogoForId(category.id);
+
+/// Thumbnail with organ-specific logo for test list cards.
+class LabTestThumbnail extends StatelessWidget {
+  const LabTestThumbnail({
+    super.key,
+    required this.test,
+    this.width = 72,
+    this.height = 56,
+    this.logoSize = 28,
+  });
+
+  final LabTest test;
+  final double width;
+  final double height;
+  final double logoSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: width,
+        height: height,
+        color: test.iconColor.withValues(alpha: 0.12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/home_cards/lab_tests.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox.shrink(),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    test.iconColor.withValues(alpha: 0.35),
+                    test.iconColor.withValues(alpha: 0.05),
+                  ],
+                ),
+              ),
+            ),
+            Center(
+              child: LabOrganLogoIcon(
+                logo: test.organLogo,
+                size: logoSize,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -122,7 +187,13 @@ class LabTestIconAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: AppDecorations.iconTile(color.withValues(alpha: 0.14)),
-      child: Icon(test.icon, color: color, size: iconSize),
+      child: Center(
+        child: LabOrganLogoIcon(
+          logo: test.organLogo,
+          size: iconSize,
+          color: color,
+        ),
+      ),
     );
   }
 }

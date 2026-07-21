@@ -104,7 +104,6 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                     .map(
                       (service) => HealthServiceItem(
                         title: service.title,
-                        description: service.description,
                         image: service.image,
                         icon: service.icon,
                         color: service.color,
@@ -427,7 +426,6 @@ class _SpecialtyChip extends StatelessWidget {
 class _HomeService {
   const _HomeService({
     required this.title,
-    required this.description,
     required this.image,
     required this.icon,
     required this.color,
@@ -436,7 +434,6 @@ class _HomeService {
   });
 
   final String title;
-  final String description;
   final String image;
   final IconData icon;
   final Color color;
@@ -465,7 +462,6 @@ class _SpecialtyItem {
 const _homeServices = [
   _HomeService(
     title: 'Doctor\nConsultation',
-    description: 'Consult trusted doctors online or in clinic.',
     image: 'assets/images/home_cards/doctor_card.png',
     icon: Icons.medical_services_outlined,
     color: Color(0xff2CB67D),
@@ -473,7 +469,6 @@ const _homeServices = [
   ),
   _HomeService(
     title: 'Nurse\nHome Care',
-    description: 'Professional nursing care at home.',
     image: 'assets/images/home_cards/nurse_card.png',
     icon: Icons.health_and_safety_outlined,
     color: Color(0xff8B5CF6),
@@ -481,7 +476,6 @@ const _homeServices = [
   ),
   _HomeService(
     title: 'Lab\nTests',
-    description: 'Book tests with home sample collection.',
     image: 'assets/images/home_cards/lab_card.png',
     icon: Icons.science_outlined,
     color: Color(0xff3B82F6),
@@ -489,7 +483,6 @@ const _homeServices = [
   ),
   _HomeService(
     title: 'Diagnostic\nScans',
-    description: 'MRI, CT Scan, X-Ray & Ultrasound.',
     image: 'assets/images/home_cards/scan_card.png',
     icon: Icons.monitor_heart_outlined,
     color: Color(0xff14B8A6),
@@ -497,7 +490,6 @@ const _homeServices = [
   ),
   _HomeService(
     title: 'Ambulance\nBooking',
-    description: '24/7 emergency ambulance service.',
     image: 'assets/images/home_cards/ambulance.png',
     icon: Icons.local_hospital_outlined,
     color: Color(0xffEF4444),
@@ -506,7 +498,6 @@ const _homeServices = [
   ),
   _HomeService(
     title: 'Blood\nBank',
-    description: 'Find verified blood banks near you.',
     image: 'assets/images/home_cards/blood.png',
     icon: Icons.bloodtype_outlined,
     color: Color(0xffEC4899),

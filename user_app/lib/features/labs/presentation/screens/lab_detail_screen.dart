@@ -16,7 +16,8 @@ import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../data/lab_catalog_metadata.dart';
 import '../../data/lab_model_utils.dart';
 import '../../provider/lab_search_provider.dart';
-import '../widgets/lab_sticky_cart_bar.dart';
+import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
+import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
 import '../widgets/lab_browse_group_card.dart';
 import '../widgets/lab_package_card.dart';
 import '../widgets/lab_test_tile.dart';
@@ -32,7 +33,7 @@ class LabDetailScreen extends ConsumerWidget {
     final asyncLab = ref.watch(labDetailProvider(labId));
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: LabStickyCartBar(labId: labId),
+      bottomNavigationBar: DiagnosticStickyCartBar(labId: labId),
       body: asyncLab.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),
@@ -152,6 +153,9 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
             onPressed: () => context.pop(),
           ),
+          actions: const [
+            DiagnosticCartIconButton(iconColor: Colors.white),
+          ],
           flexibleSpace: FlexibleSpaceBar(
             title: Text(
               lab.displayName,

@@ -815,6 +815,12 @@ router.put('/profile', authOptional, async (req, res) => {
 
         : existing.homeVisitFee,
 
+      homeVisitOfferFee: body.homeVisitOfferFee != null
+
+        ? parseInt(body.homeVisitOfferFee, 10)
+
+        : existing.homeVisitOfferFee,
+
       shiftAvailability: body.shiftAvailability?.trim(),
 
       bankAccountHolderName: body.bankAccountHolderName?.trim(),
@@ -1022,6 +1028,12 @@ router.post('/register', async (req, res) => {
             : true,
 
           homeVisitFee: parseInt(body.homeVisitFee, 10) || 0,
+
+          homeVisitOfferFee:
+            body.homeVisitOfferFee != null &&
+            String(body.homeVisitOfferFee).trim() !== ''
+              ? parseInt(body.homeVisitOfferFee, 10)
+              : undefined,
 
           shiftAvailability: body.shiftAvailability?.trim(),
 

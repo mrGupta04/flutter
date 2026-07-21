@@ -235,36 +235,54 @@ class VerificationBadge extends StatelessWidget {
   final String status;
   final Color backgroundColor;
   final Color textColor;
+  final bool solid;
 
   const VerificationBadge({
     super.key,
     required this.status,
     required this.backgroundColor,
     required this.textColor,
+    this.solid = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            backgroundColor.withValues(alpha: 0.2),
-            backgroundColor.withValues(alpha: 0.08),
-          ],
+        color: solid ? backgroundColor : null,
+        gradient: solid
+            ? null
+            : LinearGradient(
+                colors: [
+                  backgroundColor.withValues(alpha: 0.2),
+                  backgroundColor.withValues(alpha: 0.08),
+                ],
+              ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: solid
+              ? backgroundColor.withValues(alpha: 0.18)
+              : backgroundColor.withValues(alpha: 0.5),
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: backgroundColor.withValues(alpha: 0.5)),
+        boxShadow: solid
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified_rounded, size: 16, color: textColor),
-          const SizedBox(width: 6),
+          Icon(Icons.verified_rounded, size: 14, color: textColor),
+          const SizedBox(width: 5),
           Text(
             status,
-            style: AppTextStyles.labelMedium.copyWith(
+            style: AppTextStyles.labelSmall.copyWith(
               color: textColor,
               fontWeight: FontWeight.w700,
             ),

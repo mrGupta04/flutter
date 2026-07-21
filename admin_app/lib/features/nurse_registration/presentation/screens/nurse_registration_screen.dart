@@ -162,6 +162,17 @@ class _NurseRegistrationScreenState
         SnackBarHelper.showError(context, 'Please specify your qualification.');
         return false;
       }
+      if (ValidationUtils.validateOptionalOfferFee(
+            form.homeVisitOfferFee,
+            form.homeVisitFee,
+          ) !=
+          null) {
+        SnackBarHelper.showError(
+          context,
+          'Home visit offer must be less than the regular home visit fee.',
+        );
+        return false;
+      }
     }
 
     if (step == 3) {

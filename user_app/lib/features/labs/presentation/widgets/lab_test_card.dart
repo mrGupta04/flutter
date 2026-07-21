@@ -42,7 +42,7 @@ class LabTestCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _TestThumb(test: test),
+                    LabTestThumbnail(test: test),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -250,54 +250,6 @@ class LabTestCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TestThumb extends StatelessWidget {
-  const _TestThumb({required this.test});
-
-  final LabTest test;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 72,
-        height: 56,
-        color: test.iconColor.withValues(alpha: 0.12),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/images/home_cards/lab_tests.png',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  const SizedBox.shrink(),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    test.iconColor.withValues(alpha: 0.35),
-                    test.iconColor.withValues(alpha: 0.05),
-                  ],
-                ),
-              ),
-            ),
-            Center(
-              child: Icon(
-                test.icon,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
-          ],
         ),
       ),
     );

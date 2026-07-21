@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
+import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
+import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/top_categories_grid.dart';
 import '../../data/models/scan_procedure_model.dart';
@@ -14,16 +17,16 @@ import '../../data/scan_procedure_icons.dart';
 import '../../data/scan_modality_logos.dart';
 import '../widgets/scan_procedure_card.dart';
 
-class ScansScreen extends StatefulWidget {
+class ScansScreen extends ConsumerStatefulWidget {
   const ScansScreen({super.key, this.initialCategory});
 
   final ScanCategory? initialCategory;
 
   @override
-  State<ScansScreen> createState() => _ScansScreenState();
+  ConsumerState<ScansScreen> createState() => _ScansScreenState();
 }
 
-class _ScansScreenState extends State<ScansScreen> {
+class _ScansScreenState extends ConsumerState<ScansScreen> {
   late final TextEditingController _searchController;
   Timer? _debounce;
   String _query = '';
@@ -77,7 +80,9 @@ class _ScansScreenState extends State<ScansScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => context.pop(),
         ),
+        actions: const [DiagnosticCartIconButton()],
       ),
+      bottomNavigationBar: const DiagnosticStickyCartBar(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

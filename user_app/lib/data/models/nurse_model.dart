@@ -30,6 +30,7 @@ class NurseModel {
   final int? serviceRadiusKm;
   final bool? availableForHomeVisit;
   final int? homeVisitFee;
+  final int? homeVisitOfferFee;
   final String? shiftAvailability;
   final VerificationStatus? verificationStatus;
   final double? averageRating;
@@ -42,6 +43,55 @@ class NurseModel {
 
   /// Rating shown on listing cards (real average when available).
   double get cardDisplayRating => hasRating ? averageRating! : 4.5;
+
+  /// Primary label for listing cards and profile hero (skills, then qualification).
+  String get cardDesignationLabel {
+    final skills = nursingSkills
+            ?.where((s) => s.trim().isNotEmpty)
+            .map((s) => s.trim())
+            .toList() ??
+        const <String>[];
+    if (skills.isNotEmpty) return skills.first;
+
+    final qual = qualification?.trim();
+    if (qual != null && qual.isNotEmpty) return qual;
+
+    return 'Registered Nurse';
+  }
+
+  /// Secondary qualification line when it differs from [cardDesignationLabel].
+  String? get cardQualificationSubtitle {
+    final qual = qualification?.trim();
+    if (qual == null || qual.isEmpty) return null;
+    if (qual.toLowerCase() == cardDesignationLabel.toLowerCase()) return null;
+    return qual;
+  }
+
+  /// Subtitle under the name on the profile hero.
+  String? get profileHeroSubtitle {
+    final designation = cardDesignationLabel;
+    if (designation == 'Registered Nurse') return null;
+
+    final qual = cardQualificationSubtitle;
+    if (qual != null) return '$designation · $qual';
+    return designation;
+  }
+
+  /// Payable home visit fee (offer when lower than regular).
+  int? get effectiveHomeVisitFee {
+    final regular = homeVisitFee;
+    final offer = homeVisitOfferFee;
+    if (offer != null && (regular == null || offer < regular)) return offer;
+    return regular;
+  }
+
+  /// Regular fee shown struck-through when an offer is active.
+  int? get originalHomeVisitFee {
+    final regular = homeVisitFee;
+    final offer = homeVisitOfferFee;
+    if (offer != null && regular != null && offer < regular) return regular;
+    return null;
+  }
 
   NurseModel({
     this.id,
@@ -70,6 +120,7 @@ class NurseModel {
     this.serviceRadiusKm,
     this.availableForHomeVisit,
     this.homeVisitFee,
+    this.homeVisitOfferFee,
     this.shiftAvailability,
     this.verificationStatus,
     this.averageRating,
@@ -111,6 +162,7 @@ class NurseModel {
       serviceRadiusKm: _parseInt(json['serviceRadiusKm']),
       availableForHomeVisit: json['availableForHomeVisit'] as bool? ?? true,
       homeVisitFee: _parseInt(json['homeVisitFee']),
+      homeVisitOfferFee: _parseInt(json['homeVisitOfferFee']),
       shiftAvailability: json['shiftAvailability'] as String?,
       verificationStatus: _isApprovedTruthy(json['isApproved'])
           ? VerificationStatus.verified
@@ -148,6 +200,8 @@ class NurseModel {
       if (longitude != null) 'longitude': longitude,
       if (availableForHomeVisit != null)
         'availableForHomeVisit': availableForHomeVisit,
+      if (homeVisitFee != null) 'homeVisitFee': homeVisitFee,
+      if (homeVisitOfferFee != null) 'homeVisitOfferFee': homeVisitOfferFee,
       if (shiftAvailability != null) 'shiftAvailability': shiftAvailability,
     };
   }
@@ -177,6 +231,8 @@ class NurseModel {
     double? longitude,
     int? serviceRadiusKm,
     bool? availableForHomeVisit,
+    int? homeVisitFee,
+    int? homeVisitOfferFee,
     String? shiftAvailability,
     VerificationStatus? verificationStatus,
     double? averageRating,
@@ -210,6 +266,8 @@ class NurseModel {
       serviceRadiusKm: serviceRadiusKm ?? this.serviceRadiusKm,
       availableForHomeVisit:
           availableForHomeVisit ?? this.availableForHomeVisit,
+      homeVisitFee: homeVisitFee ?? this.homeVisitFee,
+      homeVisitOfferFee: homeVisitOfferFee ?? this.homeVisitOfferFee,
       shiftAvailability: shiftAvailability ?? this.shiftAvailability,
       verificationStatus: verificationStatus ?? this.verificationStatus,
       averageRating: averageRating ?? this.averageRating,

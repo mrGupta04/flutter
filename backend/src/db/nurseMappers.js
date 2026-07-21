@@ -38,6 +38,7 @@ function toNurse(doc) {
     serviceRadiusKm: d.serviceRadiusKm,
     availableForHomeVisit: d.availableForHomeVisit !== false,
     homeVisitFee: d.homeVisitFee,
+    homeVisitOfferFee: d.homeVisitOfferFee,
     shiftAvailability: d.shiftAvailability,
     bankAccountHolderName: d.bankAccountHolderName,
     bankAccountNumber: d.bankAccountNumber,

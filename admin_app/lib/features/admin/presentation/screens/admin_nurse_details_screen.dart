@@ -170,7 +170,6 @@ class AdminNurseDetailsScreen extends ConsumerWidget {
                     'Home visit fee',
                     FormattingUtils.formatConsultationFee(nurse.homeVisitFee!),
                   ),
-                _DetailRow('Shift', nurse.shiftAvailability ?? '-'),
               ],
             ),
             _Section(

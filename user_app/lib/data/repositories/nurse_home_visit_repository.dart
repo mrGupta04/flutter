@@ -24,8 +24,29 @@ class NurseHomeVisitRepository {
         success: body['success'] as bool? ?? true,
         statusCode: body['statusCode'] as int? ?? 200,
         data: BookableSlotsResponse.fromJson(data),
+        error: body['success'] == false ? body['error'] as String? : null,
       );
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.badResponse) {
+        final status = e.response?.statusCode ?? 500;
+        final data = e.response?.data;
+        if (data is Map<String, dynamic> &&
+            (status == 404 || status == 409)) {
+          final message =
+              (data['error'] ?? data['message']) as String? ??
+                  'No slots available';
+          return ApiResponse(
+            success: true,
+            statusCode: status,
+            data: BookableSlotsResponse(
+              doctorId: nurseId,
+              consultationType: 'book_home',
+              slots: const [],
+              message: message,
+            ),
+          );
+        }
+      }
       return _handleError(e);
     }
   }

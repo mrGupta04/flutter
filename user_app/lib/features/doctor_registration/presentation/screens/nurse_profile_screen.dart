@@ -12,6 +12,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
+import '../../../../shared/widgets/blinking_online_badge.dart';
 import '../../../../shared/widgets/doctor_feedback_carousel.dart';
 import '../../../../shared/widgets/favorite_toggle_button.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
@@ -74,8 +75,8 @@ class NurseProfileScreen extends ConsumerWidget {
             SizedBox(
               height: 54,
               child: CustomButton(
-                label: nurse.homeVisitFee != null
-                    ? 'Book visit · ₹${nurse.homeVisitFee}'
+                label: nurse.effectiveHomeVisitFee != null
+                    ? 'Book visit · ₹${nurse.effectiveHomeVisitFee}'
                     : 'Book home visit',
                 icon: Icons.home_rounded,
                 isEnabled: nurse.availableForHomeVisit != false,
@@ -93,16 +94,13 @@ class NurseProfileScreen extends ConsumerWidget {
 Future<void> _shareNurseProfile(BuildContext context, NurseModel nurse) async {
   final lines = <String>[
     'Check out ${nurse.displayName} on 1mg Care',
-    if (nurse.specialization != null && nurse.specialization!.trim().isNotEmpty)
-      'Specialization: ${nurse.specialization!.trim()}',
+    if (nurse.profileHeroSubtitle != null)
+      nurse.profileHeroSubtitle!,
     if (nurse.hasRating)
       'Rating: ${nurse.averageRating!.toStringAsFixed(1)}'
           '${(nurse.ratingCount ?? 0) > 0 ? ' (${nurse.ratingCount} reviews)' : ''}',
-    if (nurse.homeVisitFee != null)
-      'Home visit fee: ₹${nurse.homeVisitFee}',
-    if (nurse.shiftAvailability != null &&
-        nurse.shiftAvailability!.trim().isNotEmpty)
-      'Availability: ${nurse.shiftAvailability!.trim()}',
+    if (nurse.effectiveHomeVisitFee != null)
+      'Home visit fee: ₹${nurse.effectiveHomeVisitFee}',
   ];
 
   final location = _locationLine(nurse);
@@ -140,25 +138,6 @@ String _locationLine(NurseModel nurse) {
   return parts.join(', ');
 }
 
-String? _formatDob(DateTime? dob) {
-  if (dob == null) return null;
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return '${dob.day} ${months[dob.month - 1]} ${dob.year}';
-}
-
 Future<void> _call(String number) async {
   final digits = number.replaceAll(RegExp(r'\D'), '');
   final uri = Uri.parse('tel:$digits');
@@ -189,26 +168,11 @@ class _NurseProfileBody extends ConsumerWidget {
             .map((s) => s.trim())
             .toList() ??
         const <String>[];
-    final dobLabel = _formatDob(nurse.dateOfBirth);
     final feedbackAsync = nurse.id != null && nurse.id!.isNotEmpty
         ? ref.watch(nurseFeedbackProvider(nurse.id!))
         : null;
 
     final professionalRows = <Widget>[
-      if (nurse.gender != null && nurse.gender!.trim().isNotEmpty)
-        ProviderInfoRow(
-          icon: Icons.wc_outlined,
-          label: 'Gender',
-          value: nurse.gender!.trim(),
-          iconColor: AppColors.primary,
-        ),
-      if (dobLabel != null)
-        ProviderInfoRow(
-          icon: Icons.cake_outlined,
-          label: 'Date of birth',
-          value: dobLabel,
-          iconColor: AppColors.primary,
-        ),
       if (nurse.qualification != null &&
           nurse.qualification!.trim().isNotEmpty)
         ProviderInfoRow(
@@ -262,14 +226,6 @@ class _NurseProfileBody extends ConsumerWidget {
           value: nurse.nursingCouncil!.trim(),
           iconColor: AppColors.primary,
         ),
-      if (nurse.shiftAvailability != null &&
-          nurse.shiftAvailability!.trim().isNotEmpty)
-        ProviderInfoRow(
-          icon: Icons.schedule_rounded,
-          label: 'Shift availability',
-          value: nurse.shiftAvailability!.trim(),
-          iconColor: AppColors.primary,
-        ),
     ];
 
     return SingleChildScrollView(
@@ -279,12 +235,9 @@ class _NurseProfileBody extends ConsumerWidget {
         children: [
           ProviderProfileHero(
             name: nurse.displayName,
-            subtitle: nurse.specialization?.trim().isNotEmpty == true
-                ? nurse.specialization!.trim()
-                : (nurse.qualification?.trim().isNotEmpty == true
-                    ? nurse.qualification!.trim()
-                    : null),
+            subtitle: nurse.profileHeroSubtitle,
             imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
+            avatarSize: 148,
             placeholderIcon: Icons.health_and_safety_rounded,
             gradientColors: AppColors.gradientNurse,
             badges: [
@@ -296,30 +249,23 @@ class _NurseProfileBody extends ConsumerWidget {
                 status: isVerified ? 'Verified nurse' : 'Pending verification',
                 backgroundColor: AppColors.white,
                 textColor: isVerified ? AppColors.success : AppColors.warning,
+                solid: true,
               ),
               _AvailabilityChip(available: available),
             ],
           ),
+          if (nurse.isLiveNow) ...[
+            const SizedBox(height: 10),
+            const Center(child: LiveAvailableBadge()),
+          ],
           const SizedBox(height: 16),
           _NurseQuickStats(
             rating: nurse.cardDisplayRating,
             ratingCount: nurse.hasRating ? nurse.ratingCount : null,
             experienceYears: nurse.yearsOfExperience,
-            fee: nurse.homeVisitFee,
+            fee: nurse.effectiveHomeVisitFee,
+            originalFee: nurse.originalHomeVisitFee,
           ),
-          if (nurse.homeVisitFee != null) ...[
-            const SizedBox(height: 16),
-            const MarketplaceSectionTitle(title: 'Services offered'),
-            ProviderFeeBanner(
-              title: 'Home visit nursing',
-              fee: nurse.homeVisitFee!,
-              subtitle: available
-                  ? 'Professional care at your doorstep'
-                  : 'Currently unavailable for booking',
-              icon: Icons.home_rounded,
-              gradientColors: AppColors.gradientNurse,
-            ),
-          ],
           if (skills.isNotEmpty) ...[
             const SizedBox(height: 20),
             const MarketplaceSectionTitle(title: 'Clinical skills'),
@@ -404,10 +350,18 @@ class _AvailabilityChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -437,34 +391,39 @@ class _NurseQuickStats extends StatelessWidget {
     this.ratingCount,
     this.experienceYears,
     this.fee,
+    this.originalFee,
   });
 
   final double rating;
   final int? ratingCount;
   final int? experienceYears;
   final int? fee;
+  final int? originalFee;
 
   @override
   Widget build(BuildContext context) {
-    final items = <({IconData icon, String label, String value})>[
+    final items = <({IconData icon, String label, String value, String? strikeValue})>[
       (
         icon: Icons.star_rounded,
         label: 'Rating',
         value: ratingCount != null && ratingCount! > 0
             ? '${rating.toStringAsFixed(1)} ($ratingCount)'
             : rating.toStringAsFixed(1),
+        strikeValue: null,
       ),
       if (experienceYears != null)
         (
           icon: Icons.work_outline_rounded,
           label: 'Experience',
           value: '$experienceYears+ yrs',
+          strikeValue: null,
         ),
       if (fee != null)
         (
           icon: Icons.currency_rupee_rounded,
           label: 'Visit fee',
           value: '₹$fee',
+          strikeValue: originalFee != null ? '₹$originalFee' : null,
         ),
     ];
 
@@ -489,6 +448,17 @@ class _NurseQuickStats extends StatelessWidget {
                 children: [
                   Icon(items[i].icon, size: 18, color: AppColors.primary),
                   const SizedBox(height: 6),
+                  if (items[i].strikeValue != null) ...[
+                    Text(
+                      items[i].strikeValue!,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.grey400,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                  ],
                   Text(
                     items[i].value,
                     textAlign: TextAlign.center,

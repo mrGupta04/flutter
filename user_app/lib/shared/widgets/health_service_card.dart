@@ -5,7 +5,6 @@ enum HealthServiceCardType { asset, compact }
 class HealthServiceItem {
   const HealthServiceItem({
     required this.title,
-    required this.description,
     required this.image,
     required this.icon,
     required this.color,
@@ -15,7 +14,6 @@ class HealthServiceItem {
   });
 
   final String title;
-  final String description;
   final String image;
   final IconData icon;
   final Color color;
@@ -88,7 +86,6 @@ class HealthServiceGrid extends StatelessWidget {
 
     return HealthServiceCard(
       title: item.title,
-      description: item.description,
       image: item.image,
       icon: item.icon,
       color: item.color,
@@ -140,7 +137,6 @@ class HealthServiceCard extends StatelessWidget {
   const HealthServiceCard({
     super.key,
     required this.title,
-    required this.description,
     required this.image,
     required this.icon,
     required this.color,
@@ -148,7 +144,6 @@ class HealthServiceCard extends StatelessWidget {
   });
 
   final String title;
-  final String description;
   final String image;
   final IconData icon;
   final Color color;
@@ -228,17 +223,6 @@ class HealthServiceCard extends StatelessWidget {
                         color: color,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade700,
-                        height: 1.35,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

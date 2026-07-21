@@ -173,6 +173,30 @@ class _NurseHomeVisitBookingScreenState
     final bookingState =
         ref.watch(nurseHomeVisitBookingProvider(widget.nurseId));
 
+    ref.listen(nurseBookableSlotsProvider(widget.nurseId), (previous, next) {
+      final visitState =
+          ref.read(nurseHomeVisitBookingProvider(widget.nurseId));
+      final selected = visitState.selectedSlot;
+      if (selected == null) return;
+      if (visitState.slotHoldId != null && visitState.slotHoldId!.isNotEmpty) {
+        return;
+      }
+      next.whenData((slotsData) {
+        final stillAvailable = slotsData.slots.any(
+          (slot) => slot.slotKey == selected.slotKey,
+        );
+        if (!stillAvailable && mounted) {
+          ref
+              .read(nurseHomeVisitBookingProvider(widget.nurseId).notifier)
+              .selectSlot(null);
+          SnackBarHelper.showError(
+            context,
+            'Your selected slot is no longer available. Please choose another.',
+          );
+        }
+      });
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Book nurse home visit')),
@@ -185,65 +209,119 @@ class _NurseHomeVisitBookingScreenState
         data: (nurse) => Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _NurseHeader(nurse: nurse),
-                      const SizedBox(height: 16),
-                      if (nurse.homeVisitFee != null)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            borderRadius: AppDecorations.borderRadiusMd,
-                          ),
-                          child: Text(
-                            'Home visit fee: ₹${nurse.homeVisitFee}',
-                            style: AppTextStyles.labelLarge.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(nurseBookableSlotsProvider(widget.nurseId));
+                  await ref
+                      .read(nurseBookableSlotsProvider(widget.nurseId).future);
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _NurseHeader(nurse: nurse),
+                        const SizedBox(height: 16),
+                        if (nurse.effectiveHomeVisitFee != null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.08),
+                              borderRadius: AppDecorations.borderRadiusMd,
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Home visit fee: ',
+                                  style: AppTextStyles.labelLarge.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  FormattingUtils.formatConsultationFee(
+                                    nurse.effectiveHomeVisitFee!,
+                                  ),
+                                  style: AppTextStyles.labelLarge.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                if (nurse.originalHomeVisitFee != null) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    FormattingUtils.formatConsultationFee(
+                                      nurse.originalHomeVisitFee!,
+                                    ),
+                                    style: AppTextStyles.labelLarge.copyWith(
+                                      color: AppColors.textSecondary,
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                        ),
-                      const SizedBox(height: 20),
-                      slotsAsync.when(
-                        skipLoadingOnReload: true,
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(24),
-                            child: CircularProgressIndicator(),
+                        const SizedBox(height: 20),
+                        slotsAsync.when(
+                          skipLoadingOnReload: true,
+                          loading: () => const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          error: (e, _) => AppErrorWidget(
+                            message:
+                                e.toString().replaceFirst('Exception: ', ''),
+                            onRetry: () => ref.invalidate(
+                              nurseBookableSlotsProvider(widget.nurseId),
+                            ),
+                          ),
+                          data: (slotsData) => BookableSlotsSection(
+                            slotsData: slotsData,
+                            selectedSlot: bookingState.selectedSlot,
+                            selectedDateKey: _selectedDateKey,
+                            isSlotSelectionBusy: bookingState.isReservingSlot,
+                            onDateSelected: (dateKey) {
+                              setState(() => _selectedDateKey = dateKey);
+                              if (bookingState.selectedSlot?.dateKey !=
+                                  dateKey) {
+                                ref
+                                    .read(
+                                      nurseHomeVisitBookingProvider(
+                                        widget.nurseId,
+                                      ).notifier,
+                                    )
+                                    .selectSlot(null);
+                              }
+                            },
+                            onSlotSelected: (slot) async {
+                              await ref
+                                  .read(
+                                    nurseHomeVisitBookingProvider(
+                                      widget.nurseId,
+                                    ).notifier,
+                                  )
+                                  .selectSlot(slot);
+                              if (!mounted) return;
+                              final err = ref
+                                  .read(
+                                    nurseHomeVisitBookingProvider(
+                                      widget.nurseId,
+                                    ),
+                                  )
+                                  .error;
+                              if (err != null && mounted) {
+                                SnackBarHelper.showError(context, err);
+                              }
+                            },
+                            emptyMessage:
+                                'This nurse has not set home visit hours yet, '
+                                'or all slots are booked. Try another nurse or time.',
                           ),
                         ),
-                        error: (e, _) => AppErrorWidget(
-                          message: e.toString().replaceFirst('Exception: ', ''),
-                          onRetry: () => ref.invalidate(
-                            nurseBookableSlotsProvider(widget.nurseId),
-                          ),
-                        ),
-                        data: (slotsData) => BookableSlotsSection(
-                          slotsData: slotsData,
-                          selectedSlot: bookingState.selectedSlot,
-                          selectedDateKey: _selectedDateKey,
-                          isSlotSelectionBusy: bookingState.isReservingSlot,
-                          onDateSelected: (dateKey) {
-                            setState(() => _selectedDateKey = dateKey);
-                          },
-                          onSlotSelected: (slot) async {
-                            await ref
-                                .read(
-                                  nurseHomeVisitBookingProvider(widget.nurseId)
-                                      .notifier,
-                                )
-                                .selectSlot(slot);
-                          },
-                          emptyMessage:
-                              'This nurse has not set home visit hours yet.',
-                        ),
-                      ),
                       const SizedBox(height: 24),
                       OutlinedButton.icon(
                         onPressed:
@@ -326,15 +404,19 @@ class _NurseHomeVisitBookingScreenState
                 ),
               ),
             ),
+            ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
                 child: CustomButton(
-                  label: 'Request home visit',
-                  isLoading: bookingState.isSubmitting,
-                  onPressed: bookingState.selectedSlot == null
-                      ? () {}
-                      : () => _submit(nurse),
+                  label: bookingState.selectedSlot != null
+                      ? 'Request home visit'
+                      : 'Select visit time',
+                  isEnabled: bookingState.selectedSlot != null &&
+                      !bookingState.isReservingSlot,
+                  isLoading: bookingState.isSubmitting ||
+                      bookingState.isReservingSlot,
+                  onPressed: () => _submit(nurse),
                 ),
               ),
             ),

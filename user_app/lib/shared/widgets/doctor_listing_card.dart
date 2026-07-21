@@ -300,9 +300,8 @@ class _DoctorAvatar extends StatelessWidget {
 
     return SizedBox(
       width: 96,
-      height: 96,
-      child: Stack(
-        clipBehavior: Clip.none,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           MarketplaceSquareAvatar(
             size: 96,
@@ -317,12 +316,10 @@ class _DoctorAvatar extends StatelessWidget {
                   )
                 : _placeholder(),
           ),
-          if (showLiveBadge)
-            const Positioned(
-              top: 6,
-              left: 6,
-              child: LiveAvailableBadge(),
-            ),
+          if (showLiveBadge) ...[
+            const SizedBox(height: 8),
+            const Center(child: LiveAvailableBadge()),
+          ],
         ],
       ),
     );

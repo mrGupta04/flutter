@@ -185,6 +185,7 @@ class _DoctorProfileBody extends ConsumerWidget {
                 ? doctor.specializations!.join(', ')
                 : null,
             imageUrl: hasImage ? imageUrl : null,
+            avatarSize: 148,
             avatarBorder: doctor.isLiveNow
                 ? BlinkingLiveAvatarBorder(
                     padding: 4,
@@ -194,8 +195,9 @@ class _DoctorProfileBody extends ConsumerWidget {
                       imageUrl: hasImage ? imageUrl : null,
                       placeholderIcon: Icons.medical_services_rounded,
                       accentColor: AppColors.primary,
-                      size: 96,
+                      size: 148,
                       borderWidth: 0,
+                      fit: BoxFit.contain,
                     ),
                   )
                 : null,
@@ -207,7 +209,6 @@ class _DoctorProfileBody extends ConsumerWidget {
                   )
                 : null,
             badges: [
-              if (doctor.isLiveNow) const BlinkingOnlineBadge(),
               if (doctor.hasRating)
                 DoctorOverallRatingChip(
                   rating: doctor.averageRating!,
@@ -217,9 +218,14 @@ class _DoctorProfileBody extends ConsumerWidget {
                 status: isVerified ? 'Verified doctor' : 'Admin verified listing',
                 backgroundColor: AppColors.white,
                 textColor: isVerified ? AppColors.success : AppColors.warning,
+                solid: true,
               ),
             ],
           ),
+          if (doctor.isLiveNow) ...[
+            const SizedBox(height: 10),
+            const Center(child: LiveAvailableBadge()),
+          ],
           if (doctor.clinicName != null &&
               doctor.clinicName!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),

@@ -205,4 +205,11 @@ class ScansCatalog {
     }
     return map;
   }
+
+  static ScanProcedure? byId(String id) {
+    for (final scan in procedures) {
+      if (scan.id == id) return scan;
+    }
+    return null;
+  }
 }
