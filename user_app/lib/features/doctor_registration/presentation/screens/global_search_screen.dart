@@ -23,7 +23,6 @@ import '../../../../core/utils/provider_location_utils.dart';
 import '../../../ambulance/presentation/widgets/ambulance_action_sheet.dart';
 import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../online_consult/online_consult_navigation.dart';
-import 'nurse_profile_screen.dart';
 
 /// Search doctors, nurses, ambulances, and blood banks in one place.
 class GlobalSearchScreen extends ConsumerStatefulWidget {
@@ -275,7 +274,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                         padding: const EdgeInsets.only(bottom: kDoctorCardSpacing),
                         child: NurseListingCard(
                           nurse: nurse,
-                          onTap: () => openNurseProfile(context, nurse),
+                          onTap: () => openNurseHomeVisitBooking(context, nurse),
                           onBookHomeVisit: () =>
                               openNurseHomeVisitBooking(context, nurse),
                           onOpenMapTap: nurseHasMapLocation(nurse)

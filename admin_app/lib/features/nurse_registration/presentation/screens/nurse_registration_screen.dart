@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/nurse_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/models/provider_type.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../provider/provider/provider_status_sync.dart';

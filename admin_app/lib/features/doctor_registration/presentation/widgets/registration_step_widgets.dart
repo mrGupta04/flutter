@@ -406,9 +406,23 @@ class _EmailVerificationSectionState
 
   @override
   Widget build(BuildContext context) {
-    final formState = ref.watch(registrationFormProvider);
+    final emailVerified = ref.watch(
+      registrationFormProvider.select((s) => s.emailVerified),
+    );
+    final verifiedEmail = ref.watch(
+      registrationFormProvider.select((s) => s.verifiedEmail),
+    );
+    final isSendingEmailOtp = ref.watch(
+      registrationFormProvider.select((s) => s.isSendingEmailOtp),
+    );
+    final isVerifyingEmailOtp = ref.watch(
+      registrationFormProvider.select((s) => s.isVerifyingEmailOtp),
+    );
+    final emailVerificationMessage = ref.watch(
+      registrationFormProvider.select((s) => s.emailVerificationMessage),
+    );
 
-    if (formState.emailVerified) {
+    if (emailVerified) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -423,7 +437,7 @@ class _EmailVerificationSectionState
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Email verified: ${formState.verifiedEmail}',
+                'Email verified: $verifiedEmail',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.success,
                   fontWeight: FontWeight.w600,
@@ -452,11 +466,11 @@ class _EmailVerificationSectionState
           ),
           const SizedBox(height: 12),
           CustomOutlineButton(
-            label: formState.isSendingEmailOtp
+            label: isSendingEmailOtp
                 ? 'Sending code...'
                 : 'Send verification code',
             onPressed: () { _sendOtp(); },
-            isLoading: formState.isSendingEmailOtp,
+            isLoading: isSendingEmailOtp,
             icon: Icons.mail_outline_rounded,
           ),
           const SizedBox(height: 12),
@@ -474,15 +488,15 @@ class _EmailVerificationSectionState
           ),
           const SizedBox(height: 12),
           CustomButton(
-            label: formState.isVerifyingEmailOtp ? 'Verifying...' : 'Verify email',
+            label: isVerifyingEmailOtp ? 'Verifying...' : 'Verify email',
             onPressed: () { _verifyOtp(); },
-            isLoading: formState.isVerifyingEmailOtp,
+            isLoading: isVerifyingEmailOtp,
             icon: Icons.verified_user_outlined,
           ),
-          if (formState.emailVerificationMessage != null) ...[
+          if (emailVerificationMessage != null) ...[
             const SizedBox(height: 10),
             Text(
-              formState.emailVerificationMessage!,
+              emailVerificationMessage!,
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
@@ -623,7 +637,24 @@ class _Step2ProfessionalDetailsState
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final formState = ref.watch(registrationFormProvider);
+    final specializations = ref.watch(
+      registrationFormProvider.select((s) => s.specializations),
+    );
+    final languagesSpoken = ref.watch(
+      registrationFormProvider.select((s) => s.languagesSpoken),
+    );
+    final offersOnlineConsult = ref.watch(
+      registrationFormProvider.select((s) => s.offersOnlineConsult),
+    );
+    final offersBookHome = ref.watch(
+      registrationFormProvider.select((s) => s.offersBookHome),
+    );
+    final offersVisitSite = ref.watch(
+      registrationFormProvider.select((s) => s.offersVisitSite),
+    );
+    final hasConsultationOptionSelected = ref.watch(
+      registrationFormProvider.select((s) => s.hasConsultationOptionSelected),
+    );
 
     return registrationStepScroll(
       child: Form(
@@ -658,7 +689,7 @@ class _Step2ProfessionalDetailsState
             prefixIcon: Icons.medical_services_outlined,
             helperText: 'Search and tap to add. You can select more than one.',
             options: AppLists.specializations,
-            selected: formState.specializations,
+            selected: specializations,
             onChanged: (values) {
               ref.read(registrationFormProvider.notifier).setSpecializations(values);
             },
@@ -700,7 +731,7 @@ class _Step2ProfessionalDetailsState
             hint: 'Search language',
             helperText: 'Search and tap to add. You can select more than one.',
             options: AppLists.languages,
-            selected: formState.languagesSpoken,
+            selected: languagesSpoken,
             onChanged: (values) {
               ref.read(registrationFormProvider.notifier).setLanguages(values);
             },
@@ -717,37 +748,37 @@ class _Step2ProfessionalDetailsState
           ),
           const SizedBox(height: 24),
           _ConsultationOptionsPicker(
-            offersOnlineConsult: formState.offersOnlineConsult,
-            offersBookHome: formState.offersBookHome,
-            offersVisitSite: formState.offersVisitSite,
+            offersOnlineConsult: offersOnlineConsult,
+            offersBookHome: offersBookHome,
+            offersVisitSite: offersVisitSite,
             onToggleOnline: (selected) {
               ref.read(registrationFormProvider.notifier).setConsultationOptions(
                     online: selected,
-                    home: formState.offersBookHome,
-                    visit: formState.offersVisitSite,
+                    home: offersBookHome,
+                    visit: offersVisitSite,
                   );
             },
             onToggleBookHome: (selected) {
               ref.read(registrationFormProvider.notifier).setConsultationOptions(
-                    online: formState.offersOnlineConsult,
+                    online: offersOnlineConsult,
                     home: selected,
-                    visit: formState.offersVisitSite,
+                    visit: offersVisitSite,
                   );
             },
             onToggleVisitSite: (selected) {
               ref.read(registrationFormProvider.notifier).setConsultationOptions(
-                    online: formState.offersOnlineConsult,
-                    home: formState.offersBookHome,
+                    online: offersOnlineConsult,
+                    home: offersBookHome,
                     visit: selected,
                   );
             },
           ),
-          if (formState.hasConsultationOptionSelected) ...[
+          if (hasConsultationOptionSelected) ...[
             const SizedBox(height: 20),
             _ConsultationFeesSection(
-              offersOnlineConsult: formState.offersOnlineConsult,
-              offersBookHome: formState.offersBookHome,
-              offersVisitSite: formState.offersVisitSite,
+              offersOnlineConsult: offersOnlineConsult,
+              offersBookHome: offersBookHome,
+              offersVisitSite: offersVisitSite,
               onlineFeeController: _onlineFeeController,
               homeFeeController: _homeFeeController,
               visitSiteFeeController: _visitSiteFeeController,
@@ -856,7 +887,21 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final formState = ref.watch(registrationFormProvider);
+    final latitude = ref.watch(
+      registrationFormProvider.select((s) => s.latitude),
+    );
+    final longitude = ref.watch(
+      registrationFormProvider.select((s) => s.longitude),
+    );
+    final hospitalPhotoUrls = ref.watch(
+      registrationFormProvider.select((s) => s.hospitalPhotoUrls),
+    );
+    final hospitalPhotoBytes = ref.watch(
+      registrationFormProvider.select((s) => s.hospitalPhotoBytes),
+    );
+    final hospitalPhotoUploadProgress = ref.watch(
+      registrationFormProvider.select((s) => s.hospitalPhotoUploadProgress),
+    );
 
     return registrationStepScroll(
       child: Form(
@@ -874,8 +919,8 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
             stateController: _stateController,
             pincodeController: _pincodeController,
             addressMaxLines: 2,
-            latitude: formState.latitude,
-            longitude: formState.longitude,
+            latitude: latitude,
+            longitude: longitude,
             onLocationChanged: (lat, lng) => ref
                 .read(registrationFormProvider.notifier)
                 .setLocation(latitude: lat, longitude: lng),
@@ -917,11 +962,11 @@ class _Step3ClinicAddressState extends ConsumerState<Step3ClinicAddress>
             ),
             itemBuilder: (context, index) {
               final photoIndex = doctorHospitalPhotoSlots[index];
-              final uploadedUrl = formState.hospitalPhotoUrls[photoIndex];
-              final previewBytes = formState.hospitalPhotoBytes[photoIndex];
+              final uploadedUrl = hospitalPhotoUrls[photoIndex];
+              final previewBytes = hospitalPhotoBytes[photoIndex];
               final isUploaded = uploadedUrl != null && uploadedUrl.isNotEmpty;
               final progress =
-                  formState.hospitalPhotoUploadProgress[photoIndex] ?? 0;
+                  hospitalPhotoUploadProgress[photoIndex] ?? 0;
 
               return _HospitalPhotoUploadTile(
                 label: 'Photo ${index + 1}',
@@ -1021,7 +1066,15 @@ class _Step4DocumentUploadState extends ConsumerState<Step4DocumentUpload>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final formState = ref.watch(registrationFormProvider);
+    final uploadProgress = ref.watch(
+      registrationFormProvider.select((s) => s.uploadProgress),
+    );
+    final uploadedDocuments = ref.watch(
+      registrationFormProvider.select((s) => s.uploadedDocuments),
+    );
+    final submitError = ref.watch(
+      registrationFormProvider.select((s) => s.submitError),
+    );
 
     return registrationStepScroll(
       child: Form(
@@ -1041,8 +1094,8 @@ class _Step4DocumentUploadState extends ConsumerState<Step4DocumentUpload>
             documentType: DocumentType.medicalLicense,
             fileName: _fileNames[DocumentType.medicalLicense],
             previewBytes: _previewBytes[DocumentType.medicalLicense],
-            progress: formState.uploadProgress[DocumentType.medicalLicense] ?? 0,
-            uploaded: formState.uploadedDocuments.containsKey(
+            progress: uploadProgress[DocumentType.medicalLicense] ?? 0,
+            uploaded: uploadedDocuments.containsKey(
               DocumentType.medicalLicense,
             ),
             onSelect: () => _pickFile(DocumentType.medicalLicense),
@@ -1055,8 +1108,8 @@ class _Step4DocumentUploadState extends ConsumerState<Step4DocumentUpload>
             documentType: DocumentType.aadhaarCard,
             fileName: _fileNames[DocumentType.aadhaarCard],
             previewBytes: _previewBytes[DocumentType.aadhaarCard],
-            progress: formState.uploadProgress[DocumentType.aadhaarCard] ?? 0,
-            uploaded: formState.uploadedDocuments.containsKey(
+            progress: uploadProgress[DocumentType.aadhaarCard] ?? 0,
+            uploaded: uploadedDocuments.containsKey(
               DocumentType.aadhaarCard,
             ),
             onSelect: () => _pickFile(DocumentType.aadhaarCard),
@@ -1069,8 +1122,8 @@ class _Step4DocumentUploadState extends ConsumerState<Step4DocumentUpload>
             documentType: DocumentType.degreeCertificate,
             fileName: _fileNames[DocumentType.degreeCertificate],
             previewBytes: _previewBytes[DocumentType.degreeCertificate],
-            progress: formState.uploadProgress[DocumentType.degreeCertificate] ?? 0,
-            uploaded: formState.uploadedDocuments.containsKey(
+            progress: uploadProgress[DocumentType.degreeCertificate] ?? 0,
+            uploaded: uploadedDocuments.containsKey(
               DocumentType.degreeCertificate,
             ),
             onSelect: () => _pickFile(DocumentType.degreeCertificate),
@@ -1083,8 +1136,8 @@ class _Step4DocumentUploadState extends ConsumerState<Step4DocumentUpload>
             documentType: DocumentType.clinicProof,
             fileName: _fileNames[DocumentType.clinicProof],
             previewBytes: _previewBytes[DocumentType.clinicProof],
-            progress: formState.uploadProgress[DocumentType.clinicProof] ?? 0,
-            uploaded: formState.uploadedDocuments.containsKey(
+            progress: uploadProgress[DocumentType.clinicProof] ?? 0,
+            uploaded: uploadedDocuments.containsKey(
               DocumentType.clinicProof,
             ),
             onSelect: () => _pickFile(DocumentType.clinicProof),
@@ -1092,10 +1145,10 @@ class _Step4DocumentUploadState extends ConsumerState<Step4DocumentUpload>
                 .read(registrationFormProvider.notifier)
                 .uploadDocument(DocumentType.clinicProof),
           ),
-          if (formState.submitError != null) ...[
+          if (submitError != null) ...[
             const SizedBox(height: 12),
             Text(
-              formState.submitError!,
+              submitError!,
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
             ),
           ],
@@ -1207,11 +1260,22 @@ class _Step5BankDetailsState extends ConsumerState<Step5BankDetails>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final formState = ref.watch(registrationFormProvider);
-    final chequeUploaded = formState.uploadedDocuments
-        .containsKey(DocumentType.cancelledCheque);
-    final chequeProgress =
-        formState.uploadProgress[DocumentType.cancelledCheque] ?? 0;
+    final payoutMethod = ref.watch(
+      registrationFormProvider.select((s) => s.payoutMethod),
+    );
+    final chequeUploaded = ref.watch(
+      registrationFormProvider.select(
+        (s) => s.uploadedDocuments.containsKey(DocumentType.cancelledCheque),
+      ),
+    );
+    final chequeProgress = ref.watch(
+      registrationFormProvider.select(
+        (s) => s.uploadProgress[DocumentType.cancelledCheque] ?? 0,
+      ),
+    );
+    final submitError = ref.watch(
+      registrationFormProvider.select((s) => s.submitError),
+    );
 
     return registrationStepScroll(
       child: Form(
@@ -1249,7 +1313,7 @@ class _Step5BankDetailsState extends ConsumerState<Step5BankDetails>
                   icon: Icon(Icons.qr_code_2_rounded, size: 18),
                 ),
               ],
-              selected: {formState.payoutMethod},
+              selected: {payoutMethod},
               onSelectionChanged: (value) {
                 ref.read(registrationFormProvider.notifier).updateBankDetails(
                       payoutMethod: value.first,
@@ -1375,10 +1439,10 @@ class _Step5BankDetailsState extends ConsumerState<Step5BankDetails>
               const SizedBox(height: 12),
               LinearProgressIndicator(value: chequeProgress),
             ],
-            if (formState.submitError != null) ...[
+            if (submitError != null) ...[
               const SizedBox(height: 12),
               Text(
-                formState.submitError!,
+                submitError!,
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
               ),
             ],
@@ -1394,25 +1458,42 @@ class Step6WeeklyAvailability extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final formState = ref.watch(registrationFormProvider);
+    final offersOnlineConsult = ref.watch(
+      registrationFormProvider.select((s) => s.offersOnlineConsult),
+    );
+    final offersVisitSite = ref.watch(
+      registrationFormProvider.select((s) => s.offersVisitSite),
+    );
+    final offersBookHome = ref.watch(
+      registrationFormProvider.select((s) => s.offersBookHome),
+    );
+    final selectedOnlineAvailabilitySlots = ref.watch(
+      registrationFormProvider.select((s) => s.selectedOnlineAvailabilitySlots),
+    );
+    final selectedClinicAvailabilitySlots = ref.watch(
+      registrationFormProvider.select((s) => s.selectedClinicAvailabilitySlots),
+    );
+    final selectedHomeAvailabilitySlots = ref.watch(
+      registrationFormProvider.select((s) => s.selectedHomeAvailabilitySlots),
+    );
     final weekStart = _currentWeekSunday();
     final weekLabel =
         'Week of ${_formatShortDate(weekStart)} – ${_formatShortDate(weekStart.add(const Duration(days: 6)))}';
-    final showOnline = formState.offersOnlineConsult;
-    final showClinic = formState.offersVisitSite;
-    final showHome = formState.offersBookHome;
+    final showOnline = offersOnlineConsult;
+    final showClinic = offersVisitSite;
+    final showHome = offersBookHome;
     final showAnyPicker = showOnline || showClinic || showHome;
     final blockedForOnline = {
-      ...formState.selectedClinicAvailabilitySlots,
-      ...formState.selectedHomeAvailabilitySlots,
+      ...selectedClinicAvailabilitySlots,
+      ...selectedHomeAvailabilitySlots,
     };
     final blockedForClinic = {
-      ...formState.selectedOnlineAvailabilitySlots,
-      ...formState.selectedHomeAvailabilitySlots,
+      ...selectedOnlineAvailabilitySlots,
+      ...selectedHomeAvailabilitySlots,
     };
     final blockedForHome = {
-      ...formState.selectedOnlineAvailabilitySlots,
-      ...formState.selectedClinicAvailabilitySlots,
+      ...selectedOnlineAvailabilitySlots,
+      ...selectedClinicAvailabilitySlots,
     };
 
     return registrationStepScroll(
@@ -1452,7 +1533,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
             const SizedBox(height: 12),
             WeeklyAvailabilityPicker(
               weekLabel: weekLabel,
-              selectedSlots: formState.selectedOnlineAvailabilitySlots,
+              selectedSlots: selectedOnlineAvailabilitySlots,
               blockedSlots: blockedForOnline,
               onToggle: (day, hour, selected) => ref
                   .read(registrationFormProvider.notifier)
@@ -1471,7 +1552,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
             const SizedBox(height: 12),
             WeeklyAvailabilityPicker(
               weekLabel: weekLabel,
-              selectedSlots: formState.selectedClinicAvailabilitySlots,
+              selectedSlots: selectedClinicAvailabilitySlots,
               blockedSlots: blockedForClinic,
               selectedColor: AppColors.accent,
               onToggle: (day, hour, selected) => ref
@@ -1491,7 +1572,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
             const SizedBox(height: 12),
             WeeklyAvailabilityPicker(
               weekLabel: weekLabel,
-              selectedSlots: formState.selectedHomeAvailabilitySlots,
+              selectedSlots: selectedHomeAvailabilitySlots,
               blockedSlots: blockedForHome,
               selectedColor: AppColors.secondary,
               onToggle: (day, hour, selected) => ref

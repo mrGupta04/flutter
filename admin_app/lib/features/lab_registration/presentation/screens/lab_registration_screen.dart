@@ -717,7 +717,9 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final regState = ref.watch(labRegistrationProvider);
+    final regState = ref.watch(
+      labRegistrationProvider.select((s) => s.isSubmitting),
+    );
     final stepTitles = [
       'Basic information',
       'Facilities & categories',
@@ -765,7 +767,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           onContinue: _step == _totalSteps - 1 ? _submit : _next,
           continueLabel:
               _step == _totalSteps - 1 ? 'Submit application' : 'Continue',
-          isLoading: regState.isSubmitting,
+          isLoading: regState,
           isEnabled: _step != _totalSteps - 1 || _acknowledged,
         ),
         child: Padding(

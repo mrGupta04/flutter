@@ -12,7 +12,6 @@ import '../../provider/nurse_search_provider.dart';
 import '../../provider/nurse_live_status_provider.dart';
 import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../../core/utils/provider_location_utils.dart';
-import '../screens/nurse_profile_screen.dart';
 
 class VerifiedNursesSection extends ConsumerWidget {
   const VerifiedNursesSection({super.key});
@@ -77,7 +76,7 @@ class VerifiedNursesSection extends ConsumerWidget {
                   return NurseListingCard(
                     nurse: nurse,
                     showBottomDivider: false,
-                    onTap: () => openNurseProfile(context, nurse),
+                    onTap: () => openNurseHomeVisitBooking(context, nurse),
                     onBookHomeVisit: () =>
                         openNurseHomeVisitBooking(context, nurse),
                     onOpenMapTap: nurseHasMapLocation(nurse)

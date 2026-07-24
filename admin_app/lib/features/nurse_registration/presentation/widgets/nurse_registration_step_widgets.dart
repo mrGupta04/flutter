@@ -959,7 +959,12 @@ class NurseStep4Documents extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final form = ref.watch(nurseRegistrationFormProvider);
+    final documentUrls = ref.watch(
+      nurseRegistrationFormProvider.select((s) => s.documentUrls),
+    );
+    final documentBytes = ref.watch(
+      nurseRegistrationFormProvider.select((s) => s.documentBytes),
+    );
     return nurseStepScroll(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -984,8 +989,8 @@ class NurseStep4Documents extends ConsumerWidget {
                 (type) => _DocumentTile(
                   type: type,
                   required: requiredNurseDocuments.contains(type),
-                  uploaded: form.documentUrls.containsKey(type) ||
-                      form.documentBytes.containsKey(type),
+                  uploaded: documentUrls.containsKey(type) ||
+                      documentBytes.containsKey(type),
                   onPick: () async {
                     final result = await FilePicker.platform.pickFiles(
                       type: FileType.custom,
@@ -1092,6 +1097,13 @@ class _NurseStep5BankState extends ConsumerState<NurseStep5Bank>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final chequeUploaded = ref.watch(
+      nurseRegistrationFormProvider.select(
+        (s) =>
+            s.documentUrls.containsKey(NurseDocumentType.cancelledCheque) ||
+            s.documentBytes.containsKey(NurseDocumentType.cancelledCheque),
+      ),
+    );
     return nurseStepScroll(
       child: Form(
         key: widget.formKey,
@@ -1136,12 +1148,7 @@ class _NurseStep5BankState extends ConsumerState<NurseStep5Bank>
             const SizedBox(height: 16),
             _DocumentTile(
               type: NurseDocumentType.cancelledCheque,
-              uploaded: ref.watch(nurseRegistrationFormProvider).documentUrls
-                      .containsKey(NurseDocumentType.cancelledCheque) ||
-                  ref
-                      .watch(nurseRegistrationFormProvider)
-                      .documentBytes
-                      .containsKey(NurseDocumentType.cancelledCheque),
+              uploaded: chequeUploaded,
               onPick: () async {
                 final result = await FilePicker.platform.pickFiles(
                   type: FileType.image,
@@ -1168,7 +1175,10 @@ class NurseStep6Availability extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final form = ref.watch(nurseRegistrationFormProvider);
+    final selectedHomeAvailabilitySlots = ref.watch(
+      nurseRegistrationFormProvider
+          .select((s) => s.selectedHomeAvailabilitySlots),
+    );
     return nurseStepScroll(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1188,7 +1198,7 @@ class NurseStep6Availability extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           WeeklyAvailabilityPicker(
-            selectedSlots: form.selectedHomeAvailabilitySlots,
+            selectedSlots: selectedHomeAvailabilitySlots,
             onToggle: (day, hour, selected) {
               final key = '${day}_$hour';
               ref

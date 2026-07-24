@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../data/models/lab_test_model.dart';
+
 /// Recognizable organ / health logos for lab browse cards.
 enum LabOrganLogo {
   kidney,
@@ -105,6 +107,11 @@ LabOrganLogo labOrganLogoForTestId(String testId) {
     'dengue-ns1' => LabOrganLogo.mosquito,
     _ => labOrganLogoForId(testId),
   };
+}
+
+/// Organ logo for a lab test category header.
+LabOrganLogo labOrganLogoForCategory(LabTestCategory category) {
+  return labOrganLogoForId(category.id);
 }
 
 class LabOrganLogoPainter extends CustomPainter {

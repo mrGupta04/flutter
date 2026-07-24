@@ -9,8 +9,9 @@ import '../../../../data/models/lab_model.dart';
 import '../../data/models/lab_test_model.dart';
 import '../../data/lab_catalog_metadata.dart';
 import '../../data/lab_tests_catalog.dart';
-import '../widgets/lab_browse_group_card.dart';
+import '../../data/models/health_package.dart';
 import '../widgets/lab_package_card.dart';
+import 'health_package_screen.dart';
 import '../widgets/lab_test_tile.dart';
 
 class LabTestsListScreen extends ConsumerStatefulWidget {
@@ -50,13 +51,14 @@ class _LabTestsListScreenState extends ConsumerState<LabTestsListScreen> {
     super.dispose();
   }
 
-  List<dynamic> get _browseGroups {
-    if (widget.browseType == null) return const [];
+  List<HealthPackage>? get _browsePackages {
+    if (widget.browseType == null) return null;
     return switch (widget.browseType!) {
-      LabBrowseGroupType.healthRisk => LabCatalogMetadata.healthRisks,
-      LabBrowseGroupType.healthCondition => LabCatalogMetadata.healthConditions,
-      LabBrowseGroupType.bodyOrgan => LabCatalogMetadata.bodyOrgans,
-      LabBrowseGroupType.package => LabCatalogMetadata.healthPackages,
+      LabBrowseGroupType.healthRisk => HealthPackageCatalog.riskPackages,
+      LabBrowseGroupType.healthCondition =>
+        HealthPackageCatalog.conditionPackages,
+      LabBrowseGroupType.bodyOrgan => HealthPackageCatalog.organPackages,
+      LabBrowseGroupType.package => null,
     };
   }
 
@@ -67,8 +69,22 @@ class _LabTestsListScreenState extends ConsumerState<LabTestsListScreen> {
     return labTestsForLab(widget.lab, query: _query.isEmpty ? null : _query);
   }
 
+  void _openPackageTests(HealthPackage pkg) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LabTestsListScreen(
+          lab: widget.lab,
+          title: pkg.title,
+          testIds: pkg.testIds,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final browsePackages = _browsePackages;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -78,11 +94,21 @@ class _LabTestsListScreenState extends ConsumerState<LabTestsListScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: widget.browseType != null
+      body: browsePackages != null
           ? ListView(
               padding: const EdgeInsets.all(16),
-              children: widget.browseType == LabBrowseGroupType.package
-                  ? LabCatalogMetadata.healthPackages
+              children: [
+                HealthPackageList(
+                  packages: browsePackages,
+                  scrollDirection: Axis.vertical,
+                  onPackageTap: _openPackageTests,
+                ),
+              ],
+            )
+          : widget.browseType == LabBrowseGroupType.package
+              ? ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: LabCatalogMetadata.healthPackages
                       .map(
                         (pkg) => LabPackageCard(
                           package: pkg,
@@ -99,66 +125,52 @@ class _LabTestsListScreenState extends ConsumerState<LabTestsListScreen> {
                           },
                         ),
                       )
-                      .toList()
-                  : _browseGroups.map((group) {
-                      final g = group as LabBrowseGroup;
-                      return LabBrowseGroupListTile(
-                        group: g,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => LabTestsListScreen(
-                                lab: widget.lab,
-                                title: g.name,
-                                testIds: g.testIds,
-                              ),
+                      .toList(),
+                )
+              : Column(
+                  children: [
+                    if (widget.testIds == null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search tests...',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            filled: true,
+                            fillColor: AppColors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        },
-                      );
-                    }).toList(),
-            )
-          : Column(
-              children: [
-                if (widget.testIds == null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search tests...',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        filled: true,
-                        fillColor: AppColors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          ),
+                          onChanged: (v) {
+                            _debounce?.cancel();
+                            _debounce =
+                                Timer(const Duration(milliseconds: 350), () {
+                              if (mounted) setState(() => _query = v.trim());
+                            });
+                          },
                         ),
                       ),
-                      onChanged: (v) {
-                        _debounce?.cancel();
-                        _debounce = Timer(const Duration(milliseconds: 350), () {
-                          if (mounted) setState(() => _query = v.trim());
-                        });
-                      },
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _tests.length,
+                        itemBuilder: (context, index) {
+                          final test = _tests[index];
+                          return LabTestTile(
+                            lab: widget.lab,
+                            test: test,
+                            offered: resolveOfferedTest(widget.lab, test),
+                            onBookNow: () =>
+                                context.push(AppConstants.routeLabCart),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _tests.length,
-                    itemBuilder: (context, index) {
-                      final test = _tests[index];
-                      return LabTestTile(
-                        lab: widget.lab,
-                        test: test,
-                        offered: resolveOfferedTest(widget.lab, test),
-                        onBookNow: () => context.push(AppConstants.routeLabCart),
-                      );
-                    },
-                  ),
+                  ],
                 ),
-              ],
-            ),
     );
   }
 }
+

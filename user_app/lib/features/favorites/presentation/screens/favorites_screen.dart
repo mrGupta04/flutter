@@ -70,7 +70,7 @@ class FavoritesScreen extends ConsumerWidget {
                     onPressed: () {
                       if (item.providerType == 'nurse') {
                         context.push(
-                          '${AppConstants.routeNurseProfile}?id=${item.providerId}',
+                          '${AppConstants.routeNurseHomeVisitBooking}?nurseId=${Uri.encodeComponent(item.providerId)}',
                         );
                       } else {
                         context.push(

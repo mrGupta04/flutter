@@ -15,12 +15,13 @@ import '../../../../data/models/lab_model.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../data/lab_catalog_metadata.dart';
 import '../../data/lab_model_utils.dart';
+import '../../data/models/health_package.dart';
 import '../../provider/lab_search_provider.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
 import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
-import '../widgets/lab_browse_group_card.dart';
 import '../widgets/lab_package_card.dart';
 import '../widgets/lab_test_tile.dart';
+import 'health_package_screen.dart';
 import 'lab_tests_list_screen.dart';
 
 class LabDetailScreen extends ConsumerWidget {
@@ -95,8 +96,21 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
           )
           .toList();
 
-  List<LabBrowseGroup> _filteredGroups(List<LabBrowseGroup> groups) =>
-      groups.where((g) => _matchesQuery(g.name) || _matchesQuery(g.subtitle ?? '')).toList();
+  List<HealthPackage> get _filteredRiskPackages =>
+      HealthPackageCatalog.riskPackages
+          .where((pkg) => _matchesQuery(pkg.title))
+          .toList();
+
+  List<HealthPackage> get _filteredConditionPackages =>
+      HealthPackageCatalog.conditionPackages
+          .where((pkg) => _matchesQuery(pkg.title))
+          .toList();
+
+  List<HealthPackage> get _filteredOrganPackages =>
+      HealthPackageCatalog.organPackages
+          .where((pkg) => _matchesQuery(pkg.title))
+          .toList();
+
 
   Future<void> _callLab() async {
     final phone = lab.mobileNumber;
@@ -132,14 +146,13 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
     final distance = formatNearbyDistanceLabel(lab.distanceKm);
     final tests = labTestsForLab(lab, query: _query.isEmpty ? null : _query);
     final packages = _filteredPackages;
-    final healthRisks = _filteredGroups(LabCatalogMetadata.healthRisks);
-    final healthConditions =
-        _filteredGroups(LabCatalogMetadata.healthConditions);
-    final bodyOrgans = _filteredGroups(LabCatalogMetadata.bodyOrgans);
+    final riskPackages = _filteredRiskPackages;
+    final healthConditions = _filteredConditionPackages;
+    final bodyOrgans = _filteredOrganPackages;
     final isSearching = _query.isNotEmpty;
     final previewTests = isSearching ? tests : tests.take(5).toList();
     final hasAnyResults = packages.isNotEmpty ||
-        healthRisks.isNotEmpty ||
+        riskPackages.isNotEmpty ||
         healthConditions.isNotEmpty ||
         bodyOrgans.isNotEmpty ||
         tests.isNotEmpty;
@@ -382,7 +395,7 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                       ),
                     ),
                   ],
-                  if (healthRisks.isNotEmpty) ...[
+                  if (riskPackages.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     _SectionHeader(
                       title: 'Tests by Health Risk',
@@ -394,12 +407,12 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                               ),
                     ),
                     const SizedBox(height: 8),
-                    LabBrowseGroupScroller(
-                      groups: healthRisks,
-                      onTap: (g) => _openGroupTests(
+                    HealthPackageList(
+                      packages: riskPackages,
+                      onPackageTap: (pkg) => _openGroupTests(
                         context,
-                        title: g.name,
-                        testIds: g.testIds,
+                        title: pkg.title,
+                        testIds: pkg.testIds,
                       ),
                     ),
                   ],
@@ -415,12 +428,12 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                               ),
                     ),
                     const SizedBox(height: 8),
-                    LabBrowseGroupScroller(
-                      groups: healthConditions,
-                      onTap: (g) => _openGroupTests(
+                    HealthPackageList(
+                      packages: healthConditions,
+                      onPackageTap: (pkg) => _openGroupTests(
                         context,
-                        title: g.name,
-                        testIds: g.testIds,
+                        title: pkg.title,
+                        testIds: pkg.testIds,
                       ),
                     ),
                   ],
@@ -436,12 +449,12 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                               ),
                     ),
                     const SizedBox(height: 8),
-                    LabBrowseGroupScroller(
-                      groups: bodyOrgans,
-                      onTap: (g) => _openGroupTests(
+                    HealthPackageList(
+                      packages: bodyOrgans,
+                      onPackageTap: (pkg) => _openGroupTests(
                         context,
-                        title: g.name,
-                        testIds: g.testIds,
+                        title: pkg.title,
+                        testIds: pkg.testIds,
                       ),
                     ),
                   ],

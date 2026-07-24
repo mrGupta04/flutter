@@ -17,7 +17,7 @@ import '../../../../shared/widgets/consultation_type_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
-import 'nurse_profile_screen.dart';
+import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../ambulance/presentation/widgets/ambulance_action_sheet.dart';
@@ -29,7 +29,6 @@ import '../../provider/nurse_live_status_provider.dart';
 import '../../provider/verified_doctors_provider.dart';
 import '../../../../core/utils/doctor_location_utils.dart';
 import '../../../../core/utils/provider_location_utils.dart';
-import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 
 enum CareRole { doctor, nurse, ambulance, bloodBank }
@@ -511,7 +510,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                   final nurse = applyNurseLiveStatus(items[i], liveMap);
                   return NurseListingCard(
                     nurse: nurse,
-                    onTap: () => openNurseProfile(context, nurse),
+                    onTap: () => openNurseHomeVisitBooking(context, nurse),
                     onBookHomeVisit: () =>
                         openNurseHomeVisitBooking(context, nurse),
                     onOpenMapTap: nurseHasMapLocation(nurse)

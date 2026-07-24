@@ -1329,7 +1329,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                           onPressed: () {
                             if (booking.isNurseVisit) {
                               context.push(
-                                '${AppConstants.routeNurseProfile}?id=${booking.providerId}',
+                                '${AppConstants.routeNurseHomeVisitBooking}?nurseId=${Uri.encodeComponent(booking.providerId)}',
                               );
                             } else {
                               context.push(

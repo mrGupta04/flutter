@@ -10,6 +10,7 @@ import '../../data/models/nurse_model.dart';
 
 import 'blinking_online_badge.dart';
 import 'marketplace_provider_card_ui.dart';
+import 'nurse_feedback_sheet.dart';
 
 /// Nurse profile card accent — app theme green.
 const Color kNurseCardAccent = AppColors.primary;
@@ -187,7 +188,15 @@ class NurseListingCard extends StatelessWidget {
                             children: [
                               if (isVerified) const _VerifiedBadge(),
                               if (isVerified) const SizedBox(height: 6),
-                              _RatingBadge(rating: nurse.cardDisplayRating),
+                              _RatingBadge(
+                                rating: nurse.cardDisplayRating,
+                                onTap: nurse.id != null && nurse.id!.isNotEmpty
+                                    ? () => showNurseFeedbackSheet(
+                                          context,
+                                          nurse: nurse,
+                                        )
+                                    : null,
+                              ),
                             ],
                           ),
                         ),
@@ -330,13 +339,17 @@ class _VerifiedBadge extends StatelessWidget {
 }
 
 class _RatingBadge extends StatelessWidget {
-  const _RatingBadge({required this.rating});
+  const _RatingBadge({
+    required this.rating,
+    this.onTap,
+  });
 
   final double rating;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -368,6 +381,17 @@ class _RatingBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return badge;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: badge,
       ),
     );
   }
@@ -586,7 +610,7 @@ class _NurseBookNowButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Book Now',
+              'Book Nurse',
               style: TextStyle(
                 color: AppColors.white,
                 fontWeight: FontWeight.w800,

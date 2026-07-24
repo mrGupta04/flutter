@@ -277,7 +277,9 @@ class AmbulanceStep2VehicleFleet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vehicles = ref.watch(ambulanceRegistrationFormProvider).vehicles;
+    final vehicles = ref.watch(
+      ambulanceRegistrationFormProvider.select((s) => s.vehicles),
+    );
     return ambulanceStepScroll(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +587,12 @@ class AmbulanceStep3Drivers extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final form = ref.watch(ambulanceRegistrationFormProvider);
+    final drivers = ref.watch(
+      ambulanceRegistrationFormProvider.select((s) => s.drivers),
+    );
+    final vehicles = ref.watch(
+      ambulanceRegistrationFormProvider.select((s) => s.vehicles),
+    );
     return ambulanceStepScroll(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,16 +604,16 @@ class AmbulanceStep3Drivers extends ConsumerWidget {
             style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 16),
-          if (form.drivers.isEmpty)
+          if (drivers.isEmpty)
             _EmptyFleetCard(
               icon: Icons.person_outline_rounded,
               message: 'No drivers added yet. Add at least one driver/EMT.',
             )
           else
-            ...form.drivers.asMap().entries.map((e) => _DriverCard(
+            ...drivers.asMap().entries.map((e) => _DriverCard(
                   index: e.key,
                   driver: e.value,
-                  vehicles: form.vehicles,
+                  vehicles: vehicles,
                   onEdit: () => _showDriverDialog(context, ref, e.key, e.value),
                   onDelete: () =>
                       ref.read(ambulanceRegistrationFormProvider.notifier)
@@ -874,7 +881,21 @@ class AmbulanceStep4Documents extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final form = ref.watch(ambulanceRegistrationFormProvider);
+    final serviceDocumentUrls = ref.watch(
+      ambulanceRegistrationFormProvider.select((s) => s.serviceDocumentUrls),
+    );
+    final vehicleDocumentUrls = ref.watch(
+      ambulanceRegistrationFormProvider.select((s) => s.vehicleDocumentUrls),
+    );
+    final driverDocumentUrls = ref.watch(
+      ambulanceRegistrationFormProvider.select((s) => s.driverDocumentUrls),
+    );
+    final vehicles = ref.watch(
+      ambulanceRegistrationFormProvider.select((s) => s.vehicles),
+    );
+    final drivers = ref.watch(
+      ambulanceRegistrationFormProvider.select((s) => s.drivers),
+    );
     return ambulanceStepScroll(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -891,15 +912,15 @@ class AmbulanceStep4Documents extends ConsumerWidget {
           ...AmbulanceServiceDocumentType.values.map(
             (type) => _DocumentUploadTile(
               label: type.label,
-              isUploaded: form.serviceDocumentUrls.containsKey(type),
+              isUploaded: serviceDocumentUrls.containsKey(type),
               onUpload: () => _pickAndUploadService(context, ref, type),
             ),
           ),
-          if (form.vehicles.isNotEmpty) ...[
+          if (vehicles.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text('Vehicle Documents', style: AppTextStyles.titleMedium),
             const SizedBox(height: 8),
-            ...form.vehicles.expand((vehicle) => [
+            ...vehicles.expand((vehicle) => [
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4, top: 8),
                     child: Text(
@@ -913,7 +934,7 @@ class AmbulanceStep4Documents extends ConsumerWidget {
                     (type) => _DocumentUploadTile(
                       label: type.label,
                       isUploaded:
-                          form.vehicleDocumentUrls[vehicle.id]?.containsKey(type) ??
+                          vehicleDocumentUrls[vehicle.id]?.containsKey(type) ??
                               false,
                       onUpload: () =>
                           _pickAndUploadVehicle(context, ref, vehicle.id, type),
@@ -921,11 +942,11 @@ class AmbulanceStep4Documents extends ConsumerWidget {
                   ),
                 ]),
           ],
-          if (form.drivers.isNotEmpty) ...[
+          if (drivers.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text('Driver Documents', style: AppTextStyles.titleMedium),
             const SizedBox(height: 8),
-            ...form.drivers.expand((driver) => [
+            ...drivers.expand((driver) => [
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4, top: 8),
                     child: Text(
@@ -941,7 +962,7 @@ class AmbulanceStep4Documents extends ConsumerWidget {
                     (type) => _DocumentUploadTile(
                       label: type.label,
                       isUploaded:
-                          form.driverDocumentUrls[driver.id]?.containsKey(type) ??
+                          driverDocumentUrls[driver.id]?.containsKey(type) ??
                               false,
                       onUpload: () =>
                           _pickAndUploadDriver(context, ref, driver.id, type),
@@ -1231,7 +1252,12 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final form = ref.watch(ambulanceRegistrationFormProvider);
+    final chequeUploaded = ref.watch(
+      ambulanceRegistrationFormProvider.select(
+        (s) => s.serviceDocumentUrls
+            .containsKey(AmbulanceServiceDocumentType.cancelledCheque),
+      ),
+    );
     return ambulanceStepScroll(
       child: Form(
         key: widget.formKey,
@@ -1282,8 +1308,7 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
             const SizedBox(height: 8),
             _DocumentUploadTile(
               label: AmbulanceServiceDocumentType.cancelledCheque.label,
-              isUploaded: form.serviceDocumentUrls
-                  .containsKey(AmbulanceServiceDocumentType.cancelledCheque),
+              isUploaded: chequeUploaded,
               onUpload: () async {
                 final result = await FilePicker.platform.pickFiles(
                   type: FileType.custom,

@@ -444,7 +444,9 @@ class _BloodBankRegistrationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final regState = ref.watch(bloodBankRegistrationProvider);
+    final regState = ref.watch(
+      bloodBankRegistrationProvider.select((s) => s.isSubmitting),
+    );
     const stepTitles = [
       'Basic information',
       'Contact & documents',
@@ -487,7 +489,7 @@ class _BloodBankRegistrationScreenState
           onContinue: _step == _totalSteps - 1 ? _submit : _next,
           continueLabel:
               _step == _totalSteps - 1 ? 'Submit application' : 'Continue',
-          isLoading: regState.isSubmitting,
+          isLoading: regState,
           isEnabled: _step != _totalSteps - 1 || _acknowledged,
         ),
         child: Padding(

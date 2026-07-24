@@ -71,8 +71,20 @@ class _MobileNumberFieldState extends State<MobileNumberField> {
       return;
     }
     _suppressSelectionUntil =
-        DateTime.now().add(const Duration(milliseconds: 400));
+        DateTime.now().add(const Duration(milliseconds: 600));
     _collapseAccidentalSelection();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _collapseAccidentalSelection();
+    });
+    Future<void>.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) _collapseAccidentalSelection();
+    });
+  }
+
+  void _handleTap() {
+    _suppressSelectionUntil =
+        DateTime.now().add(const Duration(milliseconds: 600));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _collapseAccidentalSelection();
@@ -203,7 +215,7 @@ class _MobileNumberFieldState extends State<MobileNumberField> {
       inputFormatters: ValidationUtils.mobileInputFormatters(
         countryCode: _selectedCountry.dialCode,
       ),
-      onTap: _collapseAccidentalSelection,
+      onTap: _handleTap,
       style: AppTextStyles.bodyLarge.copyWith(
         color: AppColors.textPrimary,
       ),

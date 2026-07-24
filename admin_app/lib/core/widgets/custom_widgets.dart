@@ -100,10 +100,21 @@ class _CustomTextFieldState extends State<CustomTextField> {
       _suppressSelectionUntil = null;
       return;
     }
-    // Desktop/web often select a range (or all) on the focusing click / rebuild.
     _suppressSelectionUntil =
-        DateTime.now().add(const Duration(milliseconds: 400));
+        DateTime.now().add(const Duration(milliseconds: 600));
     _collapseAccidentalSelection();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _collapseAccidentalSelection();
+    });
+    Future<void>.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) _collapseAccidentalSelection();
+    });
+  }
+
+  void _handleTap() {
+    _suppressSelectionUntil =
+        DateTime.now().add(const Duration(milliseconds: 600));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _collapseAccidentalSelection();
@@ -154,7 +165,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       textInputAction: widget.textInputAction,
       onChanged: (_) => widget.onChanged?.call(),
       onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
-      onTap: _collapseAccidentalSelection,
+      onTap: _handleTap,
       style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: widget.label,

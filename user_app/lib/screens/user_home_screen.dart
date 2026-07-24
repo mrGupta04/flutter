@@ -104,9 +104,11 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                     .map(
                       (service) => HealthServiceItem(
                         title: service.title,
-                        image: service.image,
+                        subtitle: service.subtitle,
                         icon: service.icon,
                         color: service.color,
+                        illustrationImage: service.illustrationImage,
+                        illustrationScale: service.illustrationScale,
                         onTap: () => _openService(context, service),
                       ),
                     )
@@ -426,19 +428,23 @@ class _SpecialtyChip extends StatelessWidget {
 class _HomeService {
   const _HomeService({
     required this.title,
-    required this.image,
+    required this.subtitle,
     required this.icon,
     required this.color,
+    required this.illustrationImage,
     required this.route,
     this.routeParams,
+    this.illustrationScale = 1.0,
   });
 
   final String title;
-  final String image;
+  final String subtitle;
   final IconData icon;
   final Color color;
+  final String illustrationImage;
   final String route;
   final String? routeParams;
+  final double illustrationScale;
 }
 
 class _SpecialtyItem {
@@ -462,45 +468,58 @@ class _SpecialtyItem {
 const _homeServices = [
   _HomeService(
     title: 'Doctor\nConsultation',
-    image: 'assets/images/home_cards/doctor_card.png',
+    subtitle: 'Talk to expert doctors online',
     icon: Icons.medical_services_outlined,
     color: Color(0xff2CB67D),
+    illustrationImage:
+        'assets/images/home_cards/doctor_card-removebg-preview.png',
     route: AppConstants.routeDoctorSearch,
   ),
   _HomeService(
     title: 'Nurse\nHome Care',
-    image: 'assets/images/home_cards/nurse_card.png',
+    subtitle: 'Professional nursing care at your home',
     icon: Icons.health_and_safety_outlined,
     color: Color(0xff8B5CF6),
+    illustrationImage:
+        'assets/images/home_cards/nurse_card-removebg-preview.png',
     route: AppConstants.routeNurseSearch,
   ),
   _HomeService(
     title: 'Lab\nTests',
-    image: 'assets/images/home_cards/lab_card.png',
+    subtitle: 'Accurate reports, right on time',
     icon: Icons.science_outlined,
     color: Color(0xff3B82F6),
+    illustrationImage:
+        'assets/images/home_cards/lab_card-removebg-preview.png',
     route: AppConstants.routeLabs,
   ),
   _HomeService(
     title: 'Diagnostic\nScans',
-    image: 'assets/images/home_cards/scan_card.png',
+    subtitle: 'Advanced imaging for accurate diagnosis',
     icon: Icons.monitor_heart_outlined,
     color: Color(0xff14B8A6),
+    illustrationImage:
+        'assets/images/home_cards/scan_card-removebg-preview.png',
     route: AppConstants.routeScans,
   ),
   _HomeService(
     title: 'Ambulance\nBooking',
-    image: 'assets/images/home_cards/ambulance.png',
+    subtitle: '24/7 emergency ambulance service',
     icon: Icons.local_hospital_outlined,
     color: Color(0xffEF4444),
+    illustrationImage:
+        'assets/images/home_cards/ambulance_remove_pg_preview.png',
+    illustrationScale: 1.3,
     route: AppConstants.routeCareListing,
     routeParams: 'role=ambulance',
   ),
   _HomeService(
     title: 'Blood\nBank',
-    image: 'assets/images/home_cards/blood.png',
+    subtitle: 'Donate blood, save lives',
     icon: Icons.bloodtype_outlined,
     color: Color(0xffEC4899),
+    illustrationImage:
+        'assets/images/home_cards/blood-removebg-preview.png',
     route: AppConstants.routeBloodBanks,
   ),
 ];

@@ -287,13 +287,8 @@ class _HospitalVisitBookingScreenState
                       DoctorConsultationFeesBanner(
                         doctor: doctor,
                         highlightedType: ConsultationType.visitSite,
-                        onTypeSelected: (type) {
-                          if (type == ConsultationType.onlineConsult) {
-                            openOnlineConsultBooking(context, doctor);
-                          } else if (type == ConsultationType.bookHome) {
-                            openHomeVisitBooking(context, doctor);
-                          }
-                        },
+                        onTypeSelected: (type) =>
+                            switchConsultationBooking(context, doctor, type),
                       ),
                       const SizedBox(height: 12),
                       ConsultationBookingPriceSummary(

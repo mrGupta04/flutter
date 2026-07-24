@@ -19,7 +19,6 @@ import '../features/home_visit/presentation/screens/home_visit_booking_screen.da
 import '../features/online_consult/presentation/screens/online_consult_booking_screen.dart';
 import '../features/doctor_registration/presentation/screens/global_search_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_profile_screen.dart';
-import '../features/doctor_registration/presentation/screens/nurse_profile_screen.dart';
 import '../features/doctor_registration/presentation/screens/nurse_search_screen.dart';
 import '../features/user_auth/presentation/screens/user_login_screen.dart';
 import '../features/user_auth/presentation/screens/user_register_screen.dart';
@@ -324,12 +323,12 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppConstants.routeNurseProfile,
         name: 'nurseProfile',
-        pageBuilder: (context, state) {
-          final nurseId = state.uri.queryParameters['id'] ?? '';
-          return slidePage(
-            state,
-            NurseProfileScreen(nurseId: nurseId),
-          );
+        redirect: (context, state) {
+          final nurseId = state.uri.queryParameters['id'];
+          if (nurseId == null || nurseId.isEmpty) {
+            return AppConstants.routeNurseSearch;
+          }
+          return '${AppConstants.routeNurseHomeVisitBooking}?nurseId=${Uri.encodeComponent(nurseId)}';
         },
       ),
       GoRoute(

@@ -387,7 +387,9 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final regState = ref.watch(scanRegistrationProvider);
+    final regState = ref.watch(
+      scanRegistrationProvider.select((s) => s.isSubmitting),
+    );
     final stepTitles = [
       'Business details',
       'Documents & photos',
@@ -429,7 +431,7 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           onContinue: _step == _totalSteps - 1 ? _submit : _next,
           continueLabel:
               _step == _totalSteps - 1 ? 'Submit application' : 'Continue',
-          isLoading: regState.isSubmitting,
+          isLoading: regState,
           isEnabled: _step != _totalSteps - 1 || _acknowledged,
         ),
         child: Padding(

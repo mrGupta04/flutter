@@ -101,25 +101,7 @@ class _OnlineConsultBookingScreenState
   }
 
   void _onConsultationTypeSelected(ConsultationType type, DoctorModel doctor) {
-    if (type == ConsultationType.bookHome) {
-      openHomeVisitBooking(context, doctor);
-      return;
-    }
-    if (!_isHospitalVisit && type == ConsultationType.visitSite && !doctor.offersVisitSite) {
-      return;
-    }
-    if (_isHospitalVisit && type == ConsultationType.onlineConsult && !doctor.offersOnlineConsult) {
-      return;
-    }
-    if (type == _selectedType) return;
-
-    ref.read(onlineConsultBookingProvider(widget.doctorId).notifier).selectSlot(null);
-    ref.read(hospitalVisitBookingProvider(widget.doctorId).notifier).selectSlot(null);
-    setState(() {
-      _selectedType = type;
-      _selectedDateKey = null;
-    });
-    ref.invalidate(bookableSlotsProvider(_slotsQuery));
+    switchConsultationBooking(context, doctor, type);
   }
 
   Future<void> _submitHospitalVisit(DoctorModel doctor) async {

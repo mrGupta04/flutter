@@ -20,7 +20,6 @@ import '../../provider/nurse_search_provider.dart';
 import '../../provider/nurse_live_status_provider.dart';
 import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../../core/utils/provider_location_utils.dart';
-import 'nurse_profile_screen.dart';
 
 class NurseSearchScreen extends ConsumerStatefulWidget {
   const NurseSearchScreen({
@@ -399,7 +398,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
                 return NurseListingCard(
                   nurse: nurse,
                   distanceLabel: formatNearbyDistanceLabel(distanceKm),
-                  onTap: () => openNurseProfile(context, nurse),
+                  onTap: () => openNurseHomeVisitBooking(context, nurse),
                   onBookHomeVisit: () =>
                       openNurseHomeVisitBooking(context, nurse),
                   onOpenMapTap: nurseHasMapLocation(nurse)

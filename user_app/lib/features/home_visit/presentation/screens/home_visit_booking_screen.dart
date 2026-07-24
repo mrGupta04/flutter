@@ -17,6 +17,7 @@ import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/prescription_included_banner.dart';
 import '../../../../shared/widgets/previous_reports_picker.dart';
+import '../../../online_consult/online_consult_navigation.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
@@ -352,6 +353,8 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                         DoctorConsultationFeesBanner(
                           doctor: doctor,
                           highlightedType: ConsultationType.bookHome,
+                          onTypeSelected: (type) =>
+                              switchConsultationBooking(context, doctor, type),
                         ),
                         const SizedBox(height: 12),
                         ConsultationBookingPriceSummary(
