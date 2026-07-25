@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
+import '../models/nursing_report_model.dart';
 import '../models/patient_booking_model.dart';
 import '../models/patient_user_model.dart';
 import '../services/dio_service.dart';
@@ -147,6 +148,47 @@ class PatientDashboardRepository {
       final data = body['data'];
       if (data is! Map<String, dynamic>) return null;
       final pdfUrl = data['pdfUrl'] as String?;
+      return pdfUrl?.trim().isNotEmpty == true ? pdfUrl!.trim() : null;
+    } on DioException {
+      return null;
+    }
+  }
+
+  Future<List<NursingReportModel>> fetchNursingReports() async {
+    try {
+      final response = await _dio.get(AppConstants.endpointPatientNursingReports);
+      final body = response.data as Map<String, dynamic>;
+      if (body['success'] == false) {
+        throw Exception(
+          (body['error'] ?? body['message'] ?? 'Failed to load nursing reports')
+              as String,
+        );
+      }
+      final data = body['data'];
+      if (data is List) {
+        return data
+            .whereType<Map>()
+            .map((e) => NursingReportModel.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      throw _messageFromDio(e);
+    }
+  }
+
+  Future<String?> fetchNursingReportPdfUrl(String bookingId) async {
+    try {
+      final response = await _dio.get(
+        AppConstants.endpointPatientNursingReport(bookingId),
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body['success'] == false) return null;
+      final data = body['data'];
+      if (data is! Map<String, dynamic>) return null;
+      final note = data['note'];
+      if (note is! Map<String, dynamic>) return null;
+      final pdfUrl = note['pdfUrl'] as String?;
       return pdfUrl?.trim().isNotEmpty == true ? pdfUrl!.trim() : null;
     } on DioException {
       return null;

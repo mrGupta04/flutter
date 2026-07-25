@@ -4,6 +4,7 @@ import 'core/models/provider_type.dart';
 import 'core/services/device_push_service.dart';
 import 'core/services/doctor_presence_lifecycle.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/app_back_navigation.dart';
 import 'features/auth/provider/provider_auth_provider.dart';
 import 'router/admin_router.dart';
 
@@ -64,6 +65,10 @@ class _AdminAppState extends ConsumerState<AdminApp> {
       darkTheme: AppTheme.lightTheme,
       themeMode: ThemeMode.light,
       routerConfig: router,
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        return AppBackButtonScope(child: child);
+      },
     );
   }
 }

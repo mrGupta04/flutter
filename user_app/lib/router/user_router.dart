@@ -27,6 +27,7 @@ import '../features/user_dashboard/presentation/screens/edit_patient_profile_scr
 import '../features/user_dashboard/presentation/screens/health_profile_screen.dart';
 import '../features/user_dashboard/presentation/screens/support_tickets_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_dashboard_screen.dart';
+import '../features/user_dashboard/presentation/screens/nursing_reports_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_rewards_screen.dart';
 import '../features/ambulance/presentation/screens/ambulance_tracking_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
@@ -142,6 +143,14 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => slidePage(
           state,
           const HealthProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeNursingReports,
+        name: 'nursingReports',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const NursingReportsScreen(),
         ),
       ),
       GoRoute(

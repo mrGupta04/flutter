@@ -436,17 +436,22 @@ class _PendingRequestCard extends StatelessWidget {
   }
 }
 
-class _BookingTile extends StatelessWidget {
+class _BookingTile extends ConsumerWidget {
   const _BookingTile({required this.booking});
 
   final DoctorBookingModel booking;
 
-  Future<void> _setProgress(BuildContext context, String progress) async {
+  Future<void> _setProgress(
+    BuildContext context,
+    WidgetRef ref,
+    String progress,
+  ) async {
     try {
       await DioService().post(
         AppConstants.endpointNurseVisitProgress(booking.id),
         data: {'progress': progress},
       );
+      await ref.read(nurseDashboardProvider.notifier).refreshAll();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Marked as ${progress.replaceAll('_', ' ')}')),
@@ -461,116 +466,47 @@ class _BookingTile extends StatelessWidget {
     }
   }
 
-  Future<void> _writeVisitNote(BuildContext context) async {
-    final summaryCtrl = TextEditingController();
-    final vitalsCtrl = TextEditingController();
-    final proceduresCtrl = TextEditingController();
-    final adviceCtrl = TextEditingController();
-    var followUpNeeded = false;
-    final ok = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            16 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Care summary',
-                  style: AppTextStyles.titleSmall.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: summaryCtrl,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Care summary *',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: vitalsCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Vitals (optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: proceduresCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Procedures done (optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: adviceCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Advice (optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  value: followUpNeeded,
-                  onChanged: (v) =>
-                      setModalState(() => followUpNeeded = v ?? false),
-                  title: const Text('Follow-up visit needed'),
-                ),
-                const SizedBox(height: 8),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Save & share with patient'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    if (ok != true || summaryCtrl.text.trim().isEmpty) return;
+  Future<void> _startVisit(BuildContext context, WidgetRef ref) async {
     try {
       await DioService().post(
-        AppConstants.endpointNurseVisitNote(booking.id),
-        data: {
-          'careSummary': summaryCtrl.text.trim(),
-          if (vitalsCtrl.text.trim().isNotEmpty) 'vitals': vitalsCtrl.text.trim(),
-          if (proceduresCtrl.text.trim().isNotEmpty)
-            'proceduresDone': proceduresCtrl.text.trim(),
-          if (adviceCtrl.text.trim().isNotEmpty) 'advice': adviceCtrl.text.trim(),
-          'followUpNeeded': followUpNeeded,
-        },
+        AppConstants.endpointNurseVisitStart(booking.id),
+        data: {},
       );
+      await ref.read(nurseDashboardProvider.notifier).refreshAll();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Care summary shared with patient')),
+          const SnackBar(content: Text('Visit started')),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
       }
     }
   }
 
+  Future<void> _openAssessment(BuildContext context, WidgetRef ref) async {
+    final done = await context.push<bool>(
+      AppConstants.routeNurseVisitAssessment,
+      extra: booking,
+    );
+    if (done == true) {
+      await ref.read(nurseDashboardProvider.notifier).refreshAll();
+    }
+  }
+
+  Future<void> _openOtp(BuildContext context, WidgetRef ref) async {
+    final done = await context.push<bool>(
+      AppConstants.routeNurseVisitOtp,
+      extra: booking,
+    );
+    if (done == true) {
+      await ref.read(nurseDashboardProvider.notifier).refreshAll();
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final addressLine = booking.patientLocationLine;
     final hasCoords =
         booking.patientLatitude != null && booking.patientLongitude != null;
@@ -643,20 +579,24 @@ class _BookingTile extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   OutlinedButton(
-                    onPressed: () => _setProgress(context, 'en_route'),
+                    onPressed: () => _setProgress(context, ref, 'en_route'),
                     child: const Text('On the way'),
                   ),
                   OutlinedButton(
-                    onPressed: () => _setProgress(context, 'arrived'),
+                    onPressed: () => _setProgress(context, ref, 'arrived'),
                     child: const Text('Arrived'),
                   ),
-                  OutlinedButton(
-                    onPressed: () => _setProgress(context, 'completed'),
-                    child: const Text('Completed'),
+                  FilledButton(
+                    onPressed: () => _startVisit(context, ref),
+                    child: const Text('Start visit'),
                   ),
                   OutlinedButton(
-                    onPressed: () => _writeVisitNote(context),
-                    child: const Text('Care summary'),
+                    onPressed: () => _openAssessment(context, ref),
+                    child: const Text('Nursing report'),
+                  ),
+                  FilledButton.tonal(
+                    onPressed: () => _openOtp(context, ref),
+                    child: const Text('Complete service'),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => context.push(

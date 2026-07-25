@@ -15,9 +15,11 @@ import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/nurse_feedback_sheet.dart';
 import '../../../doctor_registration/provider/nurse_profile_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../../user_dashboard/provider/patient_dashboard_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 import '../../provider/nurse_home_visit_provider.dart';
 
@@ -157,6 +159,7 @@ class _NurseHomeVisitBookingScreenState
         ),
       );
       ref.invalidate(nurseBookableSlotsProvider(widget.nurseId));
+      await ref.read(patientDashboardProvider.notifier).loadBookings();
       if (booking != null) {
         ref
             .read(upcomingMeetingTimerProvider.notifier)
@@ -286,7 +289,7 @@ class _NurseHomeVisitBookingScreenState
                         ),
                       const SizedBox(height: 24),
                       Text(
-                        'Your details',
+                        'Patient details',
                         style: AppTextStyles.titleSmall.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -445,19 +448,32 @@ class _NurseBookingProfileHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: SizedBox(
-                  width: 88,
-                  height: 88,
-                  child: imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => _profilePlaceholder(),
-                          errorWidget: (_, __, ___) => _profilePlaceholder(),
-                        )
-                      : _profilePlaceholder(),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: imageUrl.isNotEmpty
+                      ? () => showFullScreenNetworkImage(
+                            context,
+                            imageUrl: imageUrl,
+                            title: nurse.displayName,
+                          )
+                      : null,
+                  borderRadius: BorderRadius.circular(14),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(
+                      width: 88,
+                      height: 88,
+                      child: imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => _profilePlaceholder(),
+                              errorWidget: (_, __, ___) => _profilePlaceholder(),
+                            )
+                          : _profilePlaceholder(),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 14),

@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const NurseVisitNote = require('./models/NurseVisitNote');
 const ConsultationBooking = require('./models/ConsultationBooking');
 const { createAndPushNotification } = require('./notificationRepositories');
-const { appendStatusHistory } = require('./bookingLifecycleHelpers');
+const { saveNurseVisitReportDraft } = require('./nurseVisitWorkflowRepositories');
 
 async function saveNurseVisitNote({
   bookingId,
@@ -13,75 +13,43 @@ async function saveNurseVisitNote({
   advice,
   followUpNeeded,
 }) {
-  const booking = await ConsultationBooking.findOne({ id: bookingId });
-  if (!booking) {
-    const err = new Error('Booking not found');
-    err.statusCode = 404;
-    throw err;
-  }
-  if (booking.nurseId !== nurseId) {
-    const err = new Error('You are not allowed to write notes for this visit');
-    err.statusCode = 403;
-    throw err;
-  }
-  if (booking.status !== 'confirmed') {
-    const err = new Error('Visit notes can only be written for confirmed visits');
-    err.statusCode = 400;
-    throw err;
-  }
+  const note = await saveNurseVisitReportDraft({
+    bookingId,
+    nurseId,
+    payload: {
+      careSummary,
+      nurseNotes: careSummary,
+      vitalsData: typeof vitals === 'string' ? { notes: vitals } : vitals,
+      proceduresPerformed: proceduresDone
+        ? String(proceduresDone)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [],
+      followUpRecommendation: followUpNeeded ? 'follow_up_home_visit' : undefined,
+      advice,
+    },
+  });
 
-  const summary = String(careSummary || '').trim();
-  if (!summary) {
-    const err = new Error('Care summary is required');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  let note = await NurseVisitNote.findOne({ bookingId });
   if (note) {
-    note.careSummary = summary;
-    note.vitals = vitals?.trim() || undefined;
-    note.proceduresDone = proceduresDone?.trim() || undefined;
-    note.advice = advice?.trim() || undefined;
-    note.followUpNeeded = Boolean(followUpNeeded);
-    note.status = 'finalized';
-    await note.save();
-  } else {
-    note = await NurseVisitNote.create({
-      id: uuidv4(),
-      bookingId,
-      nurseId,
-      patientId: booking.patientId,
-      patientName: booking.patientName,
-      careSummary: summary,
-      vitals: vitals?.trim() || undefined,
-      proceduresDone: proceduresDone?.trim() || undefined,
-      advice: advice?.trim() || undefined,
-      followUpNeeded: Boolean(followUpNeeded),
-      status: 'finalized',
-    });
-  }
-
-  booking.visitProgress = 'completed';
-  appendStatusHistory(booking, 'completed', 'nurse');
-  await booking.save();
-
-  if (booking.patientId) {
-    try {
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
-        title: 'Visit care summary ready',
-        body: 'Your nurse has shared a care summary for your home visit.',
-        type: 'visit_note_ready',
-        data: { bookingId },
-      });
-    } catch (err) {
-      console.error('[NurseVisitNote] notify failed:', err.message);
+    const booking = await ConsultationBooking.findOne({ id: bookingId });
+    if (booking?.patientId) {
+      try {
+        await createAndPushNotification({
+          userId: booking.patientId,
+          userType: 'patient',
+          title: 'Visit care summary updated',
+          body: 'Your nurse has updated the care summary for your home visit.',
+          type: 'visit_note_ready',
+          data: { bookingId },
+        });
+      } catch (err) {
+        console.error('[NurseVisitNote] notify failed:', err.message);
+      }
     }
   }
 
-  return note.toObject ? note.toObject() : note;
+  return note;
 }
 
 async function getNurseVisitNote(bookingId, auth) {
@@ -94,7 +62,8 @@ async function getNurseVisitNote(bookingId, auth) {
 
   const allowed =
     (auth?.type === 'patient' && auth.patientId === booking.patientId) ||
-    (auth?.type === 'nurse' && auth.nurseId === booking.nurseId);
+    (auth?.type === 'nurse' && auth.nurseId === booking.nurseId) ||
+    (auth?.type === 'doctor' && booking.patientId);
   if (!allowed) {
     const err = new Error('Not allowed to view this visit note');
     err.statusCode = 403;
@@ -113,8 +82,12 @@ async function getNurseVisitNote(bookingId, auth) {
 function nurseVisitNoteFieldsForBooking(booking, noteMap) {
   const note = noteMap?.get(booking.id);
   return {
-    hasVisitNote: Boolean(note && note.status === 'finalized'),
+    hasVisitNote: Boolean(
+      note && ['submitted', 'finalized', 'locked'].includes(note.status),
+    ),
     visitNoteId: note?.id ?? null,
+    nursingReportPdfUrl: note?.pdfUrl ?? null,
+    nursingReportLocked: note?.status === 'locked',
   };
 }
 
@@ -122,7 +95,7 @@ async function findVisitNotesByBookingIds(bookingIds) {
   if (!bookingIds.length) return new Map();
   const rows = await NurseVisitNote.find({
     bookingId: { $in: bookingIds },
-    status: 'finalized',
+    status: { $in: ['submitted', 'finalized', 'locked'] },
   }).lean();
   return new Map(rows.map((r) => [r.bookingId, r]));
 }

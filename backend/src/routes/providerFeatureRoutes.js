@@ -17,6 +17,13 @@ const {
   saveNurseVisitNote,
   getNurseVisitNote,
 } = require('../db/nurseVisitNoteRepositories');
+const {
+  startNurseVisit,
+  saveNurseVisitReportDraft,
+  submitNurseVisitReport,
+  requestVisitCompletionOtp,
+  verifyVisitCompletionOtp,
+} = require('../db/nurseVisitWorkflowRepositories');
 const { listPublicNurseFeedback } = require('../db/feedbackRepositories');
 const Nurse = require('../db/models/Nurse');
 const { sendSuccess, sendError } = require('../utils/response');
@@ -222,6 +229,84 @@ function attachProviderFeatureRoutes(router, providerType) {
       } catch (err) {
         const status = err.statusCode || 500;
         return sendError(res, err.message || 'Failed to load visit note', status);
+      }
+    });
+
+    router.post('/bookings/:bookingId/visit-start', authRequired, async (req, res) => {
+      try {
+        const provider = requireProvider(req, res);
+        if (!provider) return;
+        const data = await startNurseVisit({
+          bookingId: req.params.bookingId,
+          nurseId: provider.id,
+        });
+        return sendSuccess(res, { message: 'Visit started', data });
+      } catch (err) {
+        const status = err.statusCode || 500;
+        return sendError(res, err.message || 'Failed to start visit', status);
+      }
+    });
+
+    router.put('/bookings/:bookingId/visit-report', authRequired, async (req, res) => {
+      try {
+        const provider = requireProvider(req, res);
+        if (!provider) return;
+        const data = await saveNurseVisitReportDraft({
+          bookingId: req.params.bookingId,
+          nurseId: provider.id,
+          payload: req.body,
+        });
+        return sendSuccess(res, { message: 'Draft saved', data });
+      } catch (err) {
+        const status = err.statusCode || 500;
+        return sendError(res, err.message || 'Failed to save draft', status);
+      }
+    });
+
+    router.post('/bookings/:bookingId/visit-report/submit', authRequired, async (req, res) => {
+      try {
+        const provider = requireProvider(req, res);
+        if (!provider) return;
+        const data = await submitNurseVisitReport({
+          bookingId: req.params.bookingId,
+          nurseId: provider.id,
+          payload: req.body,
+        });
+        return sendSuccess(res, { message: 'Report submitted and PDF generated', data });
+      } catch (err) {
+        const status = err.statusCode || 500;
+        return sendError(res, err.message || 'Failed to submit report', status);
+      }
+    });
+
+    router.post('/bookings/:bookingId/visit-complete/request-otp', authRequired, async (req, res) => {
+      try {
+        const provider = requireProvider(req, res);
+        if (!provider) return;
+        const data = await requestVisitCompletionOtp({
+          bookingId: req.params.bookingId,
+          nurseId: provider.id,
+        });
+        return sendSuccess(res, { message: 'OTP sent to patient', data });
+      } catch (err) {
+        const status = err.statusCode || 500;
+        return sendError(res, err.message || 'Failed to generate OTP', status);
+      }
+    });
+
+    router.post('/bookings/:bookingId/visit-complete/verify-otp', authRequired, async (req, res) => {
+      try {
+        const provider = requireProvider(req, res);
+        if (!provider) return;
+        const data = await verifyVisitCompletionOtp({
+          bookingId: req.params.bookingId,
+          nurseId: provider.id,
+          otp: req.body?.otp,
+        });
+        return sendSuccess(res, { message: 'Visit completed successfully', data });
+      } catch (err) {
+        const status = err.statusCode || 500;
+        return sendError(res, err.message || 'OTP verification failed', status);
       }
     });
 

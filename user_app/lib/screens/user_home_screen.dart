@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
+import '../core/widgets/app_back_navigation.dart';
 import '../core/services/token_storage.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_decorations.dart';
@@ -69,7 +70,10 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
         ? dash.upcomingBookings.first
         : null;
 
-    return Scaffold(
+    return UserTabBackScope(
+      isHomeTab: true,
+      homeRoute: AppConstants.routeUserHome,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.home),
       body: RefreshIndicator(
@@ -207,6 +211,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

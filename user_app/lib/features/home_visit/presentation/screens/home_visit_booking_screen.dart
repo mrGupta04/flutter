@@ -19,6 +19,7 @@ import '../../../../shared/widgets/prescription_included_banner.dart';
 import '../../../../shared/widgets/previous_reports_picker.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
+import '../../../user_dashboard/provider/patient_dashboard_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../../../core/services/location_service.dart';
@@ -278,6 +279,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
       );
       if (booking != null) {
         ref.invalidate(bookableSlotsProvider(_slotsQuery));
+        await ref.read(patientDashboardProvider.notifier).loadBookings();
         ref
             .read(upcomingMeetingTimerProvider.notifier)
             .registerConsultationResult(booking);

@@ -59,6 +59,7 @@ class LabTestProfileThumbnail extends StatelessWidget {
     super.key,
     required this.illustrationPath,
     required this.color,
+    this.organAssetPath,
     this.fallbackLogo,
     this.width = 72,
     this.height = 56,
@@ -68,6 +69,7 @@ class LabTestProfileThumbnail extends StatelessWidget {
 
   final String illustrationPath;
   final Color color;
+  final String? organAssetPath;
   final LabOrganLogo? fallbackLogo;
   final double width;
   final double height;
@@ -98,12 +100,27 @@ class LabTestProfileThumbnail extends StatelessWidget {
             stops: const [0.0, 0.55, 1.0],
           ),
         ),
-        child: LabTestLogo(
-          illustrationPath: illustrationPath,
-          color: color,
-          fallbackLogo: fallbackLogo,
-          size: logoSize,
-        ),
+        child: organAssetPath != null
+            ? Padding(
+                padding: const EdgeInsets.all(4),
+                child: Image.asset(
+                  organAssetPath!,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (context, error, stackTrace) => LabTestLogo(
+                    illustrationPath: illustrationPath,
+                    color: color,
+                    fallbackLogo: fallbackLogo,
+                    size: logoSize,
+                  ),
+                ),
+              )
+            : LabTestLogo(
+                illustrationPath: illustrationPath,
+                color: color,
+                fallbackLogo: fallbackLogo,
+                size: logoSize,
+              ),
       ),
     );
   }
@@ -115,6 +132,7 @@ class LabTestProfileAvatar extends StatelessWidget {
     super.key,
     required this.illustrationPath,
     required this.color,
+    this.organAssetPath,
     this.fallbackLogo,
     this.size = 44,
     this.logoSize = 22,
@@ -122,6 +140,7 @@ class LabTestProfileAvatar extends StatelessWidget {
 
   final String illustrationPath;
   final Color color;
+  final String? organAssetPath;
   final LabOrganLogo? fallbackLogo;
   final double size;
   final double logoSize;
@@ -153,13 +172,29 @@ class LabTestProfileAvatar extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: LabTestLogo(
-          illustrationPath: illustrationPath,
-          color: color,
-          fallbackLogo: fallbackLogo,
-          size: logoSize,
-          watermarkOpacity: 0.08,
-        ),
+        child: organAssetPath != null
+            ? Padding(
+                padding: EdgeInsets.all(size * 0.08),
+                child: Image.asset(
+                  organAssetPath!,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (context, error, stackTrace) => LabTestLogo(
+                    illustrationPath: illustrationPath,
+                    color: color,
+                    fallbackLogo: fallbackLogo,
+                    size: logoSize,
+                    watermarkOpacity: 0.08,
+                  ),
+                ),
+              )
+            : LabTestLogo(
+                illustrationPath: illustrationPath,
+                color: color,
+                fallbackLogo: fallbackLogo,
+                size: logoSize,
+                watermarkOpacity: 0.08,
+              ),
       ),
     );
   }

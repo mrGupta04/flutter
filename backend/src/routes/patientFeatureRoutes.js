@@ -20,6 +20,10 @@ const {
 const ConsultationBooking = require('../db/models/ConsultationBooking');
 const { listChatMessages, sendChatMessage } = require('../db/chatRepositories');
 const { getNurseVisitNote } = require('../db/nurseVisitNoteRepositories');
+const {
+  listPatientNursingReports,
+  getNurseVisitReportForBooking,
+} = require('../db/nurseVisitWorkflowRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const { authRequired } = require('../middleware/auth');
 
@@ -243,6 +247,30 @@ router.get('/bookings/:bookingId/visit-note', authRequired, async (req, res) => 
   } catch (err) {
     const status = err.statusCode || 500;
     return sendError(res, err.message || 'Failed to load visit note', status);
+  }
+});
+
+router.get('/nursing-reports', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const data = await listPatientNursingReports(patientId);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load nursing reports', status);
+  }
+});
+
+router.get('/bookings/:bookingId/nursing-report', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const data = await getNurseVisitReportForBooking(req.params.bookingId, req.auth);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load nursing report', status);
   }
 });
 

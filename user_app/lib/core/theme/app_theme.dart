@@ -46,9 +46,10 @@ class AppTheme {
         backgroundColor: AppColors.headerGreen,
         foregroundColor: AppColors.white,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: AppTextStyles.titleLarge.copyWith(
+        titleTextStyle: AppTextStyles.titleMedium.copyWith(
           color: AppColors.white,
           fontWeight: FontWeight.w600,
+          fontFamily: GoogleFonts.inter().fontFamily,
         ),
         iconTheme: const IconThemeData(color: AppColors.white, size: 22),
         surfaceTintColor: Colors.transparent,

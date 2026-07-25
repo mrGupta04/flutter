@@ -104,6 +104,16 @@ class AppConstants {
       '/nurse/bookings/$bookingId/chat';
   static String endpointNurseVisitNote(String bookingId) =>
       '/nurse/bookings/$bookingId/visit-note';
+  static String endpointNurseVisitStart(String bookingId) =>
+      '/nurse/bookings/$bookingId/visit-start';
+  static String endpointNurseVisitReport(String bookingId) =>
+      '/nurse/bookings/$bookingId/visit-report';
+  static String endpointNurseVisitReportSubmit(String bookingId) =>
+      '/nurse/bookings/$bookingId/visit-report/submit';
+  static String endpointNurseVisitCompleteRequestOtp(String bookingId) =>
+      '/nurse/bookings/$bookingId/visit-complete/request-otp';
+  static String endpointNurseVisitCompleteVerifyOtp(String bookingId) =>
+      '/nurse/bookings/$bookingId/visit-complete/verify-otp';
   static String endpointDoctorBookingCancel(String bookingId) =>
       '/doctor/bookings/$bookingId/cancel';
   static String endpointNurseBookingCancel(String bookingId) =>
@@ -338,6 +348,8 @@ class AppConstants {
   static const String routeBloodBankDashboard = '/blood-bank-dashboard';
   static const String routeDoctorDashboard = '/doctor-dashboard';
   static const String routeNurseDashboard = '/nurse-dashboard';
+  static const String routeNurseVisitAssessment = '/nurse-visit-assessment';
+  static const String routeNurseVisitOtp = '/nurse-visit-otp';
   static const String routeProviderEarnings = '/provider-earnings';
   static const String routeProviderNotifications = '/provider-notifications';
   static const String routeProviderBookingChat = '/provider-booking-chat';

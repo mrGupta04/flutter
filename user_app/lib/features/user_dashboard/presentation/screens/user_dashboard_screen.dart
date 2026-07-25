@@ -18,6 +18,8 @@ import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../../video_consult/presentation/widgets/join_video_consult_button.dart';
 import '../../provider/patient_dashboard_provider.dart';
 import '../utils/prescription_view_utils.dart';
+import '../utils/nursing_report_view_utils.dart';
+import '../widgets/visit_completion_otp_banner.dart';
 import '../../../feedback/presentation/utils/feedback_prompt_helper.dart';
 import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
@@ -25,6 +27,7 @@ import '../../../../data/services/lab_scan_payment_flow.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../data/repositories/booking_lifecycle_repository.dart';
 import '../../../../data/services/dio_service.dart';
 import '../widgets/reschedule_booking_sheet.dart';
@@ -44,14 +47,29 @@ class UserDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadBookingsWhenReady());
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging && _tabController.index < 2 && mounted) {
+      ref.read(patientDashboardProvider.notifier).loadBookings();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.read(patientDashboardProvider.notifier).loadBookings();
+    }
   }
 
   Future<void> _loadBookingsWhenReady() async {
@@ -65,6 +83,8 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -86,7 +106,10 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
       }
     });
 
-    return Scaffold(
+    return UserTabBackScope(
+      isHomeTab: false,
+      homeRoute: AppConstants.routeUserHome,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar:
           const UserBottomNavBar(currentTab: UserNavTab.profile),
@@ -273,6 +296,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -603,6 +627,29 @@ class _ProfileTab extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
         ],
+        const SizedBox(height: 12),
+        _InfoCard(
+          title: 'Medical records',
+          children: [
+            Text(
+              'View nursing visit reports, vitals, and care summaries from completed home visits.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push(AppConstants.routeNursingReports),
+                icon: const Icon(Icons.health_and_safety_outlined),
+                label: const Text('Nursing reports'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         _InfoCard(
           title: 'Personal details',
           children: [
@@ -768,6 +815,18 @@ class _CategorizedBookingsTab extends StatelessWidget {
             Text(
               dash.error!,
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+            ),
+          ],
+          if (totalCount == 0 && dash.error == null && !dash.isLoadingBookings) ...[
+            const SizedBox(height: 8),
+            Text(
+              isUpcoming
+                  ? 'No upcoming bookings yet. After you book a nurse visit, consult, or lab test, it will appear here.'
+                  : 'No past bookings yet. Completed visits and consultations appear here.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
             ),
           ],
           const SizedBox(height: 16),
@@ -1191,6 +1250,33 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                       sessionLabel: booking.label,
                       videoStartsInMinutes: booking.videoStartsInMinutes,
                       onReturned: onVideoEnded,
+                    ),
+                  ],
+                  if (_showDetails &&
+                      booking.isNurseVisit &&
+                      isUpcoming &&
+                      booking.visitProgress != 'completed') ...[
+                    const SizedBox(height: 12),
+                    VisitCompletionOtpBanner(bookingId: booking.id),
+                  ],
+                  if (_showDetails &&
+                      booking.isNurseVisit &&
+                      (booking.nursingReportPdfUrl != null &&
+                          booking.nursingReportPdfUrl!.isNotEmpty)) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => openNursingReportPdf(
+                          context,
+                          bookingId: booking.id,
+                          pdfUrl: booking.nursingReportPdfUrl,
+                          repository:
+                              ref.read(patientDashboardRepositoryProvider),
+                        ),
+                        icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                        label: const Text('View nursing report'),
+                      ),
                     ),
                   ],
                   if (_showDetails && !isUpcoming && booking.hasPrescription) ...[

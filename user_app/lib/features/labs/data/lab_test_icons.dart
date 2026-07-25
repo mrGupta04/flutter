@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import 'lab_test_illustrations.dart';
+import 'lab_test_organ_assets.dart';
 import 'models/lab_test_model.dart';
 import '../presentation/widgets/lab_organ_logos.dart';
 import '../presentation/widgets/lab_test_logo.dart';
@@ -35,6 +36,8 @@ extension LabTestX on LabTest {
   LabOrganLogo get organLogo => labOrganLogoForTestId(id);
 
   String get illustrationPath => labTestIllustrationForTestId(id);
+
+  String get organAssetPath => labTestOrganAssetFor(this);
 
   IconData get sampleTypeIcon {
     final sample = sampleType.toLowerCase();
@@ -71,6 +74,7 @@ class LabTestThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     return LabTestProfileThumbnail(
       illustrationPath: test.illustrationPath,
+      organAssetPath: test.organAssetPath,
       color: test.iconColor,
       fallbackLogo: test.organLogo,
       width: width,
@@ -97,6 +101,7 @@ class LabTestIconAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LabTestProfileAvatar(
       illustrationPath: test.illustrationPath,
+      organAssetPath: test.organAssetPath,
       color: test.iconColor,
       fallbackLogo: test.organLogo,
       size: size,
@@ -134,6 +139,10 @@ class LabTestIdIconAvatar extends StatelessWidget {
     final color = AppColors.primary;
     return LabTestProfileAvatar(
       illustrationPath: labTestIllustrationForTestId(testId),
+      organAssetPath: labTestOrganAssetForTestId(
+        testId,
+        resolved?.category ?? LabTestCategory.other,
+      ),
       color: color,
       fallbackLogo: labOrganLogoForTestId(testId),
       size: size,

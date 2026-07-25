@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/services/device_push_service.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/app_back_navigation.dart';
 import 'features/upcoming_meeting/presentation/widgets/floating_meeting_timer_overlay.dart';
 import 'features/user_auth/provider/patient_auth_provider.dart';
 import 'router/user_router.dart';
@@ -55,15 +56,17 @@ class _UserAppState extends ConsumerState<UserApp> {
       themeMode: themeMode,
       routerConfig: router,
       builder: (context, child) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            if (child != null) child,
-            const Align(
-              alignment: Alignment.bottomCenter,
-              child: FloatingMeetingTimerOverlay(),
-            ),
-          ],
+        return AppBackButtonScope(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (child != null) child,
+              const Align(
+                alignment: Alignment.bottomCenter,
+                child: FloatingMeetingTimerOverlay(),
+              ),
+            ],
+          ),
         );
       },
     );

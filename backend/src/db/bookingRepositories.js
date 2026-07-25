@@ -1526,7 +1526,18 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
   const visitNoteMap = await findVisitNotesByBookingIds(bookings.map((b) => b.id));
 
   const results = [];
+  const bookingIdsToLink = [];
   for (const b of bookings) {
+    if (!b.patientId) {
+      const mobileMatch =
+        mobile.length === 10 && normalizeMobile(b.patientMobile) === mobile;
+      const emailMatch =
+        email &&
+        String(b.patientEmail || '').trim().toLowerCase() === email;
+      if (mobileMatch || emailMatch) {
+        bookingIdsToLink.push(b.id);
+      }
+    }
     const provider = await resolveBookingProviderForPatient(b);
     const slotLabel = formatSlotLabel(
       new Date(b.slotStart),
@@ -1644,6 +1655,17 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
     const bTime = new Date(b.slotStart || b.createdAt || 0).getTime();
     return bTime - aTime;
   });
+
+  if (bookingIdsToLink.length) {
+    try {
+      await ConsultationBooking.updateMany(
+        { id: { $in: bookingIdsToLink } },
+        { $set: { patientId: String(patientId) } },
+      );
+    } catch (err) {
+      console.error('Failed to link orphan bookings to patient', err);
+    }
+  }
 
   return results;
 }

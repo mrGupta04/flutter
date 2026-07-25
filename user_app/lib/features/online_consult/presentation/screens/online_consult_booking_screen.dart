@@ -442,7 +442,7 @@ class _OnlineConsultBookingScreenState
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Your details',
+                      'Patient details',
                       style: AppTextStyles.titleSmall.copyWith(
                         fontWeight: FontWeight.w800,
                       ),

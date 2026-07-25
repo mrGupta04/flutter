@@ -229,7 +229,7 @@ class _BookableSlotsSectionState extends State<BookableSlotsSection> {
               widget.onSlotSelected(isSelected ? null : slot);
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
         ],
       ],
     );
@@ -393,7 +393,7 @@ class _PeriodSection extends StatelessWidget {
           onTap: onToggleExpanded,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
                 Icon(
@@ -430,16 +430,16 @@ class _PeriodSection extends StatelessWidget {
           ),
         ),
         if (isExpanded) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: visibleSlots.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 2.35,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 5,
+              childAspectRatio: 2.4,
             ),
             itemBuilder: (context, index) {
               final slot = visibleSlots[index];

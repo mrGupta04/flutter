@@ -75,6 +75,9 @@ class AppConstants {
       '/patient/bookings/$bookingId/chat';
   static String endpointPatientVisitNote(String bookingId) =>
       '/patient/bookings/$bookingId/visit-note';
+  static const String endpointPatientNursingReports = '/patient/nursing-reports';
+  static String endpointPatientNursingReport(String bookingId) =>
+      '/patient/bookings/$bookingId/nursing-report';
 
   // Nurse API Endpoints (patient discovery)
   static const String endpointGetNurseProfile = '/nurse/profile';
@@ -194,6 +197,7 @@ class AppConstants {
   static const String routeBookingChat = '/booking-chat';
   static const String routeBookingTimeline = '/booking-timeline';
   static const String routeVisitNote = '/visit-note';
+  static const String routeNursingReports = '/user/nursing-reports';
 
   // Lab API Endpoints (patient discovery & booking)
   static const String endpointGetLabProfile = '/lab/profile';

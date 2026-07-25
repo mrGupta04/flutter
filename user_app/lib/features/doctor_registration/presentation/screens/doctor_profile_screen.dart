@@ -8,6 +8,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
+import '../../../../core/widgets/app_bar_title.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
@@ -35,12 +36,12 @@ class DoctorProfileScreen extends ConsumerWidget {
     return asyncDoctor.when(
       loading: () => Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(title: const Text('Doctor profile')),
+        appBar: AppBar(title: const AppBarTitle('Doctor profile')),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(title: const Text('Doctor profile')),
+        appBar: AppBar(title: const AppBarTitle('Doctor profile')),
         body: AppErrorWidget(
           message: error.toString().replaceFirst('Exception: ', ''),
           onRetry: () => ref.invalidate(doctorForBookingProvider(doctorId)),
@@ -49,7 +50,8 @@ class DoctorProfileScreen extends ConsumerWidget {
       data: (doctor) => Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Doctor profile'),
+          centerTitle: false,
+          title: const AppBarTitle('Doctor profile'),
           actions: [
             FavoriteToggleButton(
               providerType: 'doctor',
@@ -57,6 +59,8 @@ class DoctorProfileScreen extends ConsumerWidget {
             ),
             IconButton(
               tooltip: 'Share profile',
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               icon: const Icon(Icons.share_outlined),
               onPressed: () => _shareDoctorProfile(context, doctor),
             ),
@@ -160,6 +164,10 @@ class _DoctorProfileBody extends ConsumerWidget {
     return parts.join(', ');
   }
 
+  bool get _hasClinicDetails =>
+      _locationLine.isNotEmpty ||
+      (doctor.clinicName != null && doctor.clinicName!.trim().isNotEmpty);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final imageUrl = MediaUrlUtils.resolve(doctor.primaryPortraitUrl);
@@ -226,20 +234,6 @@ class _DoctorProfileBody extends ConsumerWidget {
             const SizedBox(height: 10),
             const Center(child: LiveAvailableBadge()),
           ],
-          if (doctor.clinicName != null &&
-              doctor.clinicName!.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                doctor.clinicName!.trim(),
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
           if (feedbackAsync != null) ...[
                   const SizedBox(height: 20),
                   feedbackAsync.when(
@@ -292,20 +286,30 @@ class _DoctorProfileBody extends ConsumerWidget {
                       ),
                   ],
           ),
-          if (_locationLine.isNotEmpty) ...[
+          if (_hasClinicDetails) ...[
             const SizedBox(height: 16),
             const MarketplaceSectionTitle(title: 'Clinic location'),
             ProviderInfoCard(
               children: [
-                ProviderInfoRow(
-                  icon: Icons.location_on_outlined,
-                  label: 'Address',
-                  value: _locationLine,
-                ),
+                if (doctor.clinicName != null &&
+                    doctor.clinicName!.trim().isNotEmpty)
+                  ProviderInfoRow(
+                    icon: Icons.local_hospital_outlined,
+                    label: 'Clinic',
+                    value: doctor.clinicName!.trim(),
+                  ),
+                if (_locationLine.isNotEmpty)
+                  ProviderInfoRow(
+                    icon: Icons.location_on_outlined,
+                    label: 'Address',
+                    value: _locationLine,
+                  ),
               ],
             ),
-            const SizedBox(height: 12),
-            DoctorHospitalMapCard(doctor: doctor),
+            if (_locationLine.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DoctorHospitalMapCard(doctor: doctor),
+            ],
           ],
           if (hospitalPhotos.isNotEmpty) ...[
             const SizedBox(height: 16),

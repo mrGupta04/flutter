@@ -32,6 +32,15 @@ class NotificationsScreen extends ConsumerWidget {
         return;
       case 'prescription_ready':
       case 'visit_note_ready':
+      case 'nursing_report_ready':
+        if (bookingId.isNotEmpty) {
+          context.push(AppConstants.routeNursingReports);
+        } else {
+          context.push(AppConstants.routeUserDashboard);
+        }
+        return;
+      case 'visit_completion_otp':
+      case 'visit_started':
         if (bookingId.isNotEmpty) {
           context.push(
             '${AppConstants.routeBookingTimeline}?bookingId=$bookingId',
@@ -39,6 +48,9 @@ class NotificationsScreen extends ConsumerWidget {
         } else {
           context.push(AppConstants.routeUserDashboard);
         }
+        return;
+      case 'visit_completed':
+        context.push(AppConstants.routeUserDashboard);
         return;
       default:
         if (bookingId.isNotEmpty) {
@@ -149,7 +161,14 @@ class NotificationsScreen extends ConsumerWidget {
         return Icons.directions_walk;
       case 'prescription_ready':
       case 'visit_note_ready':
+      case 'nursing_report_ready':
         return Icons.description_outlined;
+      case 'visit_completion_otp':
+        return Icons.pin_outlined;
+      case 'visit_started':
+        return Icons.medical_services_outlined;
+      case 'visit_completed':
+        return Icons.check_circle_outline;
       case 'chat_message':
         return Icons.chat_bubble_outline;
       default:

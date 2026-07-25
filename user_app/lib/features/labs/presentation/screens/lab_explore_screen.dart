@@ -7,6 +7,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../provider/lab_search_provider.dart';
 import '../widgets/lab_explore_card.dart';
@@ -207,13 +208,22 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(labExploreProvider);
 
-    return Scaffold(
+    return UserTabBackScope(
+      isHomeTab: false,
+      homeRoute: AppConstants.routeUserHome,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Lab Tests'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeUserHome);
+            }
+          },
         ),
         actions: const [DiagnosticCartIconButton()],
       ),
@@ -319,6 +329,7 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }

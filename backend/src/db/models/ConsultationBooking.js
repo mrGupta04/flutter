@@ -92,9 +92,16 @@ const consultationBookingSchema = new mongoose.Schema(
     /** Home-visit progress after confirmation. */
     visitProgress: {
       type: String,
-      enum: ['en_route', 'arrived', 'completed'],
+      enum: ['en_route', 'arrived', 'visit_started', 'completed'],
       default: undefined,
     },
+    visitStartedAt: Date,
+    visitCompletedAt: Date,
+    /** Hashed 6-digit OTP for nurse visit completion verification. */
+    completionOtpHash: String,
+    completionOtpExpiresAt: Date,
+    completionOtpVerifiedAt: Date,
+    completionOtpAttempts: { type: Number, default: 0 },
     statusHistory: [
       {
         status: { type: String, required: true },

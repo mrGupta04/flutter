@@ -167,6 +167,8 @@ class PatientBookingModel {
   final bool prescriptionPending;
   final bool prescriptionProcessing;
   final bool hasVisitNote;
+  final String? nursingReportPdfUrl;
+  final bool nursingReportLocked;
   final List<PreviousReportModel> previousReports;
   final List<BookingTimelineStep> timeline;
   final double? pickupLatitude;
@@ -212,6 +214,8 @@ class PatientBookingModel {
     this.prescriptionPending = false,
     this.prescriptionProcessing = false,
     this.hasVisitNote = false,
+    this.nursingReportPdfUrl,
+    this.nursingReportLocked = false,
     this.previousReports = const [],
     this.timeline = const [],
     this.pickupLatitude,
@@ -324,6 +328,9 @@ class PatientBookingModel {
       return isNurseVisit ? 'Nurse on the way' : 'Doctor on the way';
     }
     if (visitProgress == 'arrived') return 'Provider arrived';
+    if (visitProgress == 'visit_started') {
+      return isNurseVisit ? 'Nurse visit in progress' : 'Visit in progress';
+    }
     if (visitProgress == 'completed') return 'Visit completed';
     if (status == 'confirmed') return 'Confirmed';
     if (status == 'cancelled') return 'Cancelled';
@@ -332,8 +339,24 @@ class PatientBookingModel {
 
   bool get isAppointmentVerified => appointmentVerifiedAt != null;
 
-  /// True while the appointment window has not ended yet.
-  bool get isActiveOrUpcoming => !DateTime.now().isAfter(slotEnd);
+  /// True while the appointment is upcoming or an active home/nurse visit is in progress.
+  bool get isActiveOrUpcoming {
+    if (isAwaitingDoctorApproval || isApprovedPendingPayment) {
+      return true;
+    }
+    if ((isNurseVisit || isHomeVisit) &&
+        status == 'confirmed' &&
+        visitProgress != 'completed') {
+      return true;
+    }
+    if ((isNurseVisit || isHomeVisit) &&
+        visitProgress != null &&
+        visitProgress != 'completed' &&
+        ['en_route', 'arrived', 'visit_started'].contains(visitProgress)) {
+      return true;
+    }
+    return !DateTime.now().isAfter(slotEnd);
+  }
 
   factory PatientBookingModel.fromJson(Map<String, dynamic> json) {
     final id = json['id']?.toString();
@@ -392,6 +415,8 @@ class PatientBookingModel {
       prescriptionPending: json['prescriptionPending'] as bool? ?? false,
       prescriptionProcessing: json['prescriptionProcessing'] as bool? ?? false,
       hasVisitNote: json['hasVisitNote'] as bool? ?? false,
+      nursingReportPdfUrl: json['nursingReportPdfUrl'] as String?,
+      nursingReportLocked: json['nursingReportLocked'] as bool? ?? false,
       previousReports: (json['previousReports'] as List<dynamic>? ?? [])
           .map((e) => PreviousReportModel.fromJson(e as Map<String, dynamic>))
           .toList(),

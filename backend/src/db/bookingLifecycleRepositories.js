@@ -301,7 +301,7 @@ async function rescheduleBooking(bookingId, auth, { slotStart, slotEnd, dayOfWee
 }
 
 async function updateVisitProgress(bookingId, auth, progress) {
-  const allowed = ['en_route', 'arrived', 'completed'];
+  const allowed = ['en_route', 'arrived', 'visit_started', 'completed'];
   if (!allowed.includes(progress)) {
     const err = new Error('Invalid visit progress');
     err.statusCode = 400;
@@ -335,6 +335,21 @@ async function updateVisitProgress(bookingId, auth, progress) {
   booking.visitProgress = progress;
   appendStatusHistory(booking, progress, isDoctor ? 'doctor' : 'nurse');
   await booking.save();
+
+  if (booking.patientId && progress === 'arrived') {
+    try {
+      await createAndPushNotification({
+        userId: booking.patientId,
+        userType: 'patient',
+        title: isNurse ? 'Nurse has arrived' : 'Doctor has arrived',
+        body: 'Your home visit provider has arrived at your location.',
+        type: 'arrived',
+        data: { bookingId },
+      });
+    } catch (err) {
+      console.error('[VisitProgress] arrived notify failed:', err.message);
+    }
+  }
 
   if (booking.patientId && progress === 'en_route') {
     try {

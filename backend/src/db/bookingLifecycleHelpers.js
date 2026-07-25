@@ -81,9 +81,47 @@ function buildVisitTimeline(booking) {
 
     const arrived =
       booking.visitProgress === 'arrived' ||
+      booking.visitProgress === 'visit_started' ||
       booking.visitProgress === 'completed' ||
       byStatus.has('arrived');
     push('arrived', 'Arrived', arrived, byStatus.get('arrived'));
+
+    const visitStarted =
+      booking.visitProgress === 'visit_started' ||
+      booking.visitProgress === 'completed' ||
+      byStatus.has('visit_started') ||
+      Boolean(booking.visitStartedAt);
+    push(
+      'visit_started',
+      'Visit started',
+      visitStarted,
+      booking.visitStartedAt || byStatus.get('visit_started'),
+    );
+
+    const reportSubmitted = byStatus.has('report_submitted');
+    push(
+      'report_submitted',
+      'Report submitted',
+      reportSubmitted,
+      byStatus.get('report_submitted'),
+    );
+
+    const otpGenerated = byStatus.has('otp_generated');
+    push(
+      'otp_generated',
+      'OTP generated',
+      otpGenerated,
+      byStatus.get('otp_generated'),
+    );
+
+    const otpVerified =
+      Boolean(booking.completionOtpVerifiedAt) || byStatus.has('otp_verified');
+    push(
+      'otp_verified',
+      'OTP verified',
+      otpVerified,
+      booking.completionOtpVerifiedAt || byStatus.get('otp_verified'),
+    );
   }
 
   if (booking.consultationType === 'visit_site') {

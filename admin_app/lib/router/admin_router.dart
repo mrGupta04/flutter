@@ -11,6 +11,7 @@ import '../features/admin/presentation/screens/admin_blood_bank_list_screen.dart
 import '../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../features/admin/presentation/screens/admin_ops_screens.dart';
 import '../data/models/doctor_model.dart';
+import '../data/models/doctor_booking_model.dart';
 import '../features/admin/presentation/screens/admin_doctor_details_screen.dart';
 import '../features/admin/presentation/screens/admin_doctor_list_screen.dart';
 import '../features/admin/presentation/screens/admin_login_screen.dart';
@@ -36,6 +37,8 @@ import '../features/doctor_registration/presentation/screens/application_submitt
 import '../features/doctor_registration/presentation/screens/registration_form_screen.dart';
 import '../features/nurse_registration/presentation/screens/nurse_application_submitted_screen.dart';
 import '../features/nurse_dashboard/presentation/screens/nurse_dashboard_screen.dart';
+import '../features/nurse_dashboard/presentation/screens/nurse_visit_assessment_screen.dart';
+import '../features/nurse_dashboard/presentation/screens/nurse_visit_otp_screen.dart';
 import '../features/earnings/presentation/screens/provider_earnings_screen.dart';
 import '../features/notifications/presentation/screens/provider_notifications_screen.dart';
 import '../features/booking_chat/presentation/screens/provider_booking_chat_screen.dart';
@@ -277,6 +280,44 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           state,
           const NurseDashboardScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeNurseVisitAssessment,
+        name: 'nurseVisitAssessment',
+        pageBuilder: (context, state) {
+          final booking = state.extra;
+          if (booking is! DoctorBookingModel) {
+            return fadePage(
+              state,
+              const Scaffold(
+                body: Center(child: Text('Booking not found')),
+              ),
+            );
+          }
+          return slidePage(
+            state,
+            NurseVisitAssessmentScreen(booking: booking),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeNurseVisitOtp,
+        name: 'nurseVisitOtp',
+        pageBuilder: (context, state) {
+          final booking = state.extra;
+          if (booking is! DoctorBookingModel) {
+            return fadePage(
+              state,
+              const Scaffold(
+                body: Center(child: Text('Booking not found')),
+              ),
+            );
+          }
+          return slidePage(
+            state,
+            NurseVisitOtpScreen(booking: booking),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeProviderEarnings,

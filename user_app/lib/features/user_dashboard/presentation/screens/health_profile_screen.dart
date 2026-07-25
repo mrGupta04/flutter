@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -576,6 +578,12 @@ class _MedicalTabState extends State<_MedicalTab> {
           style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => context.push(AppConstants.routeNursingReports),
+          icon: const Icon(Icons.health_and_safety_outlined),
+          label: const Text('Nursing reports'),
+        ),
+        const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           value: _bloodGroup,
           decoration: const InputDecoration(labelText: 'Blood group'),
