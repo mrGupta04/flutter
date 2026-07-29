@@ -9,6 +9,7 @@ import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/scan_center_model.dart';
 import '../../data/models/scan_procedure_model.dart';
+import '../../data/scan_procedure_icons.dart';
 import '../../provider/scan_search_provider.dart';
 import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
 import '../../provider/scan_cart_provider.dart';
@@ -175,6 +176,7 @@ class _DetailBody extends ConsumerWidget {
                   final isHighlighted = highlighted?.scanId == scan.scanId;
                   final cart = ref.watch(scanCartProvider);
                   final inCart = cart.contains(scan.scanId);
+                  final procedure = scanProcedureFromOffered(scan);
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(14),
@@ -189,6 +191,13 @@ class _DetailBody extends ConsumerWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        ScanProcedureThumb(
+                          procedure: procedure,
+                          width: 64,
+                          height: 52,
+                          networkOverride: scanOfferedNetworkImage(scan.images),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

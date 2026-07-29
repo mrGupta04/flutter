@@ -13,7 +13,7 @@ const {
   submitScanCenterForReview,
 } = require('../db/scanCenterRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
-const { signToken, authOptional } = require('../middleware/auth');
+const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { upload, filePublicUrl } = require('../middleware/multerUpload');
 const { loginProvider } = require('../utils/providerAuth');
 const { toScanCenter } = require('../db/scanCenterMappers');
@@ -25,6 +25,7 @@ const {
   createPaymentOrderForScanBooking,
   confirmScanBookingAfterPayment,
 } = require('../db/scanBookingRepositories');
+const { listChatMessages, sendChatMessage } = require('../db/chatRepositories');
 
 const router = express.Router();
 
@@ -439,6 +440,38 @@ router.post('/payments/verify', authOptional, async (req, res) => {
       err.message || 'Payment verification failed',
       err.statusCode || 500,
     );
+  }
+});
+
+router.get('/bookings/:bookingId/chat', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'scan_center' || !req.auth?.scanCenterId) {
+      return sendError(res, 'Scan center authentication required', 401);
+    }
+    const data = await listChatMessages(req.params.bookingId, req.auth, {
+      after: req.query.after,
+    });
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load chat', status);
+  }
+});
+
+router.post('/bookings/:bookingId/chat', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'scan_center' || !req.auth?.scanCenterId) {
+      return sendError(res, 'Scan center authentication required', 401);
+    }
+    const data = await sendChatMessage(
+      req.params.bookingId,
+      req.auth,
+      req.body?.body || req.body?.message,
+    );
+    return sendSuccess(res, { message: 'Message sent', data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to send message', status);
   }
 });
 

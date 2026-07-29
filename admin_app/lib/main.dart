@@ -66,8 +66,10 @@ class _AdminAppState extends ConsumerState<AdminApp> {
       themeMode: ThemeMode.light,
       routerConfig: router,
       builder: (context, child) {
-        if (child == null) return const SizedBox.shrink();
-        return AppBackButtonScope(child: child);
+        return AppBackButtonScope(
+          router: router,
+          child: child ?? const SizedBox.shrink(),
+        );
       },
     );
   }

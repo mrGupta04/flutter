@@ -18,6 +18,7 @@ class AdminLoginScreen extends ConsumerStatefulWidget {
 class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _asApprover = false;
 
   @override
   void dispose() {
@@ -31,26 +32,29 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter email and password')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter email and password')));
       return;
     }
 
-    final ok = await ref.read(adminAuthProvider.notifier).login(
-          email: email,
-          password: password,
-        );
+    final ok = await ref
+        .read(adminAuthProvider.notifier)
+        .login(email: email, password: password, asApprover: _asApprover);
 
     if (!mounted) return;
 
     if (ok) {
-      context.go(AppConstants.routeAdminDashboard);
+      context.go(
+        _asApprover
+            ? AppConstants.routeApprovalManagement
+            : AppConstants.routeAdminDashboard,
+      );
     } else {
       final err = ref.read(adminAuthProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err ?? 'Login failed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(err ?? 'Login failed')));
     }
   }
 
@@ -77,19 +81,40 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                 children: [
                   const SizedBox(height: 24),
                   Text(
-                    'Admin login',
+                    _asApprover ? 'Approver login' : 'Admin login',
                     style: AppTextStyles.headlineSmall.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Use ADMIN_EMAIL and ADMIN_PASSWORD from the API server .env file.',
+                    _asApprover
+                        ? 'Sign in with the credentials created by your administrator.'
+                        : 'Use your administrator credentials.',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 28),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        icon: Icon(Icons.admin_panel_settings_outlined),
+                        label: Text('Admin'),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        icon: Icon(Icons.fact_check_outlined),
+                        label: Text('Approver'),
+                      ),
+                    ],
+                    selected: {_asApprover},
+                    onSelectionChanged: auth.isLoading
+                        ? null
+                        : (value) => setState(() => _asApprover = value.first),
+                  ),
+                  const SizedBox(height: 20),
                   CustomTextField(
                     controller: _emailController,
                     label: 'Email',

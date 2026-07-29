@@ -11,6 +11,10 @@ class TokenStorage {
   static const String _adminEmailKey = 'admin_email';
   static const String _adminRoleKey = 'admin_role';
   static const String _adminNameKey = 'admin_name';
+  static const String _adminCanReassignKey = 'admin_can_reassign';
+  static const String _adminPermissionsKey = 'admin_permissions';
+  static const String _adminRefreshTokenKey = 'admin_refresh_token';
+  static const String _adminSessionIdKey = 'admin_session_id';
   static const String _doctorIdKey = 'doctor_id';
   static const String _nurseIdKey = 'nurse_id';
   static const String _ambulanceIdKey = 'ambulance_id';
@@ -68,6 +72,45 @@ class TokenStorage {
   Future<void> saveAdminName(String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_adminNameKey, name);
+  }
+
+  Future<bool> getAdminCanReassign() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_adminCanReassignKey) ?? false;
+  }
+
+  Future<void> saveAdminCanReassign(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_adminCanReassignKey, value);
+  }
+
+  Future<List<String>> getAdminPermissions() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_adminPermissionsKey) ?? const [];
+  }
+
+  Future<void> saveAdminPermissions(List<String> permissions) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_adminPermissionsKey, permissions);
+  }
+
+  Future<String?> getAdminRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_adminRefreshTokenKey);
+  }
+
+  Future<String?> getAdminSessionId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_adminSessionIdKey);
+  }
+
+  Future<void> saveAdminRefreshSession({
+    required String refreshToken,
+    required String sessionId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_adminRefreshTokenKey, refreshToken);
+    await prefs.setString(_adminSessionIdKey, sessionId);
   }
 
   Future<String?> getDoctorId() async {
@@ -214,6 +257,10 @@ class TokenStorage {
     await prefs.remove(_adminEmailKey);
     await prefs.remove(_adminRoleKey);
     await prefs.remove(_adminNameKey);
+    await prefs.remove(_adminCanReassignKey);
+    await prefs.remove(_adminPermissionsKey);
+    await prefs.remove(_adminRefreshTokenKey);
+    await prefs.remove(_adminSessionIdKey);
   }
 
   Future<void> clearSession() async {

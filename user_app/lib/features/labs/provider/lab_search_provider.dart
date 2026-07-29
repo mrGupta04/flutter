@@ -240,7 +240,13 @@ class LabExploreNotifier extends StateNotifier<LabExploreState> {
   }
 
   void setLocation(double? lat, double? lng) {
-    state = state.copyWith(latitude: lat, longitude: lng);
+    state = state.copyWith(
+      latitude: lat,
+      longitude: lng,
+      sort: (lat != null && lng != null)
+          ? LabExploreSort.nearest
+          : state.sort,
+    );
     load(refresh: true);
   }
 }

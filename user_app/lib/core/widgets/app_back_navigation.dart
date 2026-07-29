@@ -5,18 +5,38 @@ import 'package:go_router/go_router.dart';
 /// Intercepts the Android system back button so nested [Navigator.push] routes
 /// and [GoRouter] stacks pop correctly instead of closing the app.
 class AppBackButtonScope extends StatelessWidget {
-  const AppBackButtonScope({super.key, required this.child});
+  const AppBackButtonScope({
+    super.key,
+    required this.child,
+    this.router,
+  });
 
   final Widget child;
 
-  static bool canNavigateBack(BuildContext context) {
-    if (GoRouter.of(context).canPop()) return true;
+  /// Optional when this scope sits above [GoRouter] (e.g. [MaterialApp.builder]).
+  final GoRouter? router;
+
+  static bool canNavigateBack(
+    BuildContext context, {
+    GoRouter? router,
+  }) {
+    if (router != null && router.canPop()) return true;
+    final goRouter = GoRouter.maybeOf(context);
+    if (goRouter != null && goRouter.canPop()) return true;
     return Navigator.of(context).canPop();
   }
 
-  static void navigateBack(BuildContext context) {
-    if (GoRouter.of(context).canPop()) {
-      context.pop();
+  static void navigateBack(
+    BuildContext context, {
+    GoRouter? router,
+  }) {
+    if (router != null && router.canPop()) {
+      router.pop();
+      return;
+    }
+    final goRouter = GoRouter.maybeOf(context);
+    if (goRouter != null && goRouter.canPop()) {
+      goRouter.pop();
       return;
     }
     final navigator = Navigator.of(context);
@@ -27,13 +47,15 @@ class AppBackButtonScope extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BackButtonListener(
-      onBackButtonPressed: () async {
-        if (canNavigateBack(context)) {
-          navigateBack(context);
-          return true;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (canNavigateBack(context, router: router)) {
+          navigateBack(context, router: router);
+          return;
         }
-        return false;
+        SystemNavigator.pop();
       },
       child: child,
     );

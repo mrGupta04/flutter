@@ -1,16 +1,19 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
+import '../../../../core/utils/media_url_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/scan_center_model.dart';
 import '../../data/models/scan_procedure_model.dart';
+import '../../data/scan_procedure_icons.dart';
 import '../../provider/scan_search_provider.dart';
-import '../widgets/scan_booking_sheet.dart';
 
 class ScanSearchScreen extends ConsumerStatefulWidget {
   const ScanSearchScreen({
@@ -40,16 +43,22 @@ class _ScanSearchScreenState extends ConsumerState<ScanSearchScreen> {
     super.dispose();
   }
 
-  ScanSearchParams get _params => ScanSearchParams(
-        query: _searchController.text.trim().isEmpty
-            ? null
-            : _searchController.text.trim(),
-        scanId: widget.scanId,
-        categoryId: widget.categoryId,
-        homeVisit: _homeVisitOnly ? true : null,
-        hasOffer: _discountOnly ? true : null,
-        openNow: _openNowOnly ? true : null,
-      );
+  ScanSearchParams get _params {
+    final location = ref.watch(userLocationProvider);
+    return ScanSearchParams(
+      query: _searchController.text.trim().isEmpty
+          ? null
+          : _searchController.text.trim(),
+      scanId: widget.scanId,
+      categoryId: widget.categoryId,
+      city: location.city,
+      homeVisit: _homeVisitOnly ? true : null,
+      hasOffer: _discountOnly ? true : null,
+      openNow: _openNowOnly ? true : null,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +201,21 @@ class _VerifiedScanCenterCard extends StatelessWidget {
     final originalPrice = offered?.priceInr;
     final distance = formatNearbyDistanceLabel(center.distanceKm);
     final offer = center.activeOffer;
+    final imageUrl = MediaUrlUtils.resolve(
+      (center.centerImages != null && center.centerImages!.isNotEmpty)
+          ? center.centerImages!.first
+          : center.profilePicture,
+    );
+    final procedure = ScanProcedure(
+      id: offered?.scanId ?? scanId,
+      name: offered?.scanName.isNotEmpty == true ? offered!.scanName : scanName,
+      description: offered?.description ?? '',
+      priceInr: offered?.priceInr ?? price ?? 0,
+      discountedPriceInr: offered?.discountedPriceInr,
+      reportDeliveryTime: offered?.reportDeliveryTime ?? '24–48 hours',
+      category: scanCategoryFromId(offered?.categoryId),
+      images: offered?.images ?? const [],
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -207,14 +231,27 @@ class _VerifiedScanCenterCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: AppColors.secondaryLight,
-                backgroundImage: center.profilePicture != null
-                    ? NetworkImage(center.profilePicture!)
-                    : null,
-                child: center.profilePicture == null
-                    ? const Icon(Icons.radar_rounded, color: AppColors.secondary)
-                    : null,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => ScanProcedureThumb(
+                            procedure: procedure,
+                            width: 56,
+                            height: 56,
+                          ),
+                        )
+                      : ScanProcedureThumb(
+                          procedure: procedure,
+                          width: 56,
+                          height: 56,
+                        ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -308,52 +345,13 @@ class _VerifiedScanCenterCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.push(
-                    '${AppConstants.routeScanCenterDetail}/${center.id}?scanId=$scanId',
-                  ),
-                  child: const Text('View details'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: CustomButton(
-                  label: 'Book now',
-                  icon: Icons.calendar_month_rounded,
-                  height: 44,
-                  onPressed: offered == null
-                      ? () {}
-                      : () {
-                          showScanBookingSheet(
-                            context,
-                            center: center,
-                            procedure: ScanProcedure(
-                              id: offered!.scanId,
-                              name: offered!.scanName.isNotEmpty
-                                  ? offered!.scanName
-                                  : scanName,
-                              description: offered!.description ?? '',
-                              priceInr: offered!.priceInr,
-                              discountedPriceInr: offered!.discountedPriceInr,
-                              reportDeliveryTime:
-                                  offered!.reportDeliveryTime ?? '24 hours',
-                              category: ScanCategory.other,
-                              preparationInstructions:
-                                  offered!.preparationInstructions,
-                              fastingRequired: offered!.fastingRequired,
-                              homeVisitAvailable: offered!.homeVisitAvailable,
-                              onsiteOnly: offered!.onsiteOnly,
-                              prescriptionRequired:
-                                  offered!.prescriptionRequired,
-                            ),
-                          );
-                        },
-                ),
-              ),
-            ],
+          CustomButton(
+            label: 'View details',
+            icon: Icons.arrow_forward_rounded,
+            height: 44,
+            onPressed: () => context.push(
+              '${AppConstants.routeScanCenterDetail}/${center.id}?scanId=$scanId',
+            ),
           ),
         ],
       ),

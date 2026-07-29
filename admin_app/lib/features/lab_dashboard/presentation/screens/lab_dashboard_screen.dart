@@ -250,6 +250,12 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
                           separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (_, i) {
                             final b = bookings[i];
+                            final canChat = const {
+                              'confirmed',
+                              'sample_collected',
+                              'processing',
+                              'report_ready',
+                            }.contains(b.status);
                             return ListTile(
                               tileColor: AppColors.white,
                               shape: RoundedRectangleBorder(
@@ -261,51 +267,74 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
                                 '${b.label}\n${b.status} · ${b.paymentStatus} · ₹${b.amount}',
                               ),
                               isThreeLine: true,
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (status) async {
-                                  final ok = await ref
-                                      .read(labDashboardProvider.notifier)
-                                      .updateBookingStatus(
-                                        bookingId: b.id,
-                                        status: status,
-                                      );
-                                  if (ctx.mounted) {
-                                    Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          ok
-                                              ? 'Updated to $status'
-                                              : 'Update failed',
-                                        ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (canChat)
+                                    IconButton(
+                                      tooltip: 'Chat with patient',
+                                      icon: const Icon(
+                                        Icons.chat_bubble_outline_rounded,
+                                        color: AppColors.primary,
                                       ),
-                                    );
-                                  }
-                                },
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                    value: 'confirmed',
-                                    child: Text('Confirm'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'sample_collected',
-                                    child: Text('Sample collected'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'processing',
-                                    child: Text('Processing'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'report_ready',
-                                    child: Text('Report ready'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'completed',
-                                    child: Text('Complete'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'rejected',
-                                    child: Text('Reject'),
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        context.push(
+                                          '${AppConstants.routeProviderBookingChat}'
+                                          '?role=lab'
+                                          '&bookingId=${Uri.encodeComponent(b.id)}'
+                                          '&title=${Uri.encodeComponent(b.patientName)}',
+                                        );
+                                      },
+                                    ),
+                                  PopupMenuButton<String>(
+                                    onSelected: (status) async {
+                                      final ok = await ref
+                                          .read(labDashboardProvider.notifier)
+                                          .updateBookingStatus(
+                                            bookingId: b.id,
+                                            status: status,
+                                          );
+                                      if (ctx.mounted) {
+                                        Navigator.pop(ctx);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              ok
+                                                  ? 'Updated to $status'
+                                                  : 'Update failed',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(
+                                        value: 'confirmed',
+                                        child: Text('Confirm'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'sample_collected',
+                                        child: Text('Sample collected'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'processing',
+                                        child: Text('Processing'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'report_ready',
+                                        child: Text('Report ready'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'completed',
+                                        child: Text('Complete'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'rejected',
+                                        child: Text('Reject'),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

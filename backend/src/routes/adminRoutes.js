@@ -3,22 +3,16 @@ const {
   findDoctorById,
   findDocumentsByDoctorId,
   listDoctors,
-  approveDoctor,
-  rejectDoctor,
 } = require('../db/repositories');
 const {
   findNurseById,
   findDocumentsByNurseId,
   listNurses,
-  approveNurse,
-  rejectNurse,
 } = require('../db/nurseRepositories');
 const {
   findAmbulanceById,
   findDocumentsByAmbulanceId,
   listAmbulances,
-  approveAmbulance,
-  rejectAmbulance,
 } = require('../db/ambulanceRepositories');
 const {
   findDocumentById,
@@ -31,8 +25,6 @@ const {
 const {
   findBloodBankById,
   listBloodBanks,
-  approveBloodBank,
-  rejectBloodBank,
   suspendBloodBank,
   requestBloodBankDocuments,
   verifyBloodBankDocument,
@@ -45,8 +37,6 @@ const { listInventoryByBloodBank } = require('../db/bloodInventoryRepositories')
 const {
   findLabById,
   listLabs,
-  approveLab,
-  rejectLab,
   suspendLab,
   requestLabDocuments,
   verifyLabDocument,
@@ -55,8 +45,6 @@ const {
 const {
   findScanCenterById,
   listScanCenters,
-  approveScanCenter,
-  rejectScanCenter,
   suspendScanCenter,
   requestScanCenterDocuments,
   verifyScanCenterDocument,
@@ -69,6 +57,9 @@ const {
   listAdminBookings,
 } = require('../db/adminMarketplaceRepositories');
 const { listPatientsForAdmin, findPatientById } = require('../db/patientRepositories');
+const {
+  actionApprovalRequestByProvider,
+} = require('../db/approvalWorkflowRepositories');
 
 const router = express.Router();
 
@@ -367,7 +358,18 @@ router.post('/doctors/:id/approve', adminRequired, async (req, res) => {
       return sendError(res, 'Doctor not found', 404);
     }
 
-    const doctor = await approveDoctor(req.params.id, approvalNotes);
+    await actionApprovalRequestByProvider(
+      'doctor',
+      req.params.id,
+      {
+        action: 'approve',
+        remarks:
+          approvalNotes?.trim() ||
+          'Approved by Super Admin through the legacy provider review screen.',
+      },
+      { req },
+    );
+    const doctor = await findDoctorById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Doctor approved successfully',
@@ -401,7 +403,13 @@ router.post('/doctors/:id/reject', adminRequired, async (req, res) => {
       );
     }
 
-    const doctor = await rejectDoctor(req.params.id, rejectionReason.trim());
+    await actionApprovalRequestByProvider(
+      'doctor',
+      req.params.id,
+      { action: 'reject', remarks: rejectionReason.trim() },
+      { req },
+    );
+    const doctor = await findDoctorById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Doctor rejected successfully',
@@ -409,7 +417,11 @@ router.post('/doctors/:id/reject', adminRequired, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return sendError(res, err.message || 'Failed to reject doctor', 500);
+    return sendError(
+      res,
+      err.message || 'Failed to reject doctor',
+      err.statusCode || 500,
+    );
   }
 });
 
@@ -525,7 +537,18 @@ router.post('/nurses/:id/approve', adminRequired, async (req, res) => {
       return sendError(res, 'Nurse not found', 404);
     }
 
-    const nurse = await approveNurse(req.params.id, approvalNotes);
+    await actionApprovalRequestByProvider(
+      'nurse',
+      req.params.id,
+      {
+        action: 'approve',
+        remarks:
+          approvalNotes?.trim() ||
+          'Approved by Super Admin through the legacy provider review screen.',
+      },
+      { req },
+    );
+    const nurse = await findNurseById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Nurse approved successfully',
@@ -559,7 +582,13 @@ router.post('/nurses/:id/reject', adminRequired, async (req, res) => {
       );
     }
 
-    const nurse = await rejectNurse(req.params.id, rejectionReason.trim());
+    await actionApprovalRequestByProvider(
+      'nurse',
+      req.params.id,
+      { action: 'reject', remarks: rejectionReason.trim() },
+      { req },
+    );
+    const nurse = await findNurseById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Nurse rejected successfully',
@@ -567,7 +596,11 @@ router.post('/nurses/:id/reject', adminRequired, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return sendError(res, err.message || 'Failed to reject nurse', 500);
+    return sendError(
+      res,
+      err.message || 'Failed to reject nurse',
+      err.statusCode || 500,
+    );
   }
 });
 
@@ -680,7 +713,18 @@ router.post('/ambulances/:id/approve', adminRequired, async (req, res) => {
       return sendError(res, 'Ambulance service not found', 404);
     }
 
-    const ambulance = await approveAmbulance(req.params.id, approvalNotes);
+    await actionApprovalRequestByProvider(
+      'ambulance',
+      req.params.id,
+      {
+        action: 'approve',
+        remarks:
+          approvalNotes?.trim() ||
+          'Approved by Super Admin through the legacy provider review screen.',
+      },
+      { req },
+    );
+    const ambulance = await findAmbulanceById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Ambulance approved successfully',
@@ -714,7 +758,13 @@ router.post('/ambulances/:id/reject', adminRequired, async (req, res) => {
       );
     }
 
-    const ambulance = await rejectAmbulance(req.params.id, rejectionReason.trim());
+    await actionApprovalRequestByProvider(
+      'ambulance',
+      req.params.id,
+      { action: 'reject', remarks: rejectionReason.trim() },
+      { req },
+    );
+    const ambulance = await findAmbulanceById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Ambulance rejected successfully',
@@ -722,7 +772,11 @@ router.post('/ambulances/:id/reject', adminRequired, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return sendError(res, err.message || 'Failed to reject ambulance', 500);
+    return sendError(
+      res,
+      err.message || 'Failed to reject ambulance',
+      err.statusCode || 500,
+    );
   }
 });
 
@@ -764,7 +818,18 @@ router.post('/blood-banks/:id/approve', adminRequired, async (req, res) => {
       return sendError(res, 'Blood bank not found', 404);
     }
 
-    const bloodBank = await approveBloodBank(req.params.id, approvalNotes);
+    await actionApprovalRequestByProvider(
+      'blood_bank',
+      req.params.id,
+      {
+        action: 'approve',
+        remarks:
+          approvalNotes?.trim() ||
+          'Approved by Super Admin through the legacy provider review screen.',
+      },
+      { req },
+    );
+    const bloodBank = await findBloodBankById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Blood bank approved successfully',
@@ -798,7 +863,13 @@ router.post('/blood-banks/:id/reject', adminRequired, async (req, res) => {
       );
     }
 
-    const bloodBank = await rejectBloodBank(req.params.id, rejectionReason.trim());
+    await actionApprovalRequestByProvider(
+      'blood_bank',
+      req.params.id,
+      { action: 'reject', remarks: rejectionReason.trim() },
+      { req },
+    );
+    const bloodBank = await findBloodBankById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Blood bank rejected successfully',
@@ -806,7 +877,11 @@ router.post('/blood-banks/:id/reject', adminRequired, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return sendError(res, err.message || 'Failed to reject blood bank', 500);
+    return sendError(
+      res,
+      err.message || 'Failed to reject blood bank',
+      err.statusCode || 500,
+    );
   }
 });
 
@@ -985,7 +1060,18 @@ router.post('/labs/:id/approve', adminRequired, async (req, res) => {
       return sendError(res, 'Lab not found', 404);
     }
 
-    const lab = await approveLab(req.params.id, approvalNotes);
+    await actionApprovalRequestByProvider(
+      'laboratory',
+      req.params.id,
+      {
+        action: 'approve',
+        remarks:
+          approvalNotes?.trim() ||
+          'Approved by Super Admin through the legacy provider review screen.',
+      },
+      { req },
+    );
+    const lab = await findLabById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Lab approved successfully',
@@ -1019,7 +1105,13 @@ router.post('/labs/:id/reject', adminRequired, async (req, res) => {
       );
     }
 
-    const lab = await rejectLab(req.params.id, rejectionReason.trim());
+    await actionApprovalRequestByProvider(
+      'laboratory',
+      req.params.id,
+      { action: 'reject', remarks: rejectionReason.trim() },
+      { req },
+    );
+    const lab = await findLabById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Lab rejected successfully',
@@ -1027,7 +1119,11 @@ router.post('/labs/:id/reject', adminRequired, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return sendError(res, err.message || 'Failed to reject lab', 500);
+    return sendError(
+      res,
+      err.message || 'Failed to reject lab',
+      err.statusCode || 500,
+    );
   }
 });
 
@@ -1176,7 +1272,18 @@ router.post('/scan-centers/:id/approve', adminRequired, async (req, res) => {
       return sendError(res, 'Scan center not found', 404);
     }
 
-    const center = await approveScanCenter(req.params.id, approvalNotes);
+    await actionApprovalRequestByProvider(
+      'scan_center',
+      req.params.id,
+      {
+        action: 'approve',
+        remarks:
+          approvalNotes?.trim() ||
+          'Approved by Super Admin through the legacy provider review screen.',
+      },
+      { req },
+    );
+    const center = await findScanCenterById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Scan center approved successfully',
@@ -1210,7 +1317,13 @@ router.post('/scan-centers/:id/reject', adminRequired, async (req, res) => {
       );
     }
 
-    const center = await rejectScanCenter(req.params.id, rejectionReason.trim());
+    await actionApprovalRequestByProvider(
+      'scan_center',
+      req.params.id,
+      { action: 'reject', remarks: rejectionReason.trim() },
+      { req },
+    );
+    const center = await findScanCenterById(req.params.id);
 
     return sendSuccess(res, {
       message: 'Scan center rejected successfully',
@@ -1218,7 +1331,11 @@ router.post('/scan-centers/:id/reject', adminRequired, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return sendError(res, err.message || 'Failed to reject scan center', 500);
+    return sendError(
+      res,
+      err.message || 'Failed to reject scan center',
+      err.statusCode || 500,
+    );
   }
 });
 

@@ -15,6 +15,7 @@ import '../../../../shared/widgets/searchable_filter_dropdown.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/services/location_service.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/widgets/enable_location_services_dialog.dart';
 import '../../provider/care_filter_constants.dart';
@@ -28,11 +29,13 @@ class DoctorSearchScreen extends ConsumerStatefulWidget {
     this.initialQuery,
     this.initialCity,
     this.initialSpecialization,
+    this.initialConsultationType,
   });
 
   final String? initialQuery;
   final String? initialCity;
   final String? initialSpecialization;
+  final ConsultationType? initialConsultationType;
 
   @override
   ConsumerState<DoctorSearchScreen> createState() => _DoctorSearchScreenState();
@@ -45,7 +48,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
   String? _city;
   String? _specialization;
   int? _minYearsExperience;
-  ConsultationType _consultationType = ConsultationType.onlineConsult;
+  late ConsultationType _consultationType;
   double? _nearbyLatitude;
   double? _nearbyLongitude;
   bool _nearbyActive = false;
@@ -61,8 +64,24 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
     _query = widget.initialQuery;
     _city = widget.initialCity;
     _specialization = widget.initialSpecialization;
+    _consultationType =
+        widget.initialConsultationType ?? ConsultationType.onlineConsult;
     _controller = TextEditingController(text: widget.initialQuery ?? '');
     _controller.addListener(_onTextChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyDefaultNearby());
+  }
+
+  void _applyDefaultNearby() {
+    final location = ref.read(userLocationProvider);
+    if (!mounted) return;
+    setState(() {
+      _city ??= location.city;
+      if (_showsNearbyFilter && location.hasCoordinates) {
+        _nearbyLatitude = location.latitude;
+        _nearbyLongitude = location.longitude;
+        _nearbyActive = true;
+      }
+    });
   }
 
   @override
@@ -165,6 +184,22 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
+      if (!mounted) return;
+      if (next.city != null && _city == null) {
+        setState(() => _city = next.city);
+      }
+      if (_showsNearbyFilter &&
+          next.hasCoordinates &&
+          !_nearbyActive) {
+        setState(() {
+          _nearbyLatitude = next.latitude;
+          _nearbyLongitude = next.longitude;
+          _nearbyActive = true;
+        });
+      }
+    });
+
     final asyncResults = ref.watch(doctorSearchProvider(_params));
 
     return Scaffold(
@@ -232,6 +267,14 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
               _nearbyActive = false;
               _nearbyLatitude = null;
               _nearbyLongitude = null;
+            } else {
+              final location = ref.read(userLocationProvider);
+              _city ??= location.city;
+              if (location.hasCoordinates) {
+                _nearbyLatitude = location.latitude;
+                _nearbyLongitude = location.longitude;
+                _nearbyActive = true;
+              }
             }
           }),
         ),

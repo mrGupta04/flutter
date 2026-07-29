@@ -13,7 +13,7 @@ const {
   submitLabForReview,
 } = require('../db/labRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
-const { signToken, authOptional } = require('../middleware/auth');
+const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { upload, filePublicUrl } = require('../middleware/multerUpload');
 const { loginProvider } = require('../utils/providerAuth');
 const { toLab } = require('../db/labMappers');
@@ -25,6 +25,7 @@ const {
   createPaymentOrderForLabBooking,
   confirmLabBookingAfterPayment,
 } = require('../db/labBookingRepositories');
+const { listChatMessages, sendChatMessage } = require('../db/chatRepositories');
 
 const router = express.Router();
 
@@ -471,5 +472,37 @@ router.post(
     }
   },
 );
+
+router.get('/bookings/:bookingId/chat', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'lab' || !req.auth?.labId) {
+      return sendError(res, 'Lab authentication required', 401);
+    }
+    const data = await listChatMessages(req.params.bookingId, req.auth, {
+      after: req.query.after,
+    });
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load chat', status);
+  }
+});
+
+router.post('/bookings/:bookingId/chat', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'lab' || !req.auth?.labId) {
+      return sendError(res, 'Lab authentication required', 401);
+    }
+    const data = await sendChatMessage(
+      req.params.bookingId,
+      req.auth,
+      req.body?.body || req.body?.message,
+    );
+    return sendSuccess(res, { message: 'Message sent', data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to send message', status);
+  }
+});
 
 module.exports = router;

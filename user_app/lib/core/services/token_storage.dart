@@ -22,6 +22,10 @@ class TokenStorage {
   static const String _patientProfilePictureKey = 'patient_profile_picture';
   static const String _patientGenderKey = 'patient_gender';
   static const String _patientAgeKey = 'patient_age';
+  static const String _preferredCityKey = 'preferred_city';
+  static const String _lastLatitudeKey = 'last_latitude';
+  static const String _lastLongitudeKey = 'last_longitude';
+  static const String _locationPromptedKey = 'location_prompted';
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -209,6 +213,48 @@ class TokenStorage {
   Future<String?> getPatientMobile() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_patientMobileKey);
+  }
+
+  Future<String?> getPreferredCity() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_preferredCityKey);
+  }
+
+  Future<double?> getLastLatitude() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_lastLatitudeKey);
+  }
+
+  Future<double?> getLastLongitude() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_lastLongitudeKey);
+  }
+
+  Future<bool> getLocationPrompted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_locationPromptedKey) ?? false;
+  }
+
+  Future<void> saveLocationPreference({
+    String? city,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (city != null && city.trim().isNotEmpty) {
+      await prefs.setString(_preferredCityKey, city.trim());
+    }
+    if (latitude != null) {
+      await prefs.setDouble(_lastLatitudeKey, latitude);
+    }
+    if (longitude != null) {
+      await prefs.setDouble(_lastLongitudeKey, longitude);
+    }
+  }
+
+  Future<void> setLocationPrompted(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_locationPromptedKey, value);
   }
 
   Future<void> clearPatientSession() async {

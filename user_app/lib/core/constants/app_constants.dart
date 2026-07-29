@@ -183,6 +183,7 @@ class AppConstants {
   static const String routeLabCart = '/lab-cart';
   static const String routeLabBookingConfirmation = '/lab-booking-confirmation';
   static const String routeScans = '/scans';
+  static const String routeScansCatalog = '/scans-catalog';
   static const String routeScanSearch = '/scan-search';
   static const String routeScanCenterDetail = '/scan-center';
   static const String routeLabSearch = '/lab-search';

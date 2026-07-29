@@ -268,7 +268,24 @@ class PatientBookingModel {
 
   bool get isConfirmed => status == 'confirmed';
 
-  bool get canChat => isConfirmed;
+  bool get canChat {
+    if (serviceType == 'lab') {
+      return const {
+        'confirmed',
+        'sample_collected',
+        'processing',
+        'report_ready',
+      }.contains(status);
+    }
+    if (serviceType == 'scan') {
+      return const {
+        'confirmed',
+        'in_progress',
+        'report_ready',
+      }.contains(status);
+    }
+    return isConfirmed;
+  }
 
   bool get canCancel =>
       isAwaitingDoctorApproval ||

@@ -10,6 +10,7 @@ class DioService {
   static final DioService _instance = DioService._internal();
 
   late Dio _dio;
+  Future<String?>? _approverRefresh;
 
   factory DioService() {
     return _instance;
@@ -25,10 +26,7 @@ class DioService {
   }
 
   /// Full API URI — avoids Dio dropping `/api/v1` when path starts with `/`.
-  static Uri resolveUri(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-  }) {
+  static Uri resolveUri(String path, {Map<String, dynamic>? queryParameters}) {
     final base = AppConstants.apiBaseUrl;
     final normalizedBase = base.endsWith('/') ? base : '$base/';
     final uri = Uri.parse('$normalizedBase${apiPath(path)}');
@@ -47,8 +45,12 @@ class DioService {
     _dio = Dio(
       BaseOptions(
         baseUrl: AppConstants.apiBaseUrl,
-        connectTimeout: const Duration(milliseconds: AppConstants.connectionTimeout),
-        receiveTimeout: const Duration(milliseconds: AppConstants.receiveTimeout),
+        connectTimeout: const Duration(
+          milliseconds: AppConstants.connectionTimeout,
+        ),
+        receiveTimeout: const Duration(
+          milliseconds: AppConstants.receiveTimeout,
+        ),
         contentType: 'application/json',
         responseType: ResponseType.json,
       ),
@@ -111,7 +113,64 @@ class DioService {
     DioException error,
     ErrorInterceptorHandler handler,
   ) async {
+    final request = error.requestOptions;
+    if (error.response?.statusCode == 401 &&
+        request.extra['_approvalRetry'] != true &&
+        !request.path.contains('approver-login') &&
+        !request.path.contains('approver-refresh')) {
+      final role = await TokenStorage.instance.getAdminRole();
+      if (role == 'approver') {
+        final token = await (_approverRefresh ??= _refreshApproverToken());
+        _approverRefresh = null;
+        if (token != null) {
+          request.headers['Authorization'] = 'Bearer $token';
+          request.extra['_approvalRetry'] = true;
+          try {
+            final response = await _dio.fetch<dynamic>(request);
+            handler.resolve(response);
+            return;
+          } on DioException {
+            // Return the original authorization failure below.
+          }
+        }
+      }
+    }
     handler.next(error);
+  }
+
+  Future<String?> _refreshApproverToken() async {
+    final refreshToken = await TokenStorage.instance.getAdminRefreshToken();
+    final sessionId = await TokenStorage.instance.getAdminSessionId();
+    if (refreshToken == null || sessionId == null) return null;
+    try {
+      final response = await Dio().postUri(
+        resolveUri(AppConstants.endpointApprovalApproverRefresh),
+        data: {'refreshToken': refreshToken, 'sessionId': sessionId},
+        options: Options(
+          contentType: 'application/json',
+          responseType: ResponseType.json,
+        ),
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? const {};
+      final token = data['token'] as String?;
+      final rotatedRefreshToken = data['refreshToken'] as String?;
+      final rotatedSessionId = data['sessionId'] as String?;
+      if (token == null ||
+          rotatedRefreshToken == null ||
+          rotatedSessionId == null) {
+        return null;
+      }
+      await TokenStorage.instance.saveAdminToken(token);
+      await TokenStorage.instance.saveAdminRefreshSession(
+        refreshToken: rotatedRefreshToken,
+        sessionId: rotatedSessionId,
+      );
+      return token;
+    } on DioException {
+      await TokenStorage.instance.clearAdminSession();
+      return null;
+    }
   }
 
   /// Get Dio instance
@@ -206,6 +265,35 @@ class DioService {
     }
   }
 
+  /// Generic PATCH request
+  Future<Response> patch(
+    String path, {
+    required Map<String, dynamic> data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      if (AppConstants.useMockApi) {
+        return MockApi.handleRequest(
+          path: path,
+          method: 'PATCH',
+          data: data,
+          queryParameters: queryParameters,
+        );
+      }
+      final response = await _dio.patchUri(
+        resolveUri(path, queryParameters: queryParameters),
+        data: data,
+        options: options,
+        cancelToken: cancelToken,
+      );
+      return response;
+    } on DioException {
+      rethrow;
+    }
+  }
+
   /// Generic DELETE request
   Future<Response> delete(
     String path, {
@@ -253,14 +341,20 @@ class DioService {
         );
       }
 
-      final resolvedName = filename ??
-          (filePath != null ? filePath.split(RegExp(r'[/\\]')).last : 'upload.bin');
+      final resolvedName =
+          filename ??
+          (filePath != null
+              ? filePath.split(RegExp(r'[/\\]')).last
+              : 'upload.bin');
 
       final MultipartFile filePart;
       if (bytes != null) {
         filePart = MultipartFile.fromBytes(bytes, filename: resolvedName);
       } else if (filePath != null) {
-        filePart = await MultipartFile.fromFile(filePath, filename: resolvedName);
+        filePart = await MultipartFile.fromFile(
+          filePath,
+          filename: resolvedName,
+        );
       } else {
         throw ArgumentError('Either filePath or bytes must be provided');
       }

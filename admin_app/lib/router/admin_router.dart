@@ -23,6 +23,7 @@ import '../features/admin/presentation/screens/admin_lab_details_screen.dart';
 import '../features/admin/presentation/screens/admin_lab_list_screen.dart';
 import '../features/admin/presentation/screens/admin_scan_details_screen.dart';
 import '../features/admin/presentation/screens/admin_scan_list_screen.dart';
+import '../features/admin/presentation/screens/approval_management_screen.dart';
 import '../features/blood_bank_registration/presentation/screens/blood_bank_application_submitted_screen.dart';
 import '../features/blood_bank_registration/presentation/screens/blood_bank_registration_screen.dart';
 import '../features/lab_registration/presentation/screens/lab_application_submitted_screen.dart';
@@ -54,6 +55,7 @@ import '../features/admin/provider/admin_auth_provider.dart';
 
 bool _isAdminProtectedRoute(String location) {
   return location.startsWith(AppConstants.routeAdminDashboard) ||
+      location.startsWith(AppConstants.routeApprovalManagement) ||
       location.startsWith(AppConstants.routeAdminOverview) ||
       location.startsWith(AppConstants.routeAdminBookings) ||
       location.startsWith(AppConstants.routeAdminPatients) ||
@@ -73,6 +75,32 @@ bool _isAdminProtectedRoute(String location) {
       location.startsWith(AppConstants.routeAdminLabDetails) ||
       location.startsWith(AppConstants.routeAdminScanList) ||
       location.startsWith(AppConstants.routeAdminScanDetails);
+}
+
+bool _isAdminOnlyRoute(String location) {
+  return location.startsWith(AppConstants.routeAdminDashboard) ||
+      location.startsWith(AppConstants.routeAdminOverview) ||
+      location.startsWith(AppConstants.routeAdminBookings) ||
+      location.startsWith(AppConstants.routeAdminPatients) ||
+      location.startsWith(AppConstants.routeAdminCoupons) ||
+      location.startsWith(AppConstants.routeAdminCmsBanners) ||
+      location.startsWith(AppConstants.routeAdminSupportTickets) ||
+      location.startsWith(AppConstants.routeAdminRefunds) ||
+      location == AppConstants.routeAdminDoctorList ||
+      location == AppConstants.routeAdminNurseList ||
+      location == AppConstants.routeAdminAmbulanceList ||
+      location == AppConstants.routeAdminBloodBankList ||
+      location == AppConstants.routeAdminLabList ||
+      location == AppConstants.routeAdminScanList;
+}
+
+bool _isApproverKycDetailRoute(String location) {
+  return location.startsWith('${AppConstants.routeAdminDoctorDetails}/') ||
+      location.startsWith('${AppConstants.routeAdminNurseDetails}/') ||
+      location.startsWith('${AppConstants.routeAdminAmbulanceDetails}/') ||
+      location.startsWith('${AppConstants.routeAdminBloodBankDetails}/') ||
+      location.startsWith('${AppConstants.routeAdminLabDetails}/') ||
+      location.startsWith('${AppConstants.routeAdminScanDetails}/');
 }
 
 /// Admin app — provider registration + admin verification.
@@ -99,13 +127,32 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (_isAdminProtectedRoute(loc)) {
-        if (ref.read(adminAuthProvider).isAuthenticated) {
-          return null;
+        final auth = ref.read(adminAuthProvider);
+        if (!auth.isAuthenticated) {
+          final adminToken = await TokenStorage.instance.getAdminToken();
+          if (adminToken == null || adminToken.isEmpty) {
+            return AppConstants.routeAdminLogin;
+          }
         }
-        final adminToken = await TokenStorage.instance.getAdminToken();
-        if (adminToken == null || adminToken.isEmpty) {
-          return AppConstants.routeAdminLogin;
+        final role =
+            auth.role ?? await TokenStorage.instance.getAdminRole() ?? 'admin';
+        final isApprover = role == 'approver';
+        if (isApprover) {
+          if (loc.startsWith(AppConstants.routeApprovalManagement) ||
+              _isApproverKycDetailRoute(loc)) {
+            return null;
+          }
+          if (_isAdminOnlyRoute(loc) ||
+              loc.startsWith(AppConstants.routeAdminDoctorList) ||
+              loc.startsWith(AppConstants.routeAdminNurseList) ||
+              loc.startsWith(AppConstants.routeAdminAmbulanceList) ||
+              loc.startsWith(AppConstants.routeAdminBloodBankList) ||
+              loc.startsWith(AppConstants.routeAdminLabList) ||
+              loc.startsWith(AppConstants.routeAdminScanList)) {
+            return AppConstants.routeApprovalManagement;
+          }
         }
+        return null;
       }
 
       return null;
@@ -396,6 +443,14 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadePage(
           state,
           const AdminDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeApprovalManagement,
+        name: 'approvalManagement',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ApprovalManagementScreen(),
         ),
       ),
       GoRoute(

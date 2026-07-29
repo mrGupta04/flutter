@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/location_service.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
@@ -58,6 +59,20 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
     _specialization = widget.initialSpecialization;
     _controller = TextEditingController(text: widget.initialQuery ?? '');
     _controller.addListener(_onTextChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyDefaultNearby());
+  }
+
+  void _applyDefaultNearby() {
+    final location = ref.read(userLocationProvider);
+    if (!mounted) return;
+    setState(() {
+      _city ??= location.city;
+      if (location.hasCoordinates) {
+        _nearbyLatitude = location.latitude;
+        _nearbyLongitude = location.longitude;
+        _nearbyActive = true;
+      }
+    });
   }
 
   @override
@@ -161,6 +176,19 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
+      if (!mounted || !next.hasCoordinates) return;
+      if (_nearbyActive && _city != null) return;
+      setState(() {
+        _city ??= next.city;
+        if (!_nearbyActive) {
+          _nearbyLatitude = next.latitude;
+          _nearbyLongitude = next.longitude;
+          _nearbyActive = true;
+        }
+      });
+    });
+
     final asyncResults = ref.watch(nurseSearchProvider(_params));
 
     return Scaffold(
@@ -283,22 +311,22 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
         const SizedBox(height: 10),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: FilterDropdown<String?>(
+          child: _FilterRadioGroup<String>(
             label: 'Gender',
             value: _gender,
-            items: [null, ...nurseGenderFilters],
-            itemLabel: (gender) => gender ?? 'All genders',
+            options: const [null, ...nurseGenderFilters],
+            optionLabel: (gender) => gender ?? 'All genders',
             onChanged: (gender) => setState(() => _gender = gender),
           ),
         ),
         const SizedBox(height: 10),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: FilterDropdown<int?>(
+          child: _FilterRadioGroup<int>(
             label: 'Years of experience',
             value: _minYearsExperience,
-            items: doctorMinExperienceOptions,
-            itemLabel: doctorMinExperienceLabel,
+            options: doctorMinExperienceOptions,
+            optionLabel: doctorMinExperienceLabel,
             onChanged: (years) => setState(() => _minYearsExperience = years),
           ),
         ),
@@ -410,6 +438,83 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
           ),
         ];
       },
+    );
+  }
+}
+
+class _FilterRadioGroup<T> extends StatelessWidget {
+  const _FilterRadioGroup({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.optionLabel,
+    required this.onChanged,
+  });
+
+  final String label;
+  final T? value;
+  final List<T?> options;
+  final String Function(T? value) optionLabel;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 6),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Wrap(
+            spacing: 4,
+            runSpacing: 0,
+            children: options.map((option) {
+              final isSelected = value == option;
+              return InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => onChanged(option),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Radio<T?>(
+                        value: option,
+                        groupValue: value,
+                        onChanged: onChanged,
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        activeColor: AppColors.primary,
+                      ),
+                      Text(
+                        optionLabel(option),
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -26,7 +26,8 @@ class AppConstants {
       '/nurse/bookings/$bookingId/approve-home-visit';
   static String endpointNurseRejectHomeVisit(String bookingId) =>
       '/nurse/bookings/$bookingId/reject-home-visit';
-  static const String endpointDoctorVerifyAppointment = '/doctor/verify-appointment';
+  static const String endpointDoctorVerifyAppointment =
+      '/doctor/verify-appointment';
   static String endpointConsultationVideoSession(String bookingId) =>
       '/consultations/$bookingId/video-session';
   static String endpointConsultationVideoJoin(String bookingId) =>
@@ -45,20 +46,26 @@ class AppConstants {
   static const String endpointBloodBankDashboard = '/blood-bank/dashboard';
   static const String endpointBloodBankEmergency = '/blood-bank/emergency';
   static const String endpointBloodBankUploadLogo = '/blood-bank/upload-logo';
-  static const String endpointBloodBankUploadDocument = '/blood-bank/upload-document';
-  static const String endpointBloodBankUploadGallery = '/blood-bank/upload-gallery';
+  static const String endpointBloodBankUploadDocument =
+      '/blood-bank/upload-document';
+  static const String endpointBloodBankUploadGallery =
+      '/blood-bank/upload-gallery';
 
   // Doctor API Endpoints
   static const String endpointRegisterDoctor = '/doctor/register';
   static const String endpointUploadDocument = '/doctor/upload-document';
   static const String endpointUploadProfile = '/doctor/upload-profile';
-  static const String endpointUploadHospitalPhoto = '/doctor/upload-hospital-photo';
+  static const String endpointUploadHospitalPhoto =
+      '/doctor/upload-hospital-photo';
   static const String endpointGetProfile = '/doctor/profile';
   static const String endpointUpdateProfile = '/doctor/profile';
   static const String endpointDoctorAvailability = '/doctor/availability';
-  static const String endpointDoctorPresenceHeartbeat = '/doctor/presence/heartbeat';
-  static const String endpointDoctorPresenceOffline = '/doctor/presence/offline';
-  static const String endpointNursePresenceHeartbeat = '/nurse/presence/heartbeat';
+  static const String endpointDoctorPresenceHeartbeat =
+      '/doctor/presence/heartbeat';
+  static const String endpointDoctorPresenceOffline =
+      '/doctor/presence/offline';
+  static const String endpointNursePresenceHeartbeat =
+      '/nurse/presence/heartbeat';
   static const String endpointNursePresenceOffline = '/nurse/presence/offline';
   static const String endpointVerifiedDoctors = '/doctor/verified';
   static const String endpointDoctorEmailSendOtp = '/doctor/email/send-otp';
@@ -77,7 +84,8 @@ class AppConstants {
   static const String endpointNurseSlotHold = '/nurse/slot-hold';
   static String endpointNurseSlotHoldRelease(String holdId) =>
       '/nurse/slot-hold/$holdId';
-  static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
+  static const String endpointNurseHomeVisitRequest =
+      '/nurse/home-visit/request';
 
   // Provider shared features (doctor & nurse)
   static const String endpointDoctorEarnings = '/doctor/earnings';
@@ -102,6 +110,10 @@ class AppConstants {
       '/doctor/bookings/$bookingId/chat';
   static String endpointNurseBookingChat(String bookingId) =>
       '/nurse/bookings/$bookingId/chat';
+  static String endpointLabBookingChat(String bookingId) =>
+      '/lab/bookings/$bookingId/chat';
+  static String endpointScanBookingChat(String bookingId) =>
+      '/scan/bookings/$bookingId/chat';
   static String endpointNurseVisitNote(String bookingId) =>
       '/nurse/bookings/$bookingId/visit-note';
   static String endpointNurseVisitStart(String bookingId) =>
@@ -125,15 +137,18 @@ class AppConstants {
 
   // Ambulance API Endpoints
   static const String endpointRegisterAmbulance = '/ambulance/register';
-  static const String endpointAmbulanceUploadProfile = '/ambulance/upload-profile';
-  static const String endpointAmbulanceUploadDocument = '/ambulance/upload-document';
+  static const String endpointAmbulanceUploadProfile =
+      '/ambulance/upload-profile';
+  static const String endpointAmbulanceUploadDocument =
+      '/ambulance/upload-document';
   static const String endpointGetAmbulanceProfile = '/ambulance/profile';
   static const String endpointUpdateAmbulanceProfile = '/ambulance/profile';
   static const String endpointVerifiedAmbulances = '/ambulance/verified';
 
   // Blood Bank API Endpoints
   static const String endpointRegisterBloodBank = '/blood-bank/register';
-  static const String endpointBloodBankUploadProfile = '/blood-bank/upload-profile';
+  static const String endpointBloodBankUploadProfile =
+      '/blood-bank/upload-profile';
   static const String endpointGetBloodBankProfile = '/blood-bank/profile';
   static const String endpointUpdateBloodBankProfile = '/blood-bank/profile';
   static const String endpointVerifiedBloodBanks = '/blood-bank/verified';
@@ -166,21 +181,32 @@ class AppConstants {
   static String endpointAdminDoctor(String id) => '/admin/doctors/$id';
   static String endpointAdminDoctorDocuments(String id) =>
       '/admin/doctors/$id/documents';
-  static String endpointAdminDoctorDocumentVerify(String providerId, String documentId) =>
-      '/admin/doctors/$providerId/documents/$documentId/verify';
-  static String endpointAdminDoctorDocumentReject(String providerId, String documentId) =>
-      '/admin/doctors/$providerId/documents/$documentId/reject';
+  static String endpointAdminDoctorDocumentVerify(
+    String providerId,
+    String documentId,
+  ) => '/admin/doctors/$providerId/documents/$documentId/verify';
+  static String endpointAdminDoctorDocumentReject(
+    String providerId,
+    String documentId,
+  ) => '/admin/doctors/$providerId/documents/$documentId/reject';
   static String endpointAdminApprove(String id) => '/admin/doctors/$id/approve';
   static String endpointAdminReject(String id) => '/admin/doctors/$id/reject';
   static const String endpointAdminNurses = '/admin/nurses';
   static String endpointAdminNurse(String id) => '/admin/nurses/$id';
-  static String endpointAdminNurseDocuments(String id) => '/admin/nurses/$id/documents';
-  static String endpointAdminNurseDocumentVerify(String providerId, String documentId) =>
-      '/admin/nurses/$providerId/documents/$documentId/verify';
-  static String endpointAdminNurseDocumentReject(String providerId, String documentId) =>
-      '/admin/nurses/$providerId/documents/$documentId/reject';
-  static String endpointAdminNurseApprove(String id) => '/admin/nurses/$id/approve';
-  static String endpointAdminNurseReject(String id) => '/admin/nurses/$id/reject';
+  static String endpointAdminNurseDocuments(String id) =>
+      '/admin/nurses/$id/documents';
+  static String endpointAdminNurseDocumentVerify(
+    String providerId,
+    String documentId,
+  ) => '/admin/nurses/$providerId/documents/$documentId/verify';
+  static String endpointAdminNurseDocumentReject(
+    String providerId,
+    String documentId,
+  ) => '/admin/nurses/$providerId/documents/$documentId/reject';
+  static String endpointAdminNurseApprove(String id) =>
+      '/admin/nurses/$id/approve';
+  static String endpointAdminNurseReject(String id) =>
+      '/admin/nurses/$id/reject';
   static const String endpointAdminAmbulances = '/admin/ambulances';
   static String endpointAdminAmbulance(String id) => '/admin/ambulances/$id';
   static String endpointAdminAmbulanceDocuments(String id) =>
@@ -188,13 +214,11 @@ class AppConstants {
   static String endpointAdminAmbulanceDocumentVerify(
     String providerId,
     String documentId,
-  ) =>
-      '/admin/ambulances/$providerId/documents/$documentId/verify';
+  ) => '/admin/ambulances/$providerId/documents/$documentId/verify';
   static String endpointAdminAmbulanceDocumentReject(
     String providerId,
     String documentId,
-  ) =>
-      '/admin/ambulances/$providerId/documents/$documentId/reject';
+  ) => '/admin/ambulances/$providerId/documents/$documentId/reject';
   static String endpointAdminAmbulanceApprove(String id) =>
       '/admin/ambulances/$id/approve';
   static String endpointAdminAmbulanceReject(String id) =>
@@ -215,13 +239,11 @@ class AppConstants {
   static String endpointAdminBloodBankDocumentVerify(
     String bloodBankId,
     String documentId,
-  ) =>
-      '/admin/blood-banks/$bloodBankId/documents/$documentId/verify';
+  ) => '/admin/blood-banks/$bloodBankId/documents/$documentId/verify';
   static String endpointAdminBloodBankDocumentReject(
     String bloodBankId,
     String documentId,
-  ) =>
-      '/admin/blood-banks/$bloodBankId/documents/$documentId/reject';
+  ) => '/admin/blood-banks/$bloodBankId/documents/$documentId/reject';
   static const String endpointAdminBloodOrders = '/admin/blood-orders';
   static const String endpointAdminEmergencyBloodRequests =
       '/admin/emergency-blood-requests';
@@ -243,10 +265,14 @@ class AppConstants {
   static String endpointAdminLabSuspend(String id) => '/admin/labs/$id/suspend';
   static String endpointAdminLabRequestDocuments(String id) =>
       '/admin/labs/$id/request-documents';
-  static String endpointAdminLabDocumentVerify(String labId, String documentId) =>
-      '/admin/labs/$labId/documents/$documentId/verify';
-  static String endpointAdminLabDocumentReject(String labId, String documentId) =>
-      '/admin/labs/$labId/documents/$documentId/reject';
+  static String endpointAdminLabDocumentVerify(
+    String labId,
+    String documentId,
+  ) => '/admin/labs/$labId/documents/$documentId/verify';
+  static String endpointAdminLabDocumentReject(
+    String labId,
+    String documentId,
+  ) => '/admin/labs/$labId/documents/$documentId/reject';
   static const String endpointAdminScanCenters = '/admin/scan-centers';
   static String endpointAdminScanCenter(String id) => '/admin/scan-centers/$id';
   static String endpointAdminScanCenterApprove(String id) =>
@@ -260,13 +286,57 @@ class AppConstants {
   static String endpointAdminScanCenterDocumentVerify(
     String scanCenterId,
     String documentId,
-  ) =>
-      '/admin/scan-centers/$scanCenterId/documents/$documentId/verify';
+  ) => '/admin/scan-centers/$scanCenterId/documents/$documentId/verify';
   static String endpointAdminScanCenterDocumentReject(
     String scanCenterId,
     String documentId,
-  ) =>
-      '/admin/scan-centers/$scanCenterId/documents/$documentId/reject';
+  ) => '/admin/scan-centers/$scanCenterId/documents/$documentId/reject';
+  static const String endpointApprovalDashboard =
+      '/admin/approval-management/dashboard';
+  static const String endpointApprovalApproverLogin =
+      '/admin/approval-management/approver-login';
+  static const String endpointApprovalApproverLogout =
+      '/admin/approval-management/approver-logout';
+  static const String endpointApprovalApproverRefresh =
+      '/admin/approval-management/approver-refresh';
+  static const String endpointApprovalApprovers =
+      '/admin/approval-management/approvers';
+  static String endpointApprovalApprover(String id) =>
+      '/admin/approval-management/approvers/$id';
+  static String endpointApprovalApproverStatus(String id) =>
+      '/admin/approval-management/approvers/$id/status';
+  static String endpointApprovalApproverResetPassword(String id) =>
+      '/admin/approval-management/approvers/$id/reset-password';
+  static String endpointApprovalApproverPerformance(String id) =>
+      '/admin/approval-management/approvers/$id/performance';
+  static const String endpointApprovalRequests =
+      '/admin/approval-management/requests';
+  static String endpointApprovalRequest(String id) =>
+      '/admin/approval-management/requests/$id';
+  static String endpointApprovalRequestEligibleApprovers(String id) =>
+      '/admin/approval-management/requests/$id/eligible-approvers';
+  static String endpointApprovalRequestAssign(String id) =>
+      '/admin/approval-management/requests/$id/assign';
+  static String endpointApprovalRequestAction(String id) =>
+      '/admin/approval-management/requests/$id/action';
+  static String endpointApprovalRequestView(String id) =>
+      '/admin/approval-management/requests/$id/view';
+  static const String endpointApprovalAuditLogs =
+      '/admin/approval-management/audit-logs';
+  static const String endpointApprovalConfig =
+      '/admin/approval-management/config';
+  static const String endpointApprovalReports =
+      '/admin/approval-management/reports';
+  static const String endpointApprovalNotifications =
+      '/admin/approval-management/notifications';
+  static String endpointApprovalNotificationRead(String id) =>
+      '/admin/approval-management/notifications/$id/read';
+  static const String endpointApprovalNotificationsReadAll =
+      '/admin/approval-management/notifications/read-all';
+  static const String endpointApprovalSavedFilters =
+      '/admin/approval-management/saved-filters';
+  static String endpointApprovalSavedFilter(String id) =>
+      '/admin/approval-management/saved-filters/$id';
 
   // Validation
   static const int minPasswordLength = 8;
@@ -282,7 +352,12 @@ class AppConstants {
   // File Upload
   static const int maxFileSize = 10 * 1024 * 1024;
   static const int maxProfileImageSize = 5 * 1024 * 1024;
-  static const List<String> allowedImageFormats = ['jpg', 'jpeg', 'png', 'webp'];
+  static const List<String> allowedImageFormats = [
+    'jpg',
+    'jpeg',
+    'png',
+    'webp',
+  ];
   static const List<String> allowedDocumentFormats = [
     'pdf',
     'doc',
@@ -323,7 +398,8 @@ class AppConstants {
   static const String routeProviderAuthGate = '/provider-auth';
   static const String routeProviderLogin = '/provider-login';
   static const String routeProviderProfile = '/provider-profile';
-  static const String routeNurseApplicationSubmitted = '/nurse-application-submitted';
+  static const String routeNurseApplicationSubmitted =
+      '/nurse-application-submitted';
 
   // Routes — shared / legacy
   static const String routeDoctorSearch = '/doctor-search';
@@ -340,9 +416,11 @@ class AppConstants {
   static const String routeBloodBankApplicationSubmitted =
       '/blood-bank-application-submitted';
   static const String routeLabRegistration = '/lab-registration';
-  static const String routeLabApplicationSubmitted = '/lab-application-submitted';
+  static const String routeLabApplicationSubmitted =
+      '/lab-application-submitted';
   static const String routeScanRegistration = '/scan-registration';
-  static const String routeScanApplicationSubmitted = '/scan-application-submitted';
+  static const String routeScanApplicationSubmitted =
+      '/scan-application-submitted';
   static const String routeScanDashboard = '/scan-dashboard';
   static const String routeLabDashboard = '/lab-dashboard';
   static const String routeBloodBankDashboard = '/blood-bank-dashboard';
@@ -356,6 +434,7 @@ class AppConstants {
   static const String routeVideoConsult = '/video-consult';
   static const String routeAdminLogin = '/admin-login';
   static const String routeAdminDashboard = '/admin-dashboard';
+  static const String routeApprovalManagement = '/admin-approval-management';
   static const String routeAdminOverview = '/admin-overview';
   static const String routeAdminBookings = '/admin-bookings';
   static const String routeAdminPatients = '/admin-patients';
@@ -381,12 +460,16 @@ class AppConstants {
 
   static const String errorNetworkException =
       'Network error. Please check your connection and ensure the API server is running.';
-  static const String errorServerException = 'Server error. Please try again later.';
-  static const String errorTimeoutException = 'Request timeout. Please try again.';
+  static const String errorServerException =
+      'Server error. Please try again later.';
+  static const String errorTimeoutException =
+      'Request timeout. Please try again.';
   static const String errorInvalidInput = 'Please enter valid information.';
-  static const String errorSomethingWentWrong = 'Something went wrong. Please try again.';
+  static const String errorSomethingWentWrong =
+      'Something went wrong. Please try again.';
 
-  static const String successDocumentUploaded = 'Document uploaded successfully.';
+  static const String successDocumentUploaded =
+      'Document uploaded successfully.';
   static const String successApplicationSubmitted =
       'Application sent to admin for review.';
   static const String successProfileUpdated = 'Profile updated successfully.';

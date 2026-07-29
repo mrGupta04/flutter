@@ -12,9 +12,8 @@ import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/top_categories_grid.dart';
 import '../../data/models/scan_procedure_model.dart';
-import '../../data/scans_catalog.dart';
 import '../../data/scan_procedure_icons.dart';
-import '../../data/scan_modality_logos.dart';
+import '../../provider/scan_search_provider.dart';
 import '../widgets/scan_procedure_card.dart';
 
 class ScansScreen extends ConsumerStatefulWidget {
@@ -60,17 +59,9 @@ class _ScansScreenState extends ConsumerState<ScansScreen> {
     setState(() => _selectedCategory = category);
   }
 
-  List<ScanProcedure> get _filteredScans => ScansCatalog.filter(
-        query: _query.isEmpty ? null : _query,
-        category: _selectedCategory,
-      );
-
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredScans;
-    final grouped = ScansCatalog.groupedByCategory(filtered);
-    final categoriesInResults = grouped.keys.toList()
-      ..sort((a, b) => a.index.compareTo(b.index));
+    final catalogAsync = ref.watch(scanProceduresCatalogProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -159,8 +150,43 @@ class _ScansScreenState extends ConsumerState<ScansScreen> {
             ),
           ),
           Expanded(
-            child: filtered.isEmpty
-                ? _EmptyState(
+            child: catalogAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        error.toString().replaceFirst('Exception: ', ''),
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () =>
+                            ref.invalidate(scanProceduresCatalogProvider),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              data: (allProcedures) {
+                final filtered = ScansCatalog.filter(
+                  allProcedures,
+                  query: _query.isEmpty ? null : _query,
+                  category: _selectedCategory,
+                );
+                final grouped = ScansCatalog.groupedByCategory(filtered);
+                final categoriesInResults = grouped.keys.toList()
+                  ..sort((a, b) => a.index.compareTo(b.index));
+
+                if (filtered.isEmpty) {
+                  return _EmptyState(
                     query: _query,
                     category: _selectedCategory,
                     onClear: () {
@@ -170,14 +196,21 @@ class _ScansScreenState extends ConsumerState<ScansScreen> {
                         _selectedCategory = null;
                       });
                     },
-                  )
-                : ListView(
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(scanProceduresCatalogProvider);
+                    await ref.read(scanProceduresCatalogProvider.future);
+                  },
+                  child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     children: [
                       OfferPromoCard(
                         title: '${filtered.length} scans available',
                         subtitle:
-                            'MRI, X-Ray, CT & more at verified imaging centers',
+                            'From verified imaging centers near you',
                         badge: 'SCANS',
                         icon: Icons.radar_rounded,
                         includeMargin: false,
@@ -199,10 +232,9 @@ class _ScansScreenState extends ConsumerState<ScansScreen> {
                             softColor: category.softColor,
                             accentColor: category.iconColor,
                             selected: isSelected,
-                            illustration: ScanModalityLogoIcon.forCategory(
-                              category,
+                            illustration: ScanCategoryLogoBadge(
+                              category: category,
                               size: 52,
-                              color: category.iconColor,
                             ),
                             onTap: () => _selectCategory(
                               isSelected ? null : category,
@@ -228,6 +260,9 @@ class _ScansScreenState extends ConsumerState<ScansScreen> {
                         }),
                     ],
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -331,8 +366,8 @@ class _EmptyState extends StatelessWidget {
               query.isNotEmpty
                   ? 'Try a different search term or clear filters.'
                   : category != null
-                      ? 'No scans in ${category!.label} match your filters.'
-                      : 'Adjust your filters to see available scans.',
+                      ? 'No verified centers offer ${category!.label} scans yet.'
+                      : 'No scans available from verified centers yet.',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,

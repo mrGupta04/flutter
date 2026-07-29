@@ -41,6 +41,7 @@ import '../features/labs/presentation/screens/lab_cart_screen.dart';
 import '../features/labs/presentation/screens/lab_booking_confirmation_screen.dart';
 import '../features/labs/presentation/screens/lab_search_screen.dart';
 import '../features/scans/presentation/screens/scans_screen.dart';
+import '../features/scans/presentation/screens/scan_explore_screen.dart';
 import '../features/scans/presentation/screens/scan_search_screen.dart';
 import '../features/scans/presentation/screens/scan_center_detail_screen.dart';
 import '../features/scans/data/models/scan_procedure_model.dart';
@@ -308,12 +309,22 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           final q = state.uri.queryParameters['q'];
           final city = state.uri.queryParameters['city'];
           final specialization = state.uri.queryParameters['specialization'];
+          final typeParam = state.uri.queryParameters['type'];
+          ConsultationType? initialType;
+          if (typeParam == 'home' || typeParam == 'bookHome') {
+            initialType = ConsultationType.bookHome;
+          } else if (typeParam == 'hospital' ||
+              typeParam == 'visitSite' ||
+              typeParam == 'clinic') {
+            initialType = ConsultationType.visitSite;
+          }
           return slidePage(
             state,
             DoctorSearchScreen(
               initialQuery: q,
               initialCity: city,
               initialSpecialization: specialization,
+              initialConsultationType: initialType,
             ),
           );
         },
@@ -418,6 +429,14 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppConstants.routeScans,
         name: 'scans',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ScanExploreScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeScansCatalog,
+        name: 'scansCatalog',
         pageBuilder: (context, state) {
           final categoryId = state.uri.queryParameters['category'];
           ScanCategory? initialCategory;

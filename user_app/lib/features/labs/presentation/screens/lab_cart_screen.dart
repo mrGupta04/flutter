@@ -13,6 +13,7 @@ import '../../../../data/repositories/lab_repository.dart';
 import '../../../../data/repositories/scan_repository.dart';
 import '../../../scans/data/scan_procedure_icons.dart';
 import '../../../scans/data/scans_catalog.dart';
+import '../../../scans/data/models/scan_procedure_model.dart';
 import '../../../scans/provider/scan_cart_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../data/lab_test_icons.dart';
@@ -425,13 +426,20 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
             ),
             const SizedBox(height: 12),
             ...scanCart.items.map((item) {
-              final procedure = ScansCatalog.byId(item.scanId);
+              final procedure = ScanProcedure(
+                id: item.scanId,
+                name: item.scanName,
+                description: '',
+                priceInr: item.priceInr,
+                reportDeliveryTime: item.reportDeliveryTime ?? '24–48 hours',
+                category: scanCategoryFromId(item.categoryId),
+                preparationInstructions: item.preparationInstructions,
+                prescriptionRequired: item.prescriptionRequired,
+              );
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: procedure != null
-                      ? ScanProcedureIconAvatar(procedure: procedure, size: 44)
-                      : const Icon(Icons.medical_services_outlined),
+                  leading: ScanProcedureIconAvatar(procedure: procedure, size: 44),
                   title: Text(item.scanName),
                   subtitle: Text(item.reportDeliveryTime ?? '24–48 hours'),
                   trailing: Row(

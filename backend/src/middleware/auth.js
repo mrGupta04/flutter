@@ -92,11 +92,87 @@ function tryBearerAuth(req) {
 
 }
 
+async function hydrateApprover(payload) {
+
+  if (!isApproverPayload(payload)) return payload;
+
+  const Approver = require('../db/models/Approver');
+
+  const ApprovalSession = require('../db/models/ApprovalSession');
+
+  const approverId = payload.approverId || payload.id || payload.sub;
+
+  if (!approverId) return null;
+
+  const approver = await Approver.findOne({
+
+    id: approverId,
+
+    status: 'active',
+
+    deletedAt: null,
+
+  }).lean();
+
+  if (!approver) return null;
+
+  if (payload.sessionId) {
+
+    const session = await ApprovalSession.findOne({
+
+      id: payload.sessionId,
+
+      userId: approverId,
+
+      revokedAt: null,
+
+      expiresAt: { $gt: new Date() },
+
+    }).lean();
+
+    if (!session) return null;
+
+  }
+
+  return {
+
+    ...payload,
+
+    approverId,
+
+    role: 'approver',
+
+    type: 'approver',
+
+    name: `${approver.firstName} ${approver.lastName}`.trim(),
+
+    email: approver.email,
+
+    permissions: approver.permissions || [],
+
+    canReassign: Boolean(approver.canReassign),
+
+  };
+
+}
+
 
 
 function isAdminPayload(payload) {
 
-  return payload?.type === 'admin' || payload?.role === 'admin';
+  return (
+    payload?.type === 'admin' ||
+    payload?.role === 'admin' ||
+    payload?.role === 'super_admin'
+  );
+
+}
+
+
+
+function isApproverPayload(payload) {
+
+  return payload?.type === 'approver' || payload?.role === 'approver';
 
 }
 
@@ -118,7 +194,7 @@ function adminRequired(req, res, next) {
 
 
 
-  const key = req.headers['x-admin-key'] || req.query.adminKey;
+  const key = req.headers['x-admin-key'];
 
   const expected = process.env.ADMIN_API_KEY;
 
@@ -138,6 +214,90 @@ function adminRequired(req, res, next) {
 
 
 
+async function approvalUserRequired(req, res, next) {
+
+  const payload = tryBearerAuth(req);
+
+  if (payload && isAdminPayload(payload)) {
+
+    req.auth = payload;
+
+    return next();
+
+  }
+
+  if (payload && isApproverPayload(payload)) {
+
+    try {
+
+      const currentApprover = await hydrateApprover(payload);
+
+      if (currentApprover) {
+
+        req.auth = currentApprover;
+
+        return next();
+
+      }
+
+    } catch (err) {
+
+      console.error('Failed to validate approver session:', err);
+
+      return sendError(res, 'Unable to validate approval workflow session', 503);
+
+    }
+
+  }
+
+  const key = req.headers['x-admin-key'];
+
+  const expected = process.env.ADMIN_API_KEY;
+
+  if (expected && key === expected) {
+
+    req.auth = { type: 'admin', role: 'admin' };
+
+    return next();
+
+  }
+
+  return sendError(res, 'Approval workflow authentication required', 401);
+
+}
+
+
+
+function approvalAdminRequired(req, res, next) {
+
+  const payload = tryBearerAuth(req);
+
+  if (payload && isAdminPayload(payload)) {
+
+    req.auth = payload;
+
+    return next();
+
+  }
+
+  const key = req.headers['x-admin-key'];
+
+  const expected = process.env.ADMIN_API_KEY;
+
+  if (expected && key === expected) {
+
+    req.auth = { type: 'admin', role: 'admin' };
+
+    return next();
+
+  }
+
+  return sendError(res, 'Admin authentication required', 403);
+
+}
+
+
+
 module.exports = {
 
   signToken,
@@ -150,7 +310,13 @@ module.exports = {
 
   adminRequired,
 
+  approvalAdminRequired,
+
+  approvalUserRequired,
+
   isAdminPayload,
+
+  isApproverPayload,
 
 };
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/interactive_styles.dart';
@@ -28,6 +29,7 @@ import '../../provider/nurse_search_provider.dart';
 import '../../provider/nurse_live_status_provider.dart';
 import '../../provider/verified_doctors_provider.dart';
 import '../../../../core/utils/doctor_location_utils.dart';
+import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/utils/provider_location_utils.dart';
 import '../../../online_consult/online_consult_navigation.dart';
 
@@ -83,10 +85,32 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     if (widget.initialDoctorType != null) {
       _doctorType = widget.initialDoctorType!;
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyDefaultCity());
+  }
+
+  void _applyDefaultCity() {
+    final city = ref.read(userLocationProvider).city;
+    if (!mounted || city == null || city.isEmpty) return;
+    setState(() {
+      _nurseCity ??= city;
+      _ambulanceCity ??= city;
+      _bloodBankCity ??= city;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
+      final city = next.city;
+      if (!mounted || city == null || city.isEmpty) return;
+      if (_nurseCity != null) return;
+      setState(() {
+        _nurseCity ??= city;
+        _ambulanceCity ??= city;
+        _bloodBankCity ??= city;
+      });
+    });
+
     switch (_selectedRole) {
       case CareRole.nurse:
         return _buildNurseScaffold(context);
@@ -422,30 +446,58 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       ];
     }
 
+    final location = ref.watch(userLocationProvider);
+    final sorted = (_doctorType == ConsultationType.visitSite ||
+                _doctorType == ConsultationType.bookHome) &&
+            location.hasCoordinates
+        ? sortDoctorsByDistance(
+            items,
+            location.latitude!,
+            location.longitude!,
+          )
+        : items;
+
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         sliver: SliverList(
           delegate: SliverChildListDelegate([
-            const MarketplaceSectionTitle(title: 'Consult verified doctors'),
+            MarketplaceSectionTitle(
+              title: location.hasCoordinates &&
+                      (_doctorType == ConsultationType.visitSite ||
+                          _doctorType == ConsultationType.bookHome)
+                  ? 'Doctors near you'
+                  : 'Consult verified doctors',
+            ),
             const SizedBox(height: 8),
-            for (var i = 0; i < items.length; i++) ...[
+            for (var i = 0; i < sorted.length; i++) ...[
               if (i > 0) const SizedBox(height: kDoctorCardSpacing),
               DoctorListingCard(
-                doctor: items[i],
+                doctor: sorted[i],
                 showBottomDivider: false,
                 showVerifiedIcon: true,
                 consultationFilter: _doctorType,
-                showActionButtons: items[i].offersOnlineConsult ||
-                    items[i].offersVisitSite ||
-                    items[i].offersBookHome ||
-                    doctorHasMapLocation(items[i]),
-                onTap: () => onDoctorCardTap(context, items[i]),
+                footerNote: location.hasCoordinates &&
+                        (_doctorType == ConsultationType.visitSite ||
+                            _doctorType == ConsultationType.bookHome)
+                    ? formatNearbyDistanceLabel(
+                        doctorDistanceKm(
+                          sorted[i],
+                          location.latitude!,
+                          location.longitude!,
+                        ),
+                      )
+                    : null,
+                showActionButtons: sorted[i].offersOnlineConsult ||
+                    sorted[i].offersVisitSite ||
+                    sorted[i].offersBookHome ||
+                    doctorHasMapLocation(sorted[i]),
+                onTap: () => onDoctorCardTap(context, sorted[i]),
                 onOnlineConsultTap: () =>
-                    openOnlineConsultBooking(context, items[i]),
-                onClinicTap: () => openHospitalVisitBooking(context, items[i]),
-                onHomeVisitTap: () => openHomeVisitBooking(context, items[i]),
-                onOpenMapTap: () => openDoctorInGoogleMaps(context, items[i]),
+                    openOnlineConsultBooking(context, sorted[i]),
+                onClinicTap: () => openHospitalVisitBooking(context, sorted[i]),
+                onHomeVisitTap: () => openHomeVisitBooking(context, sorted[i]),
+                onOpenMapTap: () => openDoctorInGoogleMaps(context, sorted[i]),
               ),
             ],
             const UserScrollFooter(),
@@ -491,8 +543,17 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       ];
     }
 
+    final location = ref.watch(userLocationProvider);
+    final sorted = location.hasCoordinates
+        ? sortNursesByDistance(
+            items,
+            location.latitude!,
+            location.longitude!,
+          )
+        : items;
+
     final liveMap = ref
-            .watch(nurseLiveStatusProvider(nurseIdsCacheKey(items)))
+            .watch(nurseLiveStatusProvider(nurseIdsCacheKey(sorted)))
             .valueOrNull ??
         const <String, bool>{};
 
@@ -501,15 +562,27 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         sliver: SliverList(
           delegate: SliverChildListDelegate([
-            const MarketplaceSectionTitle(title: 'Verified nurses'),
+            MarketplaceSectionTitle(
+              title: location.hasCoordinates
+                  ? 'Nurses near you'
+                  : 'Verified nurses',
+            ),
             const SizedBox(height: 8),
-            for (var i = 0; i < items.length; i++) ...[
+            for (var i = 0; i < sorted.length; i++) ...[
               if (i > 0) const SizedBox(height: kDoctorCardSpacing),
               Builder(
                 builder: (context) {
-                  final nurse = applyNurseLiveStatus(items[i], liveMap);
+                  final nurse = applyNurseLiveStatus(sorted[i], liveMap);
+                  final distanceKm = location.hasCoordinates
+                      ? nurseDistanceKm(
+                          nurse,
+                          location.latitude!,
+                          location.longitude!,
+                        )
+                      : null;
                   return NurseListingCard(
                     nurse: nurse,
+                    distanceLabel: formatNearbyDistanceLabel(distanceKm),
                     onTap: () => openNurseHomeVisitBooking(context, nurse),
                     onBookHomeVisit: () =>
                         openNurseHomeVisitBooking(context, nurse),

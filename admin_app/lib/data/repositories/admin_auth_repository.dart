@@ -7,29 +7,41 @@ class AdminAuthRepository {
   final DioService _dioService;
 
   AdminAuthRepository({DioService? dioService})
-      : _dioService = dioService ?? DioService();
+    : _dioService = dioService ?? DioService();
 
   Future<ApiResponse<AdminLoginResult>> login({
     required String email,
     required String password,
+    bool asApprover = false,
   }) async {
     try {
       final response = await _dioService.post(
-        AppConstants.endpointAdminLogin,
+        asApprover
+            ? AppConstants.endpointApprovalApproverLogin
+            : AppConstants.endpointAdminLogin,
         data: {'email': email, 'password': password},
       );
 
       final body = response.data as Map<String, dynamic>;
       final data = body['data'] as Map<String, dynamic>? ?? {};
+      final approver = data['approver'] as Map<String, dynamic>? ?? const {};
 
       return ApiResponse(
         success: body['success'] as bool? ?? true,
         statusCode: body['statusCode'] as int? ?? 200,
         data: AdminLoginResult(
           token: data['token'] as String? ?? '',
-          email: data['email'] as String? ?? email,
-          role: data['role'] as String? ?? 'admin',
-          name: data['name'] as String?,
+          email: (data['email'] ?? approver['email']) as String? ?? email,
+          role:
+              (data['role'] ?? approver['role']) as String? ??
+              (asApprover ? 'approver' : 'admin'),
+          name: (data['name'] ?? approver['name']) as String?,
+          canReassign: approver['canReassign'] as bool? ?? false,
+          permissions: (approver['permissions'] as List? ?? const [])
+              .map((item) => item.toString())
+              .toList(),
+          refreshToken: data['refreshToken'] as String?,
+          sessionId: data['sessionId'] as String?,
         ),
       );
     } on DioException catch (e) {
@@ -40,6 +52,18 @@ class AdminAuthRepository {
         error: AppConstants.errorSomethingWentWrong,
         statusCode: 500,
       );
+    }
+  }
+
+  Future<void> logoutApprover() async {
+    try {
+      await _dioService.post(
+        AppConstants.endpointApprovalApproverLogout,
+        data: const {},
+      );
+    } on DioException {
+      // Local credentials must still be cleared when the session already
+      // expired or the network is unavailable.
     }
   }
 
@@ -74,13 +98,21 @@ class AdminLoginResult {
   final String email;
   final String role;
   final String? name;
+  final bool canReassign;
+  final List<String> permissions;
+  final String? refreshToken;
+  final String? sessionId;
 
   const AdminLoginResult({
     required this.token,
     required this.email,
     required this.role,
     this.name,
+    this.canReassign = false,
+    this.permissions = const [],
+    this.refreshToken,
+    this.sessionId,
   });
 
-  bool get isAdmin => role == 'admin';
+  bool get isAdmin => role == 'admin' || role == 'super_admin';
 }

@@ -1,0 +1,213 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../services/geocoding_service.dart';
+import '../services/location_service.dart';
+import '../services/token_storage.dart';
+import '../../features/doctor_registration/provider/care_filter_constants.dart';
+
+/// Resolved marketplace location used as default city / nearby sort.
+class UserLocationState {
+  const UserLocationState({
+    this.city,
+    this.latitude,
+    this.longitude,
+    this.isResolving = false,
+    this.hasResolved = false,
+  });
+
+  final String? city;
+  final double? latitude;
+  final double? longitude;
+  final bool isResolving;
+  final bool hasResolved;
+
+  bool get hasCoordinates => latitude != null && longitude != null;
+
+  String get displayCity =>
+      (city != null && city!.trim().isNotEmpty) ? city!.trim() : 'All cities across India';
+
+  UserLocationState copyWith({
+    String? city,
+    double? latitude,
+    double? longitude,
+    bool? isResolving,
+    bool? hasResolved,
+    bool clearCity = false,
+  }) {
+    return UserLocationState(
+      city: clearCity ? null : (city ?? this.city),
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      isResolving: isResolving ?? this.isResolving,
+      hasResolved: hasResolved ?? this.hasResolved,
+    );
+  }
+}
+
+class UserLocationNotifier extends StateNotifier<UserLocationState> {
+  UserLocationNotifier() : super(const UserLocationState()) {
+    _loadCached();
+  }
+
+  final _storage = TokenStorage.instance;
+  bool _promptInFlight = false;
+
+  Future<void> _loadCached() async {
+    final city = await _storage.getPreferredCity();
+    final lat = await _storage.getLastLatitude();
+    final lng = await _storage.getLastLongitude();
+    if (!mounted) return;
+    if ((city != null && city.isNotEmpty) || (lat != null && lng != null)) {
+      state = state.copyWith(
+        city: city,
+        latitude: lat,
+        longitude: lng,
+        hasResolved: true,
+      );
+    }
+  }
+
+  /// Prompts for location on first open (JioMart-style), then resolves city.
+  /// Safe to call repeatedly — only prompts once unless [forcePrompt] is true.
+  Future<void> ensureResolved(
+    BuildContext context, {
+    bool forcePrompt = false,
+  }) async {
+    if (_promptInFlight || state.isResolving) return;
+    if (state.hasCoordinates && state.city != null && !forcePrompt) {
+      // Soft refresh when permission already granted.
+      await _refreshSilently();
+      return;
+    }
+
+    final alreadyPrompted = await _storage.getLocationPrompted();
+    if (alreadyPrompted && !forcePrompt && !state.hasCoordinates) {
+      state = state.copyWith(hasResolved: true);
+      return;
+    }
+
+    if (!context.mounted) return;
+    _promptInFlight = true;
+    state = state.copyWith(isResolving: true);
+    try {
+      final ready = await LocationService.ensureReady(context);
+      await _storage.setLocationPrompted(true);
+      if (!ready || !context.mounted) {
+        state = state.copyWith(isResolving: false, hasResolved: true);
+        return;
+      }
+
+      final position = await LocationService.getCurrentPosition(
+        requestPermissionIfNeeded: false,
+      );
+      await _applyCoordinates(position.latitude, position.longitude);
+    } on LocationFailure {
+      state = state.copyWith(isResolving: false, hasResolved: true);
+    } catch (_) {
+      state = state.copyWith(isResolving: false, hasResolved: true);
+    } finally {
+      _promptInFlight = false;
+    }
+  }
+
+  Future<void> _refreshSilently() async {
+    try {
+      if (!await LocationService.isServiceEnabled()) return;
+      final perm = await LocationService.checkPermission();
+      if (!LocationService.permissionGranted(perm)) return;
+      final position = await LocationService.getCurrentPosition(
+        requestPermissionIfNeeded: false,
+      );
+      await _applyCoordinates(position.latitude, position.longitude);
+    } catch (_) {}
+  }
+
+  Future<void> _applyCoordinates(double latitude, double longitude) async {
+    String? city = state.city;
+    try {
+      final resolved = await GeocodingService.reverseGeocode(
+        latitude: latitude,
+        longitude: longitude,
+      );
+      city = normalizeMarketplaceCity(resolved.city) ??
+          normalizeMarketplaceCity(resolved.address) ??
+          city;
+    } catch (_) {
+      // Keep coords even if reverse geocode fails.
+    }
+
+    await _storage.saveLocationPreference(
+      city: city,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    if (!mounted) return;
+    state = UserLocationState(
+      city: city,
+      latitude: latitude,
+      longitude: longitude,
+      isResolving: false,
+      hasResolved: true,
+    );
+  }
+}
+
+/// Maps reverse-geocoded place names onto marketplace city filter values.
+String? normalizeMarketplaceCity(String? raw) {
+  if (raw == null) return null;
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return null;
+
+  const aliases = <String, String>{
+    'bengaluru': 'Bangalore',
+    'bangalore': 'Bangalore',
+    'gurugram': 'Gurgaon',
+    'gurgaon': 'Gurgaon',
+    'bombay': 'Mumbai',
+    'mumbai': 'Mumbai',
+    'madras': 'Chennai',
+    'chennai': 'Chennai',
+    'calcutta': 'Kolkata',
+    'kolkata': 'Kolkata',
+    'new delhi': 'Delhi',
+    'delhi': 'Delhi',
+    'navi mumbai': 'Mumbai',
+    'thiruvananthapuram': 'Thiruvananthapuram',
+    'trivandrum': 'Thiruvananthapuram',
+  };
+
+  final lower = trimmed.toLowerCase();
+  if (aliases.containsKey(lower)) return aliases[lower];
+
+  for (final entry in aliases.entries) {
+    if (lower.contains(entry.key)) return entry.value;
+  }
+
+  for (final city in doctorSearchCities) {
+    final cityLower = city.toLowerCase();
+    if (lower == cityLower ||
+        lower.contains(cityLower) ||
+        cityLower.contains(lower)) {
+      return city;
+    }
+  }
+
+  // Prefer a short place name for API city filters.
+  final firstPart = trimmed.split(',').first.trim();
+  return firstPart.isEmpty ? trimmed : firstPart;
+}
+
+final userLocationProvider =
+    StateNotifierProvider<UserLocationNotifier, UserLocationState>((ref) {
+  return UserLocationNotifier();
+});
+
+/// Helper to append `city` query when navigating from home.
+String routeWithPreferredCity(String route, String? city) {
+  if (city == null || city.trim().isEmpty) return route;
+  final uri = Uri.parse(route);
+  final params = Map<String, String>.from(uri.queryParameters);
+  params.putIfAbsent('city', () => city.trim());
+  return uri.replace(queryParameters: params).toString();
+}

@@ -44,6 +44,15 @@ class AdminDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   ServiceBenefitCard(
+                    icon: Icons.rule_folder_rounded,
+                    title: 'Approval Management',
+                    subtitle: 'Approvers · workflow · SLA · audit logs',
+                    color: AppColors.primary,
+                    onTap: () =>
+                        context.push(AppConstants.routeApprovalManagement),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
                     icon: Icons.analytics_rounded,
                     title: 'Marketplace overview',
                     subtitle: 'Patients · bookings · revenue · pending KYC',

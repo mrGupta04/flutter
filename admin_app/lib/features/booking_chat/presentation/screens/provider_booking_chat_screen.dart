@@ -41,7 +41,7 @@ class ProviderBookingChatScreen extends StatefulWidget {
   });
 
   final String bookingId;
-  final String role; // doctor | nurse
+  final String role; // doctor | nurse | lab | scan_center
   final String title;
 
   @override
@@ -59,11 +59,30 @@ class _ProviderBookingChatScreenState extends State<ProviderBookingChatScreen> {
   String? _error;
   Timer? _poll;
 
-  String get _endpoint => widget.role == 'nurse'
-      ? AppConstants.endpointNurseBookingChat(widget.bookingId)
-      : AppConstants.endpointDoctorBookingChat(widget.bookingId);
+  String get _endpoint {
+    switch (widget.role) {
+      case 'nurse':
+        return AppConstants.endpointNurseBookingChat(widget.bookingId);
+      case 'lab':
+        return AppConstants.endpointLabBookingChat(widget.bookingId);
+      case 'scan_center':
+      case 'scan':
+        return AppConstants.endpointScanBookingChat(widget.bookingId);
+      default:
+        return AppConstants.endpointDoctorBookingChat(widget.bookingId);
+    }
+  }
 
-  bool _isMine(ChatMessage m) => m.senderType == widget.role;
+  String get _mineSenderType {
+    switch (widget.role) {
+      case 'scan':
+        return 'scan_center';
+      default:
+        return widget.role;
+    }
+  }
+
+  bool _isMine(ChatMessage m) => m.senderType == _mineSenderType;
 
   @override
   void initState() {

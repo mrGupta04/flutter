@@ -57,10 +57,11 @@ class _UserAppState extends ConsumerState<UserApp> {
       routerConfig: router,
       builder: (context, child) {
         return AppBackButtonScope(
+          router: router,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (child != null) child,
+              child ?? const SizedBox.shrink(),
               const Align(
                 alignment: Alignment.bottomCenter,
                 child: FloatingMeetingTimerOverlay(),

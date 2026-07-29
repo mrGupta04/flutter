@@ -212,6 +212,11 @@ class _ScanDashboardScreenState extends ConsumerState<ScanDashboardScreen> {
                           separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (_, i) {
                             final b = bookings[i];
+                            final canChat = const {
+                              'confirmed',
+                              'in_progress',
+                              'report_ready',
+                            }.contains(b.status);
                             return ListTile(
                               tileColor: AppColors.white,
                               shape: RoundedRectangleBorder(
@@ -223,47 +228,70 @@ class _ScanDashboardScreenState extends ConsumerState<ScanDashboardScreen> {
                                 '${b.label}\n${b.status} · ${b.paymentStatus} · ₹${b.amount}',
                               ),
                               isThreeLine: true,
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (status) async {
-                                  final ok = await ref
-                                      .read(scanDashboardProvider.notifier)
-                                      .updateBookingStatus(
-                                        bookingId: b.id,
-                                        status: status,
-                                      );
-                                  if (ctx.mounted) {
-                                    Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          ok
-                                              ? 'Updated to $status'
-                                              : 'Update failed',
-                                        ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (canChat)
+                                    IconButton(
+                                      tooltip: 'Chat with patient',
+                                      icon: const Icon(
+                                        Icons.chat_bubble_outline_rounded,
+                                        color: AppColors.primary,
                                       ),
-                                    );
-                                  }
-                                },
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                    value: 'confirmed',
-                                    child: Text('Confirm'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'in_progress',
-                                    child: Text('In progress'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'report_ready',
-                                    child: Text('Report ready'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'completed',
-                                    child: Text('Complete'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'rejected',
-                                    child: Text('Reject'),
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        context.push(
+                                          '${AppConstants.routeProviderBookingChat}'
+                                          '?role=scan_center'
+                                          '&bookingId=${Uri.encodeComponent(b.id)}'
+                                          '&title=${Uri.encodeComponent(b.patientName)}',
+                                        );
+                                      },
+                                    ),
+                                  PopupMenuButton<String>(
+                                    onSelected: (status) async {
+                                      final ok = await ref
+                                          .read(scanDashboardProvider.notifier)
+                                          .updateBookingStatus(
+                                            bookingId: b.id,
+                                            status: status,
+                                          );
+                                      if (ctx.mounted) {
+                                        Navigator.pop(ctx);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              ok
+                                                  ? 'Updated to $status'
+                                                  : 'Update failed',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(
+                                        value: 'confirmed',
+                                        child: Text('Confirm'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'in_progress',
+                                        child: Text('In progress'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'report_ready',
+                                        child: Text('Report ready'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'completed',
+                                        child: Text('Complete'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'rejected',
+                                        child: Text('Reject'),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
 import '../core/widgets/app_back_navigation.dart';
+import '../core/providers/user_location_provider.dart';
 import '../core/services/token_storage.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_decorations.dart';
@@ -50,7 +51,10 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadBookings());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeLoadBookings();
+      _requestLocationOnOpen();
+    });
   }
 
   Future<void> _maybeLoadBookings() async {
@@ -60,11 +64,19 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     }
   }
 
+  Future<void> _requestLocationOnOpen() async {
+    if (!mounted) return;
+    await ref
+        .read(userLocationProvider.notifier)
+        .ensureResolved(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(patientAuthProvider);
     final user = auth.user;
     final dash = ref.watch(patientDashboardProvider);
+    final location = ref.watch(userLocationProvider);
     final bannersAsync = ref.watch(homeHeroBannersProvider);
     final nextBooking = dash.upcomingBookings.isNotEmpty
         ? dash.upcomingBookings.first
@@ -80,6 +92,11 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
         color: AppColors.primary,
         onRefresh: () async {
           ref.invalidate(homeHeroBannersProvider);
+          if (mounted) {
+            await ref
+                .read(userLocationProvider.notifier)
+                .ensureResolved(context, forcePrompt: false);
+          }
           if (await TokenStorage.instance.isPatientLoggedIn()) {
             await ref.read(patientDashboardProvider.notifier).refreshAll();
           }
@@ -91,8 +108,10 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: OneMgHeader(
-                locationLabel: 'Service available in',
-                locationValue: 'All cities across India',
+                locationLabel: location.hasCoordinates
+                    ? 'Near you in'
+                    : 'Service available in',
+                locationValue: location.displayCity,
                 searchHint: 'Search doctors, tests, labs...',
                 trailing: user != null
                     ? PatientHeaderAvatar(user: user)
@@ -127,14 +146,24 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   title: 'Online consult',
                   subtitle: 'Video with verified doctors',
                   color: AppColors.primary,
-                  onTap: () => context.push(AppConstants.routeDoctorSearch),
+                  onTap: () => context.push(
+                    routeWithPreferredCity(
+                      AppConstants.routeDoctorSearch,
+                      ref.read(userLocationProvider).city,
+                    ),
+                  ),
                 ),
                 right: OneMgDualCta(
                   icon: Icons.biotech_rounded,
                   title: 'Lab tests',
                   subtitle: 'Home sample collection',
                   color: const Color(0xFF00838F),
-                  onTap: () => context.push(AppConstants.routeLabs),
+                  onTap: () => context.push(
+                    routeWithPreferredCity(
+                      AppConstants.routeLabs,
+                      ref.read(userLocationProvider).city,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -216,11 +245,11 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
   }
 
   void _openService(BuildContext context, _HomeService service) {
-    if (service.routeParams != null) {
-      context.push('${service.route}?${service.routeParams}');
-    } else {
-      context.push(service.route);
-    }
+    final city = ref.read(userLocationProvider).city;
+    final base = service.routeParams != null
+        ? '${service.route}?${service.routeParams}'
+        : service.route;
+    context.push(routeWithPreferredCity(base, city));
   }
 
   void _openDoctorSearch(
@@ -236,8 +265,11 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
       return;
     }
 
+    final preferredCity = city ?? ref.read(userLocationProvider).city;
     final params = <String, String>{};
-    if (city != null && city.isNotEmpty) params['city'] = city;
+    if (preferredCity != null && preferredCity.isNotEmpty) {
+      params['city'] = preferredCity;
+    }
     if (specialization != null && specialization.isNotEmpty) {
       params['specialization'] = specialization;
     }

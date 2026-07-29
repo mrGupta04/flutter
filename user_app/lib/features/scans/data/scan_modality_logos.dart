@@ -60,22 +60,30 @@ ScanModalityLogo scanLogoForCategory(ScanCategory category) {
 }
 
 ScanModalityLogo scanLogoForProcedure(ScanProcedure procedure) {
-  return switch (procedure.id) {
-    'mri-brain' || 'ct-brain' => ScanModalityLogo.brain,
-    'mri-spine' || 'xray-spine' => ScanModalityLogo.spine,
-    'mri-knee' || 'xray-knee' => ScanModalityLogo.knee,
-    'mri-abdomen' || 'ct-abdomen' || 'usg-abdomen' => ScanModalityLogo.abdomen,
-    'xray-chest' || 'ct-chest' => ScanModalityLogo.chest,
-    'xray-dental' => ScanModalityLogo.dental,
-    'usg-pregnancy' => ScanModalityLogo.pregnancy,
-    'usg-thyroid' => ScanModalityLogo.thyroid,
-    'usg-pelvis' => ScanModalityLogo.ultrasound,
-    'echo-2d' => ScanModalityLogo.echo,
-    'dexa-scan' => ScanModalityLogo.dexa,
-    'pet-whole-body' => ScanModalityLogo.pet,
-    'mammography-bilateral' => ScanModalityLogo.mammography,
-    _ => scanLogoForCategory(procedure.category),
-  };
+  final key = '${procedure.id} ${procedure.name}'.toLowerCase();
+  if (key.contains('brain') || key.contains('head')) return ScanModalityLogo.brain;
+  if (key.contains('spine') || key.contains('cervical') || key.contains('lumbar')) {
+    return ScanModalityLogo.spine;
+  }
+  if (key.contains('knee')) return ScanModalityLogo.knee;
+  if (key.contains('abdomen') || key.contains('pelvis')) {
+    return ScanModalityLogo.abdomen;
+  }
+  if (key.contains('chest') || key.contains('lung') || key.contains('hrct')) {
+    return ScanModalityLogo.chest;
+  }
+  if (key.contains('dental') || key.contains('opg') || key.contains('tooth')) {
+    return ScanModalityLogo.dental;
+  }
+  if (key.contains('pregnancy') || key.contains('obstetric') || key.contains('fetal')) {
+    return ScanModalityLogo.pregnancy;
+  }
+  if (key.contains('thyroid')) return ScanModalityLogo.thyroid;
+  if (key.contains('echo') || key.contains('cardiac')) return ScanModalityLogo.echo;
+  if (key.contains('dexa') || key.contains('bone density')) return ScanModalityLogo.dexa;
+  if (key.contains('pet')) return ScanModalityLogo.pet;
+  if (key.contains('mammo')) return ScanModalityLogo.mammography;
+  return scanLogoForCategory(procedure.category);
 }
 
 class ScanModalityLogoPainter extends CustomPainter {

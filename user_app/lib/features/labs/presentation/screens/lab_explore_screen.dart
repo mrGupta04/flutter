@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -35,20 +36,25 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
   }
 
   Future<void> _initExplore() async {
-    double? lat;
-    double? lng;
-    try {
-      if (await LocationService.isServiceEnabled()) {
-        final perm = await LocationService.checkPermission();
-        if (LocationService.permissionGranted(perm)) {
-          final pos = await LocationService.getCurrentPosition(
-            requestPermissionIfNeeded: false,
-          );
-          lat = pos.latitude;
-          lng = pos.longitude;
+    final preferred = ref.read(userLocationProvider);
+    double? lat = preferred.latitude;
+    double? lng = preferred.longitude;
+
+    if (lat == null || lng == null) {
+      try {
+        if (await LocationService.isServiceEnabled()) {
+          final perm = await LocationService.checkPermission();
+          if (LocationService.permissionGranted(perm)) {
+            final pos = await LocationService.getCurrentPosition(
+              requestPermissionIfNeeded: false,
+            );
+            lat = pos.latitude;
+            lng = pos.longitude;
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
+
     if (!mounted) return;
     final notifier = ref.read(labExploreProvider.notifier);
     if (lat != null && lng != null) {
@@ -56,6 +62,16 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
     } else {
       notifier.load(refresh: true);
     }
+  }
+
+  void _onLocationResolved(UserLocationState location) {
+    if (!location.hasCoordinates) return;
+    final state = ref.read(labExploreProvider);
+    if (state.latitude != null && state.longitude != null) return;
+    ref.read(labExploreProvider.notifier).setLocation(
+          location.latitude,
+          location.longitude,
+        );
   }
 
   void _onScroll() {
@@ -206,6 +222,9 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
+      _onLocationResolved(next);
+    });
     final state = ref.watch(labExploreProvider);
 
     return UserTabBackScope(

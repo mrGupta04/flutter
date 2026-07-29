@@ -1,6 +1,13 @@
 function sendSuccess(
   res,
-  { data = null, message = null, statusCode = 200, token = null } = {},
+  {
+    data = null,
+    message = null,
+    statusCode = 200,
+    token = null,
+    pagination = null,
+    meta = null,
+  } = {},
 ) {
   const body = {
     success: true,
@@ -10,6 +17,12 @@ function sendSuccess(
   };
   if (token != null && token !== '') {
     body.token = token;
+  }
+  if (pagination != null) {
+    body.pagination = pagination;
+  }
+  if (meta != null) {
+    body.meta = meta;
   }
   return res.status(statusCode).json(body);
 }

@@ -1,189 +1,88 @@
+import '../../../data/models/scan_center_model.dart';
 import 'models/scan_procedure_model.dart';
 
-/// Static catalog of imaging scans grouped by category.
+/// Maps API `categoryId` values onto patient-facing [ScanCategory] chips.
+ScanCategory scanCategoryFromId(String? id) {
+  if (id == null || id.trim().isEmpty) return ScanCategory.other;
+  final lower = id.trim().toLowerCase();
+
+  for (final category in ScanCategory.values) {
+    if (category.id == lower) return category;
+  }
+
+  if (lower.contains('mri')) return ScanCategory.mri;
+  if (lower.contains('ct') || lower.contains('hrct')) return ScanCategory.ct;
+  if (lower.contains('xray') || lower.contains('x-ray') || lower.contains('opg')) {
+    return ScanCategory.xray;
+  }
+  if (lower.contains('ultrasound') || lower.contains('usg') || lower.contains('sono')) {
+    return ScanCategory.ultrasound;
+  }
+  if (lower.contains('pet')) return ScanCategory.pet;
+  if (lower.contains('mammo')) return ScanCategory.mammography;
+  if (lower.contains('ecg') || lower.contains('ekg')) return ScanCategory.ecg;
+  if (lower.contains('eeg')) return ScanCategory.eeg;
+  if (lower.contains('echo')) return ScanCategory.echo;
+  if (lower.contains('doppler')) return ScanCategory.doppler;
+  if (lower.contains('dexa') || lower.contains('bone')) return ScanCategory.dexa;
+  if (lower.contains('fluoro')) return ScanCategory.fluoroscopy;
+  if (lower.contains('endoscop')) return ScanCategory.endoscopy;
+  if (lower.contains('colonoscop')) return ScanCategory.colonoscopy;
+  if (lower.contains('bronchoscop')) return ScanCategory.bronchoscopy;
+  if (lower.contains('tmt') || lower.contains('treadmill')) return ScanCategory.tmt;
+  if (lower.contains('ncv')) return ScanCategory.ncv;
+  if (lower.contains('emg')) return ScanCategory.emg;
+  return ScanCategory.other;
+}
+
+ScanProcedure scanProcedureFromOffered(ScanOfferedProcedure offered) {
+  return ScanProcedure(
+    id: offered.scanId,
+    name: offered.scanName,
+    description: offered.description ?? '',
+    priceInr: offered.priceInr,
+    discountedPriceInr: offered.discountedPriceInr,
+    reportDeliveryTime: offered.reportDeliveryTime ?? '24–48 hours',
+    category: scanCategoryFromId(offered.categoryId),
+    preparationInstructions: offered.preparationInstructions,
+    fastingRequired: offered.fastingRequired,
+    homeVisitAvailable: offered.homeVisitAvailable,
+    onsiteOnly: offered.onsiteOnly,
+    reportFormat: ScanReportFormat.fromString(offered.reportFormat),
+    availabilityStatus:
+        ScanAvailabilityStatus.fromString(offered.availabilityStatus),
+    prescriptionRequired: offered.prescriptionRequired,
+    images: offered.images,
+  );
+}
+
+/// Helpers for filtering/grouping scan procedures loaded from the API.
 class ScansCatalog {
   ScansCatalog._();
 
   static const List<ScanCategory> allCategories = ScanCategory.values;
 
-  static const List<ScanProcedure> procedures = [
-    // MRI
-    ScanProcedure(
-      id: 'mri-brain',
-      name: 'MRI Brain',
-      description: 'Detailed imaging of brain structures for headaches, seizures, or stroke evaluation.',
-      priceInr: 5499,
-      reportDeliveryTime: '24–48 hours',
-      category: ScanCategory.mri,
-      preparationInstructions: 'Remove all metal objects; inform about implants or pacemaker.',
-    ),
-    ScanProcedure(
-      id: 'mri-spine',
-      name: 'MRI Spine (Cervical / Lumbar)',
-      description: 'Evaluates disc herniation, nerve compression, and spinal cord conditions.',
-      priceInr: 6499,
-      reportDeliveryTime: '24–48 hours',
-      category: ScanCategory.mri,
-      preparationInstructions: 'No fasting required; wear comfortable clothing without metal.',
-    ),
-    ScanProcedure(
-      id: 'mri-knee',
-      name: 'MRI Knee',
-      description: 'Assesses ligament tears, meniscus injury, and joint damage.',
-      priceInr: 4999,
-      reportDeliveryTime: '24 hours',
-      category: ScanCategory.mri,
-    ),
-    ScanProcedure(
-      id: 'mri-abdomen',
-      name: 'MRI Abdomen',
-      description: 'Detailed imaging of liver, pancreas, kidneys, and abdominal organs.',
-      priceInr: 7999,
-      reportDeliveryTime: '48 hours',
-      category: ScanCategory.mri,
-      preparationInstructions: 'Fasting 4–6 hours may be required; follow center instructions.',
-    ),
+  /// Dedupes offered scans across centers (keeps the lowest effective price).
+  static List<ScanProcedure> fromCenters(List<ScanCenterModel> centers) {
+    final byId = <String, ScanProcedure>{};
+    for (final center in centers) {
+      for (final offered in center.offeredScans ?? const <ScanOfferedProcedure>[]) {
+        if (!offered.enabled || offered.scanId.trim().isEmpty) continue;
+        final procedure = scanProcedureFromOffered(offered);
+        final existing = byId[procedure.id];
+        if (existing == null ||
+            procedure.effectivePrice < existing.effectivePrice) {
+          byId[procedure.id] = procedure;
+        }
+      }
+    }
+    final list = byId.values.toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return list;
+  }
 
-    // X-Ray
-    ScanProcedure(
-      id: 'xray-chest',
-      name: 'X-Ray Chest (PA View)',
-      description: 'Screens lungs, heart size, and rib cage for infection or injury.',
-      priceInr: 399,
-      reportDeliveryTime: '2–4 hours',
-      category: ScanCategory.xray,
-    ),
-    ScanProcedure(
-      id: 'xray-spine',
-      name: 'X-Ray Spine',
-      description: 'Evaluates vertebral alignment, fractures, and degenerative changes.',
-      priceInr: 499,
-      reportDeliveryTime: '2–4 hours',
-      category: ScanCategory.xray,
-    ),
-    ScanProcedure(
-      id: 'xray-knee',
-      name: 'X-Ray Knee (AP / Lateral)',
-      description: 'Initial assessment of knee joint, bones, and arthritis.',
-      priceInr: 349,
-      reportDeliveryTime: '2–4 hours',
-      category: ScanCategory.xray,
-    ),
-    ScanProcedure(
-      id: 'xray-dental',
-      name: 'Dental X-Ray (OPG)',
-      description: 'Panoramic view of teeth, jaws, and surrounding bone.',
-      priceInr: 599,
-      reportDeliveryTime: 'Same day',
-      category: ScanCategory.xray,
-    ),
-
-    // CT Scan
-    ScanProcedure(
-      id: 'ct-brain',
-      name: 'CT Scan Brain',
-      description: 'Rapid imaging for head injury, bleeding, or stroke evaluation.',
-      priceInr: 3499,
-      reportDeliveryTime: '12–24 hours',
-      category: ScanCategory.ct,
-    ),
-    ScanProcedure(
-      id: 'ct-chest',
-      name: 'CT Scan Chest (HRCT)',
-      description: 'High-resolution lung imaging for infection, fibrosis, or nodules.',
-      priceInr: 4499,
-      reportDeliveryTime: '12–24 hours',
-      category: ScanCategory.ct,
-    ),
-    ScanProcedure(
-      id: 'ct-abdomen',
-      name: 'CT Scan Abdomen & Pelvis',
-      description: 'Comprehensive abdominal organ evaluation with contrast option.',
-      priceInr: 5999,
-      reportDeliveryTime: '24 hours',
-      category: ScanCategory.ct,
-      preparationInstructions: 'Fasting 4–6 hours; kidney function test may be required for contrast.',
-    ),
-
-    // Ultrasound
-    ScanProcedure(
-      id: 'usg-abdomen',
-      name: 'Ultrasound Abdomen',
-      description: 'Non-invasive imaging of liver, gallbladder, kidneys, and spleen.',
-      priceInr: 999,
-      reportDeliveryTime: '4–6 hours',
-      category: ScanCategory.ultrasound,
-      preparationInstructions: 'Fasting 6–8 hours; drink water for bladder if pelvic included.',
-    ),
-    ScanProcedure(
-      id: 'usg-pelvis',
-      name: 'Ultrasound Pelvis',
-      description: 'Evaluates uterus, ovaries, bladder, and pelvic organs.',
-      priceInr: 899,
-      reportDeliveryTime: '4–6 hours',
-      category: ScanCategory.ultrasound,
-      preparationInstructions: 'Full bladder required; drink 4–5 glasses of water 1 hour before.',
-    ),
-    ScanProcedure(
-      id: 'usg-thyroid',
-      name: 'Ultrasound Thyroid',
-      description: 'Assesses thyroid nodules, goitre, and neck lymph nodes.',
-      priceInr: 799,
-      reportDeliveryTime: '4–6 hours',
-      category: ScanCategory.ultrasound,
-    ),
-    ScanProcedure(
-      id: 'usg-pregnancy',
-      name: 'Obstetric Ultrasound (Anomaly Scan)',
-      description: 'Fetal growth monitoring and structural anomaly screening.',
-      priceInr: 1499,
-      reportDeliveryTime: 'Same day',
-      category: ScanCategory.ultrasound,
-      preparationInstructions: 'Carry previous pregnancy records and doctor referral.',
-    ),
-
-    // PET Scan
-    ScanProcedure(
-      id: 'pet-whole-body',
-      name: 'PET-CT Whole Body',
-      description: 'Cancer staging, recurrence monitoring, and metabolic imaging.',
-      priceInr: 18999,
-      reportDeliveryTime: '48–72 hours',
-      category: ScanCategory.pet,
-      preparationInstructions: 'Fasting 6 hours; avoid strenuous exercise 24 hours prior.',
-    ),
-
-    // Mammography
-    ScanProcedure(
-      id: 'mammography-bilateral',
-      name: 'Mammography (Bilateral)',
-      description: 'Breast cancer screening for women aged 40 and above.',
-      priceInr: 1999,
-      reportDeliveryTime: '24 hours',
-      category: ScanCategory.mammography,
-      preparationInstructions: 'Avoid deodorant, powder, or lotion on chest area.',
-    ),
-
-    // Other
-    ScanProcedure(
-      id: 'dexa-scan',
-      name: 'DEXA Bone Density Scan',
-      description: 'Measures bone mineral density for osteoporosis screening.',
-      priceInr: 1499,
-      reportDeliveryTime: 'Same day',
-      category: ScanCategory.other,
-    ),
-    ScanProcedure(
-      id: 'echo-2d',
-      name: '2D Echocardiography',
-      description: 'Ultrasound of heart structure and function.',
-      priceInr: 1799,
-      reportDeliveryTime: 'Same day',
-      category: ScanCategory.other,
-    ),
-  ];
-
-  static List<ScanProcedure> filter({
+  static List<ScanProcedure> filter(
+    List<ScanProcedure> procedures, {
     String? query,
     ScanCategory? category,
   }) {
@@ -206,7 +105,7 @@ class ScansCatalog {
     return map;
   }
 
-  static ScanProcedure? byId(String id) {
+  static ScanProcedure? byId(List<ScanProcedure> procedures, String id) {
     for (final scan in procedures) {
       if (scan.id == id) return scan;
     }

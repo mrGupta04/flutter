@@ -2,12 +2,14 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const { rateLimit } = require('express-rate-limit');
 const { connectDB } = require('./db/connect');
 const { seed } = require('./db/seed');
 const doctorRoutes = require('./routes/doctorRoutes');
 const nurseRoutes = require('./routes/nurseRoutes');
 const adminAuthRoutes = require('./routes/adminAuthRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const approvalWorkflowRoutes = require('./routes/approvalWorkflowRoutes');
 const ambulanceRoutes = require('./routes/ambulanceRoutes');
 const bloodBankRoutes = require('./routes/bloodBankRoutes');
 const labRoutes = require('./routes/labRoutes');
@@ -31,6 +33,9 @@ const {
 const {
   startVisitReminderScheduler,
 } = require('./services/visitReminderService');
+const {
+  startApprovalSlaEscalationScheduler,
+} = require('./services/approvalSlaEscalationService');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const app = express();
@@ -48,6 +53,20 @@ app.use(
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  '/api/',
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 1000,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: {
+      success: false,
+      error: 'Too many requests. Please try again later.',
+      statusCode: 429,
+    },
+  }),
+);
 
 const uploadsPath = path.join(__dirname, '../uploads');
 const uploadRoutes = require('./routes/uploadRoutes');
@@ -77,6 +96,7 @@ app.get('/health', async (_req, res) => {
 
 app.use('/api/v1/admin', adminAuthRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/admin', approvalWorkflowRoutes);
 app.use('/api/v1/doctor', doctorRoutes);
 app.use('/api/v1/nurse', nurseRoutes);
 app.use('/api/v1/ambulance', ambulanceRoutes);
@@ -102,9 +122,17 @@ app.use((err, _req, res, _next) => {
 
 async function start() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    if (NODE_ENV === 'production') {
+      throw new Error(
+        'JWT_SECRET must be a random string of at least 32 characters in production.',
+      );
+    }
     console.warn(
       'WARNING: Set JWT_SECRET to a random string of at least 32 characters.',
     );
+  }
+  if (NODE_ENV === 'production' && corsOrigin === '*') {
+    throw new Error('CORS_ORIGIN must explicitly list trusted origins in production.');
   }
 
   await connectDB();
@@ -146,6 +174,7 @@ async function start() {
   void verifySmtpAtStartup();
   startPrescriptionAutoSendScheduler();
   startVisitReminderScheduler();
+  startApprovalSlaEscalationScheduler();
 }
 
 async function verifySmtpAtStartup() {
