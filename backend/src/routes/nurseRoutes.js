@@ -55,13 +55,16 @@ const { upload, filePublicUrl } = require('../middleware/multerUpload');
 
 const { loginProvider } = require('../utils/providerAuth');
 
+const {
+  mountProviderPasswordResetRoutes,
+} = require('./helpers/mountProviderPasswordReset');
+
 const { toNurse } = require('../db/nurseMappers');
 
 
 
 const router = express.Router();
-
-
+mountProviderPasswordResetRoutes(router, 'nurse');
 
 const { normalizeMobile, validateMobile } = require('../utils/mobile');
 

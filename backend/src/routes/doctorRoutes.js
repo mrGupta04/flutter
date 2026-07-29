@@ -20,6 +20,9 @@ const { sendSuccess, sendError } = require('../utils/response');
 const { validateMobile } = require('../utils/mobile');
 const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { loginProvider } = require('../utils/providerAuth');
+const {
+  mountProviderPasswordResetRoutes,
+} = require('./helpers/mountProviderPasswordReset');
 const { toDoctor } = require('../db/mappers');
 const { listPublicDoctorFeedback } = require('../db/feedbackRepositories');
 const { isDoctorLiveNow } = require('../utils/doctorPresence');
@@ -46,6 +49,7 @@ const aadhaarRoutes = require('./aadhaarRoutes');
 const emailRoutes = require('./emailRoutes');
 
 const router = express.Router();
+mountProviderPasswordResetRoutes(router, 'doctor');
 
 // Aadhaar OTP — must be registered on this router (POST /doctor/aadhaar/send-otp)
 router.use('/aadhaar', aadhaarRoutes);

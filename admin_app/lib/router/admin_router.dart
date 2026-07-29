@@ -45,6 +45,7 @@ import '../features/notifications/presentation/screens/provider_notifications_sc
 import '../features/booking_chat/presentation/screens/provider_booking_chat_screen.dart';
 import '../features/nurse_registration/presentation/screens/nurse_registration_screen.dart';
 import '../features/auth/presentation/screens/provider_auth_gate_screen.dart';
+import '../features/auth/presentation/screens/provider_forgot_password_screen.dart';
 import '../features/auth/presentation/screens/provider_login_screen.dart';
 import '../core/models/provider_type.dart';
 import '../features/provider/presentation/screens/provider_landing_screen.dart';
@@ -186,6 +187,20 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
             return fadePage(state, const ProviderLandingScreen());
           }
           return slidePage(state, ProviderLoginScreen(providerType: type));
+        },
+      ),
+      GoRoute(
+        path: '${AppConstants.routeProviderForgotPassword}/:type',
+        name: 'providerForgotPassword',
+        pageBuilder: (context, state) {
+          final type = ProviderType.fromRouteParam(state.pathParameters['type']);
+          if (type == null) {
+            return fadePage(state, const ProviderLandingScreen());
+          }
+          return slidePage(
+            state,
+            ProviderForgotPasswordScreen(providerType: type),
+          );
         },
       ),
       GoRoute(

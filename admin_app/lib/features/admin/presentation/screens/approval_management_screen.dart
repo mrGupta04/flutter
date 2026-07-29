@@ -465,7 +465,7 @@ class _ApprovalManagementScreenState
       text: approver?.profilePicture ?? '',
     );
     final country = TextEditingController(
-      text: approver?.regions.firstOrNull?.country ?? 'India',
+      text: approver?.regions.firstOrNull?.country ?? '',
     );
     final stateController = TextEditingController(
       text: approver?.regions.firstOrNull?.state ?? '',
@@ -482,7 +482,15 @@ class _ApprovalManagementScreenState
     var status = approver?.status ?? 'active';
     var canReassign = approver?.canReassign ?? false;
     final permissions = <String>{...?approver?.permissions};
-    final categories = ref.read(approvalManagementProvider).config.categories;
+    var categories = ref.read(approvalManagementProvider).config.categories;
+    if (categories.isEmpty) {
+      // Ensure permission chips always cover every provider type.
+      await ref.read(approvalManagementProvider.notifier).refreshConfig();
+      categories = ref.read(approvalManagementProvider).config.categories;
+    }
+    if (categories.isEmpty) {
+      categories = _fallbackApprovalCategories;
+    }
 
     final ok = await showDialog<bool>(
       context: context,
@@ -517,7 +525,17 @@ class _ApprovalManagementScreenState
                         ],
                       ),
                       const SizedBox(height: 18),
-                      Text('Permissions', style: AppTextStyles.titleSmall),
+                      Text(
+                        'Can approve (select all that apply)',
+                        style: AppTextStyles.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Doctor, Nurse, Lab, Scan/MRI, Ambulance, Blood Bank, etc.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -539,7 +557,10 @@ class _ApprovalManagementScreenState
                         }).toList(),
                       ),
                       const SizedBox(height: 18),
-                      Text('Location access', style: AppTextStyles.titleSmall),
+                      Text(
+                        'Location access (optional — leave blank for all regions)',
+                        style: AppTextStyles.titleSmall,
+                      ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 12,
@@ -596,7 +617,7 @@ class _ApprovalManagementScreenState
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Name, employee ID, email, password, and permissions are required',
+                            'Name, employee ID, email, password, and at least one provider category are required',
                           ),
                         ),
                       );
@@ -3356,13 +3377,89 @@ String? _kycDetailPath(String providerType, String providerId) {
     case 'blood_bank':
       return '${AppConstants.routeAdminBloodBankDetails}/$providerId';
     case 'laboratory':
+    case 'lab':
       return '${AppConstants.routeAdminLabDetails}/$providerId';
     case 'scan_center':
+    case 'scan':
       return '${AppConstants.routeAdminScanDetails}/$providerId';
     default:
       return null;
   }
 }
+
+/// Fallback chips if config API has not loaded yet.
+const _fallbackApprovalCategories = <ProviderCategoryModel>[
+  ProviderCategoryModel(
+    slug: 'doctor',
+    name: 'Doctor',
+    active: true,
+    slaHours: 24,
+    sortOrder: 10,
+  ),
+  ProviderCategoryModel(
+    slug: 'nurse',
+    name: 'Nurse',
+    active: true,
+    slaHours: 18,
+    sortOrder: 20,
+  ),
+  ProviderCategoryModel(
+    slug: 'laboratory',
+    name: 'Lab / Diagnostic Lab',
+    active: true,
+    slaHours: 12,
+    sortOrder: 40,
+  ),
+  ProviderCategoryModel(
+    slug: 'scan_center',
+    name: 'Scan / MRI Center',
+    active: true,
+    slaHours: 12,
+    sortOrder: 50,
+  ),
+  ProviderCategoryModel(
+    slug: 'ambulance',
+    name: 'Ambulance',
+    active: true,
+    slaHours: 8,
+    sortOrder: 70,
+  ),
+  ProviderCategoryModel(
+    slug: 'blood_bank',
+    name: 'Blood Bank',
+    active: true,
+    slaHours: 12,
+    sortOrder: 80,
+  ),
+  ProviderCategoryModel(
+    slug: 'hospital',
+    name: 'Hospital',
+    active: true,
+    slaHours: 48,
+    sortOrder: 30,
+  ),
+  ProviderCategoryModel(
+    slug: 'pharmacy',
+    name: 'Pharmacy',
+    active: true,
+    slaHours: 12,
+    sortOrder: 60,
+  ),
+  ProviderCategoryModel(
+    slug: 'home_care',
+    name: 'Home Care',
+    active: true,
+    slaHours: 18,
+    sortOrder: 90,
+  ),
+  ProviderCategoryModel(
+    slug: 'other',
+    name: 'Other Categories',
+    active: true,
+    slaHours: 24,
+    sortOrder: 120,
+  ),
+];
 
 String _titleCase(String value) {
   return value

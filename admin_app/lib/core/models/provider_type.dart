@@ -75,6 +75,10 @@ enum ProviderType {
     }
   }
 
+  String get loginRoute => '/provider-login/$routeParam';
+
+  String get forgotPasswordRoute => '/provider-forgot-password/$routeParam';
+
   static ProviderType? fromRouteParam(String? value) {
     switch (value) {
       case 'doctor':

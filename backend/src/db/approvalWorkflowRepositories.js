@@ -72,29 +72,103 @@ const REVIEW_PROVIDER_STATUSES = [
 ];
 
 const DEFAULT_PROVIDER_CATEGORIES = [
-  { slug: 'doctor', name: 'Doctor Approval', slaHours: 24, sortOrder: 10 },
-  { slug: 'nurse', name: 'Nurse Approval', slaHours: 18, sortOrder: 20 },
-  { slug: 'hospital', name: 'Hospital Approval', slaHours: 48, sortOrder: 30 },
-  { slug: 'laboratory', name: 'Laboratory Approval', slaHours: 12, sortOrder: 40 },
-  { slug: 'scan_center', name: 'Scan Center Approval', slaHours: 12, sortOrder: 50 },
-  { slug: 'pharmacy', name: 'Pharmacy Approval', slaHours: 12, sortOrder: 60 },
-  { slug: 'ambulance', name: 'Ambulance Approval', slaHours: 8, sortOrder: 70 },
-  { slug: 'blood_bank', name: 'Blood Bank Approval', slaHours: 12, sortOrder: 80 },
-  { slug: 'home_care', name: 'Home Care Approval', slaHours: 18, sortOrder: 90 },
+  { slug: 'doctor', name: 'Doctor', slaHours: 24, sortOrder: 10 },
+  { slug: 'nurse', name: 'Nurse', slaHours: 18, sortOrder: 20 },
+  { slug: 'hospital', name: 'Hospital', slaHours: 48, sortOrder: 30 },
+  { slug: 'laboratory', name: 'Lab / Diagnostic Lab', slaHours: 12, sortOrder: 40 },
+  { slug: 'scan_center', name: 'Scan / MRI Center', slaHours: 12, sortOrder: 50 },
+  { slug: 'pharmacy', name: 'Pharmacy', slaHours: 12, sortOrder: 60 },
+  { slug: 'ambulance', name: 'Ambulance', slaHours: 8, sortOrder: 70 },
+  { slug: 'blood_bank', name: 'Blood Bank', slaHours: 12, sortOrder: 80 },
+  { slug: 'home_care', name: 'Home Care', slaHours: 18, sortOrder: 90 },
   {
     slug: 'medical_equipment',
-    name: 'Medical Equipment Approval',
+    name: 'Medical Equipment',
     slaHours: 24,
     sortOrder: 100,
   },
   {
     slug: 'physiotherapist',
-    name: 'Physiotherapist Approval',
+    name: 'Physiotherapist',
     slaHours: 18,
     sortOrder: 110,
   },
   { slug: 'other', name: 'Other Categories', slaHours: 24, sortOrder: 120 },
 ];
+
+/** Maps UI/legacy permission values onto canonical category slugs. */
+const CATEGORY_ALIASES = {
+  doctor: ['doctor'],
+  nurse: ['nurse'],
+  hospital: ['hospital'],
+  laboratory: ['laboratory', 'lab', 'labs', 'diagnostic_lab', 'diagnostic-lab'],
+  scan_center: [
+    'scan_center',
+    'scan-center',
+    'scan',
+    'scans',
+    'mri',
+    'mri_scan',
+    'mri-scan',
+    'imaging',
+  ],
+  pharmacy: ['pharmacy'],
+  ambulance: ['ambulance'],
+  blood_bank: ['blood_bank', 'blood-bank', 'bloodbank', 'blood'],
+  home_care: ['home_care', 'home-care', 'homecare'],
+  medical_equipment: ['medical_equipment', 'medical-equipment'],
+  physiotherapist: ['physiotherapist', 'physio'],
+  other: ['other'],
+};
+
+function expandPermissionKeys(permissions = []) {
+  const expanded = new Set();
+  for (const raw of permissions) {
+    const key = String(raw || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+    if (!key) continue;
+    expanded.add(key);
+    for (const [canonical, aliases] of Object.entries(CATEGORY_ALIASES)) {
+      const normalizedAliases = aliases.map((alias) =>
+        String(alias).replace(/-/g, '_'),
+      );
+      if (
+        canonical === key ||
+        aliases.includes(raw) ||
+        aliases.includes(key) ||
+        normalizedAliases.includes(key)
+      ) {
+        expanded.add(canonical);
+        for (const alias of aliases) {
+          expanded.add(String(alias).replace(/-/g, '_'));
+        }
+      }
+    }
+  }
+  return [...expanded];
+}
+
+function permissionKeysForRequest(request) {
+  return expandPermissionKeys([
+    request?.providerCategory,
+    request?.providerType,
+    'other',
+  ]);
+}
+
+function canonicalCategoryForProviderType(providerType) {
+  const key = String(providerType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, '_');
+  if (PROVIDER_DEFINITIONS[key]) return PROVIDER_DEFINITIONS[key].category;
+  for (const [canonical, aliases] of Object.entries(CATEGORY_ALIASES)) {
+    if (canonical === key || aliases.includes(key)) return canonical;
+  }
+  return key || 'other';
+}
 
 async function requestDoctorDocuments(id, note) {
   await Doctor.updateOne(
@@ -195,6 +269,40 @@ function escapeRegex(value) {
 function normalizeArray(value) {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.map((v) => String(v || '').trim()).filter(Boolean))];
+}
+
+function canonicalizePermissions(permissions = []) {
+  const result = new Set();
+  for (const raw of permissions) {
+    const key = String(raw || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+    if (!key) continue;
+    let matched = false;
+    for (const [canonical, aliases] of Object.entries(CATEGORY_ALIASES)) {
+      const normalizedAliases = aliases.map((alias) =>
+        String(alias).replace(/-/g, '_'),
+      );
+      if (
+        canonical === key ||
+        aliases.includes(raw) ||
+        aliases.includes(key) ||
+        normalizedAliases.includes(key)
+      ) {
+        result.add(canonical);
+        matched = true;
+        break;
+      }
+    }
+    if (
+      !matched &&
+      DEFAULT_PROVIDER_CATEGORIES.some((category) => category.slug === key)
+    ) {
+      result.add(key);
+    }
+  }
+  return [...result];
 }
 
 function normalizeEmail(email) {
@@ -465,14 +573,16 @@ async function ensureApprovalConfiguration() {
       ProviderCategory.updateOne(
         { slug: category.slug },
         {
-          $setOnInsert: {
-            id: uuidv4(),
-            slug: category.slug,
+          $set: {
             name: category.name,
-            description: `${category.name} workflow category`,
+            description: `${category.name} approval workflow`,
             slaHours: category.slaHours,
             sortOrder: category.sortOrder,
             active: true,
+          },
+          $setOnInsert: {
+            id: uuidv4(),
+            slug: category.slug,
           },
         },
         { upsert: true },
@@ -509,6 +619,9 @@ async function ensureApprovalConfiguration() {
               },
             ],
           },
+          $set: {
+            active: true,
+          },
         },
         { upsert: true },
       ),
@@ -521,105 +634,272 @@ async function getRuleForCategory(providerCategory) {
   return ApprovalRule.findOne({ providerCategory, active: true });
 }
 
-async function syncProviderRequests() {
-  await ensureApprovalConfiguration();
+const SYNC_TTL_MS = 30 * 1000;
+let _lastSyncAt = 0;
+let _syncPromise = null;
 
-  for (const [providerType, def] of Object.entries(PROVIDER_DEFINITIONS)) {
-    const docs = await def.model
-      .find({ verificationStatus: { $in: REVIEW_PROVIDER_STATUSES } })
-      .sort({ createdAt: -1 })
-      .limit(500);
+async function syncProviderRequests({ force = false } = {}) {
+  const now = Date.now();
+  if (!force && now - _lastSyncAt < SYNC_TTL_MS) {
+    return;
+  }
+  if (_syncPromise) {
+    return _syncPromise;
+  }
 
-    for (const raw of docs) {
-      const provider = def.mapper(raw);
-      if (!provider?.id) continue;
+  _syncPromise = (async () => {
+    await ensureApprovalConfiguration();
 
-      const existing = await ApprovalRequest.findOne({
+    const rules = await ApprovalRule.find({ active: true }).lean();
+    const rulesByCategory = Object.fromEntries(
+      rules.map((rule) => [rule.providerCategory, rule]),
+    );
+
+    for (const [providerType, def] of Object.entries(PROVIDER_DEFINITIONS)) {
+      const docs = await def.model
+        .find({ verificationStatus: { $in: REVIEW_PROVIDER_STATUSES } })
+        .sort({ createdAt: -1 })
+        .limit(500)
+        .lean();
+
+      if (!docs.length) continue;
+
+      const providers = docs
+        .map((raw) => def.mapper(raw))
+        .filter((provider) => provider?.id);
+      if (!providers.length) continue;
+
+      const existingList = await ApprovalRequest.find({
         providerType,
-        providerId: provider.id,
-      });
-      const snapshot = providerSnapshot(providerType, provider);
-      const mappedStatus = statusFromProviderStatus(provider.verificationStatus);
-      const rule = await getRuleForCategory(def.category);
-      const registrationDate = snapshot.registrationDate || new Date();
-      const slaHours = rule?.slaHours || 24;
-      const approvalLevels = [...(rule?.approvalLevels || [])]
-        .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
-        .map((level) => ({
-          id: uuidv4(),
-          levelId: level.id,
-          levelName: level.name,
-          levelOrder: level.order,
-          role: level.role,
-          required: level.required !== false,
-          status: level.required === false ? 'skipped' : 'pending',
-        }));
-      const firstRequiredLevel = approvalLevels.find(
-        (level) => level.status === 'pending',
+        providerId: { $in: providers.map((provider) => provider.id) },
+      })
+        .select({
+          providerId: 1,
+          status: 1,
+          approvalLevels: 1,
+          timeline: 1,
+        })
+        .lean();
+      const existingById = new Map(
+        existingList.map((item) => [item.providerId, item]),
       );
-      const existingClosed =
-        existing && ['approved', 'rejected'].includes(existing.status);
-      const status =
-        mappedStatus === 'approved' || mappedStatus === 'rejected'
-          ? mappedStatus
-          : existingClosed
-            ? existing.status
-            : existing?.status || mappedStatus;
 
-      const timeline =
-        existing?.timeline?.length > 0
-          ? existing.timeline
-          : [
-              {
-                id: uuidv4(),
-                actor: { id: provider.id, name: snapshot.name, role: 'provider' },
-                action: 'provider_registered',
-                remarks: 'Provider registered in the platform.',
-                createdAt: registrationDate,
-                metadata: { providerType },
-              },
-              {
-                id: uuidv4(),
-                actor: { id: 'system', name: 'System', role: 'system' },
-                action: 'approval_request_created',
-                remarks: 'Approval workflow request created.',
-                createdAt: new Date(),
-                metadata: { providerType, providerCategory: def.category },
-              },
-            ];
+      const rule = rulesByCategory[def.category];
+      const ops = [];
 
-      await ApprovalRequest.updateOne(
-        { providerType, providerId: provider.id },
-        {
-          $setOnInsert: {
+      for (const provider of providers) {
+        const existing = existingById.get(provider.id);
+        const snapshot = providerSnapshot(providerType, provider);
+        const mappedStatus = statusFromProviderStatus(
+          provider.verificationStatus,
+        );
+        const registrationDate = snapshot.registrationDate || new Date();
+        const slaHours = rule?.slaHours || 24;
+        const approvalLevels = [...(rule?.approvalLevels || [])]
+          .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+          .map((level) => ({
             id: uuidv4(),
-            priority: 'normal',
-            providerType,
-            providerId: provider.id,
-            providerCategory: def.category,
-            slaHours,
-            slaDueAt: addHours(registrationDate, slaHours),
-            timeline,
-            approvalLevels,
-            currentApprovalLevel: firstRequiredLevel?.levelOrder || 1,
+            levelId: level.id,
+            levelName: level.name,
+            levelOrder: level.order,
+            role: level.role,
+            required: level.required !== false,
+            status: level.required === false ? 'skipped' : 'pending',
+          }));
+        const firstRequiredLevel = approvalLevels.find(
+          (level) => level.status === 'pending',
+        );
+        const existingClosed =
+          existing && ['approved', 'rejected'].includes(existing.status);
+        const status =
+          mappedStatus === 'approved' || mappedStatus === 'rejected'
+            ? mappedStatus
+            : existingClosed
+              ? existing.status
+              : existing?.status || mappedStatus;
+
+        const timeline =
+          existing?.timeline?.length > 0
+            ? existing.timeline
+            : [
+                {
+                  id: uuidv4(),
+                  actor: {
+                    id: provider.id,
+                    name: snapshot.name,
+                    role: 'provider',
+                  },
+                  action: 'provider_registered',
+                  remarks: 'Provider registered in the platform.',
+                  createdAt: registrationDate,
+                  metadata: { providerType },
+                },
+                {
+                  id: uuidv4(),
+                  actor: { id: 'system', name: 'System', role: 'system' },
+                  action: 'approval_request_created',
+                  remarks: 'Approval workflow request created.',
+                  createdAt: new Date(),
+                  metadata: {
+                    providerType,
+                    providerCategory: def.category,
+                  },
+                },
+              ];
+
+        // Never put the same path in both $set and $setOnInsert (Mongo conflict).
+        const setOnInsert = {
+          id: uuidv4(),
+          priority: 'normal',
+          providerType,
+          providerId: provider.id,
+          providerCategory: def.category,
+          slaHours,
+          slaDueAt: addHours(registrationDate, slaHours),
+          timeline,
+          approvalLevels,
+          currentApprovalLevel: firstRequiredLevel?.levelOrder || 1,
+        };
+        const setFields = {
+          provider: snapshot,
+          status,
+          providerCategory: def.category,
+          metadata: {
+            providerLabel: def.label,
+            providerVerificationStatus: provider.verificationStatus,
           },
-          $set: {
-            provider: snapshot,
-            status,
-            ...((!existing || !existing.approvalLevels?.length) && approvalLevels.length
-              ? {
-                  approvalLevels,
-                  currentApprovalLevel: firstRequiredLevel?.levelOrder || 1,
-                }
-              : {}),
-            metadata: {
-              providerLabel: def.label,
-              providerVerificationStatus: provider.verificationStatus,
+        };
+
+        // Backfill levels only on existing docs that are missing them.
+        if (
+          existing &&
+          !existing.approvalLevels?.length &&
+          approvalLevels.length
+        ) {
+          setFields.approvalLevels = approvalLevels;
+          setFields.currentApprovalLevel =
+            firstRequiredLevel?.levelOrder || 1;
+        }
+
+        ops.push({
+          updateOne: {
+            filter: { providerType, providerId: provider.id },
+            update: {
+              $setOnInsert: setOnInsert,
+              $set: setFields,
             },
+            upsert: true,
+          },
+        });
+      }
+
+      if (ops.length) {
+        await ApprovalRequest.bulkWrite(ops, { ordered: false });
+      }
+    }
+
+    await autoAssignUnassignedRequests();
+    _lastSyncAt = Date.now();
+  })().finally(() => {
+    _syncPromise = null;
+  });
+
+  return _syncPromise;
+}
+
+/**
+ * Assign open, unassigned requests to eligible approvers using each
+ * category's assignment strategy (default: least_busy).
+ */
+async function autoAssignUnassignedRequests() {
+  const unassigned = await ApprovalRequest.find({
+    status: { $in: OPEN_REQUEST_STATUSES },
+    $or: [
+      { currentAssigneeId: null },
+      { currentAssigneeId: { $exists: false } },
+      { currentAssigneeId: '' },
+    ],
+  })
+    .sort({ createdAt: 1 })
+    .limit(500);
+
+  if (!unassigned.length) return;
+
+  const rules = await ApprovalRule.find({ active: true }).lean();
+  const strategyByCategory = Object.fromEntries(
+    rules.map((rule) => [
+      rule.providerCategory,
+      rule.assignmentStrategy || 'least_busy',
+    ]),
+  );
+
+  const systemActor = { id: 'system', name: 'System', role: 'system' };
+
+  for (const request of unassigned) {
+    const strategy =
+      strategyByCategory[request.providerCategory] || 'least_busy';
+    const approver = await chooseApproverForRequest(request, strategy);
+    if (!approver) continue;
+
+    const toApproverName = `${approver.firstName} ${approver.lastName}`.trim();
+    const eventId = uuidv4();
+    const result = await ApprovalRequest.updateOne(
+      {
+        id: request.id,
+        $or: [
+          { currentAssigneeId: null },
+          { currentAssigneeId: { $exists: false } },
+          { currentAssigneeId: '' },
+        ],
+      },
+      {
+        $set: {
+          currentAssigneeId: approver.id,
+          currentAssigneeName: toApproverName,
+          assignedBy: systemActor,
+          assignedAt: new Date(),
+          assignmentStrategy: strategy,
+          lastActionAt: new Date(),
+          lastActionBy: systemActor,
+          lastRemarks: `Auto-assigned via ${strategy}`,
+        },
+        $push: {
+          assignmentHistory: {
+            id: eventId,
+            fromApproverId: null,
+            fromApproverName: null,
+            toApproverId: approver.id,
+            toApproverName,
+            strategy,
+            assignedBy: systemActor,
+            remarks: `Auto-assigned via ${strategy}`,
+            createdAt: new Date(),
+          },
+          timeline: {
+            id: uuidv4(),
+            actor: systemActor,
+            action: 'request_assigned',
+            remarks: `Auto-assigned to ${toApproverName}.`,
+            createdAt: new Date(),
+            metadata: { strategy, auto: true },
           },
         },
-        { upsert: true },
-      );
+      },
+    );
+
+    if (result.modifiedCount > 0) {
+      await createApprovalNotification({
+        recipientId: approver.id,
+        recipientRole: 'approver',
+        title: 'New approval request',
+        body: `${request.provider?.name || 'A provider'} was assigned to you for review.`,
+        type: 'provider_assigned',
+        data: {
+          requestId: request.id,
+          providerId: request.providerId,
+          providerType: request.providerType,
+        },
+      });
     }
   }
 }
@@ -802,7 +1082,7 @@ async function createApprover(data, { req } = {}) {
     designation: data.designation,
     profilePicture: data.profilePicture,
     status: data.status === 'inactive' ? 'inactive' : 'active',
-    permissions: normalizeArray(data.permissions),
+    permissions: canonicalizePermissions(data.permissions),
     regions: Array.isArray(data.regions) ? data.regions : [],
     canReassign: Boolean(data.canReassign),
   });
@@ -847,7 +1127,9 @@ async function updateApprover(id, data, { req } = {}) {
     }
   }
   if (data.status === 'active' || data.status === 'inactive') update.status = data.status;
-  if (Array.isArray(data.permissions)) update.permissions = normalizeArray(data.permissions);
+  if (Array.isArray(data.permissions)) {
+    update.permissions = canonicalizePermissions(data.permissions);
+  }
   if (Array.isArray(data.regions)) update.regions = data.regions;
   if (data.canReassign != null) update.canReassign = Boolean(data.canReassign);
 
@@ -1129,27 +1411,78 @@ function regionMatches(approver, request) {
     return entries.every(([key, value]) => {
       const expected = String(region[key] || '').trim().toLowerCase();
       if (!expected) return true;
-      return expected === String(value || '').trim().toLowerCase();
+      const actual = String(value || '').trim().toLowerCase();
+      // Provider profile may be incomplete — don't exclude on missing fields.
+      if (!actual) return true;
+      return expected === actual;
     });
   });
 }
 
 function hasCategoryPermission(approver, request) {
-  const permissions = approver.permissions || [];
-  return (
-    permissions.includes(request.providerCategory) ||
-    permissions.includes(request.providerType) ||
-    permissions.includes('other')
+  const permissions = expandPermissionKeys(approver.permissions || []);
+  if (permissions.includes('other')) return true;
+  const requestKeys = permissionKeysForRequest(request).filter(
+    (key) => key !== 'other',
   );
+  return requestKeys.some((key) => permissions.includes(key));
+}
+
+function isUnassignedRequest(request) {
+  return !request?.currentAssigneeId;
+}
+
+async function buildApproverVisibilityFilter(actor) {
+  if (!actor || !isApproverActor(actor)) return null;
+  const approver = await Approver.findOne({
+    id: actor.id,
+    status: 'active',
+    deletedAt: null,
+  });
+  const permissions = expandPermissionKeys(approver?.permissions || []);
+  const categoryKeys = permissions.includes('other')
+    ? null
+    : permissions.filter((key) => key !== 'other');
+  const unassignedClause = {
+    $and: [
+      {
+        $or: [
+          { currentAssigneeId: null },
+          { currentAssigneeId: { $exists: false } },
+          { currentAssigneeId: '' },
+        ],
+      },
+      ...(categoryKeys?.length
+        ? [
+            {
+              $or: [
+                { providerCategory: { $in: categoryKeys } },
+                { providerType: { $in: categoryKeys } },
+              ],
+            },
+          ]
+        : categoryKeys
+          ? [{ _id: null }] // no permissions → match nothing unassigned
+          : []),
+    ],
+  };
+  return {
+    $or: [{ currentAssigneeId: actor.id }, unassignedClause],
+  };
 }
 
 async function eligibleApproversForRequest(request) {
+  const permissionKeys = permissionKeysForRequest(request);
   const candidates = await Approver.find({
     status: 'active',
     deletedAt: null,
-    permissions: { $in: [request.providerCategory, request.providerType, 'other'] },
+    permissions: { $in: permissionKeys },
   }).sort({ firstName: 1, lastName: 1 });
-  return candidates.filter((approver) => regionMatches(approver, request));
+  return candidates.filter(
+    (approver) =>
+      hasCategoryPermission(approver, request) &&
+      regionMatches(approver, request),
+  );
 }
 
 async function chooseApproverForRequest(request, strategy = 'least_busy') {
@@ -1348,11 +1681,86 @@ async function assignApprovalRequest(
 
 function ensureRequestAccess(request, actor) {
   if (!isApproverActor(actor)) return;
-  if (request.currentAssigneeId !== actor.id) {
-    const err = new Error('This approval request is not assigned to you');
+  if (request.currentAssigneeId === actor.id) return;
+  if (isUnassignedRequest(request)) return;
+  const err = new Error('This approval request is not assigned to you');
+  err.statusCode = 403;
+  throw err;
+}
+
+async function claimRequestIfUnassigned(request, actor) {
+  if (!isApproverActor(actor) || !isUnassignedRequest(request)) {
+    return request;
+  }
+  const approver = await Approver.findOne({
+    id: actor.id,
+    status: 'active',
+    deletedAt: null,
+  });
+  if (
+    !approver ||
+    !hasCategoryPermission(approver, request) ||
+    !regionMatches(approver, request)
+  ) {
+    const err = new Error(
+      'You are not eligible to claim this request for your category or region',
+    );
     err.statusCode = 403;
     throw err;
   }
+
+  const toApproverName = `${approver.firstName} ${approver.lastName}`.trim();
+  const eventId = uuidv4();
+  await ApprovalRequest.updateOne(
+    {
+      id: request.id,
+      $or: [
+        { currentAssigneeId: null },
+        { currentAssigneeId: { $exists: false } },
+        { currentAssigneeId: '' },
+      ],
+    },
+    {
+      $set: {
+        currentAssigneeId: approver.id,
+        currentAssigneeName: toApproverName,
+        assignedBy: actor,
+        assignedAt: new Date(),
+        assignmentStrategy: 'self_claim',
+        lastActionAt: new Date(),
+        lastActionBy: actor,
+        lastRemarks: 'Claimed from unassigned queue',
+      },
+      $push: {
+        assignmentHistory: {
+          id: eventId,
+          fromApproverId: null,
+          fromApproverName: null,
+          toApproverId: approver.id,
+          toApproverName,
+          strategy: 'self_claim',
+          assignedBy: actor,
+          remarks: 'Claimed from unassigned queue',
+          createdAt: new Date(),
+        },
+        timeline: {
+          id: uuidv4(),
+          actor,
+          action: 'request_assigned',
+          remarks: `Claimed by ${toApproverName}.`,
+          createdAt: new Date(),
+          metadata: { strategy: 'self_claim' },
+        },
+      },
+    },
+  );
+  const updated = await ApprovalRequest.findOne({ id: request.id });
+  if (updated?.currentAssigneeId && updated.currentAssigneeId !== actor.id) {
+    const err = new Error('This approval request was claimed by another approver');
+    err.statusCode = 409;
+    throw err;
+  }
+  return updated || request;
 }
 
 async function performProviderAction(request, action, remarks) {
@@ -1367,7 +1775,7 @@ async function performProviderAction(request, action, remarks) {
 }
 
 async function actionApprovalRequest(requestId, { action, remarks, reassignToApproverId }, { req } = {}) {
-  const request = await ApprovalRequest.findOne({ id: requestId });
+  let request = await ApprovalRequest.findOne({ id: requestId });
   if (!request) {
     const err = new Error('Approval request not found');
     err.statusCode = 404;
@@ -1375,6 +1783,7 @@ async function actionApprovalRequest(requestId, { action, remarks, reassignToApp
   }
   const actor = actorFromRequest(req);
   ensureRequestAccess(request, actor);
+  request = await claimRequestIfUnassigned(request, actor);
   if (isApproverActor(actor)) {
     const currentApprover = await Approver.findOne({
       id: actor.id,
@@ -1661,6 +2070,8 @@ async function listApprovalRequests({
   actor,
 } = {}) {
   await syncProviderRequests();
+  // Ensure unassigned open requests get an eligible approver even when sync is cached.
+  await autoAssignUnassignedRequests();
   const filter = {};
   if (status) filter.status = status;
   if (providerType) filter.providerType = providerType;
@@ -1669,25 +2080,38 @@ async function listApprovalRequests({
   if (city) filter['provider.city'] = new RegExp(escapeRegex(city), 'i');
   if (state) filter['provider.state'] = new RegExp(escapeRegex(state), 'i');
   if (priority) filter.priority = priority;
-  if (actor && isApproverActor(actor)) filter.currentAssigneeId = actor.id;
+
+  const andClauses = [];
+  if (actor && isApproverActor(actor)) {
+    const visibility = await buildApproverVisibilityFilter(actor);
+    if (visibility) andClauses.push(visibility);
+  }
   if (registrationFrom || registrationTo) {
-    filter['provider.registrationDate'] = {};
+    const registrationDate = {};
     const from = toDate(registrationFrom);
     const to = toDate(registrationTo);
-    if (from) filter['provider.registrationDate'].$gte = from;
-    if (to) filter['provider.registrationDate'].$lte = to;
+    if (from) registrationDate.$gte = from;
+    if (to) registrationDate.$lte = to;
+    filter['provider.registrationDate'] = registrationDate;
   }
   if (search?.trim()) {
     const regex = new RegExp(escapeRegex(search.trim()), 'i');
-    filter.$or = [
-      { 'provider.name': regex },
-      { 'provider.email': regex },
-      { 'provider.phone': regex },
-      { 'provider.city': regex },
-      { 'provider.state': regex },
-      { 'provider.pincode': regex },
-      { providerId: regex },
-    ];
+    andClauses.push({
+      $or: [
+        { 'provider.name': regex },
+        { 'provider.email': regex },
+        { 'provider.phone': regex },
+        { 'provider.city': regex },
+        { 'provider.state': regex },
+        { 'provider.pincode': regex },
+        { providerId: regex },
+      ],
+    });
+  }
+  if (andClauses.length === 1) {
+    Object.assign(filter, andClauses[0]);
+  } else if (andClauses.length > 1) {
+    filter.$and = andClauses;
   }
 
   const allowedSortFields = new Set([
@@ -1840,7 +2264,7 @@ async function getApprovalDashboard(actor) {
   const week = startOfWeek(now);
   const month = startOfMonth(now);
   const requestFilter =
-    actor && isApproverActor(actor) ? { currentAssigneeId: actor.id } : {};
+    (await buildApproverVisibilityFilter(actor)) || {};
 
   const [
     statusCounts,

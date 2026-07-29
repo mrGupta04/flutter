@@ -58,10 +58,14 @@ const { sendSuccess, sendError } = require('../utils/response');
 const { signToken, authOptional } = require('../middleware/auth');
 const { upload, filePublicUrl } = require('../middleware/multerUpload');
 const { loginProvider } = require('../utils/providerAuth');
+const {
+  mountProviderPasswordResetRoutes,
+} = require('./helpers/mountProviderPasswordReset');
 const { toBloodBank } = require('../db/bloodBankMappers');
 const { normalizeMobile, validateMobile } = require('../utils/mobile');
 
 const router = express.Router();
+mountProviderPasswordResetRoutes(router, 'blood-bank');
 
 // ——— Public discovery ———
 

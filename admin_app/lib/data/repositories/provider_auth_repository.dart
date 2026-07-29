@@ -40,6 +40,40 @@ class ProviderAuthRepository {
     }
   }
 
+  String _forgotPasswordEndpoint(ProviderType type) {
+    switch (type) {
+      case ProviderType.doctor:
+        return AppConstants.endpointDoctorForgotPassword;
+      case ProviderType.nurse:
+        return AppConstants.endpointNurseForgotPassword;
+      case ProviderType.ambulance:
+        return AppConstants.endpointAmbulanceForgotPassword;
+      case ProviderType.bloodBank:
+        return AppConstants.endpointBloodBankForgotPassword;
+      case ProviderType.lab:
+        return AppConstants.endpointLabForgotPassword;
+      case ProviderType.scanCenter:
+        return AppConstants.endpointScanForgotPassword;
+    }
+  }
+
+  String _resetPasswordEndpoint(ProviderType type) {
+    switch (type) {
+      case ProviderType.doctor:
+        return AppConstants.endpointDoctorResetPassword;
+      case ProviderType.nurse:
+        return AppConstants.endpointNurseResetPassword;
+      case ProviderType.ambulance:
+        return AppConstants.endpointAmbulanceResetPassword;
+      case ProviderType.bloodBank:
+        return AppConstants.endpointBloodBankResetPassword;
+      case ProviderType.lab:
+        return AppConstants.endpointLabResetPassword;
+      case ProviderType.scanCenter:
+        return AppConstants.endpointScanResetPassword;
+    }
+  }
+
   String _entityIdFromProfile(ProviderType type, Map<String, dynamic> profile) {
     final id = profile['id'] as String? ??
         profile['_id']?.toString() ??
@@ -102,6 +136,71 @@ class ProviderAuthRepository {
           entityId: entityId,
           profile: data,
         ),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (_) {
+      return ApiResponse(
+        success: false,
+        error: AppConstants.errorSomethingWentWrong,
+        statusCode: 500,
+      );
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> forgotPassword({
+    required ProviderType type,
+    required String email,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        _forgotPasswordEndpoint(type),
+        data: {'email': email.trim()},
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'];
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: data is Map<String, dynamic> ? data : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (_) {
+      return ApiResponse(
+        success: false,
+        error: AppConstants.errorSomethingWentWrong,
+        statusCode: 500,
+      );
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> resetPassword({
+    required ProviderType type,
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        _resetPasswordEndpoint(type),
+        data: {
+          'email': email.trim(),
+          'otp': otp.trim(),
+          'newPassword': newPassword,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'];
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: data is Map<String, dynamic> ? data : null,
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
       );
     } on DioException catch (e) {
       return _handleError(e);

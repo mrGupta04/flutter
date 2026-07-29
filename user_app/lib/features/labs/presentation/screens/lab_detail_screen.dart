@@ -478,12 +478,31 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                             context.push(AppConstants.routeLabCart),
                       ),
                     ),
-                    if (!isSearching && tests.length > 5)
-                      TextButton(
-                        onPressed: () =>
-                            _openTests(context, title: 'All Tests'),
-                        child: Text('View all ${tests.length} tests'),
+                    if (!isSearching && tests.length > 5) ...[
+                      const SizedBox(height: 8),
+                      Center(
+                        child: FilledButton(
+                          onPressed: () =>
+                              _openTests(context, title: 'All Tests'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                            textStyle: AppTextStyles.labelLarge.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: Text('View all ${tests.length} tests'),
+                        ),
                       ),
+                    ],
                   ],
                   if (!isSearching) ...[
                     const SizedBox(height: 20),

@@ -17,6 +17,19 @@ class AppConstants {
   static const String endpointNurseLogin = '/nurse/login';
   static const String endpointAmbulanceLogin = '/ambulance/login';
   static const String endpointBloodBankLogin = '/blood-bank/login';
+  static const String endpointDoctorForgotPassword = '/doctor/forgot-password';
+  static const String endpointDoctorResetPassword = '/doctor/reset-password';
+  static const String endpointNurseForgotPassword = '/nurse/forgot-password';
+  static const String endpointNurseResetPassword = '/nurse/reset-password';
+  static const String endpointAmbulanceForgotPassword =
+      '/ambulance/forgot-password';
+  static const String endpointAmbulanceResetPassword =
+      '/ambulance/reset-password';
+  static const String endpointBloodBankForgotPassword =
+      '/blood-bank/forgot-password';
+  static const String endpointBloodBankResetPassword =
+      '/blood-bank/reset-password';
+
   static const String endpointDoctorBookings = '/doctor/bookings';
   static String endpointDoctorApproveHomeVisit(String bookingId) =>
       '/doctor/bookings/$bookingId/approve-home-visit';
@@ -156,6 +169,8 @@ class AppConstants {
   // Lab API Endpoints
   static const String endpointRegisterLab = '/lab/register';
   static const String endpointLabLogin = '/lab/login';
+  static const String endpointLabForgotPassword = '/lab/forgot-password';
+  static const String endpointLabResetPassword = '/lab/reset-password';
   static const String endpointLabBookings = '/lab/bookings';
   static const String endpointLabUploadProfile = '/lab/upload-profile';
   static const String endpointLabUploadDocument = '/lab/upload-document';
@@ -167,6 +182,8 @@ class AppConstants {
   // Scan API Endpoints
   static const String endpointRegisterScanCenter = '/scan/register';
   static const String endpointScanLogin = '/scan/login';
+  static const String endpointScanForgotPassword = '/scan/forgot-password';
+  static const String endpointScanResetPassword = '/scan/reset-password';
   static const String endpointScanBookings = '/scan/bookings';
   static const String endpointScanUploadProfile = '/scan/upload-profile';
   static const String endpointScanUploadDocument = '/scan/upload-document';
@@ -397,6 +414,7 @@ class AppConstants {
   static const String routeProviderLanding = '/provider-landing';
   static const String routeProviderAuthGate = '/provider-auth';
   static const String routeProviderLogin = '/provider-login';
+  static const String routeProviderForgotPassword = '/provider-forgot-password';
   static const String routeProviderProfile = '/provider-profile';
   static const String routeNurseApplicationSubmitted =
       '/nurse-application-submitted';

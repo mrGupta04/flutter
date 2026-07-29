@@ -16,6 +16,9 @@ const { sendSuccess, sendError } = require('../utils/response');
 const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { upload, filePublicUrl } = require('../middleware/multerUpload');
 const { loginProvider } = require('../utils/providerAuth');
+const {
+  mountProviderPasswordResetRoutes,
+} = require('./helpers/mountProviderPasswordReset');
 const { toScanCenter } = require('../db/scanCenterMappers');
 const { validateMobile } = require('../utils/mobile');
 const {
@@ -28,6 +31,7 @@ const {
 const { listChatMessages, sendChatMessage } = require('../db/chatRepositories');
 
 const router = express.Router();
+mountProviderPasswordResetRoutes(router, 'scan');
 
 router.get('/verified', async (req, res) => {
   try {

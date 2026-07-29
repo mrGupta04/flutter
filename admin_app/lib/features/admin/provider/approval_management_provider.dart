@@ -118,58 +118,79 @@ class ApprovalManagementNotifier
 
   Future<void> loadAll() async {
     state = state.copyWith(isLoading: true, clearError: true);
-    final dashboard = await _repository.getDashboard();
-    final approvers = await _repository.getApprovers();
-    final requests = await _repository.getRequests(
+
+    // Critical path for Overview — paint metrics ASAP.
+    final dashboardFuture = _repository.getDashboard();
+    final requestsFuture = _repository.getRequests(
       status: state.requestStatusFilter,
       category: state.categoryFilter,
       approverId: state.approverFilter,
       search: state.searchQuery,
     );
-    final auditLogs = await _repository.getAuditLogs();
-    final config = await _repository.getConfig();
-    final report = await _repository.getReport();
-    final notifications = await _repository.getNotifications();
-    final savedFilters = await _repository.getSavedFilters();
+    final notificationsFuture = _repository.getNotifications();
+    final savedFiltersFuture = _repository.getSavedFilters();
 
-    final firstError = [
-      dashboard.error,
-      approvers.error,
-      requests.error,
-      auditLogs.error,
-      config.error,
-      report.error,
-      notifications.error,
-      savedFilters.error,
-    ].whereType<String>().firstOrNull;
+    final dashboard = await dashboardFuture;
+    final requests = await requestsFuture;
+    final notifications = await notificationsFuture;
+    final savedFilters = await savedFiltersFuture;
 
     state = state.copyWith(
       dashboard: dashboard.data ?? state.dashboard,
-      approvers: approvers.data ?? state.approvers,
       requests: requests.data ?? state.requests,
-      auditLogs: auditLogs.data ?? state.auditLogs,
-      config: config.data ?? state.config,
-      report: report.data ?? state.report,
       notifications: notifications.data ?? state.notifications,
       savedFilters: savedFilters.data ?? state.savedFilters,
       unreadNotifications: int.tryParse(notifications.message ?? '') ??
           notifications.data?.where((item) => item.isUnread).length ??
           state.unreadNotifications,
       isLoading: false,
-      error: firstError,
+      error: dashboard.error ??
+          requests.error ??
+          notifications.error ??
+          savedFilters.error,
+    );
+
+    // Secondary tabs — load in parallel without blocking Overview.
+    final approversFuture = _repository.getApprovers();
+    final auditLogsFuture = _repository.getAuditLogs();
+    final configFuture = _repository.getConfig();
+    final reportFuture = _repository.getReport();
+
+    final approvers = await approversFuture;
+    final auditLogs = await auditLogsFuture;
+    final config = await configFuture;
+    final report = await reportFuture;
+
+    if (!mounted) return;
+    state = state.copyWith(
+      approvers: approvers.data ?? state.approvers,
+      auditLogs: auditLogs.data ?? state.auditLogs,
+      config: config.data ?? state.config,
+      report: report.data ?? state.report,
+      error: state.error ??
+          approvers.error ??
+          auditLogs.error ??
+          config.error ??
+          report.error,
     );
   }
 
   Future<void> loadForApprover() async {
     state = state.copyWith(isLoading: true, clearError: true);
-    final dashboard = await _repository.getDashboard();
-    final requests = await _repository.getRequests(
+    final dashboardFuture = _repository.getDashboard();
+    final requestsFuture = _repository.getRequests(
       status: state.requestStatusFilter,
       category: state.categoryFilter,
       search: state.searchQuery,
     );
-    final notifications = await _repository.getNotifications();
-    final savedFilters = await _repository.getSavedFilters();
+    final notificationsFuture = _repository.getNotifications();
+    final savedFiltersFuture = _repository.getSavedFilters();
+
+    final dashboard = await dashboardFuture;
+    final requests = await requestsFuture;
+    final notifications = await notificationsFuture;
+    final savedFilters = await savedFiltersFuture;
+
     state = state.copyWith(
       dashboard: dashboard.data ?? state.dashboard,
       requests: requests.data ?? state.requests,
@@ -205,6 +226,15 @@ class ApprovalManagementNotifier
     );
     if (response.success && response.data != null) {
       state = state.copyWith(requests: response.data, clearError: true);
+    } else {
+      state = state.copyWith(error: response.error);
+    }
+  }
+
+  Future<void> refreshConfig() async {
+    final response = await _repository.getConfig();
+    if (response.success && response.data != null) {
+      state = state.copyWith(config: response.data, clearError: true);
     } else {
       state = state.copyWith(error: response.error);
     }

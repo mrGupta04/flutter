@@ -20,6 +20,9 @@ const { sendSuccess, sendError } = require('../utils/response');
 const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { upload, filePublicUrl } = require('../middleware/multerUpload');
 const { loginProvider } = require('../utils/providerAuth');
+const {
+  mountProviderPasswordResetRoutes,
+} = require('./helpers/mountProviderPasswordReset');
 const { toAmbulance } = require('../db/ambulanceMappers');
 const {
   createAmbulanceBooking,
@@ -30,6 +33,7 @@ const {
 } = require('../db/ambulanceBookingRepositories');
 
 const router = express.Router();
+mountProviderPasswordResetRoutes(router, 'ambulance');
 
 const { normalizeMobile, validateMobile } = require('../utils/mobile');
 

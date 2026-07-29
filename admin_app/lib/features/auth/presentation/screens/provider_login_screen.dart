@@ -112,7 +112,22 @@ class _ProviderLoginScreenState extends ConsumerState<ProviderLoginScreen> {
                     prefixIcon: Icons.lock_outline_rounded,
                     obscureText: true,
                   ),
-                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => context.push(
+                        widget.providerType.forgotPasswordRoute,
+                      ),
+                      child: Text(
+                        'Forgot password?',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   CustomButton(
                     label: 'Sign in',
                     onPressed: _login,
