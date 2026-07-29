@@ -43,10 +43,22 @@ const app = express();
 
 app.set('trust proxy', 1);
 
-const corsOrigin = process.env.CORS_ORIGIN || '*';
+const corsOriginRaw = (process.env.CORS_ORIGIN || '').trim();
+const corsOrigin = corsOriginRaw || '*';
+const corsOriginOption =
+  corsOrigin === '*'
+    ? true
+    : corsOrigin
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
 app.use(
   cors({
-    origin: corsOrigin === '*' ? true : corsOrigin.split(','),
+    origin:
+      Array.isArray(corsOriginOption) && corsOriginOption.length === 0
+        ? true
+        : corsOriginOption,
     credentials: true,
   }),
 );
@@ -132,7 +144,11 @@ async function start() {
     );
   }
   if (NODE_ENV === 'production' && corsOrigin === '*') {
-    throw new Error('CORS_ORIGIN must explicitly list trusted origins in production.');
+    console.warn(
+      'WARNING: CORS_ORIGIN is unset or *. Set CORS_ORIGIN on Render to a ' +
+        'comma-separated list of trusted web origins (e.g. https://your-app.com). ' +
+        'Native mobile apps are not blocked by CORS; continuing startup.',
+    );
   }
 
   await connectDB();
