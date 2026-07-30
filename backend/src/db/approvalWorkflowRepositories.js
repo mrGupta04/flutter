@@ -610,13 +610,13 @@ async function ensureApprovalConfiguration() {
       ApprovalRule.updateOne(
         { providerCategory: category.slug },
         {
+          // Keep `active` only in $set — Mongo rejects the same path in $set + $setOnInsert.
           $setOnInsert: {
             id: uuidv4(),
             providerCategory: category.slug,
             assignmentStrategy: 'least_busy',
             slaHours: category.slaHours,
             escalationHours: 4,
-            active: true,
             approvalLevels: [
               {
                 id: 'level_1_approver',
