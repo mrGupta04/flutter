@@ -31,6 +31,24 @@ function getDoctorProfileMissingFields(doctor) {
     doctor.offersOnlineConsult || doctor.offersBookHome || doctor.offersVisitSite;
   if (!hasConsultationOption) missing.push('consultationOptions');
 
+  const hasFeeFor = (regular, offer) =>
+    (regular != null && Number(regular) >= 1) ||
+    (offer != null && Number(offer) >= 1) ||
+    (doctor.consultationFee != null && Number(doctor.consultationFee) >= 1);
+
+  if (doctor.offersOnlineConsult &&
+      !hasFeeFor(doctor.onlineConsultFee, doctor.onlineConsultOfferFee)) {
+    missing.push('onlineConsultFee');
+  }
+  if (doctor.offersBookHome &&
+      !hasFeeFor(doctor.homeVisitFee, doctor.homeVisitOfferFee)) {
+    missing.push('homeVisitFee');
+  }
+  if (doctor.offersVisitSite &&
+      !hasFeeFor(doctor.visitSiteFee, doctor.visitSiteOfferFee)) {
+    missing.push('visitSiteFee');
+  }
+
   return missing;
 }
 

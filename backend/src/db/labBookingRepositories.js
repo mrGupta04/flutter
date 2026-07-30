@@ -38,6 +38,23 @@ function toLabBooking(doc) {
     rejectionReason: d.rejectionReason,
     reportUrl: d.reportUrl,
     reportFileName: d.reportFileName,
+    sampleCollectedAt: d.sampleCollectedAt || null,
+    reportSubmittedAt: d.reportSubmittedAt || null,
+    reportAcceptedByUserAt: d.reportAcceptedByUserAt || null,
+    sampleCollected: Boolean(
+      d.sampleCollectedAt ||
+        ['sample_collected', 'processing', 'report_ready', 'completed'].includes(
+          d.status,
+        ),
+    ),
+    reportSubmitted: Boolean(
+      d.reportSubmittedAt ||
+        d.reportUrl ||
+        ['report_ready', 'completed'].includes(d.status),
+    ),
+    acceptedByUser: Boolean(
+      d.reportAcceptedByUserAt || d.status === 'completed',
+    ),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
@@ -215,12 +232,53 @@ async function updateLabBookingStatus({
     throw err;
   }
 
+  const now = new Date();
   booking.status = status;
   if (rejectionReason) booking.rejectionReason = String(rejectionReason).trim();
   if (reportUrl) {
     booking.reportUrl = reportUrl;
     booking.reportFileName = reportFileName || booking.reportFileName;
+    if (!booking.reportSubmittedAt) booking.reportSubmittedAt = now;
   }
+  if (
+    ['sample_collected', 'processing', 'report_ready', 'completed'].includes(
+      status,
+    ) &&
+    !booking.sampleCollectedAt
+  ) {
+    booking.sampleCollectedAt = now;
+  }
+  if (['report_ready', 'completed'].includes(status) && !booking.reportSubmittedAt) {
+    booking.reportSubmittedAt = now;
+  }
+  if (status === 'completed' && !booking.reportAcceptedByUserAt) {
+    booking.reportAcceptedByUserAt = now;
+  }
+  await booking.save();
+  return toLabBooking(booking);
+}
+
+async function acceptLabReportByUser({ bookingId, patientId }) {
+  const booking = await LabBooking.findOne({ id: bookingId });
+  if (!booking) {
+    const err = new Error('Booking not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (patientId && booking.patientId && booking.patientId !== patientId) {
+    const err = new Error('Not allowed to accept this report');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (!['report_ready', 'completed'].includes(booking.status) && !booking.reportUrl) {
+    const err = new Error('Report is not ready yet');
+    err.statusCode = 400;
+    throw err;
+  }
+  booking.status = 'completed';
+  booking.reportAcceptedByUserAt = booking.reportAcceptedByUserAt || new Date();
+  if (!booking.reportSubmittedAt) booking.reportSubmittedAt = booking.reportAcceptedByUserAt;
+  if (!booking.sampleCollectedAt) booking.sampleCollectedAt = booking.reportAcceptedByUserAt;
   await booking.save();
   return toLabBooking(booking);
 }
@@ -389,6 +447,7 @@ module.exports = {
   listLabBookingsForLab,
   listLabBookingsForPatient,
   updateLabBookingStatus,
+  acceptLabReportByUser,
   createPaymentOrderForLabBooking,
   confirmLabBookingAfterPayment,
   toLabBooking,

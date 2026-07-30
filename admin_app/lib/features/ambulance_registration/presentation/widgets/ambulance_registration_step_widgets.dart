@@ -1293,6 +1293,11 @@ class _AmbulanceStep6BankDetailsState extends ConsumerState<AmbulanceStep6BankDe
               label: 'IFSC Code',
               hint: 'e.g. SBIN0001234',
               prefixIcon: Icons.code_outlined,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                UpperCaseTextFormatter(),
+                LengthLimitingTextInputFormatter(11),
+              ],
               validator: ValidationUtils.validateIfscCode,
             ),
             const SizedBox(height: 12),

@@ -11,8 +11,13 @@ import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../provider/admin_provider.dart';
 
 /// Admin screen listing doctor applications pending approval.
+///
+/// [serviceType] filters by offered consultation mode:
+/// `online` | `home_visit` | `hospital_visit`
 class AdminDoctorListScreen extends ConsumerStatefulWidget {
-  const AdminDoctorListScreen({super.key});
+  const AdminDoctorListScreen({super.key, this.serviceType});
+
+  final String? serviceType;
 
   @override
   ConsumerState<AdminDoctorListScreen> createState() =>
@@ -21,6 +26,32 @@ class AdminDoctorListScreen extends ConsumerStatefulWidget {
 
 class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
   String? _statusFilter = 'awaiting_review';
+
+  String get _title {
+    switch (widget.serviceType) {
+      case 'online':
+        return 'Online doctor applications';
+      case 'home_visit':
+        return 'Home visit doctor applications';
+      case 'hospital_visit':
+        return 'Hospital visit doctor applications';
+      default:
+        return 'Doctor applications';
+    }
+  }
+
+  List<DoctorModel> _byService(List<DoctorModel> doctors) {
+    switch (widget.serviceType) {
+      case 'online':
+        return doctors.where((d) => d.offersOnlineConsult).toList();
+      case 'home_visit':
+        return doctors.where((d) => d.offersBookHome).toList();
+      case 'hospital_visit':
+        return doctors.where((d) => d.offersVisitSite).toList();
+      default:
+        return doctors;
+    }
+  }
 
   @override
   void initState() {
@@ -48,7 +79,7 @@ class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Doctor applications'),
+        title: Text(_title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => context.pop(),
@@ -113,12 +144,14 @@ class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
       );
     }
 
-    if (state.doctors.isEmpty) {
+    final doctors = _byService(state.doctors);
+
+    if (doctors.isEmpty) {
       return custom.EmptyStateWidget(
         icon: Icons.inbox_outlined,
         title: 'No doctors found',
         message: _statusFilter == 'awaiting_review'
-            ? 'New registrations will appear here for admin verification.'
+            ? 'New registrations for this service will appear here.'
             : 'No applications match this filter.',
       );
     }
@@ -129,11 +162,11 @@ class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
           ),
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        itemCount: state.doctors.length,
+        itemCount: doctors.length,
         separatorBuilder: (context, index) =>
             const SizedBox(height: kDoctorCardSpacing),
         itemBuilder: (context, index) {
-          final doctor = state.doctors[index];
+          final doctor = doctors[index];
           return _DoctorListTile(
             doctor: doctor,
             showBottomDivider: false,
@@ -142,7 +175,9 @@ class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
               if (id == null || id.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('This application has no profile id. Cannot open details.'),
+                    content: Text(
+                      'This application has no profile id. Cannot open details.',
+                    ),
                   ),
                 );
                 return;

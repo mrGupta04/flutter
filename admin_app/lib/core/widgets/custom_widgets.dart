@@ -11,6 +11,7 @@ class CustomTextField extends StatefulWidget {
   final String? hint;
   final String? Function(String?)? validator;
   final TextInputType keyboardType;
+  final TextCapitalization textCapitalization;
   final int? maxLines;
   final int? minLines;
   final bool obscureText;
@@ -31,6 +32,7 @@ class CustomTextField extends StatefulWidget {
     this.hint,
     this.validator,
     this.keyboardType = TextInputType.text,
+    this.textCapitalization = TextCapitalization.none,
     this.maxLines = 1,
     this.minLines,
     this.obscureText = false,
@@ -157,6 +159,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       focusNode: _focusNode,
       validator: widget.validator,
       keyboardType: widget.keyboardType,
+      textCapitalization: widget.textCapitalization,
       maxLines: widget.obscureText ? 1 : widget.maxLines,
       minLines: widget.minLines,
       obscureText: _obscureText,

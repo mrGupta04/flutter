@@ -46,6 +46,10 @@ const scanBookingSchema = new mongoose.Schema(
     notes: String,
     rejectionReason: String,
     reportUrl: String,
+    /** For MRI/scan: when imaging was performed (maps to “sample collected” in admin). */
+    sampleCollectedAt: Date,
+    reportSubmittedAt: Date,
+    reportAcceptedByUserAt: Date,
   },
   { timestamps: true },
 );

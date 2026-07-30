@@ -316,7 +316,17 @@ class _ApprovalManagementScreenState
           remarks: remarksController.text.trim(),
         );
     remarksController.dispose();
-    if (mounted && success) _toast('Approval action recorded');
+    if (!mounted) return;
+    if (success) {
+      _toast('Approval action recorded');
+    } else {
+      final err = ref.read(approvalManagementProvider).error;
+      _toast(
+        err?.trim().isNotEmpty == true
+            ? err!
+            : 'Action failed. Open KYC review, verify documents, then try again.',
+      );
+    }
   }
 
   Future<void> _showAssignDialog(ApprovalRequestModel request) async {
@@ -531,7 +541,7 @@ class _ApprovalManagementScreenState
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Doctor, Nurse, Lab, Scan/MRI, Ambulance, Blood Bank, etc.',
+                        'Select every category this approver can verify: Doctor, Nurse, Lab, Scan/MRI, Ambulance, Blood Bank, etc. Matching applications appear in their Requests queue.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -3367,20 +3377,37 @@ const _chartColors = [
 
 String? _kycDetailPath(String providerType, String providerId) {
   if (providerId.isEmpty) return null;
-  switch (providerType) {
+  switch (providerType.trim().toLowerCase().replaceAll('-', '_')) {
     case 'doctor':
+    case 'doctors':
       return '${AppConstants.routeAdminDoctorDetails}/$providerId';
     case 'nurse':
+    case 'nurses':
+    case 'nursing':
       return '${AppConstants.routeAdminNurseDetails}/$providerId';
     case 'ambulance':
+    case 'ambulances':
+    case 'ambulance_service':
       return '${AppConstants.routeAdminAmbulanceDetails}/$providerId';
     case 'blood_bank':
+    case 'bloodbank':
+    case 'blood':
+    case 'blood_banks':
       return '${AppConstants.routeAdminBloodBankDetails}/$providerId';
     case 'laboratory':
     case 'lab':
+    case 'labs':
+    case 'diagnostic_lab':
+    case 'pathology':
       return '${AppConstants.routeAdminLabDetails}/$providerId';
     case 'scan_center':
     case 'scan':
+    case 'scans':
+    case 'mri':
+    case 'mri_center':
+    case 'mri_scan':
+    case 'imaging':
+    case 'radiology':
       return '${AppConstants.routeAdminScanDetails}/$providerId';
     default:
       return null;

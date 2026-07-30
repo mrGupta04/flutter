@@ -98,23 +98,39 @@ const DEFAULT_PROVIDER_CATEGORIES = [
 
 /** Maps UI/legacy permission values onto canonical category slugs. */
 const CATEGORY_ALIASES = {
-  doctor: ['doctor'],
-  nurse: ['nurse'],
-  hospital: ['hospital'],
-  laboratory: ['laboratory', 'lab', 'labs', 'diagnostic_lab', 'diagnostic-lab'],
+  doctor: ['doctor', 'doctors'],
+  nurse: ['nurse', 'nurses', 'nursing'],
+  hospital: ['hospital', 'hospitals'],
+  laboratory: [
+    'laboratory',
+    'lab',
+    'labs',
+    'diagnostic_lab',
+    'diagnostic-lab',
+    'pathology',
+  ],
   scan_center: [
     'scan_center',
     'scan-center',
     'scan',
     'scans',
     'mri',
+    'mri_center',
+    'mri-center',
     'mri_scan',
     'mri-scan',
     'imaging',
+    'radiology',
   ],
-  pharmacy: ['pharmacy'],
-  ambulance: ['ambulance'],
-  blood_bank: ['blood_bank', 'blood-bank', 'bloodbank', 'blood'],
+  pharmacy: ['pharmacy', 'pharmacies'],
+  ambulance: ['ambulance', 'ambulances', 'ambulance_service', 'ambulance-service'],
+  blood_bank: [
+    'blood_bank',
+    'blood-bank',
+    'bloodbank',
+    'blood',
+    'blood_banks',
+  ],
   home_care: ['home_care', 'home-care', 'homecare'],
   medical_equipment: ['medical_equipment', 'medical-equipment'],
   physiotherapist: ['physiotherapist', 'physio'],
@@ -154,7 +170,6 @@ function permissionKeysForRequest(request) {
   return expandPermissionKeys([
     request?.providerCategory,
     request?.providerType,
-    'other',
   ]);
 }
 
@@ -1098,6 +1113,14 @@ async function createApprover(data, { req } = {}) {
     metadata: { permissions: doc.permissions, regions: doc.regions },
   });
 
+  // Immediately place matching open applications into this approver's queue.
+  try {
+    await syncProviderRequests();
+    await autoAssignUnassignedRequests();
+  } catch (err) {
+    console.error('Failed to auto-assign after creating approver:', err);
+  }
+
   return toApprover(doc);
 }
 
@@ -1152,6 +1175,15 @@ async function updateApprover(id, data, { req } = {}) {
     entityLabel: `${updated.firstName} ${updated.lastName}`.trim(),
     metadata: { changedFields: Object.keys(update), permissions: updated.permissions },
   });
+
+  if (update.permissions || update.regions || update.status === 'active') {
+    try {
+      await syncProviderRequests();
+      await autoAssignUnassignedRequests();
+    } catch (err) {
+      console.error('Failed to auto-assign after updating approver:', err);
+    }
+  }
 
   return toApprover(updated);
 }
@@ -1440,43 +1472,42 @@ async function buildApproverVisibilityFilter(actor) {
     deletedAt: null,
   });
   const permissions = expandPermissionKeys(approver?.permissions || []);
-  const categoryKeys = permissions.includes('other')
-    ? null
-    : permissions.filter((key) => key !== 'other');
-  const unassignedClause = {
-    $and: [
-      {
+  // Always show work assigned to this approver (any status).
+  const clauses = [{ currentAssigneeId: actor.id }];
+
+  if (!permissions.length) {
+    return { $or: clauses };
+  }
+
+  // "other" = every open request; otherwise open requests in permitted categories.
+  // This is what makes "Doctor" role put doctor applications in her queue.
+  if (permissions.includes('other')) {
+    clauses.push({ status: { $in: OPEN_REQUEST_STATUSES } });
+  } else {
+    const categoryKeys = permissions.filter((key) => key !== 'other');
+    if (categoryKeys.length) {
+      clauses.push({
+        status: { $in: OPEN_REQUEST_STATUSES },
         $or: [
-          { currentAssigneeId: null },
-          { currentAssigneeId: { $exists: false } },
-          { currentAssigneeId: '' },
+          { providerCategory: { $in: categoryKeys } },
+          { providerType: { $in: categoryKeys } },
         ],
-      },
-      ...(categoryKeys?.length
-        ? [
-            {
-              $or: [
-                { providerCategory: { $in: categoryKeys } },
-                { providerType: { $in: categoryKeys } },
-              ],
-            },
-          ]
-        : categoryKeys
-          ? [{ _id: null }] // no permissions → match nothing unassigned
-          : []),
-    ],
-  };
-  return {
-    $or: [{ currentAssigneeId: actor.id }, unassignedClause],
-  };
+      });
+    }
+  }
+
+  return { $or: clauses };
 }
 
 async function eligibleApproversForRequest(request) {
-  const permissionKeys = permissionKeysForRequest(request);
+  const requestKeys = [
+    ...permissionKeysForRequest(request),
+    'other', // approvers with catch-all "other" permission
+  ];
   const candidates = await Approver.find({
     status: 'active',
     deletedAt: null,
-    permissions: { $in: permissionKeys },
+    permissions: { $in: requestKeys },
   }).sort({ firstName: 1, lastName: 1 });
   return candidates.filter(
     (approver) =>
@@ -1538,7 +1569,7 @@ async function listEligibleApprovers(requestId, { req } = {}) {
   }
   const actor = actorFromRequest(req);
   if (isApproverActor(actor)) {
-    ensureRequestAccess(request, actor);
+    await ensureRequestAccess(request, actor);
     const currentApprover = await Approver.findOne({
       id: actor.id,
       status: 'active',
@@ -1571,7 +1602,7 @@ async function assignApprovalRequest(
 
   const actor = actorFromRequest(req);
   if (isApproverActor(actor)) {
-    ensureRequestAccess(request, actor);
+    await ensureRequestAccess(request, actor);
     const approverActor = await Approver.findOne({ id: actor.id });
     if (!approverActor?.canReassign) {
       const err = new Error('You do not have permission to reassign requests');
@@ -1679,19 +1710,39 @@ async function assignApprovalRequest(
   return toApprovalRequest(await ApprovalRequest.findOne({ id: requestId }));
 }
 
-function ensureRequestAccess(request, actor) {
+async function ensureRequestAccess(request, actor) {
   if (!isApproverActor(actor)) return;
   if (request.currentAssigneeId === actor.id) return;
-  if (isUnassignedRequest(request)) return;
-  const err = new Error('This approval request is not assigned to you');
+
+  const approver = await Approver.findOne({
+    id: actor.id,
+    status: 'active',
+    deletedAt: null,
+  });
+  const eligible =
+    approver &&
+    hasCategoryPermission(approver, request) &&
+    regionMatches(approver, request);
+
+  // Eligible approvers may open any open request in their category
+  // (assigned or not) so doctor-role verifiers can review doctor apps.
+  if (eligible && OPEN_REQUEST_STATUSES.includes(request.status)) {
+    return;
+  }
+
+  const err = new Error(
+    eligible
+      ? 'This approval request is already completed'
+      : 'This approval request is not in your assigned categories or region',
+  );
   err.statusCode = 403;
   throw err;
 }
 
 async function claimRequestIfUnassigned(request, actor) {
-  if (!isApproverActor(actor) || !isUnassignedRequest(request)) {
-    return request;
-  }
+  if (!isApproverActor(actor)) return request;
+  if (request.currentAssigneeId === actor.id) return request;
+
   const approver = await Approver.findOne({
     id: actor.id,
     status: 'active',
@@ -1709,15 +1760,28 @@ async function claimRequestIfUnassigned(request, actor) {
     throw err;
   }
 
+  // Eligible category approver takes ownership when acting on an open request.
+  if (!OPEN_REQUEST_STATUSES.includes(request.status)) {
+    return request;
+  }
+
+  const fromApproverId = request.currentAssigneeId || null;
+  const fromApproverName = request.currentAssigneeName || null;
   const toApproverName = `${approver.firstName} ${approver.lastName}`.trim();
   const eventId = uuidv4();
+  const claimRemarks = fromApproverId
+    ? 'Taken over for category verification'
+    : 'Claimed from unassigned queue';
+
   await ApprovalRequest.updateOne(
     {
       id: request.id,
+      status: { $in: OPEN_REQUEST_STATUSES },
       $or: [
         { currentAssigneeId: null },
         { currentAssigneeId: { $exists: false } },
         { currentAssigneeId: '' },
+        { currentAssigneeId: fromApproverId },
       ],
     },
     {
@@ -1729,25 +1793,25 @@ async function claimRequestIfUnassigned(request, actor) {
         assignmentStrategy: 'self_claim',
         lastActionAt: new Date(),
         lastActionBy: actor,
-        lastRemarks: 'Claimed from unassigned queue',
+        lastRemarks: claimRemarks,
       },
       $push: {
         assignmentHistory: {
           id: eventId,
-          fromApproverId: null,
-          fromApproverName: null,
+          fromApproverId,
+          fromApproverName,
           toApproverId: approver.id,
           toApproverName,
           strategy: 'self_claim',
           assignedBy: actor,
-          remarks: 'Claimed from unassigned queue',
+          remarks: claimRemarks,
           createdAt: new Date(),
         },
         timeline: {
           id: uuidv4(),
           actor,
           action: 'request_assigned',
-          remarks: `Claimed by ${toApproverName}.`,
+          remarks: `${claimRemarks} by ${toApproverName}.`,
           createdAt: new Date(),
           metadata: { strategy: 'self_claim' },
         },
@@ -1782,7 +1846,7 @@ async function actionApprovalRequest(requestId, { action, remarks, reassignToApp
     throw err;
   }
   const actor = actorFromRequest(req);
-  ensureRequestAccess(request, actor);
+  await ensureRequestAccess(request, actor);
   request = await claimRequestIfUnassigned(request, actor);
   if (isApproverActor(actor)) {
     const currentApprover = await Approver.findOne({
@@ -1892,9 +1956,30 @@ async function actionApprovalRequest(requestId, { action, remarks, reassignToApp
       update.approvalLevels = levels;
     }
     update.firstDecisionAt = request.firstDecisionAt || now;
-    const nextLevel = levels
-      .filter((level) => level.status === 'pending' && level.required !== false)
-      .sort((a, b) => Number(a.levelOrder || 0) - Number(b.levelOrder || 0))[0];
+
+    // Super admin / admin KYC publish skips remaining unused levels and goes live.
+    const isSuperAdminActor = !isApproverActor(actor);
+    if (isSuperAdminActor) {
+      for (const level of levels) {
+        if (level.status === 'pending') {
+          level.status = 'approved';
+          level.decidedBy = actor;
+          level.remarks = remarks || 'Approved by Super Admin';
+          level.decidedAt = now;
+        }
+      }
+      update.approvalLevels = levels;
+    }
+
+    const nextLevel = isSuperAdminActor
+      ? null
+      : levels
+          .filter(
+            (level) => level.status === 'pending' && level.required !== false,
+          )
+          .sort(
+            (a, b) => Number(a.levelOrder || 0) - Number(b.levelOrder || 0),
+          )[0];
     if (nextLevel) {
       statusAfter = nextLevel.role === 'approver' ? 'pending' : 'escalated';
       update.status = statusAfter;
@@ -2019,7 +2104,7 @@ async function markApprovalRequestViewed(requestId, { req } = {}) {
     throw err;
   }
   const actor = actorFromRequest(req);
-  ensureRequestAccess(request, actor);
+  await ensureRequestAccess(request, actor);
   const now = new Date();
   await ApprovalRequest.updateOne(
     { id: requestId },
@@ -2158,7 +2243,7 @@ async function getApprovalRequestById(id, { req } = {}) {
     throw err;
   }
   const actor = actorFromRequest(req);
-  ensureRequestAccess(request, actor);
+  await ensureRequestAccess(request, actor);
   const definition = PROVIDER_DEFINITIONS[request.providerType];
   let providerDetails = {};
   if (definition) {
@@ -2188,6 +2273,20 @@ async function getApprovalRequestById(id, { req } = {}) {
       verifiedAt: document.verifiedAt,
       verifiedBy: document.verifiedBy,
       uploadedAt: document.uploadedAt,
+    }));
+  } else if (Array.isArray(providerDetails.documents)) {
+    // Lab / scan / blood bank keep embedded documents on the provider profile.
+    providerDetails.documents = providerDetails.documents.map((document) => ({
+      id: document.id,
+      documentType: document.type || document.documentType,
+      label: document.label,
+      fileUrl: document.url || document.fileUrl,
+      fileName: document.fileName || document.label,
+      status: document.verificationStatus || document.status || 'pending',
+      rejectionReason: document.rejectionReason,
+      verifiedAt: document.verifiedAt,
+      verifiedBy: document.verifiedBy,
+      uploadedAt: document.uploadedAt || document.createdAt,
     }));
   }
   return {

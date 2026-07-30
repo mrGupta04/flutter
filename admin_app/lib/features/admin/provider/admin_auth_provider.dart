@@ -30,7 +30,39 @@ class AdminAuthState {
 
   bool canApproveCategory(String category) {
     if (isAdmin) return true;
-    return permissions.contains(category);
+    final wanted = _canonicalCategory(category);
+    if (wanted.isEmpty) return false;
+    for (final raw in permissions) {
+      final key = _canonicalCategory(raw);
+      if (key == wanted || key == 'other') return true;
+    }
+    return false;
+  }
+
+  static String _canonicalCategory(String value) {
+    final key = value.trim().toLowerCase().replaceAll('-', '_');
+    const aliases = <String, String>{
+      'doctors': 'doctor',
+      'nurses': 'nurse',
+      'nursing': 'nurse',
+      'lab': 'laboratory',
+      'labs': 'laboratory',
+      'diagnostic_lab': 'laboratory',
+      'pathology': 'laboratory',
+      'scan': 'scan_center',
+      'scans': 'scan_center',
+      'mri': 'scan_center',
+      'mri_center': 'scan_center',
+      'mri_scan': 'scan_center',
+      'imaging': 'scan_center',
+      'radiology': 'scan_center',
+      'ambulances': 'ambulance',
+      'ambulance_service': 'ambulance',
+      'blood': 'blood_bank',
+      'bloodbank': 'blood_bank',
+      'blood_banks': 'blood_bank',
+    };
+    return aliases[key] ?? key;
   }
 
   AdminAuthState copyWith({

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -1501,6 +1502,11 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           controller: _ifscController,
           label: 'IFSC code',
           prefixIcon: Icons.code_outlined,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [
+            UpperCaseTextFormatter(),
+            LengthLimitingTextInputFormatter(11),
+          ],
           validator: ValidationUtils.validateIfscCode,
         ),
         const SizedBox(height: 12),

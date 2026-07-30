@@ -263,24 +263,28 @@ class DoctorModel {
         (qualification?.trim().isNotEmpty ?? false);
   }
 
-  /// Check if all required fields are filled
+  /// Check if all required fields are filled (aligned with backend approval gate).
   bool get isProfileComplete {
-    return firstName != null &&
-        lastName != null &&
-        email != null &&
-        mobileNumber != null &&
-        medicalRegistrationNumber != null &&
-        medicalCouncilName != null &&
+    final hasFeesForOfferedServices = hasAnyConsultationOption &&
+        availableConsultationTypes.every(
+          (type) => feeForConsultationType(type) != null,
+        );
+    return (firstName?.trim().isNotEmpty ?? false) &&
+        (lastName?.trim().isNotEmpty ?? false) &&
+        (email?.trim().isNotEmpty ?? false) &&
+        (mobileNumber?.trim().isNotEmpty ?? false) &&
+        (medicalRegistrationNumber?.trim().isNotEmpty ?? false) &&
+        (medicalCouncilName?.trim().isNotEmpty ?? false) &&
         specializations != null &&
         specializations!.isNotEmpty &&
-        qualification != null &&
+        (qualification?.trim().isNotEmpty ?? false) &&
         yearsOfExperience != null &&
-        clinicName != null &&
-        consultationFee != null &&
-        address != null &&
-        city != null &&
-        state != null &&
-        pincode != null;
+        (clinicName?.trim().isNotEmpty ?? false) &&
+        hasFeesForOfferedServices &&
+        (address?.trim().isNotEmpty ?? false) &&
+        (city?.trim().isNotEmpty ?? false) &&
+        (state?.trim().isNotEmpty ?? false) &&
+        (pincode?.trim().isNotEmpty ?? false);
   }
 
   /// Get verification badge color

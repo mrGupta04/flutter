@@ -53,6 +53,17 @@ class AdminDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   ServiceBenefitCard(
+                    icon: Icons.manage_accounts_rounded,
+                    title: 'Service provider management',
+                    subtitle:
+                        'Online / home / hospital doctors · nurses · labs · MRI',
+                    color: AppColors.secondary,
+                    onTap: () => context.push(
+                      AppConstants.routeAdminServiceProviderManagement,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
                     icon: Icons.analytics_rounded,
                     title: 'Marketplace overview',
                     subtitle: 'Patients · bookings · revenue · pending KYC',
@@ -62,20 +73,44 @@ class AdminDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   ServiceBenefitCard(
-                    icon: Icons.people_alt_rounded,
-                    title: 'Doctor applications',
-                    subtitle: 'Needs review · verify or reject',
+                    icon: Icons.videocam_rounded,
+                    title: 'Online doctor sessions',
+                    subtitle: 'Patient · doctor · payment · join times · status',
                     color: AppColors.primary,
-                    onTap: () =>
-                        context.push(AppConstants.routeAdminDoctorList),
+                    onTap: () => context.push(
+                      '${AppConstants.routeAdminDoctorSessions}?service=online',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.home_rounded,
+                    title: 'Home visit doctor sessions',
+                    subtitle: 'Patient · doctor · payment · visit status',
+                    color: AppColors.secondary,
+                    onTap: () => context.push(
+                      '${AppConstants.routeAdminDoctorSessions}?service=home_visit',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.local_hospital_rounded,
+                    title: 'Hospital visit doctor sessions',
+                    subtitle: 'Patient · doctor · payment · visit status',
+                    color: AppColors.primary,
+                    onTap: () => context.push(
+                      '${AppConstants.routeAdminDoctorSessions}?service=hospital_visit',
+                    ),
                   ),
                   const SizedBox(height: 10),
                   ServiceBenefitCard(
                     icon: Icons.health_and_safety_rounded,
-                    title: 'Nurse applications',
-                    subtitle: 'Needs review · verify or reject',
+                    title: 'Nurse sessions',
+                    subtitle:
+                        'Patient · nurse · payment · visit progress · status',
                     color: AppColors.secondary,
-                    onTap: () => context.push(AppConstants.routeAdminNurseList),
+                    onTap: () => context.push(
+                      '${AppConstants.routeAdminDoctorSessions}?provider=nurse&service=home_visit',
+                    ),
                   ),
                   const SizedBox(height: 10),
                   ServiceBenefitCard(
@@ -98,18 +133,24 @@ class AdminDashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                   ServiceBenefitCard(
                     icon: Icons.biotech_rounded,
-                    title: 'Diagnostic lab applications',
-                    subtitle: 'Review documents · approve or suspend',
+                    title: 'Diagnostic lab sessions',
+                    subtitle:
+                        'Sample collected · report submitted · accepted by user',
                     color: AppColors.primary,
-                    onTap: () => context.push(AppConstants.routeAdminLabList),
+                    onTap: () => context.push(
+                      '${AppConstants.routeAdminDiagnosticSessions}?kind=lab',
+                    ),
                   ),
                   const SizedBox(height: 10),
                   ServiceBenefitCard(
                     icon: Icons.radar_rounded,
-                    title: 'Scan center applications',
-                    subtitle: 'Review imaging services · approve or suspend',
+                    title: 'MRI / scan sessions',
+                    subtitle:
+                        'Scan performed · report submitted · accepted by user',
                     color: AppColors.secondary,
-                    onTap: () => context.push(AppConstants.routeAdminScanList),
+                    onTap: () => context.push(
+                      '${AppConstants.routeAdminDiagnosticSessions}?kind=scan',
+                    ),
                   ),
                   const SizedBox(height: 10),
                   ServiceBenefitCard(

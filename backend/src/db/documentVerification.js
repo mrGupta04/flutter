@@ -357,16 +357,34 @@ async function ensureNurseDocumentsFromProfile(nurse) {
 }
 
 async function assertDoctorDocumentsVerified(doctor) {
-  const apiDocs = await findDocumentsByDoctorId(doctor.id);
+  // Persist profile URL docs so verify buttons always have real Document ids.
+  const apiDocs = await ensureDoctorDocumentsFromProfile(doctor);
   const merged = mergeDoctorDocuments(doctor, apiDocs);
-  const required = merged.filter((d) =>
-    REQUIRED_DOCTOR_DOC_TYPES.includes(d.documentType),
+  const byType = new Map(
+    merged.filter((d) => d.fileUrl).map((d) => [d.documentType, d]),
   );
-  validateAllDocumentsVerified(required, 'required document');
+  const missing = REQUIRED_DOCTOR_DOC_TYPES.filter((t) => !byType.has(t));
+  if (missing.length > 0) {
+    const err = new Error(
+      `Required documents missing: ${missing.join(', ')}`,
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+  const pending = REQUIRED_DOCTOR_DOC_TYPES.filter(
+    (t) => byType.get(t)?.status !== 'verified',
+  );
+  if (pending.length > 0) {
+    const err = new Error(
+      `All documents must be verified before approval. Pending: ${pending.join(', ')}`,
+    );
+    err.statusCode = 400;
+    throw err;
+  }
 }
 
 async function assertNurseDocumentsVerified(nurse) {
-  const apiDocs = await findDocumentsByNurseId(nurse.id);
+  const apiDocs = await ensureNurseDocumentsFromProfile(nurse);
   const merged = latestByKey(apiDocs, (d) => d.documentType);
   if (!nurse.profilePicture && merged.length === 0) {
     const err = new Error('Profile picture must be uploaded before approval');
@@ -381,11 +399,11 @@ async function assertNurseDocumentsVerified(nurse) {
       status: 'pending',
     });
   }
-  validateAllDocumentsVerified(merged, 'profile document');
+  validateAllDocumentsVerified(merged, 'nurse document');
 }
 
 async function assertAmbulanceDocumentsVerified(ambulance) {
-  const apiDocs = await findDocumentsByAmbulanceId(ambulance.id);
+  const apiDocs = await ensureAmbulanceDocumentsFromProfile(ambulance);
   const merged = collectAmbulanceDocuments(ambulance, apiDocs);
   const uploaded = merged.filter((d) => d.fileUrl);
   validateAllDocumentsVerified(uploaded, 'ambulance document');

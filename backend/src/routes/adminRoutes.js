@@ -51,10 +51,21 @@ const {
   rejectScanCenterDocument,
 } = require('../db/scanCenterRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
-const { adminRequired } = require('../middleware/auth');
+const { adminRequired, approvalUserRequired } = require('../middleware/auth');
+
+/** Admin or approver — KYC detail + per-document verify/reject. */
+const kycReviewRequired = approvalUserRequired;
+
+function reviewerId(req) {
+  return req.auth?.adminId || req.auth?.approverId || req.auth?.id || null;
+}
 const {
   getAdminMarketplaceOverview,
   listAdminBookings,
+  listAdminConsultationBookings,
+  getAdminConsultationBookingDetail,
+  listAdminDiagnosticBookings,
+  getAdminDiagnosticBookingDetail,
 } = require('../db/adminMarketplaceRepositories');
 const { listPatientsForAdmin, findPatientById } = require('../db/patientRepositories');
 const {
@@ -83,6 +94,91 @@ router.get('/bookings', adminRequired, async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to list bookings', 500);
+  }
+});
+
+router.get('/consultation-bookings', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '50', 10));
+    const data = await listAdminConsultationBookings({
+      consultationType: req.query.consultationType || undefined,
+      providerType: req.query.providerType || 'doctor',
+      page,
+      pageSize,
+      status: req.query.status,
+      paymentStatus: req.query.paymentStatus,
+      search: req.query.q || req.query.search,
+    });
+    return sendSuccess(res, {
+      data: data.bookings,
+      pagination: data.pagination,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to list consultation bookings',
+      500,
+    );
+  }
+});
+
+router.get('/consultation-bookings/:id', adminRequired, async (req, res) => {
+  try {
+    const data = await getAdminConsultationBookingDetail(req.params.id);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(
+      res,
+      err.message || 'Failed to load consultation booking',
+      status,
+    );
+  }
+});
+
+router.get('/diagnostic-bookings', adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, parseInt(req.query.pageSize || '50', 10));
+    const kind = req.query.kind === 'scan' ? 'scan' : 'lab';
+    const data = await listAdminDiagnosticBookings({
+      kind,
+      page,
+      pageSize,
+      status: req.query.status,
+      paymentStatus: req.query.paymentStatus,
+      search: req.query.q || req.query.search,
+    });
+    return sendSuccess(res, {
+      data: data.bookings,
+      pagination: data.pagination,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to list diagnostic bookings',
+      500,
+    );
+  }
+});
+
+router.get('/diagnostic-bookings/:kind/:id', adminRequired, async (req, res) => {
+  try {
+    const kind = req.params.kind === 'scan' ? 'scan' : 'lab';
+    const data = await getAdminDiagnosticBookingDetail(kind, req.params.id);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(
+      res,
+      err.message || 'Failed to load diagnostic booking',
+      status,
+    );
   }
 });
 
@@ -265,7 +361,7 @@ router.get('/doctors', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/doctors/:id', adminRequired, async (req, res) => {
+router.get('/doctors/:id', kycReviewRequired, async (req, res) => {
   try {
     const doctor = await findDoctorById(req.params.id);
     if (!doctor) {
@@ -278,7 +374,7 @@ router.get('/doctors/:id', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/doctors/:id/documents', adminRequired, async (req, res) => {
+router.get('/doctors/:id/documents', kycReviewRequired, async (req, res) => {
   try {
     const doctor = await findDoctorById(req.params.id);
     if (!doctor) {
@@ -294,7 +390,7 @@ router.get('/doctors/:id/documents', adminRequired, async (req, res) => {
 
 router.post(
   '/doctors/:doctorId/documents/:documentId/verify',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { doctorId, documentId } = req.params;
@@ -303,7 +399,7 @@ router.post(
         return sendError(res, 'Document not found', 404);
       }
 
-      const verified = await verifyDocument(documentId, req.auth?.adminId);
+      const verified = await verifyDocument(documentId, reviewerId(req));
       return sendSuccess(res, {
         message: 'Document verified',
         data: verified,
@@ -318,7 +414,7 @@ router.post(
 
 router.post(
   '/doctors/:doctorId/documents/:documentId/reject',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { doctorId, documentId } = req.params;
@@ -335,7 +431,7 @@ router.post(
       const rejected = await rejectDocument(
         documentId,
         rejectionReason.trim(),
-        req.auth?.adminId,
+        reviewerId(req),
       );
       return sendSuccess(res, {
         message: 'Document rejected',
@@ -350,7 +446,7 @@ router.post(
 );
 
 // Admin approval: pending / under_review → verified (live on user app)
-router.post('/doctors/:id/approve', adminRequired, async (req, res) => {
+router.post('/doctors/:id/approve', kycReviewRequired, async (req, res) => {
   try {
     const { approvalNotes } = req.body;
     const existing = await findDoctorById(req.params.id);
@@ -382,7 +478,7 @@ router.post('/doctors/:id/approve', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/doctors/:id/reject', adminRequired, async (req, res) => {
+router.post('/doctors/:id/reject', kycReviewRequired, async (req, res) => {
   try {
     const { rejectionReason } = req.body;
     if (!rejectionReason?.trim()) {
@@ -445,7 +541,7 @@ router.get('/nurses', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/nurses/:id', adminRequired, async (req, res) => {
+router.get('/nurses/:id', kycReviewRequired, async (req, res) => {
   try {
     const nurse = await findNurseById(req.params.id);
     if (!nurse) {
@@ -458,7 +554,7 @@ router.get('/nurses/:id', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/nurses/:id/documents', adminRequired, async (req, res) => {
+router.get('/nurses/:id/documents', kycReviewRequired, async (req, res) => {
   try {
     const nurse = await findNurseById(req.params.id);
     if (!nurse) {
@@ -474,7 +570,7 @@ router.get('/nurses/:id/documents', adminRequired, async (req, res) => {
 
 router.post(
   '/nurses/:nurseId/documents/:documentId/verify',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { nurseId, documentId } = req.params;
@@ -483,7 +579,7 @@ router.post(
         return sendError(res, 'Document not found', 404);
       }
 
-      const verified = await verifyDocument(documentId, req.auth?.adminId);
+      const verified = await verifyDocument(documentId, reviewerId(req));
       return sendSuccess(res, {
         message: 'Document verified',
         data: verified,
@@ -498,7 +594,7 @@ router.post(
 
 router.post(
   '/nurses/:nurseId/documents/:documentId/reject',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { nurseId, documentId } = req.params;
@@ -515,7 +611,7 @@ router.post(
       const rejected = await rejectDocument(
         documentId,
         rejectionReason.trim(),
-        req.auth?.adminId,
+        reviewerId(req),
       );
       return sendSuccess(res, {
         message: 'Document rejected',
@@ -529,7 +625,7 @@ router.post(
   },
 );
 
-router.post('/nurses/:id/approve', adminRequired, async (req, res) => {
+router.post('/nurses/:id/approve', kycReviewRequired, async (req, res) => {
   try {
     const { approvalNotes } = req.body;
     const existing = await findNurseById(req.params.id);
@@ -561,7 +657,7 @@ router.post('/nurses/:id/approve', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/nurses/:id/reject', adminRequired, async (req, res) => {
+router.post('/nurses/:id/reject', kycReviewRequired, async (req, res) => {
   try {
     const { rejectionReason } = req.body;
     if (!rejectionReason?.trim()) {
@@ -621,7 +717,7 @@ router.get('/ambulances', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/ambulances/:id', adminRequired, async (req, res) => {
+router.get('/ambulances/:id', kycReviewRequired, async (req, res) => {
   try {
     const ambulance = await findAmbulanceById(req.params.id);
     if (!ambulance) {
@@ -634,7 +730,7 @@ router.get('/ambulances/:id', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/ambulances/:id/documents', adminRequired, async (req, res) => {
+router.get('/ambulances/:id/documents', kycReviewRequired, async (req, res) => {
   try {
     const ambulance = await findAmbulanceById(req.params.id);
     if (!ambulance) {
@@ -650,7 +746,7 @@ router.get('/ambulances/:id/documents', adminRequired, async (req, res) => {
 
 router.post(
   '/ambulances/:ambulanceId/documents/:documentId/verify',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { ambulanceId, documentId } = req.params;
@@ -659,7 +755,7 @@ router.post(
         return sendError(res, 'Document not found', 404);
       }
 
-      const verified = await verifyDocument(documentId, req.auth?.adminId);
+      const verified = await verifyDocument(documentId, reviewerId(req));
       return sendSuccess(res, {
         message: 'Document verified',
         data: verified,
@@ -674,7 +770,7 @@ router.post(
 
 router.post(
   '/ambulances/:ambulanceId/documents/:documentId/reject',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { ambulanceId, documentId } = req.params;
@@ -691,7 +787,7 @@ router.post(
       const rejected = await rejectDocument(
         documentId,
         rejectionReason.trim(),
-        req.auth?.adminId,
+        reviewerId(req),
       );
       return sendSuccess(res, {
         message: 'Document rejected',
@@ -705,7 +801,7 @@ router.post(
   },
 );
 
-router.post('/ambulances/:id/approve', adminRequired, async (req, res) => {
+router.post('/ambulances/:id/approve', kycReviewRequired, async (req, res) => {
   try {
     const { approvalNotes } = req.body;
     const existing = await findAmbulanceById(req.params.id);
@@ -737,7 +833,7 @@ router.post('/ambulances/:id/approve', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/ambulances/:id/reject', adminRequired, async (req, res) => {
+router.post('/ambulances/:id/reject', kycReviewRequired, async (req, res) => {
   try {
     const { rejectionReason } = req.body;
     if (!rejectionReason?.trim()) {
@@ -797,7 +893,7 @@ router.get('/blood-banks', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/blood-banks/:id', adminRequired, async (req, res) => {
+router.get('/blood-banks/:id', kycReviewRequired, async (req, res) => {
   try {
     const bloodBank = await findBloodBankById(req.params.id);
     if (!bloodBank) {
@@ -810,7 +906,7 @@ router.get('/blood-banks/:id', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/blood-banks/:id/approve', adminRequired, async (req, res) => {
+router.post('/blood-banks/:id/approve', kycReviewRequired, async (req, res) => {
   try {
     const { approvalNotes } = req.body;
     const existing = await findBloodBankById(req.params.id);
@@ -842,7 +938,7 @@ router.post('/blood-banks/:id/approve', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/blood-banks/:id/reject', adminRequired, async (req, res) => {
+router.post('/blood-banks/:id/reject', kycReviewRequired, async (req, res) => {
   try {
     const { rejectionReason } = req.body;
     if (!rejectionReason?.trim()) {
@@ -922,7 +1018,7 @@ router.post('/blood-banks/:id/request-documents', adminRequired, async (req, res
 
 router.post(
   '/blood-banks/:bloodBankId/documents/:documentId/verify',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { bloodBankId, documentId } = req.params;
@@ -947,7 +1043,7 @@ router.post(
 
 router.post(
   '/blood-banks/:bloodBankId/documents/:documentId/reject',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { bloodBankId, documentId } = req.params;
@@ -1039,7 +1135,7 @@ router.get('/labs', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/labs/:id', adminRequired, async (req, res) => {
+router.get('/labs/:id', kycReviewRequired, async (req, res) => {
   try {
     const lab = await findLabById(req.params.id);
     if (!lab) {
@@ -1052,7 +1148,7 @@ router.get('/labs/:id', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/labs/:id/approve', adminRequired, async (req, res) => {
+router.post('/labs/:id/approve', kycReviewRequired, async (req, res) => {
   try {
     const { approvalNotes } = req.body;
     const existing = await findLabById(req.params.id);
@@ -1084,7 +1180,7 @@ router.post('/labs/:id/approve', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/labs/:id/reject', adminRequired, async (req, res) => {
+router.post('/labs/:id/reject', kycReviewRequired, async (req, res) => {
   try {
     const { rejectionReason } = req.body;
     if (!rejectionReason?.trim()) {
@@ -1173,7 +1269,7 @@ router.post('/labs/:id/request-documents', adminRequired, async (req, res) => {
 
 router.post(
   '/labs/:labId/documents/:documentId/verify',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { labId, documentId } = req.params;
@@ -1198,7 +1294,7 @@ router.post(
 
 router.post(
   '/labs/:labId/documents/:documentId/reject',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { labId, documentId } = req.params;
@@ -1251,7 +1347,7 @@ router.get('/scan-centers', adminRequired, async (req, res) => {
   }
 });
 
-router.get('/scan-centers/:id', adminRequired, async (req, res) => {
+router.get('/scan-centers/:id', kycReviewRequired, async (req, res) => {
   try {
     const center = await findScanCenterById(req.params.id);
     if (!center) {
@@ -1264,7 +1360,7 @@ router.get('/scan-centers/:id', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/scan-centers/:id/approve', adminRequired, async (req, res) => {
+router.post('/scan-centers/:id/approve', kycReviewRequired, async (req, res) => {
   try {
     const { approvalNotes } = req.body;
     const existing = await findScanCenterById(req.params.id);
@@ -1296,7 +1392,7 @@ router.post('/scan-centers/:id/approve', adminRequired, async (req, res) => {
   }
 });
 
-router.post('/scan-centers/:id/reject', adminRequired, async (req, res) => {
+router.post('/scan-centers/:id/reject', kycReviewRequired, async (req, res) => {
   try {
     const { rejectionReason } = req.body;
     if (!rejectionReason?.trim()) {
@@ -1385,7 +1481,7 @@ router.post('/scan-centers/:id/request-documents', adminRequired, async (req, re
 
 router.post(
   '/scan-centers/:scanCenterId/documents/:documentId/verify',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { scanCenterId, documentId } = req.params;
@@ -1410,7 +1506,7 @@ router.post(
 
 router.post(
   '/scan-centers/:scanCenterId/documents/:documentId/reject',
-  adminRequired,
+  kycReviewRequired,
   async (req, res) => {
     try {
       const { scanCenterId, documentId } = req.params;

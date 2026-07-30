@@ -79,6 +79,9 @@ const consultationBookingSchema = new mongoose.Schema(
     videoRoomId: String,
     videoCallStartedAt: Date,
     videoCallEndedAt: Date,
+    /** First time each party joined the video room. */
+    doctorJoinedAt: Date,
+    patientJoinedAt: Date,
     /** Patient-uploaded lab reports, prescriptions, etc. for the doctor. */
     previousReports: [
       {

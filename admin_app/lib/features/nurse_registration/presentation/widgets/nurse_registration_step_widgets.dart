@@ -257,7 +257,7 @@ class _NurseChipMultiSelect extends StatelessWidget {
   }
 }
 
-class _NurseDateOfBirthTile extends StatelessWidget {
+class _NurseDateOfBirthTile extends StatefulWidget {
   const _NurseDateOfBirthTile({
     required this.value,
     required this.onChanged,
@@ -267,26 +267,74 @@ class _NurseDateOfBirthTile extends StatelessWidget {
   final ValueChanged<DateTime> onChanged;
 
   @override
+  State<_NurseDateOfBirthTile> createState() => _NurseDateOfBirthTileState();
+}
+
+class _NurseDateOfBirthTileState extends State<_NurseDateOfBirthTile> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: _format(widget.value));
+  }
+
+  @override
+  void didUpdateWidget(covariant _NurseDateOfBirthTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      final next = _format(widget.value);
+      if (_controller.text != next) {
+        _controller.text = next;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _format(DateTime? value) {
+    if (value == null) return '';
+    return FormattingUtils.formatDate(value);
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: widget.value ?? DateTime(1995),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+    );
+    if (picked == null) return;
+    _controller.text = FormattingUtils.formatDate(picked);
+    widget.onChanged(picked);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text('Date of birth', style: AppTextStyles.labelLarge),
-      subtitle: Text(
-        value != null
-            ? '${value!.day}/${value!.month}/${value!.year}'
-            : 'Tap to select',
-        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+    return GestureDetector(
+      onTap: _pickDate,
+      child: AbsorbPointer(
+        child: CustomTextField(
+          controller: _controller,
+          label: 'Date of birth',
+          hint: 'Select date of birth',
+          prefixIcon: Icons.calendar_today_outlined,
+          suffixIcon: Icons.edit_calendar_outlined,
+          readOnly: true,
+          validator: (value) {
+            if (widget.value == null) {
+              return 'Date of birth is required';
+            }
+            return ValidationUtils.validateDateOfBirth(
+              FormattingUtils.formatDate(widget.value!),
+            );
+          },
+        ),
       ),
-      trailing: const Icon(Icons.calendar_month_outlined),
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: value ?? DateTime(1995),
-          firstDate: DateTime(1950),
-          lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
-        );
-        if (picked != null) onChanged(picked);
-      },
     );
   }
 }
@@ -684,6 +732,8 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
                 controller: _qualificationOther,
                 label: 'Specify qualification',
                 prefixIcon: Icons.school_outlined,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: [UpperCaseTextFormatter()],
                 validator: (v) => ValidationUtils.validateOrganizationName(
                   v,
                   fieldName: 'Qualification',
@@ -1136,6 +1186,11 @@ class _NurseStep5BankState extends ConsumerState<NurseStep5Bank>
               controller: _ifsc,
               label: 'IFSC code',
               prefixIcon: Icons.tag_rounded,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                UpperCaseTextFormatter(),
+                LengthLimitingTextInputFormatter(11),
+              ],
               validator: ValidationUtils.validateIfscCode,
             ),
             const SizedBox(height: 12),

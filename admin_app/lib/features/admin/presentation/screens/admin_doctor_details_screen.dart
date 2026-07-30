@@ -99,7 +99,7 @@ class AdminDoctorDetailsScreen extends ConsumerWidget {
     final canReviewDocuments = doctor.verificationStatus !=
             VerificationStatus.verified &&
         doctor.verificationStatus != VerificationStatus.rejected;
-    final allVerified = allDocumentsVerified(documents);
+    final allVerified = requiredDoctorDocumentsVerified(documents);
 
     return RefreshIndicator(
       onRefresh: () => ref
@@ -153,57 +153,66 @@ class AdminDoctorDetailsScreen extends ConsumerWidget {
               if (doctor.bio != null && doctor.bio!.trim().isNotEmpty)
                 _DetailRow('About', doctor.bio!),
               _DetailRow('Clinic', doctor.clinicName ?? '-'),
-              if (doctor.offersOnlineConsult)
-                _DetailRow(
-                  'Online consult fee',
-                  doctor.effectiveFeeForConsultationType(
-                            ConsultationType.onlineConsult,
-                          ) !=
-                          null
-                      ? FormattingUtils.formatConsultationFee(
-                          doctor.effectiveFeeForConsultationType(
-                            ConsultationType.onlineConsult,
-                          )!,
-                        )
-                      : '-',
-                ),
-              if (doctor.offersVisitSite)
-                _DetailRow(
-                  'Hospital visit fee',
-                  doctor.effectiveFeeForConsultationType(
-                            ConsultationType.visitSite,
-                          ) !=
-                          null
-                      ? FormattingUtils.formatConsultationFee(
-                          doctor.effectiveFeeForConsultationType(
-                            ConsultationType.visitSite,
-                          )!,
-                        )
-                      : '-',
-                ),
-              if (doctor.offersBookHome)
-                _DetailRow(
-                  'Home visit fee',
-                  doctor.effectiveFeeForConsultationType(
-                            ConsultationType.bookHome,
-                          ) !=
-                          null
-                      ? FormattingUtils.formatConsultationFee(
-                          doctor.effectiveFeeForConsultationType(
-                            ConsultationType.bookHome,
-                          )!,
-                        )
-                      : '-',
-                ),
+            ],
+          ),
+          _Section(
+            title: 'Services offered',
+            children: [
               if (!doctor.hasAnyConsultationOption)
-                _DetailRow(
-                  'Fee',
-                  doctor.consultationFee != null
-                      ? FormattingUtils.formatConsultationFee(
-                          doctor.consultationFee!,
-                        )
-                      : '-',
+                const _DetailRow(
+                  'Services',
+                  'No consultation services selected',
+                )
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (doctor.offersOnlineConsult)
+                        const _ServiceChip(
+                          icon: Icons.videocam_outlined,
+                          label: 'Online consult',
+                        ),
+                      if (doctor.offersVisitSite)
+                        const _ServiceChip(
+                          icon: Icons.local_hospital_outlined,
+                          label: 'Visit hospital',
+                        ),
+                      if (doctor.offersBookHome)
+                        const _ServiceChip(
+                          icon: Icons.home_outlined,
+                          label: 'Home visit',
+                        ),
+                    ],
+                  ),
                 ),
+                if (doctor.offersOnlineConsult)
+                  _DetailRow(
+                    'Online consult fee',
+                    _serviceFeeLabel(
+                      doctor,
+                      ConsultationType.onlineConsult,
+                    ),
+                  ),
+                if (doctor.offersVisitSite)
+                  _DetailRow(
+                    'Hospital visit fee',
+                    _serviceFeeLabel(
+                      doctor,
+                      ConsultationType.visitSite,
+                    ),
+                  ),
+                if (doctor.offersBookHome)
+                  _DetailRow(
+                    'Home visit fee',
+                    _serviceFeeLabel(
+                      doctor,
+                      ConsultationType.bookHome,
+                    ),
+                  ),
+              ],
             ],
           ),
           _Section(
@@ -443,6 +452,54 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
+class _ServiceChip extends StatelessWidget {
+  const _ServiceChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _serviceFeeLabel(DoctorModel doctor, ConsultationType type) {
+  final effective = doctor.effectiveFeeForConsultationType(type);
+  final regular = doctor.feeForConsultationType(type);
+  final offer = doctor.offerFeeForConsultationType(type);
+  if (effective == null) return '-';
+  final formatted = FormattingUtils.formatConsultationFee(effective);
+  if (offer != null &&
+      offer > 0 &&
+      regular != null &&
+      offer < regular) {
+    return '$formatted (offer; was ${FormattingUtils.formatConsultationFee(regular)})';
+  }
+  return formatted;
+}
+
 class _ActionBar extends ConsumerWidget {
   const _ActionBar({
     required this.doctorId,
@@ -468,7 +525,7 @@ class _ActionBar extends ConsumerWidget {
     final verifiedCount =
         documents.where((d) => d.status == DocumentStatus.verified).length;
     final totalCount = documents.length;
-    final allDocsVerified = allDocumentsVerified(documents);
+    final allDocsVerified = requiredDoctorDocumentsVerified(documents);
     final profileComplete = state.doctor?.isProfileComplete ?? false;
     final canApprove = isPendingReview && allDocsVerified && profileComplete;
 
@@ -607,10 +664,14 @@ class _ActionBar extends ConsumerWidget {
             page: listState.currentPage,
           );
     }
-    if (context.mounted) {
-      SnackBarHelper.showSuccess(
+    if (!context.mounted) return;
+    if (success) {
+      SnackBarHelper.showSuccess(context, AppConstants.adminApprovalSuccess);
+    } else {
+      final err = ref.read(doctorDetailsProvider(doctorId)).error;
+      SnackBarHelper.showError(
         context,
-        success ? AppConstants.adminApprovalSuccess : 'Approval failed',
+        err ?? 'Approval failed. Complete profile and try again.',
       );
     }
   }

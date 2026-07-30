@@ -60,6 +60,9 @@ const labBookingSchema = new mongoose.Schema(
     rejectionReason: String,
     reportUrl: String,
     reportFileName: String,
+    sampleCollectedAt: Date,
+    reportSubmittedAt: Date,
+    reportAcceptedByUserAt: Date,
   },
   { timestamps: true },
 );

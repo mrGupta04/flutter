@@ -25,6 +25,7 @@ const {
   createLabBooking,
   listLabBookingsForLab,
   updateLabBookingStatus,
+  acceptLabReportByUser,
   createPaymentOrderForLabBooking,
   confirmLabBookingAfterPayment,
 } = require('../db/labBookingRepositories');
@@ -389,6 +390,26 @@ router.post('/bookings/:bookingId/status', authOptional, async (req, res) => {
     return sendError(
       res,
       err.message || 'Failed to update booking',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.post('/bookings/:bookingId/accept-report', authRequired, async (req, res) => {
+  try {
+    const booking = await acceptLabReportByUser({
+      bookingId: req.params.bookingId,
+      patientId: req.auth?.patientId,
+    });
+    return sendSuccess(res, {
+      message: 'Report accepted by user',
+      data: booking,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to accept report',
       err.statusCode || 500,
     );
   }

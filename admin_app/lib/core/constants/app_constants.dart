@@ -266,6 +266,14 @@ class AppConstants {
       '/admin/emergency-blood-requests';
   static const String endpointAdminOverview = '/admin/overview';
   static const String endpointAdminBookings = '/admin/bookings';
+  static const String endpointAdminConsultationBookings =
+      '/admin/consultation-bookings';
+  static String endpointAdminConsultationBooking(String id) =>
+      '/admin/consultation-bookings/$id';
+  static const String endpointAdminDiagnosticBookings =
+      '/admin/diagnostic-bookings';
+  static String endpointAdminDiagnosticBooking(String kind, String id) =>
+      '/admin/diagnostic-bookings/$kind/$id';
   static const String endpointAdminPatients = '/admin/patients';
   static String endpointAdminPatient(String id) => '/admin/patients/$id';
   static const String endpointAdminCoupons = '/admin/coupons';
@@ -453,6 +461,15 @@ class AppConstants {
   static const String routeAdminLogin = '/admin-login';
   static const String routeAdminDashboard = '/admin-dashboard';
   static const String routeApprovalManagement = '/admin-approval-management';
+  static const String routeAdminServiceProviderManagement =
+      '/admin-service-provider-management';
+  static const String routeAdminDoctorSessions = '/admin-doctor-sessions';
+  static const String routeAdminDoctorSessionDetails =
+      '/admin-doctor-session-details';
+  static const String routeAdminDiagnosticSessions =
+      '/admin-diagnostic-sessions';
+  static const String routeAdminDiagnosticSessionDetails =
+      '/admin-diagnostic-session-details';
   static const String routeAdminOverview = '/admin-overview';
   static const String routeAdminBookings = '/admin-bookings';
   static const String routeAdminPatients = '/admin-patients';

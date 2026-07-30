@@ -10,6 +10,11 @@ import '../features/admin/presentation/screens/admin_blood_bank_details_screen.d
 import '../features/admin/presentation/screens/admin_blood_bank_list_screen.dart';
 import '../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../features/admin/presentation/screens/admin_ops_screens.dart';
+import '../features/admin/presentation/screens/admin_service_provider_management_screen.dart';
+import '../features/admin/presentation/screens/admin_doctor_sessions_screen.dart';
+import '../features/admin/presentation/screens/admin_doctor_session_details_screen.dart';
+import '../features/admin/presentation/screens/admin_diagnostic_sessions_screen.dart';
+import '../features/admin/presentation/screens/admin_diagnostic_session_details_screen.dart';
 import '../data/models/doctor_model.dart';
 import '../data/models/doctor_booking_model.dart';
 import '../features/admin/presentation/screens/admin_doctor_details_screen.dart';
@@ -57,6 +62,11 @@ import '../features/admin/provider/admin_auth_provider.dart';
 bool _isAdminProtectedRoute(String location) {
   return location.startsWith(AppConstants.routeAdminDashboard) ||
       location.startsWith(AppConstants.routeApprovalManagement) ||
+      location.startsWith(AppConstants.routeAdminServiceProviderManagement) ||
+      location.startsWith(AppConstants.routeAdminDoctorSessions) ||
+      location.startsWith(AppConstants.routeAdminDoctorSessionDetails) ||
+      location.startsWith(AppConstants.routeAdminDiagnosticSessions) ||
+      location.startsWith(AppConstants.routeAdminDiagnosticSessionDetails) ||
       location.startsWith(AppConstants.routeAdminOverview) ||
       location.startsWith(AppConstants.routeAdminBookings) ||
       location.startsWith(AppConstants.routeAdminPatients) ||
@@ -80,6 +90,11 @@ bool _isAdminProtectedRoute(String location) {
 
 bool _isAdminOnlyRoute(String location) {
   return location.startsWith(AppConstants.routeAdminDashboard) ||
+      location.startsWith(AppConstants.routeAdminServiceProviderManagement) ||
+      location.startsWith(AppConstants.routeAdminDoctorSessions) ||
+      location.startsWith(AppConstants.routeAdminDoctorSessionDetails) ||
+      location.startsWith(AppConstants.routeAdminDiagnosticSessions) ||
+      location.startsWith(AppConstants.routeAdminDiagnosticSessionDetails) ||
       location.startsWith(AppConstants.routeAdminOverview) ||
       location.startsWith(AppConstants.routeAdminBookings) ||
       location.startsWith(AppConstants.routeAdminPatients) ||
@@ -469,6 +484,59 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppConstants.routeAdminServiceProviderManagement,
+        name: 'adminServiceProviderManagement',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminServiceProviderManagementScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminDoctorSessions,
+        name: 'adminDoctorSessions',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          AdminDoctorSessionsScreen(
+            serviceType:
+                state.uri.queryParameters['service'] ?? 'online',
+            providerType:
+                state.uri.queryParameters['provider'] ?? 'doctor',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '${AppConstants.routeAdminDoctorSessionDetails}/:bookingId',
+        name: 'adminDoctorSessionDetails',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          AdminDoctorSessionDetailsScreen(
+            bookingId: state.pathParameters['bookingId'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminDiagnosticSessions,
+        name: 'adminDiagnosticSessions',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          AdminDiagnosticSessionsScreen(
+            kind: state.uri.queryParameters['kind'] ?? 'lab',
+          ),
+        ),
+      ),
+      GoRoute(
+        path:
+            '${AppConstants.routeAdminDiagnosticSessionDetails}/:kind/:bookingId',
+        name: 'adminDiagnosticSessionDetails',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          AdminDiagnosticSessionDetailsScreen(
+            kind: state.pathParameters['kind'] ?? 'lab',
+            bookingId: state.pathParameters['bookingId'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
         path: AppConstants.routeAdminOverview,
         name: 'adminOverview',
         pageBuilder: (context, state) => slidePage(
@@ -529,7 +597,9 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         name: 'adminDoctorList',
         pageBuilder: (context, state) => slidePage(
           state,
-          const AdminDoctorListScreen(),
+          AdminDoctorListScreen(
+            serviceType: state.uri.queryParameters['service'],
+          ),
         ),
       ),
       GoRoute(

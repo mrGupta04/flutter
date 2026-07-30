@@ -302,7 +302,7 @@ async function markVideoCallStarted(bookingId, auth) {
 
   }
 
-  await assertBookingVideoAccess(auth, bookingDoc.toObject());
+  const access = await assertBookingVideoAccess(auth, bookingDoc.toObject());
 
 
 
@@ -326,9 +326,23 @@ async function markVideoCallStarted(bookingId, auth) {
 
   }
 
+  const now = new Date();
+
   if (!bookingDoc.videoCallStartedAt) {
 
-    bookingDoc.videoCallStartedAt = new Date();
+    bookingDoc.videoCallStartedAt = now;
+
+  }
+
+  if (access.role === 'doctor' && !bookingDoc.doctorJoinedAt) {
+
+    bookingDoc.doctorJoinedAt = now;
+
+  }
+
+  if (access.role === 'patient' && !bookingDoc.patientJoinedAt) {
+
+    bookingDoc.patientJoinedAt = now;
 
   }
 
@@ -343,6 +357,10 @@ async function markVideoCallStarted(bookingId, auth) {
     videoRoomId: bookingDoc.videoRoomId,
 
     videoCallStartedAt: bookingDoc.videoCallStartedAt,
+
+    doctorJoinedAt: bookingDoc.doctorJoinedAt || null,
+
+    patientJoinedAt: bookingDoc.patientJoinedAt || null,
 
   };
 

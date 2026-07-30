@@ -143,3 +143,24 @@ bool allDocumentsVerified(List<DoctorDocumentModel> documents) {
   if (documents.isEmpty) return false;
   return documents.every((d) => d.status == DocumentStatus.verified);
 }
+
+/// Doctor publish gate: only the required KYC types must be verified.
+/// Optional uploads (e.g. cancelled cheque) do not block final approve.
+bool requiredDoctorDocumentsVerified(List<DoctorDocumentModel> documents) {
+  const required = {
+    DocumentType.medicalLicense,
+    DocumentType.aadhaarCard,
+    DocumentType.degreeCertificate,
+    DocumentType.clinicProof,
+  };
+  final byType = <DocumentType, DoctorDocumentModel>{};
+  for (final doc in documents) {
+    final type = doc.documentType;
+    if (type != null && doc.fileUrl != null && doc.fileUrl!.isNotEmpty) {
+      byType[type] = doc;
+    }
+  }
+  return required.every(
+    (type) => byType[type]?.status == DocumentStatus.verified,
+  );
+}

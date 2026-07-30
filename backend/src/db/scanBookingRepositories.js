@@ -38,6 +38,21 @@ function toScanBooking(doc) {
     notes: d.notes,
     rejectionReason: d.rejectionReason,
     reportUrl: d.reportUrl,
+    sampleCollectedAt: d.sampleCollectedAt || null,
+    reportSubmittedAt: d.reportSubmittedAt || null,
+    reportAcceptedByUserAt: d.reportAcceptedByUserAt || null,
+    sampleCollected: Boolean(
+      d.sampleCollectedAt ||
+        ['in_progress', 'report_ready', 'completed'].includes(d.status),
+    ),
+    reportSubmitted: Boolean(
+      d.reportSubmittedAt ||
+        d.reportUrl ||
+        ['report_ready', 'completed'].includes(d.status),
+    ),
+    acceptedByUser: Boolean(
+      d.reportAcceptedByUserAt || d.status === 'completed',
+    ),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
@@ -184,9 +199,50 @@ async function updateScanBookingStatus({
     throw err;
   }
 
+  const now = new Date();
   booking.status = status;
   if (rejectionReason) booking.rejectionReason = String(rejectionReason).trim();
-  if (reportUrl) booking.reportUrl = reportUrl;
+  if (reportUrl) {
+    booking.reportUrl = reportUrl;
+    if (!booking.reportSubmittedAt) booking.reportSubmittedAt = now;
+  }
+  if (
+    ['in_progress', 'report_ready', 'completed'].includes(status) &&
+    !booking.sampleCollectedAt
+  ) {
+    booking.sampleCollectedAt = now;
+  }
+  if (['report_ready', 'completed'].includes(status) && !booking.reportSubmittedAt) {
+    booking.reportSubmittedAt = now;
+  }
+  if (status === 'completed' && !booking.reportAcceptedByUserAt) {
+    booking.reportAcceptedByUserAt = now;
+  }
+  await booking.save();
+  return toScanBooking(booking);
+}
+
+async function acceptScanReportByUser({ bookingId, patientId }) {
+  const booking = await ScanBooking.findOne({ id: bookingId });
+  if (!booking) {
+    const err = new Error('Booking not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (patientId && booking.patientId && booking.patientId !== patientId) {
+    const err = new Error('Not allowed to accept this report');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (!['report_ready', 'completed'].includes(booking.status) && !booking.reportUrl) {
+    const err = new Error('Report is not ready yet');
+    err.statusCode = 400;
+    throw err;
+  }
+  booking.status = 'completed';
+  booking.reportAcceptedByUserAt = booking.reportAcceptedByUserAt || new Date();
+  if (!booking.reportSubmittedAt) booking.reportSubmittedAt = booking.reportAcceptedByUserAt;
+  if (!booking.sampleCollectedAt) booking.sampleCollectedAt = booking.reportAcceptedByUserAt;
   await booking.save();
   return toScanBooking(booking);
 }
@@ -331,6 +387,7 @@ module.exports = {
   listScanBookingsForCenter,
   listScanBookingsForPatient,
   updateScanBookingStatus,
+  acceptScanReportByUser,
   createPaymentOrderForScanBooking,
   confirmScanBookingAfterPayment,
   toScanBooking,

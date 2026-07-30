@@ -638,3 +638,17 @@ extension NumFormatting on num {
   /// Convert to percentage string
   String toPercentage() => '${(this * 100).toStringAsFixed(1)}%';
 }
+
+/// Forces typed/pasted text to uppercase (for IFSC, degree codes, etc.).
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
+}

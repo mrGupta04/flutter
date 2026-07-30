@@ -700,6 +700,8 @@ class _Step2ProfessionalDetailsState
             label: 'Qualification',
             hint: 'MBBS, MD',
             prefixIcon: Icons.school_outlined,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [UpperCaseTextFormatter()],
             validator: (v) => ValidationUtils.validateOrganizationName(
               v,
               fieldName: 'Qualification',
@@ -1335,6 +1337,11 @@ class _Step5BankDetailsState extends ConsumerState<Step5BankDetails>
               label: 'IFSC code',
               hint: 'e.g. HDFC0001234',
               prefixIcon: Icons.code_rounded,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                UpperCaseTextFormatter(),
+                LengthLimitingTextInputFormatter(11),
+              ],
               validator: ValidationUtils.validateIfscCode,
             ),
             const SizedBox(height: 16),
