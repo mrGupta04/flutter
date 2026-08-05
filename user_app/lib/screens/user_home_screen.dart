@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
@@ -10,6 +11,8 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_decorations.dart';
 import '../core/theme/app_text_styles.dart';
 import '../data/models/patient_booking_model.dart';
+import '../features/labs/data/health_package_visuals.dart';
+import '../features/labs/data/lab_test_illustrations.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
@@ -222,11 +225,10 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   itemBuilder: (context, index) {
                     final item = _specialties[index];
                     return _SpecialtyChip(
-                      icon: item.icon,
+                      organAsset: item.organAsset,
                       label: item.label,
                       softColor: item.softColor,
                       accentColor: item.accentColor,
-                      deepColor: item.deepColor,
                       onTap: () => _openDoctorSearch(
                         context,
                         specialization: item.searchTerm,
@@ -371,23 +373,23 @@ class _UpcomingBookingCard extends StatelessWidget {
 
 class _SpecialtyChip extends StatelessWidget {
   const _SpecialtyChip({
-    required this.icon,
+    required this.organAsset,
     required this.label,
     required this.softColor,
     required this.accentColor,
-    required this.deepColor,
     required this.onTap,
   });
 
-  final IconData icon;
+  final String organAsset;
   final String label;
   final Color softColor;
   final Color accentColor;
-  final Color deepColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final isSvg = organAsset.toLowerCase().endsWith('.svg');
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -421,27 +423,22 @@ class _SpecialtyChip extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Center(
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [accentColor, deepColor],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: accentColor.withValues(alpha: 0.35),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: isSvg
+                      ? SvgPicture.asset(
+                          organAsset,
+                          fit: BoxFit.contain,
+                          colorFilter: ColorFilter.mode(
+                            accentColor,
+                            BlendMode.srcIn,
+                          ),
+                        )
+                      : Image.asset(
+                          organAsset,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
                         ),
-                      ],
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 20),
-                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -486,19 +483,17 @@ class _HomeService {
 
 class _SpecialtyItem {
   const _SpecialtyItem({
-    required this.icon,
+    required this.organAsset,
     required this.label,
     required this.softColor,
     required this.accentColor,
-    required this.deepColor,
     required this.searchTerm,
   });
 
-  final IconData icon;
+  final String organAsset;
   final String label;
   final Color softColor;
   final Color accentColor;
-  final Color deepColor;
   final String searchTerm;
 }
 
@@ -563,67 +558,59 @@ const _homeServices = [
 
 const _specialties = [
   _SpecialtyItem(
-    icon: Icons.favorite_rounded,
+    organAsset: OrganAssets.heart,
     label: 'Cardiology',
     softColor: Color(0xFFFFEBEE),
     accentColor: Color(0xFFE53935),
-    deepColor: Color(0xFFC62828),
     searchTerm: 'Cardiology',
   ),
   _SpecialtyItem(
-    icon: Icons.psychology_rounded,
+    organAsset: LabTestIllustrations.brain,
     label: 'Mental',
     softColor: Color(0xFFF3E5F5),
     accentColor: Color(0xFF8E24AA),
-    deepColor: Color(0xFF6A1B9A),
     searchTerm: 'Psychiatry',
   ),
   _SpecialtyItem(
-    icon: Icons.child_care_rounded,
+    organAsset: OrganAssets.vitamin,
     label: 'Pediatric',
     softColor: Color(0xFFE8F5E9),
     accentColor: Color(0xFF43A047),
-    deepColor: Color(0xFF2E7D32),
     searchTerm: 'Pediatric',
   ),
   _SpecialtyItem(
-    icon: Icons.visibility_rounded,
+    organAsset: OrganAssets.eye,
     label: 'Eye care',
     softColor: Color(0xFFE3F2FD),
     accentColor: Color(0xFF1E88E5),
-    deepColor: Color(0xFF1565C0),
     searchTerm: 'Ophthalmology',
   ),
   _SpecialtyItem(
-    icon: Icons.accessibility_new_rounded,
+    organAsset: OrganAssets.bone,
     label: 'Ortho',
     softColor: Color(0xFFFFF8E1),
     accentColor: Color(0xFFFB8C00),
-    deepColor: Color(0xFFEF6C00),
     searchTerm: 'Orthopedics',
   ),
   _SpecialtyItem(
-    icon: Icons.pregnant_woman_rounded,
+    organAsset: OrganAssets.pregnancy,
     label: 'Gynae',
     softColor: Color(0xFFFCE4EC),
     accentColor: Color(0xFFEC407A),
-    deepColor: Color(0xFFC2185B),
     searchTerm: 'Gynecology',
   ),
   _SpecialtyItem(
-    icon: Icons.spa_rounded,
+    organAsset: OrganAssets.skin,
     label: 'Dermat',
     softColor: Color(0xFFE8EAF6),
     accentColor: Color(0xFF5C6BC0),
-    deepColor: Color(0xFF3949AB),
     searchTerm: 'Dermatology',
   ),
   _SpecialtyItem(
-    icon: Icons.medical_services_rounded,
+    organAsset: OrganAssets.blood,
     label: 'General',
     softColor: Color(0xFFE0F2F1),
     accentColor: Color(0xFF00897B),
-    deepColor: Color(0xFF00695C),
     searchTerm: 'General Physician',
   ),
 ];

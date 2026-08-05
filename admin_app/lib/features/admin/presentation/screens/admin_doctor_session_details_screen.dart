@@ -347,11 +347,38 @@ class _AdminDoctorSessionDetailsScreenState
                             data?['doctorName']?.toString() ??
                             providerLabel,
                         onTap: () {
-                          final providerId = provider['id']?.toString() ??
-                              data?['providerId']?.toString() ??
-                              (isNurse
-                                  ? data?['nurseId']?.toString()
-                                  : data?['doctorId']?.toString());
+                          String? providerId = provider['id']?.toString();
+                          providerId ??= data?['providerId']?.toString();
+                          // Avoid `cond ? map?['k'] : ...` — Dart parses `map?` as ternary.
+                          if (providerId == null || providerId.isEmpty) {
+                            if (isNurse) {
+                              providerId = data?['nurseId']?.toString();
+                            } else {
+                              providerId = data?['doctorId']?.toString();
+                            }
+                          }
+
+                          final profile = <String, dynamic>{
+                            'Name': provider['name'] ??
+                                data?['providerName'] ??
+                                data?['doctorName'],
+                            'Email': provider['email'],
+                            'Mobile': provider['mobileNumber'],
+                            'Qualification': provider['qualification'],
+                            'City': provider['city'],
+                            'State': provider['state'],
+                            'Verification': provider['verificationStatus'],
+                            '$providerLabel ID': providerId,
+                          };
+                          if (!isNurse) {
+                            profile['Specializations'] =
+                                provider['specializations'];
+                            profile['Clinic'] = provider['clinicName'];
+                          } else {
+                            profile['Experience'] =
+                                provider['yearsOfExperience'];
+                          }
+
                           showModalBottomSheet<void>(
                             context: context,
                             showDragHandle: true,
@@ -366,28 +393,7 @@ class _AdminDoctorSessionDetailsScreenState
                                       Navigator.pop(context);
                                       _showProfileSheet(
                                         title: '$providerLabel profile',
-                                        profile: {
-                                          'Name': provider['name'] ??
-                                              data?['providerName'] ??
-                                              data?['doctorName'],
-                                          'Email': provider['email'],
-                                          'Mobile': provider['mobileNumber'],
-                                          if (!isNurse)
-                                            'Specializations':
-                                                provider['specializations'],
-                                          'Qualification':
-                                              provider['qualification'],
-                                          if (!isNurse)
-                                            'Clinic': provider['clinicName'],
-                                          if (isNurse)
-                                            'Experience':
-                                                provider['yearsOfExperience'],
-                                          'City': provider['city'],
-                                          'State': provider['state'],
-                                          'Verification':
-                                              provider['verificationStatus'],
-                                          '$providerLabel ID': providerId,
-                                        },
+                                        profile: profile,
                                       );
                                     },
                                   ),
@@ -402,11 +408,10 @@ class _AdminDoctorSessionDetailsScreenState
                                       ),
                                       onTap: () {
                                         Navigator.pop(context);
-                                        context.push(
-                                          isNurse
-                                              ? '${AppConstants.routeAdminNurseDetails}/$providerId'
-                                              : '${AppConstants.routeAdminDoctorDetails}/$providerId',
-                                        );
+                                        final path = isNurse
+                                            ? '${AppConstants.routeAdminNurseDetails}/$providerId'
+                                            : '${AppConstants.routeAdminDoctorDetails}/$providerId';
+                                        context.push(path);
                                       },
                                     ),
                                 ],

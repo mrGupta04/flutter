@@ -138,9 +138,40 @@ class _AdminDoctorSessionsScreenState extends State<AdminDoctorSessionsScreen> {
         return 'Refunded';
       case 'in_progress':
         return 'In progress';
+      case 'pending':
+        return 'Pending';
       default:
         return outcome.replaceAll('_', ' ');
     }
+  }
+
+  Color _paymentColor(String? status) {
+    switch ((status ?? '').toLowerCase()) {
+      case 'paid':
+        return AppColors.success;
+      case 'pending':
+        return AppColors.warning;
+      case 'failed':
+        return AppColors.error;
+      case 'refunded':
+        return AppColors.offer;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  String _paymentLabel(String? status) {
+    final value = (status ?? '—').trim();
+    if (value.isEmpty || value == '—') return 'Pay: —';
+    return 'Pay: ${value.replaceAll('_', ' ')}';
+  }
+
+  /// Green when the timestamp exists; muted grey when not joined yet.
+  Color _joinColor(dynamic value) {
+    if (value == null || value.toString().trim().isEmpty) {
+      return AppColors.textSecondary;
+    }
+    return AppColors.success;
   }
 
   @override
@@ -233,6 +264,8 @@ class _AdminDoctorSessionsScreenState extends State<AdminDoctorSessionsScreen> {
                                             CrossAxisAlignment.stretch,
                                         children: [
                                           Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Expanded(
                                                 child: _ClickableName(
@@ -240,12 +273,9 @@ class _AdminDoctorSessionsScreenState extends State<AdminDoctorSessionsScreen> {
                                                   value: row['patientName']
                                                           ?.toString() ??
                                                       'Patient',
-                                                  onTap: () => context.push(
-                                                    '${AppConstants.routeAdminDoctorSessionDetails}/${row['id']}',
-                                                  ),
                                                 ),
                                               ),
-                                              const SizedBox(width: 8),
+                                              const SizedBox(width: 12),
                                               Expanded(
                                                 child: _ClickableName(
                                                   label: _providerLabel,
@@ -254,29 +284,46 @@ class _AdminDoctorSessionsScreenState extends State<AdminDoctorSessionsScreen> {
                                                       row['doctorName']
                                                           ?.toString() ??
                                                       _providerLabel,
-                                                  onTap: () => context.push(
-                                                    '${AppConstants.routeAdminDoctorSessionDetails}/${row['id']}',
-                                                  ),
                                                 ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              _Pill(
+                                                label: _outcomeLabel(outcome),
+                                                color: _outcomeColor(outcome),
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 10),
+                                          const SizedBox(height: 12),
                                           Wrap(
                                             spacing: 8,
                                             runSpacing: 8,
+                                            alignment: WrapAlignment.start,
+                                            crossAxisAlignment:
+                                                WrapCrossAlignment.center,
                                             children: [
                                               _Pill(
-                                                label:
-                                                    'Pay: ${row['paymentStatus'] ?? '—'}',
+                                                label: _paymentLabel(
+                                                  row['paymentStatus']
+                                                      ?.toString(),
+                                                ),
+                                                color: _paymentColor(
+                                                  row['paymentStatus']
+                                                      ?.toString(),
+                                                ),
                                               ),
                                               _Pill(
                                                 label:
-                                                    '${row['doctorActionLabel'] ?? 'Doctor'}: ${_fmt(row['doctorActionAt'])}',
+                                                    '${row['doctorActionLabel'] ?? 'Doctor joined'}: ${_fmt(row['doctorActionAt'])}',
+                                                color: _joinColor(
+                                                  row['doctorActionAt'],
+                                                ),
                                               ),
                                               _Pill(
                                                 label:
-                                                    '${row['patientActionLabel'] ?? 'Patient'}: ${_fmt(row['patientActionAt'])}',
+                                                    '${row['patientActionLabel'] ?? 'User joined'}: ${_fmt(row['patientActionAt'])}',
+                                                color: _joinColor(
+                                                  row['patientActionAt'],
+                                                ),
                                               ),
                                               if ((_isNurse ||
                                                       widget.serviceType ==
@@ -285,6 +332,7 @@ class _AdminDoctorSessionsScreenState extends State<AdminDoctorSessionsScreen> {
                                                 _Pill(
                                                   label:
                                                       'Progress: ${row['visitProgress']}',
+                                                  color: AppColors.primary,
                                                 ),
                                               if (!_isNurse &&
                                                   widget.serviceType ==
@@ -294,14 +342,14 @@ class _AdminDoctorSessionsScreenState extends State<AdminDoctorSessionsScreen> {
                                                           null
                                                       ? 'Checked in'
                                                       : 'Not checked in',
+                                                  color: row['appointmentVerifiedAt'] !=
+                                                          null
+                                                      ? AppColors.success
+                                                      : AppColors.warning,
                                                 ),
-                                              _Pill(
-                                                label: _outcomeLabel(outcome),
-                                                color: _outcomeColor(outcome),
-                                              ),
                                             ],
                                           ),
-                                          const SizedBox(height: 8),
+                                          const SizedBox(height: 12),
                                           Text(
                                             [
                                               'Slot ${_fmt(row['slotStart'])}',
@@ -326,9 +374,12 @@ class _AdminDoctorSessionsScreenState extends State<AdminDoctorSessionsScreen> {
                                                 row['clinicName'].toString(),
                                               'Tap for full details',
                                             ].join(' · '),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                             style: AppTextStyles.bodySmall
                                                 .copyWith(
                                               color: AppColors.textSecondary,
+                                              height: 1.35,
                                             ),
                                           ),
                                         ],
@@ -350,41 +401,36 @@ class _ClickableName extends StatelessWidget {
   const _ClickableName({
     required this.label,
     required this.value,
-    this.onTap,
   });
 
   final String label;
   final String value;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            Text(
-              value,
-              style: AppTextStyles.titleSmall.copyWith(
-                color: onTap != null ? AppColors.primary : AppColors.textPrimary,
-                decoration:
-                    onTap != null ? TextDecoration.underline : null,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: AppColors.textSecondary,
+            height: 1.2,
+          ),
         ),
-      ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.titleSmall.copyWith(
+            color: AppColors.primary,
+            decoration: TextDecoration.underline,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -406,9 +452,12 @@ class _Pill extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: AppTextStyles.labelSmall.copyWith(
           color: c,
           fontWeight: FontWeight.w700,
+          height: 1.2,
         ),
       ),
     );

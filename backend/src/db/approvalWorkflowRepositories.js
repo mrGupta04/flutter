@@ -671,145 +671,159 @@ async function syncProviderRequests({ force = false } = {}) {
     );
 
     for (const [providerType, def] of Object.entries(PROVIDER_DEFINITIONS)) {
-      const docs = await def.model
-        .find({ verificationStatus: { $in: REVIEW_PROVIDER_STATUSES } })
-        .sort({ createdAt: -1 })
-        .limit(500)
-        .lean();
+      try {
+        const docs = await def.model
+          .find({ verificationStatus: { $in: REVIEW_PROVIDER_STATUSES } })
+          .sort({ createdAt: -1 })
+          .limit(500)
+          .lean();
 
-      if (!docs.length) continue;
+        if (!docs.length) continue;
 
-      const providers = docs
-        .map((raw) => def.mapper(raw))
-        .filter((provider) => provider?.id);
-      if (!providers.length) continue;
+        const providers = docs
+          .map((raw) => def.mapper(raw))
+          .filter((provider) => provider?.id);
+        if (!providers.length) continue;
 
-      const existingList = await ApprovalRequest.find({
-        providerType,
-        providerId: { $in: providers.map((provider) => provider.id) },
-      })
-        .select({
-          providerId: 1,
-          status: 1,
-          approvalLevels: 1,
-          timeline: 1,
-        })
-        .lean();
-      const existingById = new Map(
-        existingList.map((item) => [item.providerId, item]),
-      );
-
-      const rule = rulesByCategory[def.category];
-      const ops = [];
-
-      for (const provider of providers) {
-        const existing = existingById.get(provider.id);
-        const snapshot = providerSnapshot(providerType, provider);
-        const mappedStatus = statusFromProviderStatus(
-          provider.verificationStatus,
-        );
-        const registrationDate = snapshot.registrationDate || new Date();
-        const slaHours = rule?.slaHours || 24;
-        const approvalLevels = [...(rule?.approvalLevels || [])]
-          .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
-          .map((level) => ({
-            id: uuidv4(),
-            levelId: level.id,
-            levelName: level.name,
-            levelOrder: level.order,
-            role: level.role,
-            required: level.required !== false,
-            status: level.required === false ? 'skipped' : 'pending',
-          }));
-        const firstRequiredLevel = approvalLevels.find(
-          (level) => level.status === 'pending',
-        );
-        const existingClosed =
-          existing && ['approved', 'rejected'].includes(existing.status);
-        const status =
-          mappedStatus === 'approved' || mappedStatus === 'rejected'
-            ? mappedStatus
-            : existingClosed
-              ? existing.status
-              : existing?.status || mappedStatus;
-
-        const timeline =
-          existing?.timeline?.length > 0
-            ? existing.timeline
-            : [
-                {
-                  id: uuidv4(),
-                  actor: {
-                    id: provider.id,
-                    name: snapshot.name,
-                    role: 'provider',
-                  },
-                  action: 'provider_registered',
-                  remarks: 'Provider registered in the platform.',
-                  createdAt: registrationDate,
-                  metadata: { providerType },
-                },
-                {
-                  id: uuidv4(),
-                  actor: { id: 'system', name: 'System', role: 'system' },
-                  action: 'approval_request_created',
-                  remarks: 'Approval workflow request created.',
-                  createdAt: new Date(),
-                  metadata: {
-                    providerType,
-                    providerCategory: def.category,
-                  },
-                },
-              ];
-
-        // Never put the same path in both $set and $setOnInsert (Mongo conflict).
-        const setOnInsert = {
-          id: uuidv4(),
-          priority: 'normal',
+        const existingList = await ApprovalRequest.find({
           providerType,
-          providerId: provider.id,
-          providerCategory: def.category,
-          slaHours,
-          slaDueAt: addHours(registrationDate, slaHours),
-          timeline,
-          approvalLevels,
-          currentApprovalLevel: firstRequiredLevel?.levelOrder || 1,
-        };
-        const setFields = {
-          provider: snapshot,
-          status,
-          providerCategory: def.category,
-          metadata: {
-            providerLabel: def.label,
-            providerVerificationStatus: provider.verificationStatus,
-          },
-        };
+          providerId: { $in: providers.map((provider) => provider.id) },
+        })
+          .select({
+            providerId: 1,
+            status: 1,
+            approvalLevels: 1,
+            timeline: 1,
+          })
+          .lean();
+        const existingById = new Map(
+          existingList.map((item) => [item.providerId, item]),
+        );
 
-        // Backfill levels only on existing docs that are missing them.
-        if (
-          existing &&
-          !existing.approvalLevels?.length &&
-          approvalLevels.length
-        ) {
-          setFields.approvalLevels = approvalLevels;
-          setFields.currentApprovalLevel =
-            firstRequiredLevel?.levelOrder || 1;
+        const rule = rulesByCategory[def.category];
+        const ops = [];
+
+        for (const provider of providers) {
+          const existing = existingById.get(provider.id);
+          const snapshot = providerSnapshot(providerType, provider);
+          const mappedStatus = statusFromProviderStatus(
+            provider.verificationStatus,
+          );
+          const registrationDate = snapshot.registrationDate || new Date();
+          const slaHours = rule?.slaHours || 24;
+          const approvalLevels = [...(rule?.approvalLevels || [])]
+            .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+            .map((level) => ({
+              id: uuidv4(),
+              levelId: level.id,
+              levelName: level.name,
+              levelOrder: level.order,
+              role: level.role,
+              required: level.required !== false,
+              status: level.required === false ? 'skipped' : 'pending',
+            }));
+          const firstRequiredLevel = approvalLevels.find(
+            (level) => level.status === 'pending',
+          );
+          const existingClosed =
+            existing && ['approved', 'rejected'].includes(existing.status);
+          const status =
+            mappedStatus === 'approved' || mappedStatus === 'rejected'
+              ? mappedStatus
+              : existingClosed
+                ? existing.status
+                : existing?.status || mappedStatus;
+
+          const timeline =
+            existing?.timeline?.length > 0
+              ? existing.timeline
+              : [
+                  {
+                    id: uuidv4(),
+                    actor: {
+                      id: provider.id,
+                      name: snapshot.name,
+                      role: 'provider',
+                    },
+                    action: 'provider_registered',
+                    remarks: 'Provider registered in the platform.',
+                    createdAt: registrationDate,
+                    metadata: { providerType },
+                  },
+                  {
+                    id: uuidv4(),
+                    actor: { id: 'system', name: 'System', role: 'system' },
+                    action: 'approval_request_created',
+                    remarks: 'Approval workflow request created.',
+                    createdAt: new Date(),
+                    metadata: {
+                      providerType,
+                      providerCategory: def.category,
+                    },
+                  },
+                ];
+
+          // Never put the same path in both $set and $setOnInsert (Mongo conflict).
+          const setOnInsert = {
+            id: uuidv4(),
+            priority: 'normal',
+            providerType,
+            providerId: provider.id,
+            slaHours,
+            slaDueAt: addHours(registrationDate, slaHours),
+            timeline,
+            approvalLevels,
+            currentApprovalLevel: firstRequiredLevel?.levelOrder || 1,
+          };
+          const setFields = {
+            provider: snapshot,
+            status,
+            providerCategory: def.category,
+            metadata: {
+              providerLabel: def.label,
+              providerVerificationStatus: provider.verificationStatus,
+            },
+          };
+
+          // Backfill levels only on existing docs that are missing them.
+          if (
+            existing &&
+            !existing.approvalLevels?.length &&
+            approvalLevels.length
+          ) {
+            setFields.approvalLevels = approvalLevels;
+            setFields.currentApprovalLevel =
+              firstRequiredLevel?.levelOrder || 1;
+          }
+
+          ops.push({
+            updateOne: {
+              filter: { providerType, providerId: provider.id },
+              update: {
+                $setOnInsert: setOnInsert,
+                $set: setFields,
+              },
+              upsert: true,
+            },
+          });
         }
 
-        ops.push({
-          updateOne: {
-            filter: { providerType, providerId: provider.id },
-            update: {
-              $setOnInsert: setOnInsert,
-              $set: setFields,
-            },
-            upsert: true,
-          },
-        });
-      }
-
-      if (ops.length) {
-        await ApprovalRequest.bulkWrite(ops, { ordered: false });
+        if (ops.length) {
+          try {
+            await ApprovalRequest.bulkWrite(ops, { ordered: false });
+          } catch (err) {
+            // ordered:false still throws when some ops fail; keep syncing others.
+            console.error(
+              `Approval sync bulkWrite failed for ${providerType}:`,
+              err?.message || err,
+            );
+          }
+        }
+      } catch (err) {
+        console.error(
+          `Approval sync failed for ${providerType}:`,
+          err?.message || err,
+        );
       }
     }
 
@@ -2364,6 +2378,12 @@ async function getApprovalDashboard(actor) {
   const month = startOfMonth(now);
   const requestFilter =
     (await buildApproverVisibilityFilter(actor)) || {};
+
+  // If the queue is empty after a cached sync, force one rebuild from providers.
+  const existingCount = await ApprovalRequest.countDocuments(requestFilter);
+  if (existingCount === 0) {
+    await syncProviderRequests({ force: true });
+  }
 
   const [
     statusCounts,

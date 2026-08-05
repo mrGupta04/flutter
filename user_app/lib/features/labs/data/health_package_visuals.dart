@@ -60,6 +60,7 @@ abstract final class OrganAssets {
   static const muscle = '$_organs/muscle-removebg-preview.png';
   static const dna = '$_organs/DNA-removebg-preview.png';
   static const gallbladder = '$_organs/gallblader-removebg-preview.png';
+  static const ear = '$_organs/ear-removebg-preview.png';
 }
 
 class HealthPackageVisuals {
