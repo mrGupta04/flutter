@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/models/provider_type.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../provider/provider/provider_status_sync.dart';
@@ -78,8 +79,9 @@ class _ProviderLoginScreenState extends ConsumerState<ProviderLoginScreen> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
+              padding: ResponsiveUtils.pagePadding(context),
+              child: ResponsiveFormWidth(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 16),
@@ -147,6 +149,7 @@ class _ProviderLoginScreenState extends ConsumerState<ProviderLoginScreen> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ),

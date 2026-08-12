@@ -7,10 +7,13 @@ class ResolvedAddress {
     required this.city,
     required this.state,
     required this.pincode,
+    this.place = '',
   });
 
   final String address;
   final String city;
+  /// Locality / area (neighbourhood, suburb) when available.
+  final String place;
   final String state;
   final String pincode;
 }
@@ -79,6 +82,15 @@ class GeocodingService {
     Map<String, dynamic> addr,
     String? displayName,
   ) {
+    final place = _firstNonEmpty(addr, [
+      'neighbourhood',
+      'suburb',
+      'quarter',
+      'city_district',
+      'residential',
+      'hamlet',
+    ]);
+
     final city = _firstNonEmpty(addr, [
       'city',
       'town',
@@ -86,7 +98,6 @@ class GeocodingService {
       'municipality',
       'county',
       'state_district',
-      'suburb',
     ]);
 
     final state = _firstNonEmpty(addr, ['state', 'region']) ?? '';
@@ -95,9 +106,7 @@ class GeocodingService {
     final streetParts = <String>[
       if (addr['house_number'] != null) '${addr['house_number']}',
       if (addr['road'] != null) '${addr['road']}',
-      if (addr['neighbourhood'] != null) '${addr['neighbourhood']}',
-      if (addr['suburb'] != null && addr['suburb'] != city) '${addr['suburb']}',
-      if (addr['quarter'] != null) '${addr['quarter']}',
+      if (place != null) place,
     ].where((s) => s.trim().isNotEmpty).toList();
 
     var line = streetParts.join(', ');
@@ -116,7 +125,8 @@ class GeocodingService {
 
     return ResolvedAddress(
       address: line,
-      city: city ?? '',
+      place: place ?? '',
+      city: city ?? place ?? '',
       state: state,
       pincode: pincode.replaceAll(RegExp(r'\s'), ''),
     );
@@ -129,6 +139,7 @@ class GeocodingService {
     }
     return ResolvedAddress(
       address: parts.first,
+      place: parts.length > 3 ? parts[parts.length - 4] : parts.first,
       city: parts.length > 2 ? parts[parts.length - 3] : '',
       state: parts.length > 1 ? parts[parts.length - 2] : '',
       pincode: '',

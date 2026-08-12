@@ -168,6 +168,8 @@ const labSchema = new mongoose.Schema(
     emergencyServiceAvailable: { type: Boolean, default: false },
     homeCollectionAvailable: { type: Boolean, default: false },
     available24x7: { type: Boolean, default: false },
+    // Highlighted marketplace offer on lab cards (e.g. 10, 20, 30, 40).
+    mainOfferPercent: { type: Number, min: 0, max: 90, default: null },
     facilities: { type: [String], default: [] },
     supportedCategories: { type: [String], default: [] },
     offeredTests: { type: [offeredTestSchema], default: [] },

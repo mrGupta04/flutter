@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../data/lab_test_icons.dart';
 import '../widgets/lab_organ_logos.dart';
@@ -69,8 +71,10 @@ class _LabsScreenState extends State<LabsScreen> {
     final categoriesInResults = grouped.keys.toList()
       ..sort((a, b) => a.index.compareTo(b.index));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.labs,
       backgroundColor: AppColors.background,
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Diagnostic Labs'),
         leading: IconButton(
@@ -199,7 +203,6 @@ class _LabsScreenState extends State<LabsScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.labs),
     );
   }
 
@@ -224,6 +227,14 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final columns = ResponsiveUtils.gridColumns(
+      context,
+      mobile: 1,
+      tablet: 2,
+      laptop: 2,
+      desktop: 3,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -259,12 +270,34 @@ class _CategorySection extends StatelessWidget {
             ],
           ),
         ),
-        ...tests.map(
-          (test) => LabTestCard(
-            test: test,
-            onBookNow: () => onBook(test),
-          ),
-        ),
+        if (columns <= 1)
+          ...tests.map(
+            (test) => LabTestCard(
+              test: test,
+              onBookNow: () => onBook(test),
+            ),
+          )
+        else
+          for (var i = 0; i < tests.length; i += columns)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var j = 0; j < columns; j++) ...[
+                    if (j > 0) const SizedBox(width: 12),
+                    Expanded(
+                      child: i + j < tests.length
+                          ? LabTestCard(
+                              test: tests[i + j],
+                              onBookNow: () => onBook(tests[i + j]),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
         const SizedBox(height: 8),
       ],
     );

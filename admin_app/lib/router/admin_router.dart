@@ -10,6 +10,7 @@ import '../features/admin/presentation/screens/admin_blood_bank_details_screen.d
 import '../features/admin/presentation/screens/admin_blood_bank_list_screen.dart';
 import '../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../features/admin/presentation/screens/admin_ops_screens.dart';
+import '../features/admin/presentation/screens/admin_patient_details_screen.dart';
 import '../features/admin/presentation/screens/admin_service_provider_management_screen.dart';
 import '../features/admin/presentation/screens/admin_doctor_sessions_screen.dart';
 import '../features/admin/presentation/screens/admin_doctor_session_details_screen.dart';
@@ -70,6 +71,7 @@ bool _isAdminProtectedRoute(String location) {
       location.startsWith(AppConstants.routeAdminOverview) ||
       location.startsWith(AppConstants.routeAdminBookings) ||
       location.startsWith(AppConstants.routeAdminPatients) ||
+      location.startsWith(AppConstants.routeAdminPatientDetails) ||
       location.startsWith(AppConstants.routeAdminCoupons) ||
       location.startsWith(AppConstants.routeAdminCmsBanners) ||
       location.startsWith(AppConstants.routeAdminSupportTickets) ||
@@ -98,6 +100,7 @@ bool _isAdminOnlyRoute(String location) {
       location.startsWith(AppConstants.routeAdminOverview) ||
       location.startsWith(AppConstants.routeAdminBookings) ||
       location.startsWith(AppConstants.routeAdminPatients) ||
+      location.startsWith(AppConstants.routeAdminPatientDetails) ||
       location.startsWith(AppConstants.routeAdminCoupons) ||
       location.startsWith(AppConstants.routeAdminCmsBanners) ||
       location.startsWith(AppConstants.routeAdminSupportTickets) ||
@@ -559,6 +562,23 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           state,
           const AdminPatientsScreen(),
         ),
+      ),
+      GoRoute(
+        path: '${AppConstants.routeAdminPatientDetails}/:patientId',
+        name: 'adminPatientDetails',
+        pageBuilder: (context, state) {
+          final patientId = state.pathParameters['patientId'] ?? '';
+          final initial = state.extra is Map
+              ? Map<String, dynamic>.from(state.extra as Map)
+              : null;
+          return slidePage(
+            state,
+            AdminPatientDetailsScreen(
+              patientId: patientId,
+              initialPatient: initial,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeAdminSupportTickets,

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/ambulance_model.dart';
 import '../../../../data/models/blood_bank_model.dart';
@@ -15,6 +16,7 @@ import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../provider/global_search_provider.dart';
 import '../../provider/nurse_live_status_provider.dart';
@@ -75,9 +77,10 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
         ? const AsyncValue<GlobalSearchResults>.data(GlobalSearchResults.empty)
         : ref.watch(globalSearchProvider(_query));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.home,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.home),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Search care'),
         leading: IconButton(
@@ -346,6 +349,46 @@ class _ResultSection<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final columns = ResponsiveUtils.gridColumns(
+      context,
+      mobile: 1,
+      tablet: 2,
+      laptop: 2,
+      desktop: 2,
+    );
+
+    Widget content;
+    if (columns <= 1 || children.length <= 1) {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+    } else {
+      final rows = <Widget>[];
+      for (var i = 0; i < children.length; i += columns) {
+        if (i > 0) rows.add(const SizedBox(height: kDoctorCardSpacing));
+        rows.add(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var j = 0; j < columns; j++) ...[
+                if (j > 0) const SizedBox(width: 12),
+                Expanded(
+                  child: i + j < children.length
+                      ? children[i + j]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
+          ),
+        );
+      }
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: rows,
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
@@ -357,7 +400,7 @@ class _ResultSection<T> extends StatelessWidget {
             onAction: onSeeAll,
           ),
           const SizedBox(height: 8),
-          ...children,
+          content,
         ],
       ),
     );

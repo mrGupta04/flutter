@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/responsive_utils.dart';
 
 enum HealthServiceCardType { asset, designed }
 
@@ -48,17 +49,36 @@ class HealthServiceGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final perRow = cardsPerRow < 1 ? 1 : cardsPerRow;
+    final perRow = ResponsiveUtils.gridColumns(
+      context,
+      mobile: cardsPerRow < 1 ? 1 : cardsPerRow,
+      tablet: 3,
+      laptop: 4,
+      desktop: 4,
+      largeDesktop: 4,
+    );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _horizontalPadding),
+      padding: EdgeInsets.symmetric(
+        horizontal: ResponsiveUtils.valueFor(
+          context,
+          mobile: _horizontalPadding,
+          tablet: 24,
+          laptop: 32,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: ResponsiveUtils.valueFor(
+                context,
+                mobile: 18,
+                tablet: 20,
+                desktop: 22,
+              ),
               fontWeight: FontWeight.w800,
               height: 1.2,
               color: AppColors.textPrimary,

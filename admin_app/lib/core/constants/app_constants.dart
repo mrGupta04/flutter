@@ -276,6 +276,10 @@ class AppConstants {
       '/admin/diagnostic-bookings/$kind/$id';
   static const String endpointAdminPatients = '/admin/patients';
   static String endpointAdminPatient(String id) => '/admin/patients/$id';
+  static String endpointAdminPatientBlock(String id) =>
+      '/admin/patients/$id/block';
+  static String endpointAdminPatientUnblock(String id) =>
+      '/admin/patients/$id/unblock';
   static const String endpointAdminCoupons = '/admin/coupons';
   static const String endpointAdminCmsBanners = '/admin/cms/banners';
   static String endpointAdminCmsBanner(String id) => '/admin/cms/banners/$id';
@@ -473,6 +477,7 @@ class AppConstants {
   static const String routeAdminOverview = '/admin-overview';
   static const String routeAdminBookings = '/admin-bookings';
   static const String routeAdminPatients = '/admin-patients';
+  static const String routeAdminPatientDetails = '/admin-patient-details';
   static const String routeAdminCoupons = '/admin-coupons';
   static const String routeAdminCmsBanners = '/admin-cms-banners';
   static const String routeAdminSupportTickets = '/admin-support-tickets';

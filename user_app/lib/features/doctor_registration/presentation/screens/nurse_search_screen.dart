@@ -8,6 +8,7 @@ import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../core/widgets/enable_location_services_dialog.dart';
 import '../../../../data/models/nurse_model.dart';
@@ -15,6 +16,7 @@ import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/searchable_filter_dropdown.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../provider/care_filter_constants.dart';
 import '../../provider/nurse_search_provider.dart';
@@ -50,6 +52,8 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
   double? _nearbyLongitude;
   bool _nearbyActive = false;
   bool _isFetchingNearby = false;
+  /// Location shown in the search box without applying as a keyword query.
+  String? _locationPrefill;
 
   @override
   void initState() {
@@ -67,12 +71,35 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
     if (!mounted) return;
     setState(() {
       _city ??= location.city;
+      _applyLocationPrefill(location);
       if (location.hasCoordinates) {
         _nearbyLatitude = location.latitude;
         _nearbyLongitude = location.longitude;
         _nearbyActive = true;
       }
     });
+  }
+
+  void _applyLocationPrefill(UserLocationState location) {
+    final hasTypedQuery =
+        widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty;
+    if (hasTypedQuery) return;
+
+    final label = location.displayPlaceCity;
+    if (label == null || label.isEmpty) return;
+
+    final current = _controller.text.trim();
+    final canReplace = current.isEmpty ||
+        (_locationPrefill != null && current == _locationPrefill);
+    if (!canReplace) return;
+
+    _locationPrefill = label;
+    if (current != label) {
+      _controller.value = TextEditingValue(
+        text: label,
+        selection: TextSelection.collapsed(offset: label.length),
+      );
+    }
   }
 
   @override
@@ -87,10 +114,13 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
+      final text = _controller.text.trim();
+      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
+        setState(() => _query = null);
+        return;
+      }
       setState(() {
-        _query = _controller.text.trim().isEmpty
-            ? null
-            : _controller.text.trim();
+        _query = text.isEmpty ? null : text;
       });
     });
   }
@@ -105,6 +135,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
       _nearbyActive = false;
       _nearbyLatitude = null;
       _nearbyLongitude = null;
+      _locationPrefill = null;
       _controller.clear();
     });
   }
@@ -117,8 +148,12 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
         gender: _gender,
       );
 
-  bool get _hasActiveFilters =>
-      _params.hasTextFilters || _controller.text.trim().isNotEmpty;
+  bool get _hasActiveFilters {
+    final text = _controller.text.trim();
+    final isLocationOnly =
+        _locationPrefill != null && text == _locationPrefill!.trim();
+    return _params.hasTextFilters || (text.isNotEmpty && !isLocationOnly);
+  }
 
   Future<void> _getNursesNearby() async {
     setState(() => _isFetchingNearby = true);
@@ -177,11 +212,11 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
-      if (!mounted || !next.hasCoordinates) return;
-      if (_nearbyActive && _city != null) return;
+      if (!mounted) return;
       setState(() {
         _city ??= next.city;
-        if (!_nearbyActive) {
+        _applyLocationPrefill(next);
+        if (next.hasCoordinates && !_nearbyActive) {
           _nearbyLatitude = next.latitude;
           _nearbyLongitude = next.longitude;
           _nearbyActive = true;
@@ -191,9 +226,10 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
 
     final asyncResults = ref.watch(nurseSearchProvider(_params));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.care,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Find a nurse'),
         leading: IconButton(
@@ -241,8 +277,14 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
             ),
             textInputAction: TextInputAction.search,
             onSubmitted: (value) {
+              final text = value.trim();
               setState(() {
-                _query = value.trim().isEmpty ? null : value.trim();
+                if (_locationPrefill != null &&
+                    text == _locationPrefill!.trim()) {
+                  _query = null;
+                } else {
+                  _query = text.isEmpty ? null : text;
+                }
               });
             },
           ),
@@ -327,6 +369,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
             value: _minYearsExperience,
             options: doctorMinExperienceOptions,
             optionLabel: doctorMinExperienceLabel,
+            scrollHorizontally: true,
             onChanged: (years) => setState(() => _minYearsExperience = years),
           ),
         ),
@@ -408,30 +451,68 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
                 .valueOrNull ??
             const <String, bool>{};
 
+        final columns = ResponsiveUtils.gridColumns(
+          context,
+          mobile: 1,
+          tablet: 2,
+          laptop: 2,
+          desktop: 3,
+        );
+
+        Widget cardFor(int index) {
+          final nurse = applyNurseLiveStatus(sortedNurses[index], liveMap);
+          final distanceKm = _nearbyActive &&
+                  _nearbyLatitude != null &&
+                  _nearbyLongitude != null
+              ? nurseDistanceKm(nurse, _nearbyLatitude!, _nearbyLongitude!)
+              : null;
+          return NurseListingCard(
+            nurse: nurse,
+            distanceLabel: formatNearbyDistanceLabel(distanceKm),
+            onTap: () => openNurseHomeVisitBooking(context, nurse),
+            onBookHomeVisit: () => openNurseHomeVisitBooking(context, nurse),
+            onOpenMapTap: nurseHasMapLocation(nurse)
+                ? () => openNurseInGoogleMaps(context, nurse)
+                : null,
+          );
+        }
+
+        if (columns <= 1) {
+          return [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverList.separated(
+                itemCount: sortedNurses.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: kDoctorCardSpacing),
+                itemBuilder: (_, index) => cardFor(index),
+              ),
+            ),
+          ];
+        }
+
+        final rowCount = (sortedNurses.length / columns).ceil();
         return [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             sliver: SliverList.separated(
-              itemCount: sortedNurses.length,
+              itemCount: rowCount,
               separatorBuilder: (_, __) =>
                   const SizedBox(height: kDoctorCardSpacing),
-              itemBuilder: (_, index) {
-                final nurse =
-                    applyNurseLiveStatus(sortedNurses[index], liveMap);
-                final distanceKm = _nearbyActive &&
-                        _nearbyLatitude != null &&
-                        _nearbyLongitude != null
-                    ? nurseDistanceKm(nurse, _nearbyLatitude!, _nearbyLongitude!)
-                    : null;
-                return NurseListingCard(
-                  nurse: nurse,
-                  distanceLabel: formatNearbyDistanceLabel(distanceKm),
-                  onTap: () => openNurseHomeVisitBooking(context, nurse),
-                  onBookHomeVisit: () =>
-                      openNurseHomeVisitBooking(context, nurse),
-                  onOpenMapTap: nurseHasMapLocation(nurse)
-                      ? () => openNurseInGoogleMaps(context, nurse)
-                      : null,
+              itemBuilder: (_, rowIndex) {
+                final start = rowIndex * columns;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var j = 0; j < columns; j++) ...[
+                      if (j > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: start + j < sortedNurses.length
+                            ? cardFor(start + j)
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
                 );
               },
             ),
@@ -449,6 +530,7 @@ class _FilterRadioGroup<T> extends StatelessWidget {
     required this.options,
     required this.optionLabel,
     required this.onChanged,
+    this.scrollHorizontally = false,
   });
 
   final String label;
@@ -456,12 +538,20 @@ class _FilterRadioGroup<T> extends StatelessWidget {
   final List<T?> options;
   final String Function(T? value) optionLabel;
   final ValueChanged<T?> onChanged;
+  final bool scrollHorizontally;
 
   @override
   Widget build(BuildContext context) {
+    final optionWidgets = options.map(_buildOption).toList();
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 10, 10, 6),
+      padding: EdgeInsets.fromLTRB(
+        14,
+        10,
+        scrollHorizontally ? 0 : 10,
+        6,
+      ),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
@@ -478,42 +568,50 @@ class _FilterRadioGroup<T> extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Wrap(
-            spacing: 4,
-            runSpacing: 0,
-            children: options.map((option) {
-              final isSelected = value == option;
-              return InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => onChanged(option),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Radio<T?>(
-                        value: option,
-                        groupValue: value,
-                        onChanged: onChanged,
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        activeColor: AppColors.primary,
-                      ),
-                      Text(
-                        optionLabel(option),
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+          if (scrollHorizontally)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 10),
+              child: Row(children: optionWidgets),
+            )
+          else
+            Wrap(
+              spacing: 4,
+              runSpacing: 0,
+              children: optionWidgets,
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOption(T? option) {
+    final isSelected = value == option;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => onChanged(option),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Radio<T?>(
+              value: option,
+              groupValue: value,
+              onChanged: onChanged,
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              activeColor: AppColors.primary,
+            ),
+            Text(
+              optionLabel(option),
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

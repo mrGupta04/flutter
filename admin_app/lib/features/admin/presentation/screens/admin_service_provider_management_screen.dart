@@ -1,17 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../core/utils/responsive_utils.dart';
+import '../../../../shared/widgets/admin_adaptive_shell.dart';
+import 'admin_ambulance_list_screen.dart';
+import 'admin_blood_bank_list_screen.dart';
+import 'admin_diagnostic_sessions_screen.dart';
+import 'admin_doctor_sessions_screen.dart';
 
-enum _ProviderCategory {
-  doctors,
+enum _ProviderTab {
+  onlineDoctors,
+  homeVisitDoctors,
+  hospitalVisitDoctors,
   nurses,
   ambulance,
   bloodBanks,
   labs,
   scans,
+}
+
+class _ProviderOption {
+  const _ProviderOption({
+    required this.tab,
+    required this.icon,
+    required this.label,
+  });
+
+  final _ProviderTab tab;
+  final IconData icon;
+  final String label;
 }
 
 /// Hub for managing all service-provider application queues.
@@ -25,209 +42,198 @@ class AdminServiceProviderManagementScreen extends StatefulWidget {
 
 class _AdminServiceProviderManagementScreenState
     extends State<AdminServiceProviderManagementScreen> {
-  _ProviderCategory _selected = _ProviderCategory.doctors;
+  _ProviderTab _selected = _ProviderTab.onlineDoctors;
 
-  static const _categories = <(_ProviderCategory, String, IconData)>[
-    (_ProviderCategory.doctors, 'Doctors', Icons.medical_services_rounded),
-    (_ProviderCategory.nurses, 'Nurses', Icons.health_and_safety_rounded),
-    (_ProviderCategory.ambulance, 'Ambulance', Icons.local_shipping_rounded),
-    (_ProviderCategory.bloodBanks, 'Blood banks', Icons.bloodtype_rounded),
-    (_ProviderCategory.labs, 'Labs', Icons.biotech_rounded),
-    (_ProviderCategory.scans, 'Scan / MRI', Icons.radar_rounded),
+  static const _options = <_ProviderOption>[
+    _ProviderOption(
+      tab: _ProviderTab.onlineDoctors,
+      icon: Icons.videocam_rounded,
+      label: 'Online doctors',
+    ),
+    _ProviderOption(
+      tab: _ProviderTab.homeVisitDoctors,
+      icon: Icons.home_rounded,
+      label: 'Home visit doctors',
+    ),
+    _ProviderOption(
+      tab: _ProviderTab.hospitalVisitDoctors,
+      icon: Icons.local_hospital_rounded,
+      label: 'Hospital visit doctors',
+    ),
+    _ProviderOption(
+      tab: _ProviderTab.nurses,
+      icon: Icons.health_and_safety_rounded,
+      label: 'Nurses',
+    ),
+    _ProviderOption(
+      tab: _ProviderTab.ambulance,
+      icon: Icons.local_shipping_rounded,
+      label: 'Ambulance',
+    ),
+    _ProviderOption(
+      tab: _ProviderTab.bloodBanks,
+      icon: Icons.bloodtype_rounded,
+      label: 'Blood banks',
+    ),
+    _ProviderOption(
+      tab: _ProviderTab.labs,
+      icon: Icons.biotech_rounded,
+      label: 'Labs',
+    ),
+    _ProviderOption(
+      tab: _ProviderTab.scans,
+      icon: Icons.radar_rounded,
+      label: 'Scan / MRI',
+    ),
   ];
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Service provider management')),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Text(
-              'Review, verify, and manage provider applications across every category.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
+  Widget _buildHubHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Text(
+            'Review, verify, and manage provider applications across every category.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 14),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                for (var i = 0; i < _categories.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  _ProviderChip(
-                    label: _categories[i].$2,
-                    icon: _categories[i].$3,
-                    selected: _selected == _categories[i].$1,
-                    onTap: () => setState(() => _selected = _categories[i].$1),
-                  ),
-                ],
+        ),
+        const SizedBox(height: 14),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              for (var i = 0; i < _options.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                _ProviderButton(
+                  icon: _options[i].icon,
+                  label: _options[i].label,
+                  selected: _selected == _options[i].tab,
+                  onTap: () => setState(() => _selected = _options[i].tab),
+                ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              children: _buildCategoryContent(context),
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 
-  List<Widget> _buildCategoryContent(BuildContext context) {
+  Widget _buildContent() {
+    final header = _buildHubHeader();
     switch (_selected) {
-      case _ProviderCategory.doctors:
-        return [
-          Text(
-            'Doctors by service',
-            style: AppTextStyles.titleSmall.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ServiceBenefitCard(
-            icon: Icons.videocam_rounded,
-            title: 'Online doctors',
-            subtitle: 'Sessions · payment · join times · final status',
-            color: AppColors.primary,
-            onTap: () => context.push(
-              '${AppConstants.routeAdminDoctorSessions}?service=online',
-            ),
-          ),
-          const SizedBox(height: 10),
-          ServiceBenefitCard(
-            icon: Icons.home_rounded,
-            title: 'Home visit doctors',
-            subtitle: 'Sessions · payment · visit progress · final status',
-            color: AppColors.secondary,
-            onTap: () => context.push(
-              '${AppConstants.routeAdminDoctorSessions}?service=home_visit',
-            ),
-          ),
-          const SizedBox(height: 10),
-          ServiceBenefitCard(
-            icon: Icons.local_hospital_rounded,
-            title: 'Hospital visit doctors',
-            subtitle: 'Sessions · payment · verification · final status',
-            color: AppColors.primary,
-            onTap: () => context.push(
-              '${AppConstants.routeAdminDoctorSessions}?service=hospital_visit',
-            ),
-          ),
-        ];
-      case _ProviderCategory.nurses:
-        return [
-          ServiceBenefitCard(
-            icon: Icons.health_and_safety_rounded,
-            title: 'Nurses',
-            subtitle: 'Sessions · payment · visit progress · final status',
-            color: AppColors.secondary,
-            onTap: () => context.push(
-              '${AppConstants.routeAdminDoctorSessions}?provider=nurse&service=home_visit',
-            ),
-          ),
-        ];
-      case _ProviderCategory.ambulance:
-        return [
-          ServiceBenefitCard(
-            icon: Icons.local_shipping_rounded,
-            title: 'Ambulance',
-            subtitle: 'Fleet docs · drivers · approve or reject',
-            color: AppColors.primary,
-            onTap: () => context.push(AppConstants.routeAdminAmbulanceList),
-          ),
-        ];
-      case _ProviderCategory.bloodBanks:
-        return [
-          ServiceBenefitCard(
-            icon: Icons.bloodtype_rounded,
-            title: 'Blood banks',
-            subtitle: 'Licenses · inventory readiness · approve',
-            color: AppColors.secondary,
-            onTap: () => context.push(AppConstants.routeAdminBloodBankList),
-          ),
-        ];
-      case _ProviderCategory.labs:
-        return [
-          ServiceBenefitCard(
-            icon: Icons.biotech_rounded,
-            title: 'Diagnostic labs',
-            subtitle: 'Sample · report submitted · accepted by user',
-            color: AppColors.primary,
-            onTap: () => context.push(
-              '${AppConstants.routeAdminDiagnosticSessions}?kind=lab',
-            ),
-          ),
-        ];
-      case _ProviderCategory.scans:
-        return [
-          ServiceBenefitCard(
-            icon: Icons.radar_rounded,
-            title: 'Scan / MRI centers',
-            subtitle: 'Scan performed · report submitted · accepted by user',
-            color: AppColors.secondary,
-            onTap: () => context.push(
-              '${AppConstants.routeAdminDiagnosticSessions}?kind=scan',
-            ),
-          ),
-        ];
+      case _ProviderTab.onlineDoctors:
+        return AdminDoctorSessionsScreen(
+          key: const ValueKey('online'),
+          serviceType: 'online',
+          embedded: true,
+          scrollHeader: header,
+        );
+      case _ProviderTab.homeVisitDoctors:
+        return AdminDoctorSessionsScreen(
+          key: const ValueKey('home_visit'),
+          serviceType: 'home_visit',
+          embedded: true,
+          scrollHeader: header,
+        );
+      case _ProviderTab.hospitalVisitDoctors:
+        return AdminDoctorSessionsScreen(
+          key: const ValueKey('hospital_visit'),
+          serviceType: 'hospital_visit',
+          embedded: true,
+          scrollHeader: header,
+        );
+      case _ProviderTab.nurses:
+        return AdminDoctorSessionsScreen(
+          key: const ValueKey('nurse'),
+          serviceType: 'home_visit',
+          providerType: 'nurse',
+          embedded: true,
+          scrollHeader: header,
+        );
+      case _ProviderTab.ambulance:
+        return AdminAmbulanceListScreen(
+          key: const ValueKey('ambulance'),
+          embedded: true,
+          scrollHeader: header,
+        );
+      case _ProviderTab.bloodBanks:
+        return AdminBloodBankListScreen(
+          key: const ValueKey('blood_banks'),
+          embedded: true,
+          scrollHeader: header,
+        );
+      case _ProviderTab.labs:
+        return AdminDiagnosticSessionsScreen(
+          key: const ValueKey('lab'),
+          kind: 'lab',
+          embedded: true,
+          scrollHeader: header,
+        );
+      case _ProviderTab.scans:
+        return AdminDiagnosticSessionsScreen(
+          key: const ValueKey('scan'),
+          kind: 'scan',
+          embedded: true,
+          scrollHeader: header,
+        );
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminAdaptiveShell(
+      section: AdminNavSection.providers,
+      constrainBody: false,
+      backgroundColor: AppColors.background,
+      appBar: AppBar(title: const Text('Service provider management')),
+      body: ResponsivePage(child: _buildContent()),
+    );
   }
 }
 
-class _ProviderChip extends StatelessWidget {
-  const _ProviderChip({
-    required this.label,
+class _ProviderButton extends StatelessWidget {
+  const _ProviderButton({
     required this.icon,
+    required this.label,
     required this.selected,
     required this.onTap,
   });
 
-  final String label;
   final IconData icon;
+  final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: selected ? AppColors.white : AppColors.primary,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: selected ? AppColors.white : AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(
+        icon,
+        size: 18,
+        color: selected ? AppColors.white : AppColors.primary,
       ),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      selectedColor: AppColors.primary,
-      checkmarkColor: AppColors.white,
-      backgroundColor: AppColors.white,
-      showCheckmark: false,
-      side: BorderSide(
-        color: selected ? AppColors.primary : AppColors.divider,
+      label: Text(
+        label,
+        style: AppTextStyles.labelMedium.copyWith(
+          color: selected ? AppColors.white : AppColors.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      style: OutlinedButton.styleFrom(
+        backgroundColor: selected ? AppColors.primary : AppColors.white,
+        foregroundColor: selected ? AppColors.white : AppColors.textPrimary,
+        side: BorderSide(
+          color: selected ? AppColors.primary : AppColors.divider,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      ),
     );
   }
 }

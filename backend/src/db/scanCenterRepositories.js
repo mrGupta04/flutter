@@ -102,6 +102,14 @@ async function upsertScanCenter(data) {
     available24x7: data.available24x7 ?? existing?.available24x7 ?? false,
     cashPaymentEnabled:
       data.cashPaymentEnabled ?? existing?.cashPaymentEnabled ?? true,
+    mainOfferPercent: (() => {
+      if (data.mainOfferPercent === null) return null;
+      if (data.mainOfferPercent !== undefined) {
+        const n = Number(data.mainOfferPercent);
+        return Number.isFinite(n) ? n : existing?.mainOfferPercent ?? null;
+      }
+      return existing?.mainOfferPercent ?? null;
+    })(),
     offeredScans: data.offeredScans ?? existing?.offeredScans ?? [],
     offers: data.offers ?? existing?.offers ?? [],
     appointmentSlots: data.appointmentSlots ?? existing?.appointmentSlots ?? [],

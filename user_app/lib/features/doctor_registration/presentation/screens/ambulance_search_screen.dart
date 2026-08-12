@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/ambulance_model.dart';
 import '../../../../shared/widgets/ambulance_care_filter_cards.dart';
@@ -12,6 +14,7 @@ import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../ambulance/presentation/widgets/ambulance_action_sheet.dart';
 import '../../provider/ambulance_search_provider.dart';
@@ -41,6 +44,7 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
   String? _city;
   String? _vehicleType;
   AmbulanceCareFilter _careFilter = AmbulanceCareFilter.all;
+  String? _locationPrefill;
 
   @override
   void initState() {
@@ -49,12 +53,43 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
     _city = widget.initialCity;
     _vehicleType = widget.initialVehicleType;
     _controller = TextEditingController(
-      text: widget.initialQuery ??
-          widget.initialCity ??
-          widget.initialVehicleType ??
-          '',
+      text: widget.initialQuery ?? widget.initialVehicleType ?? '',
     );
     _controller.addListener(_onTextChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyDefaultLocation());
+  }
+
+  void _applyDefaultLocation() {
+    final location = ref.read(userLocationProvider);
+    if (!mounted) return;
+    setState(() {
+      _city ??= location.city;
+      _applyLocationPrefill(location);
+    });
+  }
+
+  void _applyLocationPrefill(UserLocationState location) {
+    final hasTypedQuery =
+        (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) ||
+            (widget.initialVehicleType != null &&
+                widget.initialVehicleType!.trim().isNotEmpty);
+    if (hasTypedQuery) return;
+
+    final label = location.displayPlaceCity;
+    if (label == null || label.isEmpty) return;
+
+    final current = _controller.text.trim();
+    final canReplace = current.isEmpty ||
+        (_locationPrefill != null && current == _locationPrefill);
+    if (!canReplace) return;
+
+    _locationPrefill = label;
+    if (current != label) {
+      _controller.value = TextEditingValue(
+        text: label,
+        selection: TextSelection.collapsed(offset: label.length),
+      );
+    }
   }
 
   @override
@@ -69,10 +104,19 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
+      final text = _controller.text.trim();
+      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
+        setState(() {
+          _query = null;
+          _vehicleType = null;
+        });
+        return;
+      }
       setState(() {
-        _query = _controller.text.trim().isEmpty ? null : _controller.text.trim();
+        _query = text.isEmpty ? null : text;
         _city = null;
         _vehicleType = null;
+        _locationPrefill = null;
       });
     });
   }
@@ -86,11 +130,20 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
+      if (!mounted) return;
+      setState(() {
+        _city ??= next.city;
+        _applyLocationPrefill(next);
+      });
+    });
+
     final asyncResults = ref.watch(ambulanceSearchProvider(_params));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.care,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Find ambulance'),
         leading: IconButton(
@@ -127,9 +180,15 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
               ),
             ),
             onSubmitted: (value) => setState(() {
-              _query = value.trim().isEmpty ? null : value.trim();
+              final text = value.trim();
+              if (_locationPrefill != null && text == _locationPrefill!.trim()) {
+                _query = null;
+                return;
+              }
+              _query = text.isEmpty ? null : text;
               _city = null;
               _vehicleType = null;
+              _locationPrefill = null;
             }),
           ),
         ),
@@ -147,8 +206,10 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
             if (city != null) {
               _vehicleType = null;
               _query = null;
+              _locationPrefill = city;
               _controller.text = city;
             } else {
+              _locationPrefill = null;
               _controller.clear();
             }
           }),
@@ -162,6 +223,7 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
             if (type != null) {
               _city = null;
               _query = null;
+              _locationPrefill = null;
               _controller.text = type;
             } else {
               _controller.clear();
@@ -211,21 +273,64 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
           ];
         }
 
+        final columns = ResponsiveUtils.gridColumns(
+          context,
+          mobile: 1,
+          tablet: 2,
+          laptop: 2,
+          desktop: 3,
+        );
+
+        if (columns <= 1) {
+          return [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverList.separated(
+                itemCount: items.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: kDoctorCardSpacing),
+                itemBuilder: (context, index) => AmbulanceListingCard(
+                  ambulance: items[index],
+                  onTap: () => showAmbulanceActionSheet(
+                    context,
+                    ambulance: items[index],
+                  ),
+                ),
+              ),
+            ),
+          ];
+        }
+
+        final rowCount = (items.length / columns).ceil();
         return [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             sliver: SliverList.separated(
-              itemCount: items.length,
+              itemCount: rowCount,
               separatorBuilder: (context, index) =>
                   const SizedBox(height: kDoctorCardSpacing),
-              itemBuilder: (context, index) =>
-                  AmbulanceListingCard(
-                    ambulance: items[index],
-                    onTap: () => showAmbulanceActionSheet(
-                      context,
-                      ambulance: items[index],
-                    ),
-                  ),
+              itemBuilder: (context, rowIndex) {
+                final start = rowIndex * columns;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var j = 0; j < columns; j++) ...[
+                      if (j > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: start + j < items.length
+                            ? AmbulanceListingCard(
+                                ambulance: items[start + j],
+                                onTap: () => showAmbulanceActionSheet(
+                                  context,
+                                  ambulance: items[start + j],
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ];

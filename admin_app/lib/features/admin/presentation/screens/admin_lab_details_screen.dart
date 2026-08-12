@@ -105,6 +105,12 @@ class AdminLabDetailsScreen extends ConsumerWidget {
             'Home collection',
             lab.homeCollectionAvailable == true ? 'Yes' : 'No',
           ),
+          _DetailRow(
+            'Main offer',
+            lab.mainOfferPercent == null
+                ? 'None'
+                : '${lab.mainOfferPercent}% OFF',
+          ),
           _DetailRow('24×7', lab.available24x7 == true ? 'Yes' : 'No'),
           _DetailRow('Tests offered', '${lab.offeredTests?.length ?? 0}'),
           _DetailRow('Lab images', '${lab.labImages?.length ?? 0}'),

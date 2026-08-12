@@ -270,20 +270,32 @@ function buildDoctorListFilter({
 
   if (search?.trim()) {
     const regex = new RegExp(escapeRegex(search.trim()), 'i');
-    filter.$or = [
-      { firstName: regex },
-      { lastName: regex },
-      { city: regex },
-      { state: regex },
-      { pincode: regex },
-      { clinicName: regex },
-      { qualification: regex },
-      { medicalCouncilName: regex },
-      { medicalRegistrationNumber: regex },
-      { bio: regex },
-      { specializations: regex },
-      { languagesSpoken: regex },
-    ];
+    // Patient marketplace: keep keyword search focused on identity / practice.
+    // Broader fields (bio, languages, registration ids) cause irrelevant hits.
+    filter.$or = publicDisplayable
+      ? [
+          { firstName: regex },
+          { lastName: regex },
+          { clinicName: regex },
+          { specializations: regex },
+          { qualification: regex },
+        ]
+      : [
+          { firstName: regex },
+          { lastName: regex },
+          { city: regex },
+          { state: regex },
+          { pincode: regex },
+          { clinicName: regex },
+          { qualification: regex },
+          { medicalCouncilName: regex },
+          { medicalRegistrationNumber: regex },
+          { bio: regex },
+          { specializations: regex },
+          { languagesSpoken: regex },
+          { email: regex },
+          { mobileNumber: regex },
+        ];
   }
 
   return filter;

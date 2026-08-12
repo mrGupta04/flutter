@@ -40,7 +40,8 @@ async function sendPatientPasswordResetOtp({ email }) {
   const patient = await Patient.findOne({ email: normalizedEmail });
 
   // Always look successful to avoid account enumeration.
-  if (!patient) {
+  // Blocked accounts also get a generic response and no OTP.
+  if (!patient || patient.isBlocked) {
     return {
       message: GENERIC_SEND_MESSAGE,
       maskedEmail: maskEmail(normalizedEmail),
@@ -191,6 +192,13 @@ async function resetPatientPassword({ email, otp, newPassword }) {
   if (!patient) {
     const err = new Error('Account not found');
     err.statusCode = 404;
+    throw err;
+  }
+  if (patient.isBlocked) {
+    const err = new Error(
+      'Your account has been blocked. Contact support for help.',
+    );
+    err.statusCode = 403;
     throw err;
   }
 

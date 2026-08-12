@@ -10,6 +10,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/lab_model.dart';
@@ -114,6 +115,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
   final _radiusController = TextEditingController(text: '10');
   final Map<String, String> _testSampleTypes = {};
   final Map<String, bool> _testFasting = {};
+  int? _mainOfferPercent;
 
   @override
   void dispose() {
@@ -472,6 +474,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           .where((e) => e.isNotEmpty)
           .toList(),
       homeCollectionRadiusKm: double.tryParse(_radiusController.text.trim()),
+      mainOfferPercent: _mainOfferPercent,
     );
 
     final offeredTestsPayload = _selectedTests.entries.map((entry) {
@@ -550,6 +553,9 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
         var fasting = false;
         return StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
+            constraints: const BoxConstraints(
+              maxWidth: ResponsiveUtils.dialogMaxWidth,
+            ),
             title: const Text('Add custom test'),
             content: SingleChildScrollView(
               child: Column(
@@ -619,6 +625,9 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
         final originalCtrl = TextEditingController(text: '2999');
         final discountCtrl = TextEditingController(text: '2499');
         return AlertDialog(
+          constraints: const BoxConstraints(
+            maxWidth: ResponsiveUtils.dialogMaxWidth,
+          ),
           title: const Text('Create health package'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -671,6 +680,9 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
         var role = LabRegistrationConstants.staffRoles.first;
         return StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
+            constraints: const BoxConstraints(
+              maxWidth: ResponsiveUtils.dialogMaxWidth,
+            ),
             title: const Text('Add staff member'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -861,23 +873,26 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           onCountryCodeChanged: (c) => setState(() => _countryCode = c),
         ),
         const SizedBox(height: 12),
-        CustomTextField(
-          controller: _passwordController,
-          label: 'Password',
-          obscureText: true,
-          prefixIcon: Icons.lock_outline_rounded,
-          validator: ValidationUtils.validatePassword,
-        ),
-        const SizedBox(height: 12),
-        CustomTextField(
-          controller: _confirmPasswordController,
-          label: 'Confirm password',
-          obscureText: true,
-          prefixIcon: Icons.lock_outline_rounded,
-          validator: (v) => ValidationUtils.validatePasswordMatch(
-            _passwordController.text,
-            v,
-          ),
+        ResponsiveFormRow(
+          children: [
+            CustomTextField(
+              controller: _passwordController,
+              label: 'Password',
+              obscureText: true,
+              prefixIcon: Icons.lock_outline_rounded,
+              validator: ValidationUtils.validatePassword,
+            ),
+            CustomTextField(
+              controller: _confirmPasswordController,
+              label: 'Confirm password',
+              obscureText: true,
+              prefixIcon: Icons.lock_outline_rounded,
+              validator: (v) => ValidationUtils.validatePasswordMatch(
+                _passwordController.text,
+                v,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         Text(
@@ -1169,6 +1184,44 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          'Main offer card',
+          style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Shown highlighted on patient Lab Tests cards (optional).',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: const Text('No offer'),
+              selected: _mainOfferPercent == null,
+              showCheckmark: false,
+              onSelected: (_) => setState(() => _mainOfferPercent = null),
+            ),
+            ...labMainOfferPercentOptions.map(
+              (percent) => ChoiceChip(
+                label: Text('$percent% OFF'),
+                selected: _mainOfferPercent == percent,
+                showCheckmark: false,
+                selectedColor: AppColors.offer.withValues(alpha: 0.2),
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: _mainOfferPercent == percent
+                      ? AppColors.offerDark
+                      : AppColors.textPrimary,
+                ),
+                onSelected: (_) => setState(() => _mainOfferPercent = percent),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
         Text(
           'Select tests you offer',
           style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700),
@@ -1536,6 +1589,10 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
         _ReviewRow('Facilities', '${_facilities.length}'),
         _ReviewRow('Categories', '${_supportedCategories.length}'),
         _ReviewRow('Tests offered', '${_selectedTests.length}'),
+        _ReviewRow(
+          'Main offer',
+          _mainOfferPercent == null ? 'None' : '$_mainOfferPercent% OFF',
+        ),
         _ReviewRow('Health packages', '${_healthPackages.length}'),
         _ReviewRow('Imaging services', _imagingEnabled ? '${_offeredScans.length}' : 'None'),
         _ReviewRow('Staff', '${_staffMembers.length}'),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/responsive_utils.dart';
 
 /// Item for the marketplace-style Top Categories grid.
 class TopCategoryItem {
@@ -56,8 +57,15 @@ class TopCategoriesGrid extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: items.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveUtils.gridColumns(
+                context,
+                mobile: 3,
+                tablet: 4,
+                laptop: 5,
+                desktop: 6,
+                largeDesktop: 6,
+              ),
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
               childAspectRatio: 0.92,

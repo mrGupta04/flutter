@@ -84,6 +84,10 @@ const patientSchema = new mongoose.Schema(
         currentMedications: [],
       }),
     },
+    isBlocked: { type: Boolean, default: false, index: true },
+    blockedAt: Date,
+    blockedReason: String,
+    blockedByAdminId: String,
   },
   { timestamps: true },
 );

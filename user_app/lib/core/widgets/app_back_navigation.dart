@@ -2,6 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../constants/app_constants.dart';
+
+/// Bottom-nav tab roots that should return to Home instead of exiting the app.
+bool _isNonHomeTabRoot(String path) {
+  return path == AppConstants.routeLabs ||
+      path == AppConstants.routeCareListing ||
+      path == AppConstants.routeUserDashboard ||
+      path == AppConstants.routeUserDashboardLegacy ||
+      path == AppConstants.routeUserLogin ||
+      path == AppConstants.routeScans;
+}
+
 /// Intercepts the Android system back button so nested [Navigator.push] routes
 /// and [GoRouter] stacks pop correctly instead of closing the app.
 class AppBackButtonScope extends StatelessWidget {
@@ -45,6 +57,19 @@ class AppBackButtonScope extends StatelessWidget {
     }
   }
 
+  static bool goHomeIfOnTabRoot(
+    BuildContext context, {
+    GoRouter? router,
+  }) {
+    final goRouter = router ?? GoRouter.maybeOf(context);
+    if (goRouter == null) return false;
+    final path = goRouter.state.uri.path;
+    if (path == AppConstants.routeUserHome) return false;
+    if (!_isNonHomeTabRoot(path)) return false;
+    goRouter.go(AppConstants.routeUserHome);
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -55,6 +80,9 @@ class AppBackButtonScope extends StatelessWidget {
           navigateBack(context, router: router);
           return;
         }
+        // Care / Profile / Labs tab roots use go() so the stack is empty —
+        // send users Home instead of killing the app.
+        if (goHomeIfOnTabRoot(context, router: router)) return;
         SystemNavigator.pop();
       },
       child: child,
@@ -86,7 +114,7 @@ class UserTabBackScope extends StatelessWidget {
           return;
         }
         if (!isHomeTab) {
-          context.go(homeRoute ?? '/user-home');
+          context.go(homeRoute ?? AppConstants.routeUserHome);
           return;
         }
         SystemNavigator.pop();

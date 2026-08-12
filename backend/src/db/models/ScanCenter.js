@@ -81,6 +81,8 @@ const scanCenterSchema = new mongoose.Schema(
     homeVisitAvailable: { type: Boolean, default: false },
     available24x7: { type: Boolean, default: false },
     cashPaymentEnabled: { type: Boolean, default: true },
+    // Highlighted marketplace offer on scan cards (e.g. 10, 20, 30, 40).
+    mainOfferPercent: { type: Number, min: 0, max: 90, default: null },
     offeredScans: { type: [offeredScanSchema], default: [] },
     offers: { type: [scanOfferSchema], default: [] },
     appointmentSlots: { type: [appointmentSlotSchema], default: [] },

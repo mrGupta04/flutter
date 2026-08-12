@@ -4,18 +4,28 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../data/models/api_response_model.dart';
 import '../../../../data/services/dio_service.dart';
+import '../../../../shared/widgets/admin_adaptive_shell.dart';
 
 /// Admin sessions for Lab / MRI (scan) bookings.
 class AdminDiagnosticSessionsScreen extends StatefulWidget {
   const AdminDiagnosticSessionsScreen({
     super.key,
     required this.kind,
+    this.embedded = false,
+    this.scrollHeader,
   });
 
   /// `lab` | `scan`
   final String kind;
+
+  /// When true, renders list content only (no Scaffold / AppBar).
+  final bool embedded;
+
+  /// Optional hub header that scrolls away with the list (not sticky).
+  final Widget? scrollHeader;
 
   @override
   State<AdminDiagnosticSessionsScreen> createState() =>
@@ -122,9 +132,248 @@ class _AdminDiagnosticSessionsScreenState
 
   Color _flagColor(bool ok) => ok ? AppColors.success : AppColors.textSecondary;
 
+  Widget _searchField({required bool embedded}) {
+    return Padding(
+      padding: embedded
+          ? const EdgeInsets.fromLTRB(16, 8, 16, 8)
+          : const EdgeInsets.only(bottom: 8),
+      child: TextField(
+        controller: _search,
+        decoration: InputDecoration(
+          hintText: 'Search patient, mobile, $_providerLabel…',
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: _load,
+          ),
+          filled: true,
+          fillColor: AppColors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        onSubmitted: (_) => _load(),
+      ),
+    );
+  }
+
+  Widget _kycAppsButton() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(
+          onPressed: () => context.push(
+            _isLab
+                ? AppConstants.routeAdminLabList
+                : AppConstants.routeAdminScanList,
+          ),
+          child: const Text('KYC apps'),
+        ),
+      ),
+    );
+  }
+
+  Widget _sessionCard(Map<String, dynamic> row) {
+    final outcome = row['finalOutcome']?.toString() ?? 'pending';
+    final sample = row['sampleCollected'] == true;
+    final report = row['reportSubmitted'] == true;
+    final accepted = row['acceptedByUser'] == true;
+    final kind = _isLab ? 'lab' : 'scan';
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => context.push(
+          '${AppConstants.routeAdminDiagnosticSessionDetails}/$kind/${row['id']}',
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _NameCol(
+                      label: 'Patient',
+                      value: row['patientName']?.toString() ?? 'Patient',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _NameCol(
+                      label: _providerLabel,
+                      value: row['providerName']?.toString() ?? _providerLabel,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                row['serviceLabel']?.toString() ?? '',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _Pill(label: 'Pay: ${row['paymentStatus'] ?? '—'}'),
+                  _Pill(
+                    label: sample
+                        ? '$_sampleLabel: ${_fmt(row['sampleCollectedAt'])}'
+                        : '$_sampleLabel: No',
+                    color: _flagColor(sample),
+                  ),
+                  _Pill(
+                    label: report
+                        ? 'Report submitted: ${_fmt(row['reportSubmittedAt'])}'
+                        : 'Report submitted: No',
+                    color: _flagColor(report),
+                  ),
+                  _Pill(
+                    label: accepted
+                        ? 'Accepted by user: ${_fmt(row['reportAcceptedByUserAt'])}'
+                        : 'Accepted by user: No',
+                    color: _flagColor(accepted),
+                  ),
+                  _Pill(
+                    label: _outcomeLabel(outcome),
+                    color: _outcomeColor(outcome),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Slot ${_fmt(row['scheduledDate'])} ${row['timeSlot'] ?? ''} · ₹${row['amount'] ?? 0} · Tap for details',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _embeddedScrollBody() {
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          if (widget.scrollHeader != null)
+            SliverToBoxAdapter(child: widget.scrollHeader),
+          SliverToBoxAdapter(child: _searchField(embedded: true)),
+          SliverToBoxAdapter(child: _kycAppsButton()),
+          if (_loading)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_error != null)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: _load,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_rows.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Text(
+                  'No ${_title.toLowerCase()} yet',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            )
+          else
+            ResponsiveCardSliver(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+              spacing: 8,
+              itemCount: _rows.length,
+              itemBuilder: (context, index) => _sessionCard(_rows[index]),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    if (widget.embedded) {
+      return ColoredBox(
+        color: AppColors.background,
+        child: _embeddedScrollBody(),
+      );
+    }
+
+    final content = Column(
+      children: [
+        _searchField(embedded: false),
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(_error!, textAlign: TextAlign.center),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: _load,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _rows.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No ${_title.toLowerCase()} yet',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          child: ResponsiveCardList(
+                            padding: const EdgeInsets.only(bottom: 24),
+                            spacing: 8,
+                            desktopColumns: 2,
+                            largeDesktopColumns: 2,
+                            itemCount: _rows.length,
+                            itemBuilder: (context, index) =>
+                                _sessionCard(_rows[index]),
+                          ),
+                        ),
+        ),
+      ],
+    );
+
+    return AdminAdaptiveShell(
+      section: AdminNavSection.providers,
+      constrainBody: false,
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(_title),
@@ -139,167 +388,9 @@ class _AdminDiagnosticSessionsScreenState
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _search,
-              decoration: InputDecoration(
-                hintText: 'Search patient, mobile, $_providerLabel…',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: _load,
-                ),
-                filled: true,
-                fillColor: AppColors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onSubmitted: (_) => _load(),
-            ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(_error!, textAlign: TextAlign.center),
-                            const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: _load,
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : _rows.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No ${_title.toLowerCase()} yet',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: _load,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                              itemCount: _rows.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 8),
-                              itemBuilder: (context, index) {
-                                final row = _rows[index];
-                                final outcome =
-                                    row['finalOutcome']?.toString() ?? 'pending';
-                                final sample =
-                                    row['sampleCollected'] == true;
-                                final report =
-                                    row['reportSubmitted'] == true;
-                                final accepted =
-                                    row['acceptedByUser'] == true;
-                                final kind = _isLab ? 'lab' : 'scan';
-                                return Material(
-                                  color: AppColors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(14),
-                                    onTap: () => context.push(
-                                      '${AppConstants.routeAdminDiagnosticSessionDetails}/$kind/${row['id']}',
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(14),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: _NameCol(
-                                                  label: 'Patient',
-                                                  value: row['patientName']
-                                                          ?.toString() ??
-                                                      'Patient',
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: _NameCol(
-                                                  label: _providerLabel,
-                                                  value: row['providerName']
-                                                          ?.toString() ??
-                                                      _providerLabel,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            row['serviceLabel']?.toString() ??
-                                                '',
-                                            style: AppTextStyles.bodySmall
-                                                .copyWith(
-                                              color: AppColors.textSecondary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Wrap(
-                                            spacing: 8,
-                                            runSpacing: 8,
-                                            children: [
-                                              _Pill(
-                                                label:
-                                                    'Pay: ${row['paymentStatus'] ?? '—'}',
-                                              ),
-                                              _Pill(
-                                                label: sample
-                                                    ? '$_sampleLabel: ${_fmt(row['sampleCollectedAt'])}'
-                                                    : '$_sampleLabel: No',
-                                                color: _flagColor(sample),
-                                              ),
-                                              _Pill(
-                                                label: report
-                                                    ? 'Report submitted: ${_fmt(row['reportSubmittedAt'])}'
-                                                    : 'Report submitted: No',
-                                                color: _flagColor(report),
-                                              ),
-                                              _Pill(
-                                                label: accepted
-                                                    ? 'Accepted by user: ${_fmt(row['reportAcceptedByUserAt'])}'
-                                                    : 'Accepted by user: No',
-                                                color: _flagColor(accepted),
-                                              ),
-                                              _Pill(
-                                                label: _outcomeLabel(outcome),
-                                                color: _outcomeColor(outcome),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Slot ${_fmt(row['scheduledDate'])} ${row['timeSlot'] ?? ''} · ₹${row['amount'] ?? 0} · Tap for details',
-                                            style: AppTextStyles.bodySmall
-                                                .copyWith(
-                                              color: AppColors.textSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-          ),
-        ],
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: content,
       ),
     );
   }

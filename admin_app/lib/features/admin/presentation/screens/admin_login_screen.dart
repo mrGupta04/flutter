@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../provider/admin_auth_provider.dart';
@@ -75,8 +76,9 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
+              padding: ResponsiveUtils.pagePadding(context),
+              child: ResponsiveFormWidth(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 24),
@@ -138,6 +140,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     isEnabled: !auth.isLoading,
                   ),
                 ],
+              ),
               ),
             ),
           ),

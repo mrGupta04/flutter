@@ -25,7 +25,9 @@ import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart'
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../../data/services/lab_scan_payment_flow.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
+import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../data/repositories/booking_lifecycle_repository.dart';
@@ -109,10 +111,10 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
     return UserTabBackScope(
       isHomeTab: false,
       homeRoute: AppConstants.routeUserHome,
-      child: Scaffold(
+      child: UserAdaptiveScaffold(
+      currentTab: UserNavTab.profile,
       backgroundColor: AppColors.background,
-      bottomNavigationBar:
-          const UserBottomNavBar(currentTab: UserNavTab.profile),
+      constrainBody: false,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
@@ -530,6 +532,10 @@ class _ProfileTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
       children: [
+        ResponsivePage(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
         _DiagnosticCartCard(
           labCount: ref.watch(labCartProvider).itemCount,
           scanCount: ref.watch(scanCartProvider).itemCount,
@@ -711,6 +717,9 @@ class _ProfileTab extends ConsumerWidget {
           icon: const Icon(Icons.health_and_safety_outlined),
           label: const Text('Family, addresses & medical'),
         ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -801,6 +810,10 @@ class _CategorizedBookingsTab extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
+          ResponsivePage(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
           Row(
             children: [
               _StatChip(
@@ -840,6 +853,9 @@ class _CategorizedBookingsTab extends StatelessWidget {
               onRefresh: onRefresh,
             );
           }),
+              ],
+            ),
+          ),
         ],
       ),
     );

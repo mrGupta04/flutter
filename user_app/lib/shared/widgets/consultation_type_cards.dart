@@ -32,7 +32,7 @@ class ConsultationTypeCards extends StatelessWidget {
           Expanded(
             child: _TypeChip(
               icon: Icons.local_hospital_rounded,
-              label: 'Clinic',
+              label: 'Clinic visit',
               selected: selected == ConsultationType.visitSite,
               onTap: () => onSelected(ConsultationType.visitSite),
             ),
@@ -41,7 +41,7 @@ class ConsultationTypeCards extends StatelessWidget {
           Expanded(
             child: _TypeChip(
               icon: Icons.home_rounded,
-              label: 'Home',
+              label: 'Home visit',
               selected: selected == ConsultationType.bookHome,
               onTap: () => onSelected(ConsultationType.bookHome),
             ),
@@ -104,23 +104,26 @@ class _TypeChip extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 15,
+                size: 14,
                 color: selected ? AppColors.primary : AppColors.textSecondary,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 3),
               Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    color: selected
-                        ? AppColors.primaryDark
-                        : AppColors.textSecondary,
-                    height: 1.1,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    softWrap: false,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                      color: selected
+                          ? AppColors.primaryDark
+                          : AppColors.textSecondary,
+                      height: 1.1,
+                    ),
                   ),
                 ),
               ),

@@ -157,6 +157,10 @@ class AppTheme {
           ),
         ),
         showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 720),
+      ),
+      dialogTheme: const DialogThemeData(
+        constraints: BoxConstraints(maxWidth: 560),
       ),
     );
   }

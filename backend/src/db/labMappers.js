@@ -26,6 +26,10 @@ function toLab(doc) {
     operatingHours: d.operatingHours,
     homeCollectionAvailable: Boolean(d.homeCollectionAvailable),
     available24x7: Boolean(d.available24x7),
+    mainOfferPercent:
+      d.mainOfferPercent == null || d.mainOfferPercent === ''
+        ? null
+        : Number(d.mainOfferPercent),
     coverImage: d.coverImage,
     labType: d.labType,
     yearEstablished: d.yearEstablished,

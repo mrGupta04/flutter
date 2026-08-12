@@ -48,7 +48,7 @@ function authOptional(req, res, next) {
 
 
 
-function authRequired(req, res, next) {
+async function authRequired(req, res, next) {
 
   const header = req.headers.authorization;
 
@@ -61,6 +61,23 @@ function authRequired(req, res, next) {
   try {
 
     req.auth = verifyToken(header.slice(7));
+
+    if (req.auth?.type === 'patient' && req.auth?.patientId) {
+      const Patient = require('../db/models/Patient');
+      const patient = await Patient.findOne({ id: req.auth.patientId })
+        .select('isBlocked')
+        .lean();
+      if (!patient) {
+        return sendError(res, 'Patient not found', 404);
+      }
+      if (patient.isBlocked) {
+        return sendError(
+          res,
+          'Your account has been blocked. Contact support for help.',
+          403,
+        );
+      }
+    }
 
     next();
 

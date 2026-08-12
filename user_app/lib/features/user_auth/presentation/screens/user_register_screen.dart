@@ -9,6 +9,7 @@ import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/phone_countries.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/aadhaar_card_picker.dart';
@@ -132,8 +133,9 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Create account')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Form(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: ResponsiveFormWidth(
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -317,6 +319,7 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -8,6 +8,7 @@ import '../../../auth/provider/provider_auth_provider.dart';
 import '../../provider/provider_status_sync.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../data/models/doctor_model.dart';
@@ -98,62 +99,50 @@ class _ProviderLandingScreenState extends ConsumerState<ProviderLandingScreen> {
                   : () => context.push(AppConstants.routeApplicationSubmitted),
             ),
             const SizedBox(height: 16),
+            ResponsivePage(
+              padding: ResponsiveUtils.pagePadding(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             if (isLoggedIn) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: OfferPromoCard(
-                  title: 'Welcome back, ${auth.displayName ?? type!.label}',
-                  subtitle: isVerified
-                      ? 'You are verified — open your dashboard to manage practice'
-                      : 'Manage your ${type!.label.toLowerCase()} profile and track verification',
-                  badge: isVerified ? 'VERIFIED' : type!.label.toUpperCase(),
-                  icon: isVerified
-                      ? Icons.verified_rounded
-                      : Icons.verified_user_outlined,
-                ),
+              OfferPromoCard(
+                title: 'Welcome back, ${auth.displayName ?? type!.label}',
+                subtitle: isVerified
+                    ? 'You are verified — open your dashboard to manage practice'
+                    : 'Manage your ${type!.label.toLowerCase()} profile and track verification',
+                badge: isVerified ? 'VERIFIED' : type!.label.toUpperCase(),
+                icon: isVerified
+                    ? Icons.verified_rounded
+                    : Icons.verified_user_outlined,
               ),
               const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: CustomButton(
-                  label: 'Open my dashboard',
-                  icon: Icons.dashboard_rounded,
-                  onPressed: _openDashboard,
-                ),
+              CustomButton(
+                label: 'Open my dashboard',
+                icon: Icons.dashboard_rounded,
+                onPressed: _openDashboard,
               ),
               const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: CustomOutlineButton(
-                  label: 'Application status',
-                  icon: Icons.hourglass_top_rounded,
-                  onPressed: () => context.push(_applicationStatusRoute(type!)),
-                ),
+              CustomOutlineButton(
+                label: 'Application status',
+                icon: Icons.hourglass_top_rounded,
+                onPressed: () => context.push(_applicationStatusRoute(type!)),
               ),
               const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: CustomOutlineButton(
-                  label: 'Sign out',
-                  icon: Icons.logout_rounded,
-                  onPressed: _signOut,
-                ),
+              CustomOutlineButton(
+                label: 'Sign out',
+                icon: Icons.logout_rounded,
+                onPressed: _signOut,
               ),
             ] else ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: OfferPromoCard(
-                  title: 'Join the 1mg provider network',
-                  subtitle:
-                      'Submit once · admin verifies · then go live on the user app',
-                  badge: 'PARTNER',
-                ),
+              const OfferPromoCard(
+                title: 'Join the 1mg provider network',
+                subtitle:
+                    'Submit once · admin verifies · then go live on the user app',
+                badge: 'PARTNER',
               ),
               const SizedBox(height: 20),
               const MarketplaceSectionTitle(title: 'Register as'),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
+              Column(
                   children: [
                     _RegistrationCard(
                       title: 'Doctor',
@@ -227,75 +216,68 @@ class _ProviderLandingScreenState extends ConsumerState<ProviderLandingScreen> {
                       ),
                     ),
                   ],
-                ),
               ),
               const SizedBox(height: 20),
               const MarketplaceSectionTitle(title: 'How verification works'),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.divider),
-                  ),
-                  child: Column(
-                    children: const [
-                      _StepRow(
-                        step: '1',
-                        title: 'Submit application',
-                        subtitle: 'Complete registration in this app',
-                      ),
-                      _StepRow(
-                        step: '2',
-                        title: 'Admin review',
-                        subtitle: 'Admin approves in the partner app',
-                      ),
-                      _StepRow(
-                        step: '3',
-                        title: 'Go live on user app',
-                        subtitle:
-                            'Verified profiles appear in the patient marketplace',
-                        isLast: true,
-                      ),
-                    ],
-                  ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Column(
+                  children: const [
+                    _StepRow(
+                      step: '1',
+                      title: 'Submit application',
+                      subtitle: 'Complete registration in this app',
+                    ),
+                    _StepRow(
+                      step: '2',
+                      title: 'Admin review',
+                      subtitle: 'Admin approves in the partner app',
+                    ),
+                    _StepRow(
+                      step: '3',
+                      title: 'Go live on user app',
+                      subtitle:
+                          'Verified profiles appear in the patient marketplace',
+                      isLast: true,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20),
               const OneMgTrustStrip(),
               const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: CustomOutlineButton(
-                  label: 'Check application status',
-                  icon: Icons.hourglass_top_rounded,
-                  onPressed: () =>
-                      context.push(AppConstants.routeApplicationSubmitted),
-                ),
+              CustomOutlineButton(
+                label: 'Check application status',
+                icon: Icons.hourglass_top_rounded,
+                onPressed: () =>
+                    context.push(AppConstants.routeApplicationSubmitted),
               ),
               const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextButton.icon(
-                  onPressed: () => context.push(AppConstants.routeAdminLogin),
-                  icon: const Icon(
-                    Icons.admin_panel_settings_outlined,
-                    size: 18,
+              TextButton.icon(
+                onPressed: () => context.push(AppConstants.routeAdminLogin),
+                icon: const Icon(
+                  Icons.admin_panel_settings_outlined,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+                label: Text(
+                  'Admin portal — sign in',
+                  style: AppTextStyles.labelMedium.copyWith(
                     color: AppColors.primary,
-                  ),
-                  label: Text(
-                    'Admin portal — sign in',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ],
             const SizedBox(height: 32),
+                ],
+              ),
+            ),
           ],
         ),
       ),

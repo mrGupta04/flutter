@@ -8,6 +8,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/blood_bank_model.dart';
@@ -566,23 +567,26 @@ class _BloodBankRegistrationScreenState
           onCountryCodeChanged: (c) => setState(() => _countryCode = c),
         ),
         const SizedBox(height: 12),
-        CustomTextField(
-          controller: _passwordController,
-          label: 'Password',
-          obscureText: true,
-          prefixIcon: Icons.lock_outline_rounded,
-          validator: ValidationUtils.validatePassword,
-        ),
-        const SizedBox(height: 12),
-        CustomTextField(
-          controller: _confirmPasswordController,
-          label: 'Confirm password',
-          obscureText: true,
-          prefixIcon: Icons.lock_outline_rounded,
-          validator: (v) => ValidationUtils.validatePasswordMatch(
-            _passwordController.text,
-            v,
-          ),
+        ResponsiveFormRow(
+          children: [
+            CustomTextField(
+              controller: _passwordController,
+              label: 'Password',
+              obscureText: true,
+              prefixIcon: Icons.lock_outline_rounded,
+              validator: ValidationUtils.validatePassword,
+            ),
+            CustomTextField(
+              controller: _confirmPasswordController,
+              label: 'Confirm password',
+              obscureText: true,
+              prefixIcon: Icons.lock_outline_rounded,
+              validator: (v) => ValidationUtils.validatePasswordMatch(
+                _passwordController.text,
+                v,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         CustomTextField(

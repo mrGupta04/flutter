@@ -412,6 +412,9 @@ class ProviderSnapshotModel {
     this.pincode,
     this.registrationDate,
     this.rawStatus,
+    this.offersOnlineConsult,
+    this.offersBookHome,
+    this.offersVisitSite,
   });
 
   final String name;
@@ -424,6 +427,9 @@ class ProviderSnapshotModel {
   final String? pincode;
   final DateTime? registrationDate;
   final String? rawStatus;
+  final bool? offersOnlineConsult;
+  final bool? offersBookHome;
+  final bool? offersVisitSite;
 
   factory ProviderSnapshotModel.fromJson(Map<String, dynamic> json) {
     return ProviderSnapshotModel(
@@ -437,6 +443,9 @@ class ProviderSnapshotModel {
       pincode: json['pincode']?.toString(),
       registrationDate: _date(json['registrationDate']),
       rawStatus: json['rawStatus']?.toString(),
+      offersOnlineConsult: json['offersOnlineConsult'] as bool?,
+      offersBookHome: json['offersBookHome'] as bool?,
+      offersVisitSite: json['offersVisitSite'] as bool?,
     );
   }
 }

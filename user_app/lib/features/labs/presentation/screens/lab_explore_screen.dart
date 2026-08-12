@@ -8,6 +8,7 @@ import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../provider/lab_search_provider.dart';
@@ -26,6 +27,7 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
   Timer? _debounce;
+  String? _locationPrefill;
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
 
   Future<void> _initExplore() async {
     final preferred = ref.read(userLocationProvider);
+    _applyLocationPrefill(preferred);
     double? lat = preferred.latitude;
     double? lng = preferred.longitude;
 
@@ -64,7 +67,26 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
     }
   }
 
+  void _applyLocationPrefill(UserLocationState location) {
+    final label = location.displayPlaceCity;
+    if (label == null || label.isEmpty) return;
+
+    final current = _searchController.text.trim();
+    final canReplace = current.isEmpty ||
+        (_locationPrefill != null && current == _locationPrefill);
+    if (!canReplace) return;
+
+    _locationPrefill = label;
+    if (current != label) {
+      _searchController.value = TextEditingValue(
+        text: label,
+        selection: TextSelection.collapsed(offset: label.length),
+      );
+    }
+  }
+
   void _onLocationResolved(UserLocationState location) {
+    _applyLocationPrefill(location);
     if (!location.hasCoordinates) return;
     final state = ref.read(labExploreProvider);
     if (state.latitude != null && state.longitude != null) return;
@@ -92,7 +114,13 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      ref.read(labExploreProvider.notifier).setQuery(value.trim());
+      final text = value.trim();
+      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
+        ref.read(labExploreProvider.notifier).setQuery('');
+        return;
+      }
+      _locationPrefill = null;
+      ref.read(labExploreProvider.notifier).setQuery(text);
     });
   }
 
@@ -226,6 +254,23 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
       _onLocationResolved(next);
     });
     final state = ref.watch(labExploreProvider);
+    final columns = ResponsiveUtils.gridColumns(
+      context,
+      mobile: 1,
+      tablet: 2,
+      laptop: 2,
+      desktop: 3,
+      largeDesktop: 3,
+    );
+    final hPad = ResponsiveUtils.valueFor(
+      context,
+      mobile: 16,
+      tablet: 24,
+      laptop: 32,
+    );
+    final rowCount = state.labs.isEmpty
+        ? 0
+        : (state.labs.length / columns).ceil();
 
     return UserTabBackScope(
       isHomeTab: false,
@@ -319,11 +364,11 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 24),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      if (index >= state.labs.length) {
+                    (context, rowIndex) {
+                      if (rowIndex >= rowCount) {
                         return state.isLoadingMore
                             ? const Padding(
                                 padding: EdgeInsets.all(16),
@@ -333,15 +378,35 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
                               )
                             : const SizedBox(height: 8);
                       }
-                      final lab = state.labs[index];
-                      return LabExploreCard(
-                        lab: lab,
-                        onViewDetails: () => context.push(
-                          '${AppConstants.routeLabDetail}/${lab.id}',
+
+                      final start = rowIndex * columns;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: rowIndex < rowCount - 1 ? 4 : 0,
+                        ),
+                        child: IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (var col = 0; col < columns; col++) ...[
+                                if (col > 0) const SizedBox(width: 12),
+                                Expanded(
+                                  child: start + col < state.labs.length
+                                      ? LabExploreCard(
+                                          lab: state.labs[start + col],
+                                          onViewDetails: () => context.push(
+                                            '${AppConstants.routeLabDetail}/${state.labs[start + col].id}',
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       );
                     },
-                    childCount: state.labs.length + 1,
+                    childCount: rowCount + 1,
                   ),
                 ),
               ),

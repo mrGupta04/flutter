@@ -41,6 +41,9 @@ function toPatient(doc) {
       currentMedications: [],
       notes: null,
     },
+    isBlocked: Boolean(d.isBlocked),
+    blockedAt: d.blockedAt || null,
+    blockedReason: d.blockedReason || null,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
@@ -517,7 +520,42 @@ async function loginPatient(email, password) {
     err.statusCode = 401;
     throw err;
   }
+  if (doc.isBlocked) {
+    const err = new Error(
+      'Your account has been blocked. Contact support for help.',
+    );
+    err.statusCode = 403;
+    throw err;
+  }
 
+  return toPatient(doc);
+}
+
+async function setPatientBlockedStatus({
+  patientId,
+  blocked,
+  reason = '',
+  adminId = null,
+} = {}) {
+  const doc = await Patient.findOne({ id: patientId });
+  if (!doc) {
+    const err = new Error('Patient not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (blocked) {
+    doc.isBlocked = true;
+    doc.blockedAt = new Date();
+    doc.blockedReason = String(reason || '').trim() || 'Blocked by admin';
+    doc.blockedByAdminId = adminId || undefined;
+  } else {
+    doc.isBlocked = false;
+    doc.blockedAt = undefined;
+    doc.blockedReason = undefined;
+    doc.blockedByAdminId = undefined;
+  }
+  await doc.save();
   return toPatient(doc);
 }
 
@@ -533,4 +571,5 @@ module.exports = {
   upsertSavedAddress,
   deleteSavedAddress,
   listPatientsForAdmin,
+  setPatientBlockedStatus,
 };

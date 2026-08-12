@@ -67,7 +67,11 @@ const {
   listAdminDiagnosticBookings,
   getAdminDiagnosticBookingDetail,
 } = require('../db/adminMarketplaceRepositories');
-const { listPatientsForAdmin, findPatientById } = require('../db/patientRepositories');
+const {
+  listPatientsForAdmin,
+  findPatientById,
+  setPatientBlockedStatus,
+} = require('../db/patientRepositories');
 const {
   actionApprovalRequestByProvider,
 } = require('../db/approvalWorkflowRepositories');
@@ -206,6 +210,49 @@ router.get('/patients/:id', adminRequired, async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to load patient', 500);
+  }
+});
+
+router.post('/patients/:id/block', adminRequired, async (req, res) => {
+  try {
+    const patient = await setPatientBlockedStatus({
+      patientId: req.params.id,
+      blocked: true,
+      reason: req.body?.reason,
+      adminId: req.auth?.adminId || req.auth?.id || null,
+    });
+    return sendSuccess(res, {
+      message: 'Patient blocked successfully',
+      data: patient,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to block patient',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.post('/patients/:id/unblock', adminRequired, async (req, res) => {
+  try {
+    const patient = await setPatientBlockedStatus({
+      patientId: req.params.id,
+      blocked: false,
+      adminId: req.auth?.adminId || req.auth?.id || null,
+    });
+    return sendSuccess(res, {
+      message: 'Patient unblocked successfully',
+      data: patient,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Failed to unblock patient',
+      err.statusCode || 500,
+    );
   }
 });
 

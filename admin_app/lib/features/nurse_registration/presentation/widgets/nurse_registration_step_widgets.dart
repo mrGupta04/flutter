@@ -9,6 +9,7 @@ import '../../../../core/constants/nurse_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/text_controller_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -470,20 +471,23 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
               onError: (msg) => SnackBarHelper.showError(context, msg),
             ),
             const SizedBox(height: 16),
-            CustomTextField(
-              controller: _firstName,
-              label: 'First name',
-              prefixIcon: Icons.person_outline_rounded,
-              validator: (v) =>
-                  ValidationUtils.validateName(v, fieldName: 'First name'),
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _lastName,
-              label: 'Last name',
-              prefixIcon: Icons.person_outline_rounded,
-              validator: (v) =>
-                  ValidationUtils.validateName(v, fieldName: 'Last name'),
+            ResponsiveFormRow(
+              children: [
+                CustomTextField(
+                  controller: _firstName,
+                  label: 'First name',
+                  prefixIcon: Icons.person_outline_rounded,
+                  validator: (v) =>
+                      ValidationUtils.validateName(v, fieldName: 'First name'),
+                ),
+                CustomTextField(
+                  controller: _lastName,
+                  label: 'Last name',
+                  prefixIcon: Icons.person_outline_rounded,
+                  validator: (v) =>
+                      ValidationUtils.validateName(v, fieldName: 'Last name'),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             GenderRadioField(

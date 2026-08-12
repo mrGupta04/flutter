@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../data/models/api_response_model.dart';
 import '../../../../data/services/dio_service.dart';
+import '../../../../shared/widgets/admin_adaptive_shell.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 
 final adminOverviewProvider =
@@ -26,7 +28,9 @@ class AdminOverviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(adminOverviewProvider);
 
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.overview,
+      constrainBody: false,
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Marketplace overview')),
       body: async.when(
@@ -39,113 +43,106 @@ class AdminOverviewScreen extends ConsumerWidget {
           final recent =
               (data['recentBookings'] as List?)?.cast<dynamic>() ?? [];
 
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(adminOverviewProvider),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _StatChip(
-                      label: 'Patients',
-                      value: '${stats['patients'] ?? 0}',
-                    ),
-                    _StatChip(
-                      label: 'Bookings',
-                      value: '${stats['totalBookings'] ?? 0}',
-                    ),
-                    _StatChip(
-                      label: 'Pending KYC',
-                      value: '${stats['pendingApprovals'] ?? 0}',
-                    ),
-                    _StatChip(
-                      label: 'Revenue',
-                      value: '₹${stats['revenueInr'] ?? 0}',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const MarketplaceSectionTitle(title: 'Pending verifications'),
-                const SizedBox(height: 8),
-                Text(
-                  'Doctors ${pending['doctors'] ?? 0} · Nurses ${pending['nurses'] ?? 0} · '
-                  'Labs ${pending['labs'] ?? 0} · Scans ${pending['scanCenters'] ?? 0} · '
-                  'Ambulance ${pending['ambulances'] ?? 0} · Blood ${pending['bloodBanks'] ?? 0}',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 20),
-                ServiceBenefitCard(
-                  icon: Icons.receipt_long_rounded,
-                  title: 'All bookings',
-                  subtitle: 'Consults, labs, scans, ambulance',
-                  color: AppColors.primary,
-                  onTap: () =>
-                      context.push(AppConstants.routeAdminBookings),
-                ),
-                const SizedBox(height: 10),
-                ServiceBenefitCard(
-                  icon: Icons.people_outline_rounded,
-                  title: 'Patients',
-                  subtitle: 'Search registered patient accounts',
-                  color: AppColors.secondary,
-                  onTap: () =>
-                      context.push(AppConstants.routeAdminPatients),
-                ),
-                const SizedBox(height: 10),
-                ServiceBenefitCard(
-                  icon: Icons.support_agent_rounded,
-                  title: 'Support tickets',
-                  subtitle: 'Reply · resolve patient issues',
-                  color: AppColors.primary,
-                  onTap: () =>
-                      context.push(AppConstants.routeAdminSupportTickets),
-                ),
-                const SizedBox(height: 10),
-                ServiceBenefitCard(
-                  icon: Icons.local_offer_outlined,
-                  title: 'Coupons',
-                  subtitle: 'Create and manage discount codes',
-                  color: AppColors.secondary,
-                  onTap: () => context.push(AppConstants.routeAdminCoupons),
-                ),
-                const SizedBox(height: 10),
-                ServiceBenefitCard(
-                  icon: Icons.view_carousel_outlined,
-                  title: 'CMS banners',
-                  subtitle: 'Home hero slides for the user app',
-                  color: AppColors.primary,
-                  onTap: () =>
-                      context.push(AppConstants.routeAdminCmsBanners),
-                ),
-                const SizedBox(height: 10),
-                ServiceBenefitCard(
-                  icon: Icons.currency_exchange_rounded,
-                  title: 'Refunds',
-                  subtitle: 'Mark bookings as refunded',
-                  color: AppColors.primary,
-                  onTap: () => context.push(AppConstants.routeAdminRefunds),
-                ),
-                const SizedBox(height: 20),
-                const MarketplaceSectionTitle(title: 'Recent bookings'),
-                const SizedBox(height: 8),
-                if (recent.isEmpty)
-                  const Text('No recent bookings')
-                else
-                  ...recent.take(10).map((raw) {
-                    final m = Map<String, dynamic>.from(raw as Map);
-                    return Card(
-                      child: ListTile(
-                        title: Text(m['title']?.toString() ?? 'Booking'),
-                        subtitle: Text(
-                          '${m['type'] ?? ''} · ${m['status'] ?? ''} · ₹${m['amount'] ?? 0}',
-                        ),
+          return ResponsivePage(
+            padding: ResponsiveUtils.pagePadding(context),
+            child: RefreshIndicator(
+              onRefresh: () async => ref.invalidate(adminOverviewProvider),
+              child: ListView(
+                children: [
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _StatChip(
+                        label: 'Patients',
+                        value: '${stats['patients'] ?? 0}',
                       ),
-                    );
-                  }),
-              ],
+                      _StatChip(
+                        label: 'Bookings',
+                        value: '${stats['totalBookings'] ?? 0}',
+                      ),
+                      _StatChip(
+                        label: 'Pending KYC',
+                        value: '${stats['pendingApprovals'] ?? 0}',
+                      ),
+                      _StatChip(
+                        label: 'Revenue',
+                        value: '₹${stats['revenueInr'] ?? 0}',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const MarketplaceSectionTitle(title: 'Pending verifications'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Doctors ${pending['doctors'] ?? 0} · Nurses ${pending['nurses'] ?? 0} · '
+                    'Labs ${pending['labs'] ?? 0} · Scans ${pending['scanCenters'] ?? 0} · '
+                    'Ambulance ${pending['ambulances'] ?? 0} · Blood ${pending['bloodBanks'] ?? 0}',
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 20),
+                  ServiceBenefitCard(
+                    icon: Icons.receipt_long_rounded,
+                    title: 'All bookings',
+                    subtitle: 'Consults, labs, scans, ambulance',
+                    color: AppColors.primary,
+                    onTap: () =>
+                        context.push(AppConstants.routeAdminBookings),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.support_agent_rounded,
+                    title: 'Support tickets',
+                    subtitle: 'Reply · resolve patient issues',
+                    color: AppColors.primary,
+                    onTap: () =>
+                        context.push(AppConstants.routeAdminSupportTickets),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.local_offer_outlined,
+                    title: 'Coupons',
+                    subtitle: 'Create and manage discount codes',
+                    color: AppColors.secondary,
+                    onTap: () => context.push(AppConstants.routeAdminCoupons),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.view_carousel_outlined,
+                    title: 'CMS banners',
+                    subtitle: 'Home hero slides for the user app',
+                    color: AppColors.primary,
+                    onTap: () =>
+                        context.push(AppConstants.routeAdminCmsBanners),
+                  ),
+                  const SizedBox(height: 10),
+                  ServiceBenefitCard(
+                    icon: Icons.currency_exchange_rounded,
+                    title: 'Refunds',
+                    subtitle: 'Mark bookings as refunded',
+                    color: AppColors.primary,
+                    onTap: () => context.push(AppConstants.routeAdminRefunds),
+                  ),
+                  const SizedBox(height: 20),
+                  const MarketplaceSectionTitle(title: 'Recent bookings'),
+                  const SizedBox(height: 8),
+                  if (recent.isEmpty)
+                    const Text('No recent bookings')
+                  else
+                    ...recent.take(10).map((raw) {
+                      final m = Map<String, dynamic>.from(raw as Map);
+                      return Card(
+                        child: ListTile(
+                          title: Text(m['title']?.toString() ?? 'Booking'),
+                          subtitle: Text(
+                            '${m['type'] ?? ''} · ${m['status'] ?? ''} · ₹${m['amount'] ?? 0}',
+                          ),
+                        ),
+                      );
+                    }),
+                ],
+              ),
             ),
           );
         },
@@ -234,34 +231,39 @@ class _AdminBookingsScreenState extends ConsumerState<AdminBookingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.overview,
+      constrainBody: false,
       appBar: AppBar(title: const Text('All bookings')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) {
-                      final b = _items[i];
-                      return Card(
-                        child: ListTile(
-                          title: Text(b['patientName']?.toString() ?? 'Patient'),
-                          subtitle: Text(
-                            '${b['category']} · ${b['label'] ?? ''}\n'
-                            '${b['providerName'] ?? ''} · ${b['status']} · '
-                            '${b['paymentStatus'] ?? '—'} · ₹${b['amount'] ?? 0}',
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!))
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView.separated(
+                      itemCount: _items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (_, i) {
+                        final b = _items[i];
+                        return Card(
+                          child: ListTile(
+                            title:
+                                Text(b['patientName']?.toString() ?? 'Patient'),
+                            subtitle: Text(
+                              '${b['category']} · ${b['label'] ?? ''}\n'
+                              '${b['providerName'] ?? ''} · ${b['status']} · '
+                              '${b['paymentStatus'] ?? '—'} · ₹${b['amount'] ?? 0}',
+                            ),
+                            isThreeLine: true,
                           ),
-                          isThreeLine: true,
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
+      ),
     );
   }
 }
@@ -301,6 +303,7 @@ class _AdminPatientsScreenState extends ConsumerState<AdminPatientsScreen> {
       final response = await DioService().get(
         AppConstants.endpointAdminPatients,
         queryParameters: {
+          'pageSize': 100,
           if (_search.text.trim().isNotEmpty) 'q': _search.text.trim(),
         },
       );
@@ -319,58 +322,278 @@ class _AdminPatientsScreenState extends ConsumerState<AdminPatientsScreen> {
     }
   }
 
+  String _patientName(Map<String, dynamic> p) {
+    final name = '${p['firstName'] ?? ''} ${p['lastName'] ?? ''}'.trim();
+    return name.isEmpty ? 'Patient' : name;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.patients,
+      constrainBody: false,
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Patients')),
-      body: Column(
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
             child: TextField(
               controller: _search,
+              textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Search name, email, mobile',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: _load,
+                hintText: 'Search name, email, or mobile',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _search.text.isEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.tune_rounded),
+                        onPressed: _load,
+                        tooltip: 'Search',
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () {
+                          _search.clear();
+                          _load();
+                        },
+                      ),
+                filled: true,
+                fillColor: AppColors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
                 ),
-                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
               ),
+              onChanged: (_) => setState(() {}),
               onSubmitted: (_) => _load(),
             ),
           ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              _loading
+                  ? 'Loading patients…'
+                  : '${_items.length} patient${_items.length == 1 ? '' : 's'}',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(child: Text(_error!))
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(_error!, textAlign: TextAlign.center),
+                              const SizedBox(height: 12),
+                              FilledButton(
+                                onPressed: _load,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     : RefreshIndicator(
                         onRefresh: _load,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          itemCount: _items.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (_, i) {
-                            final p = _items[i];
-                            final name =
-                                '${p['firstName'] ?? ''} ${p['lastName'] ?? ''}'
-                                    .trim();
-                            return Card(
-                              child: ListTile(
-                                title: Text(name.isEmpty ? 'Patient' : name),
-                                subtitle: Text(
-                                  '${p['email'] ?? ''}\n${p['mobileNumber'] ?? ''}',
-                                ),
-                                isThreeLine: true,
+                        child: _items.isEmpty
+                            ? ListView(
+                                children: const [
+                                  SizedBox(height: 120),
+                                  Center(child: Text('No patients found')),
+                                ],
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.only(bottom: 24),
+                                itemCount: _items.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (_, i) {
+                                  final p = _items[i];
+                                  final blocked = p['isBlocked'] == true;
+                                  final name = _patientName(p);
+                                  final photo =
+                                      p['profilePicture']?.toString() ?? '';
+                                  return Material(
+                                    color: AppColors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: () async {
+                                        final id = p['id']?.toString() ?? '';
+                                        if (id.isEmpty) return;
+                                        await context.push(
+                                          '${AppConstants.routeAdminPatientDetails}/$id',
+                                          extra: p,
+                                        );
+                                        if (mounted) _load();
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: AppColors.border,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 28,
+                                              backgroundColor: AppColors
+                                                  .primary
+                                                  .withValues(alpha: 0.12),
+                                              backgroundImage: photo.isNotEmpty
+                                                  ? NetworkImage(photo)
+                                                  : null,
+                                              child: photo.isEmpty
+                                                  ? Text(
+                                                      name.isNotEmpty
+                                                          ? name[0]
+                                                              .toUpperCase()
+                                                          : 'P',
+                                                      style: AppTextStyles
+                                                          .titleMedium
+                                                          .copyWith(
+                                                        color:
+                                                            AppColors.primary,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                      ),
+                                                    )
+                                                  : null,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          name,
+                                                          style: AppTextStyles
+                                                              .titleSmall
+                                                              .copyWith(
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w700,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 4,
+                                                        ),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: blocked
+                                                              ? AppColors.error
+                                                                  .withValues(
+                                                                  alpha: 0.12,
+                                                                )
+                                                              : AppColors
+                                                                  .success
+                                                                  .withValues(
+                                                                  alpha: 0.12,
+                                                                ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                            999,
+                                                          ),
+                                                        ),
+                                                        child: Text(
+                                                          blocked
+                                                              ? 'Blocked'
+                                                              : 'Active',
+                                                          style: AppTextStyles
+                                                              .labelSmall
+                                                              .copyWith(
+                                                            color: blocked
+                                                                ? AppColors
+                                                                    .error
+                                                                : AppColors
+                                                                    .success,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w700,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    p['email']?.toString() ??
+                                                        '',
+                                                    style: AppTextStyles
+                                                        .bodySmall
+                                                        .copyWith(
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    [
+                                                      if ((p['mobileNumber']
+                                                                  ?.toString() ??
+                                                              '')
+                                                          .isNotEmpty)
+                                                        p['mobileNumber']
+                                                            .toString(),
+                                                      if (p['age'] != null)
+                                                        'Age ${p['age']}',
+                                                      if ((p['gender']
+                                                                  ?.toString() ??
+                                                              '')
+                                                          .isNotEmpty)
+                                                        p['gender'].toString(),
+                                                    ].join(' · '),
+                                                    style: AppTextStyles
+                                                        .bodySmall
+                                                        .copyWith(
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.chevron_right_rounded,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
                       ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -432,6 +655,9 @@ class _AdminSupportTicketsScreenState
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        constraints: const BoxConstraints(
+          maxWidth: ResponsiveUtils.dialogMaxWidth,
+        ),
         title: Text(ticket['subject']?.toString() ?? 'Ticket'),
         content: SingleChildScrollView(
           child: Column(
@@ -505,7 +731,9 @@ class _AdminSupportTicketsScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.support,
+      constrainBody: false,
       appBar: AppBar(
         title: const Text('Support tickets'),
         actions: [
@@ -526,43 +754,45 @@ class _AdminSupportTicketsScreenState
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: _items.isEmpty
-                      ? ListView(
-                          children: const [
-                            SizedBox(height: 120),
-                            Center(child: Text('No tickets')),
-                          ],
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _items.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (_, i) {
-                            final t = _items[i];
-                            return Card(
-                              child: ListTile(
-                                title: Text(
-                                  t['subject']?.toString() ?? 'Ticket',
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!))
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: _items.isEmpty
+                        ? ListView(
+                            children: const [
+                              SizedBox(height: 120),
+                              Center(child: Text('No tickets')),
+                            ],
+                          )
+                        : ResponsiveCardList(
+                            itemCount: _items.length,
+                            desktopColumns: 2,
+                            largeDesktopColumns: 2,
+                            itemBuilder: (_, i) {
+                              final t = _items[i];
+                              return Card(
+                                child: ListTile(
+                                  title: Text(
+                                    t['subject']?.toString() ?? 'Ticket',
+                                  ),
+                                  subtitle: Text(
+                                    '${t['patientName'] ?? ''} · ${t['category']}\n'
+                                    '${t['status']} · ${t['message'] ?? ''}',
+                                  ),
+                                  isThreeLine: true,
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () => _updateTicket(t),
                                 ),
-                                subtitle: Text(
-                                  '${t['patientName'] ?? ''} · ${t['category']}\n'
-                                  '${t['status']} · ${t['message'] ?? ''}',
-                                ),
-                                isThreeLine: true,
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () => _updateTicket(t),
-                              ),
-                            );
-                          },
-                        ),
-                ),
+                              );
+                            },
+                          ),
+                  ),
+      ),
     );
   }
 }
@@ -621,6 +851,9 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        constraints: const BoxConstraints(
+          maxWidth: ResponsiveUtils.dialogMaxWidth,
+        ),
         title: Text(existing == null ? 'New coupon' : 'Edit coupon'),
         content: SingleChildScrollView(
           child: Column(
@@ -702,41 +935,47 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.coupons,
+      constrainBody: false,
       appBar: AppBar(title: const Text('Coupons')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _upsert(),
         child: const Icon(Icons.add),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-                    itemCount: _items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) {
-                      final c = _items[i];
-                      return Card(
-                        child: ListTile(
-                          title: Text(c['code']?.toString() ?? ''),
-                          subtitle: Text(
-                            '${c['discountType']} ${c['discountValue']} · '
-                            'min ₹${c['minOrderInr'] ?? 0} · '
-                            'used ${c['usageCount'] ?? 0}',
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!))
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ResponsiveCardList(
+                      padding: const EdgeInsets.only(bottom: 88),
+                      itemCount: _items.length,
+                      desktopColumns: 2,
+                      largeDesktopColumns: 2,
+                      itemBuilder: (_, i) {
+                        final c = _items[i];
+                        return Card(
+                          child: ListTile(
+                            title: Text(c['code']?.toString() ?? ''),
+                            subtitle: Text(
+                              '${c['discountType']} ${c['discountValue']} · '
+                              'min ₹${c['minOrderInr'] ?? 0} · '
+                              'used ${c['usageCount'] ?? 0}',
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed: () => _upsert(existing: c),
+                            ),
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            onPressed: () => _upsert(existing: c),
-                          ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
+      ),
     );
   }
 }
@@ -794,6 +1033,9 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        constraints: const BoxConstraints(
+          maxWidth: ResponsiveUtils.dialogMaxWidth,
+        ),
         title: Text(existing == null ? 'New banner' : 'Edit banner'),
         content: SingleChildScrollView(
           child: Column(
@@ -878,54 +1120,60 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.cms,
+      constrainBody: false,
       appBar: AppBar(title: const Text('CMS banners')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _upsert(),
         child: const Icon(Icons.add),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-                    itemCount: _items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) {
-                      final b = _items[i];
-                      return Card(
-                        child: ListTile(
-                          title: Text(b['title']?.toString() ?? ''),
-                          subtitle: Text(
-                            '${b['subtitle'] ?? ''}\n${b['imageUrl'] ?? ''}',
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!))
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ResponsiveCardList(
+                      padding: const EdgeInsets.only(bottom: 88),
+                      itemCount: _items.length,
+                      desktopColumns: 2,
+                      largeDesktopColumns: 2,
+                      itemBuilder: (_, i) {
+                        final b = _items[i];
+                        return Card(
+                          child: ListTile(
+                            title: Text(b['title']?.toString() ?? ''),
+                            subtitle: Text(
+                              '${b['subtitle'] ?? ''}\n${b['imageUrl'] ?? ''}',
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            isThreeLine: true,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined),
+                                  onPressed: () => _upsert(existing: b),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () {
+                                    final id = b['id']?.toString();
+                                    if (id != null) _delete(id);
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                          isThreeLine: true,
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined),
-                                onPressed: () => _upsert(existing: b),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () {
-                                  final id = b['id']?.toString();
-                                  if (id != null) _delete(id);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
+      ),
     );
   }
 }
@@ -985,61 +1233,67 @@ class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.refunds,
+      constrainBody: false,
       appBar: AppBar(title: const Text('Record refund')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Marks payment status as refunded for the booking. '
-            'Does not move money in Razorpay automatically.',
-            style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _category,
-            decoration: const InputDecoration(labelText: 'Category'),
-            items: const [
-              DropdownMenuItem(
-                value: 'consultation',
-                child: Text('Consultation'),
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: ResponsiveFormWidth(
+          child: ListView(
+            children: [
+              Text(
+                'Marks payment status as refunded for the booking. '
+                'Does not move money in Razorpay automatically.',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
               ),
-              DropdownMenuItem(value: 'lab', child: Text('Lab')),
-              DropdownMenuItem(value: 'scan', child: Text('Scan')),
-              DropdownMenuItem(value: 'blood', child: Text('Blood')),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _category,
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'consultation',
+                    child: Text('Consultation'),
+                  ),
+                  DropdownMenuItem(value: 'lab', child: Text('Lab')),
+                  DropdownMenuItem(value: 'scan', child: Text('Scan')),
+                  DropdownMenuItem(value: 'blood', child: Text('Blood')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _category = v);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bookingId,
+                decoration: const InputDecoration(labelText: 'Booking ID'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _reason,
+                decoration: const InputDecoration(labelText: 'Reason'),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Record refund'),
+              ),
+              if (_result != null) ...[
+                const SizedBox(height: 16),
+                Text(_result!),
+              ],
             ],
-            onChanged: (v) {
-              if (v != null) setState(() => _category = v);
-            },
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _bookingId,
-            decoration: const InputDecoration(labelText: 'Booking ID'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _reason,
-            decoration: const InputDecoration(labelText: 'Reason'),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: _submitting ? null : _submit,
-            child: _submitting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Record refund'),
-          ),
-          if (_result != null) ...[
-            const SizedBox(height: 16),
-            Text(_result!),
-          ],
-        ],
+        ),
       ),
     );
   }

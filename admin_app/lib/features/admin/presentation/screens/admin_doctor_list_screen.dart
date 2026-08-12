@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/utils/safe_navigation.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/doctor_model.dart';
+import '../../../../shared/widgets/admin_adaptive_shell.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../provider/admin_provider.dart';
@@ -76,7 +79,9 @@ class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(adminDoctorsListProvider);
 
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.providers,
+      constrainBody: false,
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(_title),
@@ -85,47 +90,50 @@ class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              children: [
-                _FilterChip(
-                  label: 'Under review',
-                  selected: _statusFilter == 'awaiting_review',
-                  onTap: () => _applyFilter('awaiting_review'),
-                ),
-                _FilterChip(
-                  label: 'Verified',
-                  selected: _statusFilter == 'verified',
-                  onTap: () => _applyFilter('verified'),
-                ),
-                _FilterChip(
-                  label: 'Rejected',
-                  selected: _statusFilter == 'rejected',
-                  onTap: () => _applyFilter('rejected'),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              _statusFilter == 'verified'
-                  ? 'Verified doctors live on the user app'
-                  : _statusFilter == 'rejected'
-                      ? 'Rejected applications'
-                      : 'Review each document, then verify and publish on the user app',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  _FilterChip(
+                    label: 'Under review',
+                    selected: _statusFilter == 'awaiting_review',
+                    onTap: () => _applyFilter('awaiting_review'),
+                  ),
+                  _FilterChip(
+                    label: 'Verified',
+                    selected: _statusFilter == 'verified',
+                    onTap: () => _applyFilter('verified'),
+                  ),
+                  _FilterChip(
+                    label: 'Rejected',
+                    selected: _statusFilter == 'rejected',
+                    onTap: () => _applyFilter('rejected'),
+                  ),
+                ],
               ),
             ),
-          ),
-          Expanded(child: _buildBody(state)),
-        ],
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _statusFilter == 'verified'
+                    ? 'Verified doctors live on the user app'
+                    : _statusFilter == 'rejected'
+                        ? 'Rejected applications'
+                        : 'Review each document, then verify and publish on the user app',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            Expanded(child: _buildBody(state)),
+          ],
+        ),
       ),
     );
   }
@@ -160,11 +168,12 @@ class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
       onRefresh: () => ref.read(adminDoctorsListProvider.notifier).fetchDoctors(
             status: _statusFilter,
           ),
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      child: ResponsiveCardList(
+        padding: const EdgeInsets.only(bottom: 24),
+        spacing: kDoctorCardSpacing,
+        desktopColumns: 2,
+        largeDesktopColumns: 2,
         itemCount: doctors.length,
-        separatorBuilder: (context, index) =>
-            const SizedBox(height: kDoctorCardSpacing),
         itemBuilder: (context, index) {
           final doctor = doctors[index];
           return _DoctorListTile(
@@ -182,7 +191,8 @@ class _AdminDoctorListScreenState extends ConsumerState<AdminDoctorListScreen> {
                 );
                 return;
               }
-              await context.push(
+              await SafeNavigation.push(
+                context,
                 '${AppConstants.routeAdminDoctorDetails}/$id',
                 extra: doctor,
               );

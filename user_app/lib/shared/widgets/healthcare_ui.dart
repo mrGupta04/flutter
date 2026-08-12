@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/responsive_utils.dart';
 
 /// Tata 1mg home header — location + white search pill.
 class OneMgHeader extends StatelessWidget {
@@ -25,6 +26,15 @@ class OneMgHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWide = ResponsiveUtils.isLaptopOrUp(context);
+    final horizontal = ResponsiveUtils.valueFor(
+      context,
+      mobile: 16,
+      tablet: 24,
+      laptop: 32,
+      desktop: 40,
+    );
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -36,103 +46,144 @@ class OneMgHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+          padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 20),
+          child: isWide ? _buildDesktop(context) : _buildMobile(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobile(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _OneMgLogo(),
+            const Spacer(),
+            if (trailing != null) _trailingButton(),
+          ],
+        ),
+        const SizedBox(height: 14),
+        _locationRow(),
+        const SizedBox(height: 14),
+        _searchField(),
+      ],
+    );
+  }
+
+  Widget _buildDesktop(BuildContext context) {
+    return ResponsivePage(
+      maxWidth: ResponsiveUtils.contentMaxWidth(context),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _OneMgLogo(),
+              const SizedBox(width: 28),
+              Flexible(child: _locationRow()),
+              const SizedBox(width: 24),
+              Expanded(flex: 2, child: _searchField()),
+              if (trailing != null) ...[
+                const SizedBox(width: 16),
+                _trailingButton(),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _trailingButton() {
+    return IconButton(
+      onPressed: onTrailingTap,
+      tooltip: 'Account',
+      icon: trailing!,
+      style: IconButton.styleFrom(
+        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.white.withValues(alpha: 0.15),
+      ),
+    );
+  }
+
+  Widget _locationRow() {
+    return Row(
+      children: [
+        Icon(
+          Icons.location_on_rounded,
+          color: AppColors.white.withValues(alpha: 0.9),
+          size: 18,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  _OneMgLogo(),
-                  const Spacer(),
-                  if (trailing != null)
-                    IconButton(
-                      onPressed: onTrailingTap,
-                      icon: trailing!,
-                      style: IconButton.styleFrom(
-                        foregroundColor: AppColors.white,
-                        backgroundColor:
-                            AppColors.white.withValues(alpha: 0.15),
-                      ),
-                    ),
-                ],
+              Text(
+                locationLabel,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.white.withValues(alpha: 0.85),
+                ),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on_rounded,
-                    color: AppColors.white.withValues(alpha: 0.9),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          locationLabel,
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                        Text(
-                          locationValue,
-                          style: AppTextStyles.labelLarge.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.white.withValues(alpha: 0.9),
-                  ),
-                ],
+              Text(
+                locationValue,
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 14),
-              Material(
-                color: AppColors.white,
-                borderRadius: AppDecorations.borderRadiusMd,
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: onSearchTap,
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      boxShadow: AppDecorations.softShadow(opacity: 0.08),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.search_rounded,
-                          color: AppColors.grey400,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            searchHint,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.grey400,
-                            ),
-                          ),
-                        ),
-                        if (onSearchTap != null)
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: AppColors.grey400.withValues(alpha: 0.8),
-                          ),
-                      ],
-                    ),
+            ],
+          ),
+        ),
+        Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppColors.white.withValues(alpha: 0.9),
+        ),
+      ],
+    );
+  }
+
+  Widget _searchField() {
+    return Material(
+      color: AppColors.white,
+      borderRadius: AppDecorations.borderRadiusMd,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onSearchTap,
+        mouseCursor: onSearchTap != null
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            boxShadow: AppDecorations.softShadow(opacity: 0.08),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                color: AppColors.grey400,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  searchHint,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.grey400,
                   ),
                 ),
               ),
+              if (onSearchTap != null)
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: AppColors.grey400.withValues(alpha: 0.8),
+                ),
             ],
           ),
         ),

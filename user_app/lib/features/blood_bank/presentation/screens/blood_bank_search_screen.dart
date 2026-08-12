@@ -4,16 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../doctor_registration/provider/care_filter_constants.dart';
-import '../../data/blood_bank_catalog.dart';
 import '../../provider/blood_bank_search_provider.dart';
 
 class BloodBankSearchScreen extends ConsumerStatefulWidget {
@@ -43,6 +45,7 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
   String? _bloodGroup;
   String? _componentType;
   BloodBankCareFilter _careFilter = BloodBankCareFilter.all;
+  String? _locationPrefill;
 
   @override
   void initState() {
@@ -52,12 +55,43 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
     _bloodGroup = widget.initialBloodGroup;
     _componentType = widget.initialComponentType;
     _controller = TextEditingController(
-      text: widget.initialQuery ??
-          widget.initialCity ??
-          widget.initialBloodGroup ??
-          '',
+      text: widget.initialQuery ?? widget.initialBloodGroup ?? '',
     );
     _controller.addListener(_onTextChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyDefaultLocation());
+  }
+
+  void _applyDefaultLocation() {
+    final location = ref.read(userLocationProvider);
+    if (!mounted) return;
+    setState(() {
+      _city ??= location.city;
+      _applyLocationPrefill(location);
+    });
+  }
+
+  void _applyLocationPrefill(UserLocationState location) {
+    final hasTypedQuery =
+        (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) ||
+            (widget.initialBloodGroup != null &&
+                widget.initialBloodGroup!.trim().isNotEmpty);
+    if (hasTypedQuery) return;
+
+    final label = location.displayPlaceCity;
+    if (label == null || label.isEmpty) return;
+
+    final current = _controller.text.trim();
+    final canReplace = current.isEmpty ||
+        (_locationPrefill != null && current == _locationPrefill);
+    if (!canReplace) return;
+
+    _locationPrefill = label;
+    if (current != label) {
+      _controller.value = TextEditingValue(
+        text: label,
+        selection: TextSelection.collapsed(offset: label.length),
+      );
+    }
   }
 
   @override
@@ -72,10 +106,16 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
+      final text = _controller.text.trim();
+      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
+        setState(() => _query = null);
+        return;
+      }
       setState(() {
-        _query = _controller.text.trim().isEmpty ? null : _controller.text.trim();
+        _query = text.isEmpty ? null : text;
         _city = null;
         _bloodGroup = null;
+        _locationPrefill = null;
       });
     });
   }
@@ -90,11 +130,20 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
+      if (!mounted) return;
+      setState(() {
+        _city ??= next.city;
+        _applyLocationPrefill(next);
+      });
+    });
+
     final asyncResults = ref.watch(bloodBankSearchProvider(_params));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.care,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Find blood bank'),
         leading: IconButton(
@@ -163,6 +212,8 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
           selected: _city,
           onSelected: (city) => setState(() {
             _city = city;
+            _query = null;
+            _locationPrefill = city;
             _controller.text = city ?? '';
           }),
         ),
@@ -215,21 +266,67 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
           ];
         }
 
+        final columns = ResponsiveUtils.gridColumns(
+          context,
+          mobile: 1,
+          tablet: 2,
+          laptop: 2,
+          desktop: 3,
+        );
+
+        if (columns <= 1) {
+          return [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverList.separated(
+                itemCount: items.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) => BloodBankListingCard(
+                  bloodBank: items[index],
+                  onTap: () => context.push(
+                    '${AppConstants.routeBloodBankDetail}/${items[index].id}',
+                  ),
+                  onOrder: () => context.push(
+                    '${AppConstants.routeBloodBankDetail}/${items[index].id}',
+                  ),
+                ),
+              ),
+            ),
+          ];
+        }
+
+        final rowCount = (items.length / columns).ceil();
         return [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             sliver: SliverList.separated(
-              itemCount: items.length,
+              itemCount: rowCount,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => BloodBankListingCard(
-                bloodBank: items[index],
-                onTap: () => context.push(
-                  '${AppConstants.routeBloodBankDetail}/${items[index].id}',
-                ),
-                onOrder: () => context.push(
-                  '${AppConstants.routeBloodBankDetail}/${items[index].id}',
-                ),
-              ),
+              itemBuilder: (context, rowIndex) {
+                final start = rowIndex * columns;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var j = 0; j < columns; j++) ...[
+                      if (j > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: start + j < items.length
+                            ? BloodBankListingCard(
+                                bloodBank: items[start + j],
+                                onTap: () => context.push(
+                                  '${AppConstants.routeBloodBankDetail}/${items[start + j].id}',
+                                ),
+                                onOrder: () => context.push(
+                                  '${AppConstants.routeBloodBankDetail}/${items[start + j].id}',
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ];

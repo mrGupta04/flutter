@@ -6,6 +6,8 @@ import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/interactive_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../data/models/ambulance_model.dart';
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../data/models/consultation_type.dart';
@@ -20,6 +22,7 @@ import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
 import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../ambulance/presentation/widgets/ambulance_action_sheet.dart';
 import '../../provider/ambulance_search_provider.dart';
@@ -111,25 +114,28 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       });
     });
 
-    switch (_selectedRole) {
-      case CareRole.nurse:
-        return _buildNurseScaffold(context);
-      case CareRole.ambulance:
-        return _buildAmbulanceScaffold(context);
-      case CareRole.bloodBank:
-        return _buildBloodBankScaffold(context);
-      case CareRole.doctor:
-        return _buildDoctorScaffold(context);
-    }
+    final scaffold = switch (_selectedRole) {
+      CareRole.nurse => _buildNurseScaffold(context),
+      CareRole.ambulance => _buildAmbulanceScaffold(context),
+      CareRole.bloodBank => _buildBloodBankScaffold(context),
+      CareRole.doctor => _buildDoctorScaffold(context),
+    };
+
+    return UserTabBackScope(
+      isHomeTab: false,
+      homeRoute: AppConstants.routeUserHome,
+      child: scaffold,
+    );
   }
 
   Widget _buildDoctorScaffold(BuildContext context) {
     final asyncDoctors =
         ref.watch(verifiedDoctorsByConsultationProvider(_doctorType));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.care,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Care providers'),
         actions: [
@@ -172,9 +178,10 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     );
     final asyncNurses = ref.watch(nurseSearchProvider(params));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.care,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Verified nurses'),
         actions: [
@@ -234,9 +241,10 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     );
     final asyncAmbulances = ref.watch(ambulanceSearchProvider(params));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.care,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Ambulance services'),
         actions: [
@@ -294,9 +302,10 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     );
     final asyncBloodBanks = ref.watch(bloodBankSearchProvider(params));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.care,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Blood banks'),
         actions: [
@@ -405,6 +414,43 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     ];
   }
 
+  List<Widget> _responsiveCardRows(List<Widget> cards) {
+    final columns = ResponsiveUtils.gridColumns(
+      context,
+      mobile: 1,
+      tablet: 2,
+      laptop: 2,
+      desktop: 3,
+    );
+    if (columns <= 1) {
+      return [
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(height: kDoctorCardSpacing),
+          cards[i],
+        ],
+      ];
+    }
+
+    final rows = <Widget>[];
+    for (var i = 0; i < cards.length; i += columns) {
+      if (i > 0) rows.add(const SizedBox(height: kDoctorCardSpacing));
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var j = 0; j < columns; j++) ...[
+              if (j > 0) const SizedBox(width: 12),
+              Expanded(
+                child: i + j < cards.length ? cards[i + j] : const SizedBox.shrink(),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+    return rows;
+  }
+
   List<Widget> _doctorResultSlivers(
     AsyncValue<List<DoctorModel>> asyncDoctors,
   ) {
@@ -457,6 +503,37 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           )
         : items;
 
+    final cards = [
+      for (var i = 0; i < sorted.length; i++)
+        DoctorListingCard(
+          doctor: sorted[i],
+          showBottomDivider: false,
+          showVerifiedIcon: true,
+          consultationFilter: _doctorType,
+          footerNote: location.hasCoordinates &&
+                  (_doctorType == ConsultationType.visitSite ||
+                      _doctorType == ConsultationType.bookHome)
+              ? formatNearbyDistanceLabel(
+                  doctorDistanceKm(
+                    sorted[i],
+                    location.latitude!,
+                    location.longitude!,
+                  ),
+                )
+              : null,
+          showActionButtons: sorted[i].offersOnlineConsult ||
+              sorted[i].offersVisitSite ||
+              sorted[i].offersBookHome ||
+              doctorHasMapLocation(sorted[i]),
+          onTap: () => onDoctorCardTap(context, sorted[i]),
+          onOnlineConsultTap: () =>
+              openOnlineConsultBooking(context, sorted[i]),
+          onClinicTap: () => openHospitalVisitBooking(context, sorted[i]),
+          onHomeVisitTap: () => openHomeVisitBooking(context, sorted[i]),
+          onOpenMapTap: () => openDoctorInGoogleMaps(context, sorted[i]),
+        ),
+    ];
+
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -470,36 +547,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                   : 'Consult verified doctors',
             ),
             const SizedBox(height: 8),
-            for (var i = 0; i < sorted.length; i++) ...[
-              if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-              DoctorListingCard(
-                doctor: sorted[i],
-                showBottomDivider: false,
-                showVerifiedIcon: true,
-                consultationFilter: _doctorType,
-                footerNote: location.hasCoordinates &&
-                        (_doctorType == ConsultationType.visitSite ||
-                            _doctorType == ConsultationType.bookHome)
-                    ? formatNearbyDistanceLabel(
-                        doctorDistanceKm(
-                          sorted[i],
-                          location.latitude!,
-                          location.longitude!,
-                        ),
-                      )
-                    : null,
-                showActionButtons: sorted[i].offersOnlineConsult ||
-                    sorted[i].offersVisitSite ||
-                    sorted[i].offersBookHome ||
-                    doctorHasMapLocation(sorted[i]),
-                onTap: () => onDoctorCardTap(context, sorted[i]),
-                onOnlineConsultTap: () =>
-                    openOnlineConsultBooking(context, sorted[i]),
-                onClinicTap: () => openHospitalVisitBooking(context, sorted[i]),
-                onHomeVisitTap: () => openHomeVisitBooking(context, sorted[i]),
-                onOpenMapTap: () => openDoctorInGoogleMaps(context, sorted[i]),
-              ),
-            ],
+            ..._responsiveCardRows(cards),
             const UserScrollFooter(),
           ]),
         ),
@@ -557,6 +605,32 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
             .valueOrNull ??
         const <String, bool>{};
 
+    final cards = <Widget>[
+      for (var i = 0; i < sorted.length; i++)
+        Builder(
+          builder: (context) {
+            final nurse = applyNurseLiveStatus(sorted[i], liveMap);
+            final distanceKm = location.hasCoordinates
+                ? nurseDistanceKm(
+                    nurse,
+                    location.latitude!,
+                    location.longitude!,
+                  )
+                : null;
+            return NurseListingCard(
+              nurse: nurse,
+              distanceLabel: formatNearbyDistanceLabel(distanceKm),
+              onTap: () => openNurseHomeVisitBooking(context, nurse),
+              onBookHomeVisit: () =>
+                  openNurseHomeVisitBooking(context, nurse),
+              onOpenMapTap: nurseHasMapLocation(nurse)
+                  ? () => openNurseInGoogleMaps(context, nurse)
+                  : null,
+            );
+          },
+        ),
+    ];
+
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -568,31 +642,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                   : 'Verified nurses',
             ),
             const SizedBox(height: 8),
-            for (var i = 0; i < sorted.length; i++) ...[
-              if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-              Builder(
-                builder: (context) {
-                  final nurse = applyNurseLiveStatus(sorted[i], liveMap);
-                  final distanceKm = location.hasCoordinates
-                      ? nurseDistanceKm(
-                          nurse,
-                          location.latitude!,
-                          location.longitude!,
-                        )
-                      : null;
-                  return NurseListingCard(
-                    nurse: nurse,
-                    distanceLabel: formatNearbyDistanceLabel(distanceKm),
-                    onTap: () => openNurseHomeVisitBooking(context, nurse),
-                    onBookHomeVisit: () =>
-                        openNurseHomeVisitBooking(context, nurse),
-                    onOpenMapTap: nurseHasMapLocation(nurse)
-                        ? () => openNurseInGoogleMaps(context, nurse)
-                        : null,
-                  );
-                },
-              ),
-            ],
+            ..._responsiveCardRows(cards),
             const UserScrollFooter(),
           ]),
         ),
@@ -638,6 +688,17 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       ];
     }
 
+    final cards = [
+      for (var i = 0; i < items.length; i++)
+        AmbulanceListingCard(
+          ambulance: items[i],
+          onTap: () => showAmbulanceActionSheet(
+            context,
+            ambulance: items[i],
+          ),
+        ),
+    ];
+
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -645,16 +706,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           delegate: SliverChildListDelegate([
             const MarketplaceSectionTitle(title: 'Verified ambulance services'),
             const SizedBox(height: 8),
-            for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-              AmbulanceListingCard(
-                ambulance: items[i],
-                onTap: () => showAmbulanceActionSheet(
-                  context,
-                  ambulance: items[i],
-                ),
-              ),
-            ],
+            ..._responsiveCardRows(cards),
             const UserScrollFooter(),
           ]),
         ),
@@ -700,6 +752,19 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       ];
     }
 
+    final cards = [
+      for (var i = 0; i < items.length; i++)
+        BloodBankListingCard(
+          bloodBank: items[i],
+          onTap: () => context.push(
+            '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+          ),
+          onOrder: () => context.push(
+            '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+          ),
+        ),
+    ];
+
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -707,18 +772,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           delegate: SliverChildListDelegate([
             const MarketplaceSectionTitle(title: 'Verified blood banks'),
             const SizedBox(height: 8),
-            for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) const SizedBox(height: kDoctorCardSpacing),
-              BloodBankListingCard(
-                bloodBank: items[i],
-                onTap: () => context.push(
-                  '${AppConstants.routeBloodBankDetail}/${items[i].id}',
-                ),
-                onOrder: () => context.push(
-                  '${AppConstants.routeBloodBankDetail}/${items[i].id}',
-                ),
-              ),
-            ],
+            ..._responsiveCardRows(cards),
             const UserScrollFooter(),
           ]),
         ),

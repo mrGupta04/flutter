@@ -218,6 +218,7 @@ class LabModel {
     this.operatingHours,
     this.homeCollectionAvailable,
     this.available24x7,
+    this.mainOfferPercent,
     this.offeredTests,
     this.branches,
     this.serviceablePincodes,
@@ -255,6 +256,7 @@ class LabModel {
   final String? operatingHours;
   final bool? homeCollectionAvailable;
   final bool? available24x7;
+  final int? mainOfferPercent;
   final List<LabOfferedTest>? offeredTests;
   final List<LabBranch>? branches;
   final List<String>? serviceablePincodes;
@@ -302,6 +304,7 @@ class LabModel {
       operatingHours: json['operatingHours'] as String?,
       homeCollectionAvailable: json['homeCollectionAvailable'] as bool?,
       available24x7: json['available24x7'] as bool?,
+      mainOfferPercent: (json['mainOfferPercent'] as num?)?.toInt(),
       offeredTests: (json['offeredTests'] as List?)
           ?.map((e) => LabOfferedTest.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -358,6 +361,7 @@ class LabModel {
         if (homeCollectionAvailable != null)
           'homeCollectionAvailable': homeCollectionAvailable,
         if (available24x7 != null) 'available24x7': available24x7,
+        if (mainOfferPercent != null) 'mainOfferPercent': mainOfferPercent,
         if (offeredTests != null)
           'offeredTests': offeredTests!.map((e) => e.toJson()).toList(),
         if (branches != null)
@@ -406,6 +410,7 @@ class LabModel {
     String? operatingHours,
     bool? homeCollectionAvailable,
     bool? available24x7,
+    int? mainOfferPercent,
     List<LabOfferedTest>? offeredTests,
     List<LabBranch>? branches,
     List<String>? serviceablePincodes,
@@ -439,6 +444,7 @@ class LabModel {
       homeCollectionAvailable:
           homeCollectionAvailable ?? this.homeCollectionAvailable,
       available24x7: available24x7 ?? this.available24x7,
+      mainOfferPercent: mainOfferPercent ?? this.mainOfferPercent,
       offeredTests: offeredTests ?? this.offeredTests,
       branches: branches ?? this.branches,
       serviceablePincodes: serviceablePincodes ?? this.serviceablePincodes,

@@ -10,6 +10,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/scan_center_model.dart';
@@ -74,6 +75,8 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
   // Step 4 — offers & slots
   bool _offerAvailable = false;
   String _discountType = 'percentage';
+  int? _mainOfferPercent;
+  static const _mainOfferOptions = <int>[10, 20, 30, 40, 50];
   final _discountValueController = TextEditingController();
   final _offerTitleController = TextEditingController();
   final _offerDescriptionController = TextEditingController();
@@ -328,6 +331,7 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
       operatingHours: _hoursController.text.trim(),
       homeVisitAvailable: _homeVisit,
       available24x7: _available24x7,
+      mainOfferPercent: _mainOfferPercent,
       offeredScans: _selectedScans.values.toList(),
       appointmentSlots: _appointmentSlots,
       offers: _offerAvailable
@@ -504,23 +508,26 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
           onCountryCodeChanged: (c) => setState(() => _countryCode = c),
         ),
         const SizedBox(height: 12),
-        CustomTextField(
-          controller: _passwordController,
-          label: 'Password',
-          obscureText: true,
-          prefixIcon: Icons.lock_outline_rounded,
-          validator: ValidationUtils.validatePassword,
-        ),
-        const SizedBox(height: 12),
-        CustomTextField(
-          controller: _confirmPasswordController,
-          label: 'Confirm password',
-          obscureText: true,
-          prefixIcon: Icons.lock_outline_rounded,
-          validator: (v) => ValidationUtils.validatePasswordMatch(
-            _passwordController.text,
-            v,
-          ),
+        ResponsiveFormRow(
+          children: [
+            CustomTextField(
+              controller: _passwordController,
+              label: 'Password',
+              obscureText: true,
+              prefixIcon: Icons.lock_outline_rounded,
+              validator: ValidationUtils.validatePassword,
+            ),
+            CustomTextField(
+              controller: _confirmPasswordController,
+              label: 'Confirm password',
+              obscureText: true,
+              prefixIcon: Icons.lock_outline_rounded,
+              validator: (v) => ValidationUtils.validatePasswordMatch(
+                _passwordController.text,
+                v,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         Text(
@@ -731,6 +738,44 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
+          'Main offer card',
+          style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Shown highlighted on patient Imaging & Scans cards (optional).',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: const Text('No offer'),
+              selected: _mainOfferPercent == null,
+              showCheckmark: false,
+              onSelected: (_) => setState(() => _mainOfferPercent = null),
+            ),
+            ..._mainOfferOptions.map(
+              (percent) => ChoiceChip(
+                label: Text('$percent% OFF'),
+                selected: _mainOfferPercent == percent,
+                showCheckmark: false,
+                selectedColor: AppColors.offer.withValues(alpha: 0.2),
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: _mainOfferPercent == percent
+                      ? AppColors.offerDark
+                      : AppColors.textPrimary,
+                ),
+                onSelected: (_) => setState(() => _mainOfferPercent = percent),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Text(
           'Offers & appointment slots',
           style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700),
         ),
@@ -823,6 +868,10 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
         _ReviewRow('State', _stateController.text),
         _ReviewRow('Pincode', _pincodeController.text),
         _ReviewRow('Scans offered', '${_selectedScans.length}'),
+        _ReviewRow(
+          'Main offer',
+          _mainOfferPercent == null ? 'None' : '$_mainOfferPercent% OFF',
+        ),
         _ReviewRow('Offer', _offerAvailable ? 'Yes' : 'No'),
         _ReviewRow('Documents', '${_pendingDocs.length}'),
         _ReviewRow('Center images', '${_pendingImages.length}'),

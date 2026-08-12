@@ -10,7 +10,9 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/safe_navigation.dart';
 import '../../../../data/models/approval_management_models.dart';
+import '../../../../shared/widgets/admin_adaptive_shell.dart';
 import '../../provider/admin_auth_provider.dart';
 import '../../provider/approval_management_provider.dart';
 
@@ -38,7 +40,8 @@ class _ApprovalManagementScreenState
   final _searchController = TextEditingController();
   _ConsoleSection _section = _ConsoleSection.overview;
   bool _dark = false;
-
+  _OverviewMetric? _metricFocus;
+  String? _metricCategory;
   @override
   void initState() {
     super.initState();
@@ -50,6 +53,61 @@ class _ApprovalManagementScreenState
     return ref.read(adminAuthProvider).isApprover
         ? notifier.loadForApprover()
         : notifier.loadAll();
+  }
+
+  void _selectSection(_ConsoleSection section) {
+    setState(() {
+      _section = section;
+      // Leaving or re-tapping Overview exits metric drill-down.
+      _metricFocus = null;
+      _metricCategory = null;
+    });
+  }
+
+  Future<void> _openMetric(_OverviewMetric metric) async {
+    if (metric == _OverviewMetric.approversOnline) {
+      _selectSection(_ConsoleSection.approvers);
+      return;
+    }
+
+    setState(() {
+      _section = _ConsoleSection.overview;
+      _metricFocus = metric;
+      _metricCategory = null;
+    });
+
+    final notifier = ref.read(approvalManagementProvider.notifier);
+    await notifier.setRequestFilters(
+      status: metric.apiStatus,
+      clearStatus: metric.apiStatus == null,
+      clearCategory: true,
+      clearApprover: true,
+      search: '',
+    );
+  }
+
+  void _closeMetricDrilldown() {
+    setState(() {
+      _metricFocus = null;
+      _metricCategory = null;
+    });
+  }
+
+  /// Shared by admin and approver: open full provider KYC (per-document
+  /// verify/reject) before final approve. Used from Requests, Overview, and
+  /// Notifications.
+  Future<void> _openProviderProfile(ApprovalRequestModel request) async {
+    if (SafeNavigation.isLocked) return;
+    final path = _kycDetailPath(request.providerType, request.providerId);
+    if (path != null) {
+      await ref
+          .read(approvalManagementProvider.notifier)
+          .markRequestViewed(request);
+      if (!mounted) return;
+      await SafeNavigation.push(context, path);
+      return;
+    }
+    await _showRequestDetails(request);
   }
 
   @override
@@ -78,7 +136,9 @@ class _ApprovalManagementScreenState
       }
     });
 
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.approvals,
+      constrainBody: false,
       backgroundColor: palette.background,
       appBar: AppBar(
         title: const Text('Approval Management'),
@@ -100,8 +160,7 @@ class _ApprovalManagementScreenState
                 label: Text('${state.unreadNotifications}'),
                 child: const Icon(Icons.notifications_none_rounded),
               ),
-              onPressed: () =>
-                  setState(() => _section = _ConsoleSection.notifications),
+              onPressed: () => _selectSection(_ConsoleSection.notifications),
             ),
           ),
           Tooltip(
@@ -135,7 +194,7 @@ class _ApprovalManagementScreenState
                   palette: palette,
                   selected: _section,
                   items: navItems,
-                  onSelected: (section) => setState(() => _section = section),
+                  onSelected: _selectSection,
                 ),
                 Expanded(child: content),
               ],
@@ -147,7 +206,7 @@ class _ApprovalManagementScreenState
                 palette: palette,
                 selected: _section,
                 items: navItems,
-                onSelected: (section) => setState(() => _section = section),
+                onSelected: _selectSection,
               ),
               Expanded(child: content),
             ],
@@ -167,18 +226,39 @@ class _ApprovalManagementScreenState
     }
 
     final child = switch (_section) {
-      _ConsoleSection.overview => _OverviewPane(
-        state: state,
-        palette: palette,
-        isApprover: ref.read(adminAuthProvider).isApprover,
-        onOpenRequests: () =>
-            setState(() => _section = _ConsoleSection.requests),
-      ),
+      _ConsoleSection.overview =>
+        _metricFocus == null
+            ? _OverviewPane(
+                state: state,
+                palette: palette,
+                isApprover: ref.read(adminAuthProvider).isApprover,
+                userName: ref.watch(
+                  adminAuthProvider.select((value) => value.name),
+                ),
+                onOpenRequests: () => _selectSection(_ConsoleSection.requests),
+                onOpenMetric: _openMetric,
+              )
+            : _MetricDrilldownPane(
+                state: state,
+                palette: palette,
+                metric: _metricFocus!,
+                selectedCategory: _metricCategory,
+                onBack: () {
+                  if (_metricCategory != null) {
+                    setState(() => _metricCategory = null);
+                  } else {
+                    _closeMetricDrilldown();
+                  }
+                },
+                onSelectCategory: (category) =>
+                    setState(() => _metricCategory = category),
+                onOpenProvider: _openProviderProfile,
+              ),
       _ConsoleSection.requests => _RequestsPane(
         state: state,
         palette: palette,
         searchController: _searchController,
-        onShowDetails: _showRequestDetails,
+        onShowDetails: _openProviderProfile,
         onAction: _showActionDialog,
         onAssign: _showAssignDialog,
         canAssign:
@@ -202,8 +282,8 @@ class _ApprovalManagementScreenState
               .where((item) => item.id == requestId)
               .firstOrNull;
           if (request != null) {
-            setState(() => _section = _ConsoleSection.requests);
-            await _showRequestDetails(request);
+            _selectSection(_ConsoleSection.requests);
+            await _openProviderProfile(request);
           }
         },
       ),
@@ -211,6 +291,7 @@ class _ApprovalManagementScreenState
         state: state,
         palette: palette,
         onCreate: () => _showApproverDialog(),
+        onOpenProfile: _showApproverPerformance,
         onEdit: _showApproverDialog,
         onStatus: _confirmApproverStatus,
         onResetPassword: _resetApproverPassword,
@@ -265,6 +346,18 @@ class _ApprovalManagementScreenState
     ApprovalRequestModel request,
     String action,
   ) async {
+    // Final approve must go through full profile + per-document verification.
+    if (action == 'approve') {
+      final path = _kycDetailPath(request.providerType, request.providerId);
+      if (path != null) {
+        _toast(
+          'Open KYC review: verify each document first, then final approve.',
+        );
+        await _openProviderProfile(request);
+        return;
+      }
+    }
+
     final remarksController = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -772,6 +865,7 @@ class _ApprovalManagementScreenState
       builder: (context) => _RequestDetailsDialog(
         request: viewedRequest,
         onOpenKyc: () {
+          if (SafeNavigation.isLocked) return;
           final path = _kycDetailPath(
             viewedRequest.providerType,
             viewedRequest.providerId,
@@ -781,7 +875,7 @@ class _ApprovalManagementScreenState
             return;
           }
           Navigator.pop(context);
-          context.push(path);
+          SafeNavigation.push(context, path);
         },
       ),
     );
@@ -821,6 +915,7 @@ class _ApprovalManagementScreenState
 
   Future<void> _showApproverPerformance(ApproverModel approver) async {
     final state = ref.read(approvalManagementProvider);
+    final palette = _Palette(_dark);
     final recent = state.requests
         .where(
           (request) =>
@@ -832,10 +927,60 @@ class _ApprovalManagementScreenState
         )
         .take(10)
         .toList();
+    final metrics = [
+      _ApproverStat(
+        label: 'Assigned',
+        value: approver.assigned,
+        tone: palette.primary,
+        icon: Icons.assignment_ind_outlined,
+      ),
+      _ApproverStat(
+        label: 'Approved',
+        value: approver.approved,
+        tone: palette.success,
+        icon: Icons.verified_outlined,
+      ),
+      _ApproverStat(
+        label: 'Rejected',
+        value: approver.rejected,
+        tone: palette.danger,
+        icon: Icons.cancel_outlined,
+      ),
+      _ApproverStat(
+        label: 'Pending',
+        value: approver.pending,
+        tone: palette.warning,
+        icon: Icons.pending_actions_outlined,
+      ),
+      _ApproverStat(
+        label: 'Escalated',
+        value: approver.escalations,
+        tone: const Color(0xFF7C3AED),
+        icon: Icons.support_agent_outlined,
+      ),
+    ];
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(approver.name),
+        backgroundColor: palette.surface,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              approver.name,
+              style: AppTextStyles.titleLarge.copyWith(color: palette.text),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              [
+                approver.employeeId,
+                approver.email,
+                _titleCase(approver.status),
+              ].where((part) => part.trim().isNotEmpty).join(' · '),
+              style: AppTextStyles.bodySmall.copyWith(color: palette.muted),
+            ),
+          ],
+        ),
         content: SizedBox(
           width: 720,
           child: SingleChildScrollView(
@@ -843,47 +988,115 @@ class _ApprovalManagementScreenState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  height: 180,
-                  child: _BarChart(
-                    points: [
-                      ChartPointModel(
-                        label: 'Assigned',
-                        value: approver.assigned,
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: metrics
+                      .map(
+                        (metric) => SizedBox(
+                          width: 128,
+                          child: _ApproverStatTile(
+                            palette: palette,
+                            stat: metric,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    _MiniBadge(
+                      label: 'Avg time ${_duration(approver.averageApprovalTimeMinutes)}',
+                    ),
+                    _MiniBadge(label: 'Accept ${approver.acceptanceRate}%'),
+                    _MiniBadge(label: 'Reject ${approver.rejectionRate}%'),
+                    _MiniBadge(label: 'Workload ${approver.workload}'),
+                    if (approver.lastLoginAt != null)
+                      _MiniBadge(
+                        label: 'Last login ${_dateTime(approver.lastLoginAt)}',
                       ),
-                      ChartPointModel(
-                        label: 'Approved',
-                        value: approver.approved,
-                      ),
-                      ChartPointModel(
-                        label: 'Rejected',
-                        value: approver.rejected,
-                      ),
-                      ChartPointModel(
-                        label: 'Pending',
-                        value: approver.pending,
-                      ),
-                      ChartPointModel(
-                        label: 'Escalated',
-                        value: approver.escalations,
-                      ),
-                    ],
-                    color: AppColors.primary,
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Workload mix',
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: palette.text,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text('Recent activity', style: AppTextStyles.titleSmall),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 200,
+                  child: _BarChart(
+                    points: metrics
+                        .map(
+                          (metric) => ChartPointModel(
+                            label: metric.label,
+                            value: metric.value,
+                          ),
+                        )
+                        .toList(),
+                    color: AppColors.primary,
+                    showValues: true,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Recent activity',
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: palette.text,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 if (recent.isEmpty)
-                  const Text('No recent activity')
+                  Text(
+                    'No recent activity',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: palette.muted,
+                    ),
+                  )
                 else
                   ...recent.map(
-                    (request) => ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(request.provider.name),
-                      subtitle: Text(
-                        '${_titleCase(request.status)} · ${_date(request.updatedAt)}',
+                    (request) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.surfaceAlt,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: palette.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  request.provider.name,
+                                  style: AppTextStyles.titleSmall.copyWith(
+                                    color: palette.text,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${_friendlyCategoryLabel(request.providerCategory)} · ${_date(request.updatedAt)}',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: palette.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _StatusPill(status: request.status),
+                        ],
                       ),
                     ),
                   ),
@@ -892,6 +1105,13 @@ class _ApprovalManagementScreenState
           ),
         ),
         actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showApproverDialog(approver);
+            },
+            child: const Text('Edit profile'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Done'),
@@ -1380,25 +1600,33 @@ class _OverviewPane extends StatelessWidget {
     required this.state,
     required this.palette,
     required this.onOpenRequests,
+    required this.onOpenMetric,
     required this.isApprover,
+    this.userName,
   });
 
   final ApprovalManagementState state;
   final _Palette palette;
   final VoidCallback onOpenRequests;
+  final ValueChanged<_OverviewMetric> onOpenMetric;
   final bool isApprover;
+  final String? userName;
 
   @override
   Widget build(BuildContext context) {
     final stats = state.dashboard.stats;
+    final title = (userName?.trim().isNotEmpty == true)
+        ? userName!.trim()
+        : (isApprover ? 'Approver' : 'Command center');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _PaneHeader(
           palette: palette,
-          title: 'Command center',
-          subtitle:
-              'Transparent approval control across categories and regions',
+          title: title,
+          subtitle: isApprover
+              ? 'Your approval queue across assigned categories and regions'
+              : 'Transparent approval control across categories and regions',
           trailing: FilledButton.icon(
             onPressed: onOpenRequests,
             icon: const Icon(Icons.rule_folder_outlined),
@@ -1427,6 +1655,11 @@ class _OverviewPane extends StatelessWidget {
                       ? '${stats.approvalsToday}'
                       : '${stats.totalProviders}',
                   tone: palette.primary,
+                  onTap: () => onOpenMetric(
+                    isApprover
+                        ? _OverviewMetric.approvedToday
+                        : _OverviewMetric.totalProviders,
+                  ),
                 ),
                 _MetricCard(
                   palette: palette,
@@ -1435,6 +1668,7 @@ class _OverviewPane extends StatelessWidget {
                   label: 'Pending',
                   value: '${stats.pending}',
                   tone: palette.warning,
+                  onTap: () => onOpenMetric(_OverviewMetric.pending),
                 ),
                 _MetricCard(
                   palette: palette,
@@ -1445,14 +1679,20 @@ class _OverviewPane extends StatelessWidget {
                       ? '${stats.rejectionsToday}'
                       : '${stats.approved}',
                   tone: palette.success,
+                  onTap: () => onOpenMetric(
+                    isApprover
+                        ? _OverviewMetric.rejectedToday
+                        : _OverviewMetric.approved,
+                  ),
                 ),
                 _MetricCard(
                   palette: palette,
                   width: itemWidth,
                   icon: Icons.report_gmailerrorred_outlined,
-                  label: 'SLA breached',
+                  label: 'Past deadline',
                   value: '${stats.slaBreached}',
                   tone: palette.danger,
+                  onTap: () => onOpenMetric(_OverviewMetric.slaBreached),
                 ),
                 _MetricCard(
                   palette: palette,
@@ -1461,6 +1701,7 @@ class _OverviewPane extends StatelessWidget {
                   label: 'Need documents',
                   value: '${stats.needDocuments}',
                   tone: palette.warning,
+                  onTap: () => onOpenMetric(_OverviewMetric.needDocuments),
                 ),
                 _MetricCard(
                   palette: palette,
@@ -1469,6 +1710,7 @@ class _OverviewPane extends StatelessWidget {
                   label: 'Escalated',
                   value: '${stats.escalated}',
                   tone: palette.danger,
+                  onTap: () => onOpenMetric(_OverviewMetric.escalated),
                 ),
                 _MetricCard(
                   palette: palette,
@@ -1477,6 +1719,7 @@ class _OverviewPane extends StatelessWidget {
                   label: 'Avg approval time',
                   value: _duration(stats.averageApprovalTimeMinutes),
                   tone: palette.primary,
+                  onTap: () => onOpenMetric(_OverviewMetric.avgApprovalTime),
                 ),
                 _MetricCard(
                   palette: palette,
@@ -1487,6 +1730,11 @@ class _OverviewPane extends StatelessWidget {
                       ? '${stats.onHold}'
                       : '${stats.approversOnline}',
                   tone: palette.success,
+                  onTap: () => onOpenMetric(
+                    isApprover
+                        ? _OverviewMetric.onHold
+                        : _OverviewMetric.approversOnline,
+                  ),
                 ),
               ],
             );
@@ -1556,6 +1804,318 @@ class _OverviewPane extends StatelessWidget {
   }
 }
 
+class _MetricDrilldownPane extends StatelessWidget {
+  const _MetricDrilldownPane({
+    required this.state,
+    required this.palette,
+    required this.metric,
+    required this.selectedCategory,
+    required this.onBack,
+    required this.onSelectCategory,
+    required this.onOpenProvider,
+  });
+
+  final ApprovalManagementState state;
+  final _Palette palette;
+  final _OverviewMetric metric;
+  final String? selectedCategory;
+  final VoidCallback onBack;
+  final ValueChanged<String> onSelectCategory;
+  final ValueChanged<ApprovalRequestModel> onOpenProvider;
+
+  List<ApprovalRequestModel> get _filteredRequests {
+    return state.requests.where(metric.matches).toList();
+  }
+
+  Map<String, List<ApprovalRequestModel>> get _byCategory {
+    final map = <String, List<ApprovalRequestModel>>{};
+    for (final request in _filteredRequests) {
+      final key = request.providerCategory.trim().isEmpty
+          ? (request.providerType.trim().isEmpty
+                ? 'other'
+                : request.providerType)
+          : request.providerCategory;
+      final normalized = key.trim().toLowerCase().replaceAll('-', '_');
+      if (normalized == 'doctor' || normalized == 'doctors') {
+        for (final bucket in _doctorServiceBuckets(request)) {
+          map.putIfAbsent(bucket, () => []).add(request);
+        }
+      } else {
+        map.putIfAbsent(key, () => []).add(request);
+      }
+    }
+    return map;
+  }
+
+  /// Splits doctors into Online / Home visit / Hospital visit sections.
+  List<String> _doctorServiceBuckets(ApprovalRequestModel request) {
+    final provider = request.provider;
+    final details = request.providerDetails;
+    bool flag(bool? snapshot, String detailsKey) {
+      if (snapshot == true) return true;
+      final raw = details[detailsKey];
+      return raw == true;
+    }
+
+    final online = flag(provider.offersOnlineConsult, 'offersOnlineConsult');
+    final home = flag(provider.offersBookHome, 'offersBookHome');
+    final hospital = flag(provider.offersVisitSite, 'offersVisitSite');
+    final buckets = <String>[
+      if (online) 'doctor_online',
+      if (home) 'doctor_home_visit',
+      if (hospital) 'doctor_hospital_visit',
+    ];
+    // Legacy doctors with no consultation flags still appear in every doctor section.
+    if (buckets.isEmpty) {
+      return const [
+        'doctor_online',
+        'doctor_home_visit',
+        'doctor_hospital_visit',
+      ];
+    }
+    return buckets;
+  }
+
+  String _categoryName(String slug) {
+    for (final category in state.config.categories) {
+      if (category.slug == slug) return category.name;
+    }
+    for (final category in _fallbackApprovalCategories) {
+      if (category.slug == slug) return category.name;
+    }
+    return _friendlyCategoryLabel(slug);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = _byCategory.entries.toList()
+      ..sort((a, b) {
+        final orderA = _categorySortOrder(a.key);
+        final orderB = _categorySortOrder(b.key);
+        if (orderA != orderB) return orderA.compareTo(orderB);
+        return b.value.length.compareTo(a.value.length);
+      });
+    final inCategory = selectedCategory != null;
+    final providers = inCategory
+        ? (_byCategory[selectedCategory] ?? const <ApprovalRequestModel>[])
+        : const <ApprovalRequestModel>[];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              tooltip: 'Back',
+              onPressed: onBack,
+              icon: const Icon(Icons.arrow_back_rounded),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: _PaneHeader(
+                palette: palette,
+                title: inCategory
+                    ? _categoryName(selectedCategory!)
+                    : metric.title,
+                subtitle: inCategory
+                    ? '${providers.length} provider${providers.length == 1 ? '' : 's'} · tap a card for full profile'
+                    : 'Choose a provider type to review ${metric.title.toLowerCase()}',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (state.isLoading && state.requests.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (!inCategory && categories.isEmpty)
+          _EmptyState(
+            icon: Icons.inbox_outlined,
+            title: 'No providers found',
+            subtitle: 'Nothing matches this metric right now.',
+            palette: palette,
+          )
+        else if (!inCategory)
+          ...categories.map((entry) {
+            final slug = entry.key;
+            final count = entry.value.length;
+            final tone = _categoryTone(slug, palette);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onSelectCategory(slug),
+                  borderRadius: BorderRadius.circular(8),
+                  child: _Panel(
+                    palette: palette,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: tone.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(_categoryIcon(slug), color: tone),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _categoryName(slug),
+                                style: AppTextStyles.titleSmall.copyWith(
+                                  color: palette.text,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$count provider${count == 1 ? '' : 's'}',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: palette.muted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '$count',
+                          style: AppTextStyles.titleMedium.copyWith(
+                            color: palette.text,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.chevron_right_rounded, color: palette.muted),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          })
+        else if (providers.isEmpty)
+          _EmptyState(
+            icon: Icons.person_search_outlined,
+            title: 'No providers in this category',
+            subtitle: 'Try another provider type from the previous list.',
+            palette: palette,
+          )
+        else
+          ...providers.map(
+            (request) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ProviderProfileCard(
+                request: request,
+                palette: palette,
+                showDuration: metric == _OverviewMetric.avgApprovalTime,
+                onTap: () => onOpenProvider(request),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ProviderProfileCard extends StatelessWidget {
+  const _ProviderProfileCard({
+    required this.request,
+    required this.palette,
+    required this.onTap,
+    this.showDuration = false,
+  });
+
+  final ApprovalRequestModel request;
+  final _Palette palette;
+  final VoidCallback onTap;
+  final bool showDuration;
+
+  @override
+  Widget build(BuildContext context) {
+    final location = [
+      request.provider.city,
+      request.provider.state,
+    ].where((part) => part != null && part.trim().isNotEmpty).join(', ');
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: _Panel(
+          palette: palette,
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: palette.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  _categoryIcon(request.providerCategory),
+                  color: palette.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.provider.name,
+                      style: AppTextStyles.titleSmall.copyWith(
+                        color: palette.text,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        _friendlyCategoryLabel(request.providerCategory),
+                        if (location.isNotEmpty) location,
+                        if (request.provider.phone?.isNotEmpty == true)
+                          request.provider.phone!,
+                      ].join(' · '),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: palette.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _StatusPill(status: request.status),
+                        _SlaPill(request: request),
+                        if (showDuration &&
+                            request.approvalDurationMinutes != null)
+                          _MiniBadge(
+                            label:
+                                'Time ${_duration(request.approvalDurationMinutes!)}',
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: palette.muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RequestsPane extends ConsumerWidget {
   const _RequestsPane({
     required this.state,
@@ -1587,7 +2147,7 @@ class _RequestsPane extends ConsumerWidget {
           palette: palette,
           title: 'Approval requests',
           subtitle:
-              'Assigned providers, SLA state, remarks, and decision actions',
+              'Tap a card to open full profile, verify documents one by one, then final approve',
           trailing: Wrap(
             spacing: 8,
             children: [
@@ -1807,6 +2367,7 @@ class _ApproversPane extends StatelessWidget {
     required this.state,
     required this.palette,
     required this.onCreate,
+    required this.onOpenProfile,
     required this.onEdit,
     required this.onStatus,
     required this.onResetPassword,
@@ -1816,6 +2377,7 @@ class _ApproversPane extends StatelessWidget {
   final ApprovalManagementState state;
   final _Palette palette;
   final VoidCallback onCreate;
+  final ValueChanged<ApproverModel> onOpenProfile;
   final ValueChanged<ApproverModel> onEdit;
   final ValueChanged<ApproverModel> onStatus;
   final ValueChanged<ApproverModel> onResetPassword;
@@ -1830,7 +2392,7 @@ class _ApproversPane extends StatelessWidget {
           palette: palette,
           title: 'Approver management',
           subtitle:
-              'Create approvers, manage access, monitor workload, and reset credentials',
+              'Tap an approver to open their profile, workload, and recent activity',
           trailing: FilledButton.icon(
             onPressed: onCreate,
             icon: const Icon(Icons.person_add_alt_1_outlined),
@@ -1849,98 +2411,250 @@ class _ApproversPane extends StatelessWidget {
                       'Create the first approver to start role-based review.',
                   palette: palette,
                 )
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Approver')),
-                      DataColumn(label: Text('Permissions')),
-                      DataColumn(label: Text('Region')),
-                      DataColumn(label: Text('Workload')),
-                      DataColumn(label: Text('Approved')),
-                      DataColumn(label: Text('Rejected')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Actions')),
-                    ],
-                    rows: state.approvers.map((approver) {
-                      return DataRow(
-                        cells: [
-                          DataCell(
-                            SizedBox(
-                              width: 220,
-                              child: ListTile(
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(approver.name),
-                                subtitle: Text(
-                                  '${approver.employeeId} · ${approver.email}',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 780) {
+                      return Column(
+                        children: state.approvers
+                            .map(
+                              (approver) => _ApproverListCard(
+                                approver: approver,
+                                palette: palette,
+                                onTap: () => onOpenProfile(approver),
+                                onEdit: () => onEdit(approver),
+                                onStatus: () => onStatus(approver),
+                                onResetPassword: () =>
+                                    onResetPassword(approver),
+                                onDelete: () => onDelete(approver),
                               ),
-                            ),
-                          ),
-                          DataCell(
-                            SizedBox(
-                              width: 230,
-                              child: Text(
-                                approver.permissions.map(_titleCase).join(', '),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          DataCell(Text(_regionLabel(approver))),
-                          DataCell(Text('${approver.workload}')),
-                          DataCell(Text('${approver.approved}')),
-                          DataCell(Text('${approver.rejected}')),
-                          DataCell(_StatusPill(status: approver.status)),
-                          DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Tooltip(
-                                  message: 'Edit',
-                                  child: IconButton(
-                                    icon: const Icon(Icons.edit_outlined),
-                                    onPressed: () => onEdit(approver),
-                                  ),
-                                ),
-                                Tooltip(
-                                  message: approver.status == 'active'
-                                      ? 'Deactivate'
-                                      : 'Activate',
-                                  child: IconButton(
-                                    icon: Icon(
-                                      approver.status == 'active'
-                                          ? Icons.pause_circle_outline
-                                          : Icons.play_circle_outline,
-                                    ),
-                                    onPressed: () => onStatus(approver),
-                                  ),
-                                ),
-                                Tooltip(
-                                  message: 'Reset password',
-                                  child: IconButton(
-                                    icon: const Icon(Icons.lock_reset_rounded),
-                                    onPressed: () => onResetPassword(approver),
-                                  ),
-                                ),
-                                Tooltip(
-                                  message: 'Delete',
-                                  child: IconButton(
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () => onDelete(approver),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                            )
+                            .toList(),
                       );
-                    }).toList(),
-                  ),
+                    }
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        showCheckboxColumn: false,
+                        columns: const [
+                          DataColumn(label: Text('Approver')),
+                          DataColumn(label: Text('Permissions')),
+                          DataColumn(label: Text('Region')),
+                          DataColumn(label: Text('Workload')),
+                          DataColumn(label: Text('Approved')),
+                          DataColumn(label: Text('Rejected')),
+                          DataColumn(label: Text('Status')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: state.approvers.map((approver) {
+                          return DataRow(
+                            onSelectChanged: (_) => onOpenProfile(approver),
+                            cells: [
+                              DataCell(
+                                SizedBox(
+                                  width: 220,
+                                  child: ListTile(
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    onTap: () => onOpenProfile(approver),
+                                    title: Text(approver.name),
+                                    subtitle: Text(
+                                      '${approver.employeeId} · ${approver.email}',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: 230,
+                                  child: Text(
+                                    approver.permissions
+                                        .map(_titleCase)
+                                        .join(', '),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              DataCell(Text(_regionLabel(approver))),
+                              DataCell(Text('${approver.workload}')),
+                              DataCell(Text('${approver.approved}')),
+                              DataCell(Text('${approver.rejected}')),
+                              DataCell(_StatusPill(status: approver.status)),
+                              DataCell(
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Tooltip(
+                                      message: 'Edit',
+                                      child: IconButton(
+                                        icon: const Icon(Icons.edit_outlined),
+                                        onPressed: () => onEdit(approver),
+                                      ),
+                                    ),
+                                    Tooltip(
+                                      message: approver.status == 'active'
+                                          ? 'Deactivate'
+                                          : 'Activate',
+                                      child: IconButton(
+                                        icon: Icon(
+                                          approver.status == 'active'
+                                              ? Icons.pause_circle_outline
+                                              : Icons.play_circle_outline,
+                                        ),
+                                        onPressed: () => onStatus(approver),
+                                      ),
+                                    ),
+                                    Tooltip(
+                                      message: 'Reset password',
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.lock_reset_rounded,
+                                        ),
+                                        onPressed: () =>
+                                            onResetPassword(approver),
+                                      ),
+                                    ),
+                                    Tooltip(
+                                      message: 'Delete',
+                                      child: IconButton(
+                                        icon: const Icon(Icons.delete_outline),
+                                        onPressed: () => onDelete(approver),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _ApproverListCard extends StatelessWidget {
+  const _ApproverListCard({
+    required this.approver,
+    required this.palette,
+    required this.onTap,
+    required this.onEdit,
+    required this.onStatus,
+    required this.onResetPassword,
+    required this.onDelete,
+  });
+
+  final ApproverModel approver;
+  final _Palette palette;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onStatus;
+  final VoidCallback onResetPassword;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: palette.surfaceAlt,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: palette.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            approver.name,
+                            style: AppTextStyles.titleSmall.copyWith(
+                              color: palette.text,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${approver.employeeId} · ${approver.email}',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: palette.muted,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    _StatusPill(status: approver.status),
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_right_rounded, color: palette.muted),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MiniBadge(
+                      label: approver.permissions.isEmpty
+                          ? 'No permissions'
+                          : approver.permissions.map(_titleCase).join(', '),
+                    ),
+                    _MiniBadge(label: _regionLabel(approver)),
+                    _MiniBadge(label: 'Workload ${approver.workload}'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Edit',
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: onEdit,
+                    ),
+                    IconButton(
+                      tooltip: approver.status == 'active'
+                          ? 'Deactivate'
+                          : 'Activate',
+                      icon: Icon(
+                        approver.status == 'active'
+                            ? Icons.pause_circle_outline
+                            : Icons.play_circle_outline,
+                      ),
+                      onPressed: onStatus,
+                    ),
+                    IconButton(
+                      tooltip: 'Reset password',
+                      icon: const Icon(Icons.lock_reset_rounded),
+                      onPressed: onResetPassword,
+                    ),
+                    IconButton(
+                      tooltip: 'Delete',
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: onDelete,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1958,6 +2672,9 @@ class _PerformancePane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final approvers = [...state.approvers]
+      ..sort((a, b) => b.assigned.compareTo(a.assigned));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1965,52 +2682,120 @@ class _PerformancePane extends StatelessWidget {
           palette: palette,
           title: 'Approver performance',
           subtitle:
-              'Decision volume, acceptance rates, escalations, and last login',
+              'Each card is one approver. Open details to see only that person’s numbers.',
         ),
         const SizedBox(height: 14),
-        _Panel(
-          palette: palette,
-          title: 'Performance matrix',
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Approver')),
-                DataColumn(label: Text('Assigned')),
-                DataColumn(label: Text('Approved')),
-                DataColumn(label: Text('Rejected')),
-                DataColumn(label: Text('Pending')),
-                DataColumn(label: Text('Avg time')),
-                DataColumn(label: Text('Acceptance')),
-                DataColumn(label: Text('Rejection')),
-                DataColumn(label: Text('Escalations')),
-                DataColumn(label: Text('Last login')),
-                DataColumn(label: Text('Status')),
-              ],
-              rows: state.approvers.map((approver) {
-                return DataRow(
-                  onSelectChanged: (_) => onOpenApprover(approver),
-                  cells: [
-                    DataCell(Text(approver.name)),
-                    DataCell(Text('${approver.assigned}')),
-                    DataCell(Text('${approver.approved}')),
-                    DataCell(Text('${approver.rejected}')),
-                    DataCell(Text('${approver.pending}')),
-                    DataCell(
-                      Text(_duration(approver.averageApprovalTimeMinutes)),
-                    ),
-                    DataCell(Text('${approver.acceptanceRate}%')),
-                    DataCell(Text('${approver.rejectionRate}%')),
-                    DataCell(Text('${approver.escalations}')),
-                    DataCell(Text(_date(approver.lastLoginAt))),
-                    DataCell(_StatusPill(status: approver.status)),
-                  ],
-                );
-              }).toList(),
+        if (approvers.isEmpty)
+          _Panel(
+            palette: palette,
+            child: _EmptyState(
+              icon: Icons.insights_outlined,
+              title: 'No approvers yet',
+              subtitle: 'Create approvers first to track performance.',
+              palette: palette,
+            ),
+          )
+        else
+          ...approvers.map(
+            (approver) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ApproverPerformanceCard(
+                palette: palette,
+                approver: approver,
+                onOpen: () => onOpenApprover(approver),
+              ),
             ),
           ),
-        ),
       ],
+    );
+  }
+}
+
+class _ApproverPerformanceCard extends StatelessWidget {
+  const _ApproverPerformanceCard({
+    required this.palette,
+    required this.approver,
+    required this.onOpen,
+  });
+
+  final _Palette palette;
+  final ApproverModel approver;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Panel(
+      palette: palette,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: palette.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.person_outline_rounded, color: palette.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      approver.name,
+                      style: AppTextStyles.titleSmall.copyWith(
+                        color: palette.text,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        approver.employeeId,
+                        approver.email,
+                      ].where((part) => part.trim().isNotEmpty).join(' · '),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: palette.muted,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              _StatusPill(status: approver.status),
+              const SizedBox(width: 8),
+              FilledButton.tonalIcon(
+                onPressed: onOpen,
+                icon: const Icon(Icons.insights_outlined, size: 18),
+                label: const Text('View'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _MiniBadge(label: 'Assigned ${approver.assigned}'),
+              _MiniBadge(label: 'Approved ${approver.approved}'),
+              _MiniBadge(label: 'Rejected ${approver.rejected}'),
+              _MiniBadge(label: 'Pending ${approver.pending}'),
+              _MiniBadge(label: 'Escalated ${approver.escalations}'),
+              _MiniBadge(
+                label: 'Avg ${_duration(approver.averageApprovalTimeMinutes)}',
+              ),
+              _MiniBadge(label: 'Accept ${approver.acceptanceRate}%'),
+              _MiniBadge(
+                label: 'Last login ${_date(approver.lastLoginAt)}',
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2347,6 +3132,7 @@ class _MetricCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.tone,
+    this.onTap,
   });
 
   final _Palette palette;
@@ -2355,46 +3141,59 @@ class _MetricCard extends StatelessWidget {
   final String label;
   final String value;
   final Color tone;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: width,
-      child: _Panel(
-        palette: palette,
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: tone.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: tone),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: AppTextStyles.titleLarge.copyWith(
-                      color: palette.text,
-                      fontWeight: FontWeight.w800,
-                    ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: _Panel(
+            palette: palette,
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: tone.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  Text(
-                    label,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: palette.muted,
-                    ),
+                  child: Icon(icon, color: tone),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        value,
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: palette.text,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        label,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: palette.muted,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                if (onTap != null)
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: palette.muted,
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -2563,7 +3362,10 @@ class _ActionMenu extends StatelessWidget {
       icon: const Icon(Icons.more_horiz_rounded),
       onSelected: onSelected,
       itemBuilder: (_) => const [
-        PopupMenuItem(value: 'approve', child: Text('Approve')),
+        PopupMenuItem(
+          value: 'approve',
+          child: Text('Open KYC & final approve'),
+        ),
         PopupMenuItem(value: 'reject', child: Text('Reject')),
         PopupMenuItem(
           value: 'request_documents',
@@ -3155,10 +3957,15 @@ class _LineAreaPainter extends CustomPainter {
 }
 
 class _BarChart extends StatelessWidget {
-  const _BarChart({required this.points, required this.color});
+  const _BarChart({
+    required this.points,
+    required this.color,
+    this.showValues = false,
+  });
 
   final List<ChartPointModel> points;
   final Color color;
+  final bool showValues;
 
   @override
   Widget build(BuildContext context) {
@@ -3170,23 +3977,35 @@ class _BarChart extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: points.map((point) {
-        final heightFactor = (point.value / maxValue)
-            .clamp(0.05, 1.0)
-            .toDouble();
+        final heightFactor = point.value <= 0
+            ? 0.0
+            : (point.value / maxValue).clamp(0.08, 1.0).toDouble();
         return Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                if (showValues)
+                  Text(
+                    '${point.value.round()}',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                if (showValues) const SizedBox(height: 4),
                 Expanded(
                   child: Align(
                     alignment: Alignment.bottomCenter,
                     child: FractionallySizedBox(
-                      heightFactor: heightFactor,
+                      heightFactor: heightFactor == 0 ? 0.03 : heightFactor,
                       child: Container(
+                        width: double.infinity,
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.82),
+                          color: point.value <= 0
+                              ? color.withValues(alpha: 0.18)
+                              : color.withValues(alpha: 0.82),
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
@@ -3196,15 +4015,70 @@ class _BarChart extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   point.label,
-                  maxLines: 1,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.labelSmall,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _ApproverStat {
+  const _ApproverStat({
+    required this.label,
+    required this.value,
+    required this.tone,
+    required this.icon,
+  });
+
+  final String label;
+  final int value;
+  final Color tone;
+  final IconData icon;
+}
+
+class _ApproverStatTile extends StatelessWidget {
+  const _ApproverStatTile({required this.palette, required this.stat});
+
+  final _Palette palette;
+  final _ApproverStat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: palette.surfaceAlt,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(stat.icon, size: 18, color: stat.tone),
+          const SizedBox(height: 8),
+          Text(
+            '${stat.value}',
+            style: AppTextStyles.titleLarge.copyWith(
+              color: palette.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            stat.label,
+            style: AppTextStyles.bodySmall.copyWith(color: palette.muted),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -3352,6 +4226,7 @@ const _navItems = [
   _NavItem(_ConsoleSection.reports, Icons.file_download_outlined, 'Reports'),
 ];
 
+/// Approver uses the same Requests → full KYC document review flow as admin.
 const _approverNavItems = [
   _NavItem(
     _ConsoleSection.overview,
@@ -3374,6 +4249,239 @@ const _chartColors = [
   Color(0xFF7C3AED),
   Color(0xFF0EA5E9),
 ];
+
+enum _OverviewMetric {
+  totalProviders,
+  approvedToday,
+  pending,
+  approved,
+  rejectedToday,
+  slaBreached,
+  needDocuments,
+  escalated,
+  avgApprovalTime,
+  onHold,
+  approversOnline,
+}
+
+extension on _OverviewMetric {
+  String get title => switch (this) {
+    _OverviewMetric.totalProviders => 'Total providers',
+    _OverviewMetric.approvedToday => 'Approved today',
+    _OverviewMetric.pending => 'Pending',
+    _OverviewMetric.approved => 'Approved',
+    _OverviewMetric.rejectedToday => 'Rejected today',
+    _OverviewMetric.slaBreached => 'Past deadline',
+    _OverviewMetric.needDocuments => 'Need documents',
+    _OverviewMetric.escalated => 'Escalated',
+    _OverviewMetric.avgApprovalTime => 'Avg approval time',
+    _OverviewMetric.onHold => 'On hold',
+    _OverviewMetric.approversOnline => 'Approvers online',
+  };
+
+  /// Status sent to the API when opening this metric. Null means all statuses.
+  String? get apiStatus => switch (this) {
+    _OverviewMetric.pending => 'pending',
+    _OverviewMetric.approved ||
+    _OverviewMetric.approvedToday ||
+    _OverviewMetric.avgApprovalTime =>
+      'approved',
+    _OverviewMetric.rejectedToday => 'rejected',
+    _OverviewMetric.needDocuments => 'needs_documents',
+    _OverviewMetric.escalated => 'escalated',
+    _OverviewMetric.onHold => 'on_hold',
+    _OverviewMetric.totalProviders ||
+    _OverviewMetric.slaBreached ||
+    _OverviewMetric.approversOnline =>
+      null,
+  };
+
+  bool matches(ApprovalRequestModel request) {
+    switch (this) {
+      case _OverviewMetric.totalProviders:
+        return true;
+      case _OverviewMetric.pending:
+        return request.status == 'pending';
+      case _OverviewMetric.approved:
+      case _OverviewMetric.avgApprovalTime:
+        return request.status == 'approved';
+      case _OverviewMetric.approvedToday:
+        return request.status == 'approved' &&
+            _isSameDay(request.completedAt ?? request.updatedAt);
+      case _OverviewMetric.rejectedToday:
+        return request.status == 'rejected' &&
+            _isSameDay(request.completedAt ?? request.updatedAt);
+      case _OverviewMetric.needDocuments:
+        return request.status == 'needs_documents';
+      case _OverviewMetric.escalated:
+        return request.status == 'escalated';
+      case _OverviewMetric.onHold:
+        return request.status == 'on_hold';
+      case _OverviewMetric.slaBreached:
+        return request.slaState == 'overdue';
+      case _OverviewMetric.approversOnline:
+        return false;
+    }
+  }
+}
+
+bool _isSameDay(DateTime? value) {
+  if (value == null) return false;
+  final now = DateTime.now();
+  final local = value.toLocal();
+  return local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day;
+}
+
+int _categorySortOrder(String slug) {
+  switch (slug.trim().toLowerCase().replaceAll('-', '_')) {
+    case 'doctor_online':
+      return 10;
+    case 'doctor_home_visit':
+      return 11;
+    case 'doctor_hospital_visit':
+      return 12;
+    case 'doctor':
+    case 'doctors':
+      return 13;
+    case 'nurse':
+    case 'nurses':
+    case 'nursing':
+      return 20;
+    case 'scan_center':
+    case 'scan':
+    case 'scans':
+    case 'mri':
+    case 'mri_center':
+      return 30;
+    case 'laboratory':
+    case 'lab':
+    case 'labs':
+    case 'diagnostic_lab':
+      return 40;
+    case 'blood_bank':
+    case 'bloodbank':
+    case 'blood':
+      return 50;
+    case 'ambulance':
+    case 'ambulances':
+      return 60;
+    default:
+      return 100;
+  }
+}
+
+IconData _categoryIcon(String slug) {
+  switch (slug.trim().toLowerCase().replaceAll('-', '_')) {
+    case 'doctor_online':
+    case 'doctor':
+    case 'doctors':
+      return Icons.videocam_rounded;
+    case 'doctor_home_visit':
+      return Icons.home_rounded;
+    case 'doctor_hospital_visit':
+      return Icons.local_hospital_rounded;
+    case 'nurse':
+    case 'nurses':
+    case 'nursing':
+    case 'home_care':
+      return Icons.health_and_safety_rounded;
+    case 'laboratory':
+    case 'lab':
+    case 'labs':
+    case 'diagnostic_lab':
+    case 'pathology':
+      return Icons.biotech_rounded;
+    case 'scan_center':
+    case 'scan':
+    case 'scans':
+    case 'mri':
+    case 'mri_center':
+    case 'imaging':
+    case 'radiology':
+      return Icons.radar_rounded;
+    case 'ambulance':
+    case 'ambulances':
+      return Icons.local_shipping_rounded;
+    case 'blood_bank':
+    case 'bloodbank':
+    case 'blood':
+      return Icons.bloodtype_rounded;
+    case 'hospital':
+      return Icons.local_hospital_rounded;
+    case 'pharmacy':
+      return Icons.local_pharmacy_rounded;
+    default:
+      return Icons.business_center_outlined;
+  }
+}
+
+Color _categoryTone(String slug, _Palette palette) {
+  switch (slug.trim().toLowerCase().replaceAll('-', '_')) {
+    case 'doctor_home_visit':
+      return const Color(0xFF0EA5E9);
+    case 'doctor_hospital_visit':
+      return const Color(0xFF7C3AED);
+    case 'nurse':
+    case 'nurses':
+    case 'nursing':
+    case 'home_care':
+      return palette.warning;
+    case 'scan_center':
+    case 'scan':
+    case 'scans':
+    case 'mri':
+    case 'ambulance':
+      return palette.danger;
+    case 'laboratory':
+    case 'lab':
+    case 'labs':
+      return const Color(0xFF4568DC);
+    default:
+      return palette.primary;
+  }
+}
+
+String _friendlyCategoryLabel(String slug) {
+  switch (slug.trim().toLowerCase().replaceAll('-', '_')) {
+    case 'doctor_online':
+      return 'Online doctors';
+    case 'doctor_home_visit':
+      return 'Home visit doctors';
+    case 'doctor_hospital_visit':
+      return 'Hospital visit doctors';
+    case 'doctor':
+    case 'doctors':
+      return 'Doctors';
+    case 'nurse':
+    case 'nurses':
+    case 'nursing':
+      return 'Home nurses';
+    case 'laboratory':
+    case 'lab':
+    case 'labs':
+    case 'diagnostic_lab':
+      return 'Labs';
+    case 'scan_center':
+    case 'scan':
+    case 'scans':
+    case 'mri':
+    case 'mri_center':
+      return 'Scan / MRI';
+    case 'ambulance':
+    case 'ambulances':
+      return 'Ambulance';
+    case 'blood_bank':
+    case 'bloodbank':
+    case 'blood':
+      return 'Blood banks';
+    case 'home_care':
+      return 'Home care';
+    default:
+      return _titleCase(slug);
+  }
+}
 
 String? _kycDetailPath(String providerType, String providerId) {
   if (providerId.isEmpty) return null;

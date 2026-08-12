@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/utils/safe_navigation.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/nurse_model.dart';
+import '../../../../shared/widgets/admin_adaptive_shell.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../provider/admin_nurse_provider.dart';
 
@@ -43,7 +46,9 @@ class _AdminNurseListScreenState extends ConsumerState<AdminNurseListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(adminNursesListProvider);
 
-    return Scaffold(
+    return AdminAdaptiveShell(
+      section: AdminNavSection.providers,
+      constrainBody: false,
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Nurse applications'),
@@ -52,71 +57,72 @@ class _AdminNurseListScreenState extends ConsumerState<AdminNurseListScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              children: [
-                _FilterChip(
-                  label: 'Under review',
-                  selected: _statusFilter == 'awaiting_review',
-                  onTap: () => _applyFilter('awaiting_review'),
-                ),
-                _FilterChip(
-                  label: 'Verified',
-                  selected: _statusFilter == 'verified',
-                  onTap: () => _applyFilter('verified'),
-                ),
-                _FilterChip(
-                  label: 'Rejected',
-                  selected: _statusFilter == 'rejected',
-                  onTap: () => _applyFilter('rejected'),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              _statusFilter == 'verified'
-                  ? 'Nurses live on the user app'
-                  : _statusFilter == 'rejected'
-                      ? 'Rejected applications'
-                      : 'Open an application to verify and publish on the user app',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+      body: ResponsivePage(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  _FilterChip(
+                    label: 'Under review',
+                    selected: _statusFilter == 'awaiting_review',
+                    onTap: () => _applyFilter('awaiting_review'),
+                  ),
+                  _FilterChip(
+                    label: 'Verified',
+                    selected: _statusFilter == 'verified',
+                    onTap: () => _applyFilter('verified'),
+                  ),
+                  _FilterChip(
+                    label: 'Rejected',
+                    selected: _statusFilter == 'rejected',
+                    onTap: () => _applyFilter('rejected'),
+                  ),
+                ],
               ),
             ),
-          ),
-          Expanded(
-            child: state.isLoading
-                ? const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: ShimmerLoadingList(),
-                  )
-                : state.error != null
-                    ? Center(child: Text(state.error!))
-                    : state.nurses.isEmpty
-                        ? Center(
-                            child: Text(
-                              _statusFilter == 'awaiting_review'
-                                  ? 'No nurse applications waiting for review'
-                                  : 'No nurse applications',
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _statusFilter == 'verified'
+                    ? 'Nurses live on the user app'
+                    : _statusFilter == 'rejected'
+                        ? 'Rejected applications'
+                        : 'Open an application to verify and publish on the user app',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            Expanded(
+              child: state.isLoading
+                  ? const ShimmerLoadingList()
+                  : state.error != null
+                      ? Center(child: Text(state.error!))
+                      : state.nurses.isEmpty
+                          ? Center(
+                              child: Text(
+                                _statusFilter == 'awaiting_review'
+                                    ? 'No nurse applications waiting for review'
+                                    : 'No nurse applications',
+                              ),
+                            )
+                          : ResponsiveCardList(
+                              padding: const EdgeInsets.only(bottom: 24),
+                              desktopColumns: 2,
+                              largeDesktopColumns: 2,
+                              itemCount: state.nurses.length,
+                              itemBuilder: (context, index) {
+                                return _NurseTile(nurse: state.nurses[index]);
+                              },
                             ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: state.nurses.length,
-                            itemBuilder: (context, index) {
-                              final nurse = state.nurses[index];
-                              return _NurseTile(nurse: nurse);
-                            },
-                          ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -149,7 +155,7 @@ class _NurseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.zero,
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: AppColors.secondary.withValues(alpha: 0.15),
@@ -166,7 +172,8 @@ class _NurseTile extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
               )
             : const Icon(Icons.chevron_right_rounded),
-        onTap: () => context.push(
+        onTap: () => SafeNavigation.push(
+          context,
           '${AppConstants.routeAdminNurseDetails}/${nurse.id}',
         ),
       ),

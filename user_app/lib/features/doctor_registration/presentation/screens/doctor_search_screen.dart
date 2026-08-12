@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
@@ -13,6 +14,7 @@ import '../../../../shared/widgets/consultation_type_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/searchable_filter_dropdown.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/providers/user_location_provider.dart';
@@ -53,6 +55,8 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
   double? _nearbyLongitude;
   bool _nearbyActive = false;
   bool _isFetchingNearby = false;
+  /// Location shown in the search box without applying as a keyword query.
+  String? _locationPrefill;
 
   bool get _showsNearbyFilter =>
       _consultationType == ConsultationType.visitSite ||
@@ -76,12 +80,35 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
     if (!mounted) return;
     setState(() {
       _city ??= location.city;
+      _applyLocationPrefill(location);
       if (_showsNearbyFilter && location.hasCoordinates) {
         _nearbyLatitude = location.latitude;
         _nearbyLongitude = location.longitude;
         _nearbyActive = true;
       }
     });
+  }
+
+  void _applyLocationPrefill(UserLocationState location) {
+    final hasTypedQuery =
+        widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty;
+    if (hasTypedQuery) return;
+
+    final label = location.displayPlaceCity;
+    if (label == null || label.isEmpty) return;
+
+    final current = _controller.text.trim();
+    final canReplace = current.isEmpty ||
+        (_locationPrefill != null && current == _locationPrefill);
+    if (!canReplace) return;
+
+    _locationPrefill = label;
+    if (current != label) {
+      _controller.value = TextEditingValue(
+        text: label,
+        selection: TextSelection.collapsed(offset: label.length),
+      );
+    }
   }
 
   @override
@@ -96,10 +123,13 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
+      final text = _controller.text.trim();
+      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
+        setState(() => _query = null);
+        return;
+      }
       setState(() {
-        _query = _controller.text.trim().isEmpty
-            ? null
-            : _controller.text.trim();
+        _query = text.isEmpty ? null : text;
       });
     });
   }
@@ -113,6 +143,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
       _nearbyActive = false;
       _nearbyLatitude = null;
       _nearbyLongitude = null;
+      _locationPrefill = null;
       _controller.clear();
     });
   }
@@ -179,32 +210,34 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
         consultationType: _consultationType,
       );
 
-  bool get _hasActiveFilters =>
-      _params.hasTextFilters || _controller.text.trim().isNotEmpty;
+  bool get _hasActiveFilters {
+    final text = _controller.text.trim();
+    final isLocationOnly =
+        _locationPrefill != null && text == _locationPrefill!.trim();
+    return _params.hasTextFilters || (text.isNotEmpty && !isLocationOnly);
+  }
 
   @override
   Widget build(BuildContext context) {
     ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
       if (!mounted) return;
-      if (next.city != null && _city == null) {
-        setState(() => _city = next.city);
-      }
-      if (_showsNearbyFilter &&
-          next.hasCoordinates &&
-          !_nearbyActive) {
-        setState(() {
+      setState(() {
+        _city ??= next.city;
+        _applyLocationPrefill(next);
+        if (_showsNearbyFilter && next.hasCoordinates && !_nearbyActive) {
           _nearbyLatitude = next.latitude;
           _nearbyLongitude = next.longitude;
           _nearbyActive = true;
-        });
-      }
+        }
+      });
     });
 
     final asyncResults = ref.watch(doctorSearchProvider(_params));
 
-    return Scaffold(
+    return UserAdaptiveScaffold(
+      currentTab: UserNavTab.care,
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.care),
+      constrainBody: true,
       appBar: AppBar(
         title: const Text('Find a doctor'),
         leading: IconButton(
@@ -231,7 +264,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
           child: TextField(
             controller: _controller,
             decoration: InputDecoration(
-              hintText: 'Search by name, clinic, keyword...',
+              hintText: 'Search doctor name, clinic or specialty...',
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: _hasActiveFilters
                   ? IconButton(
@@ -252,8 +285,14 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
             ),
             textInputAction: TextInputAction.search,
             onSubmitted: (value) {
+              final text = value.trim();
               setState(() {
-                _query = value.trim().isEmpty ? null : value.trim();
+                if (_locationPrefill != null &&
+                    text == _locationPrefill!.trim()) {
+                  _query = null;
+                } else {
+                  _query = text.isEmpty ? null : text;
+                }
               });
             },
           ),
@@ -440,30 +479,69 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
                 .valueOrNull ??
             const <String, bool>{};
 
+        final columns = ResponsiveUtils.gridColumns(
+          context,
+          mobile: 1,
+          tablet: 2,
+          laptop: 2,
+          desktop: 3,
+        );
+
+        Widget tileFor(int index) {
+          final doctor = applyLiveStatus(sortedDoctors[index], liveMap);
+          final distanceKm = _nearbyActive &&
+                  _nearbyLatitude != null &&
+                  _nearbyLongitude != null
+              ? doctorDistanceKm(
+                  doctor,
+                  _nearbyLatitude!,
+                  _nearbyLongitude!,
+                )
+              : null;
+          return DoctorSearchResultTile(
+            doctor: doctor,
+            consultationFilter: _consultationType,
+            showBottomDivider: false,
+            distanceKm: distanceKm,
+          );
+        }
+
+        if (columns <= 1) {
+          return [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverList.separated(
+                itemCount: sortedDoctors.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: kDoctorCardSpacing),
+                itemBuilder: (context, index) => tileFor(index),
+              ),
+            ),
+          ];
+        }
+
+        final rowCount = (sortedDoctors.length / columns).ceil();
         return [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             sliver: SliverList.separated(
-              itemCount: sortedDoctors.length,
+              itemCount: rowCount,
               separatorBuilder: (context, index) =>
                   const SizedBox(height: kDoctorCardSpacing),
-              itemBuilder: (context, index) {
-                final doctor =
-                    applyLiveStatus(sortedDoctors[index], liveMap);
-                final distanceKm = _nearbyActive &&
-                        _nearbyLatitude != null &&
-                        _nearbyLongitude != null
-                    ? doctorDistanceKm(
-                        doctor,
-                        _nearbyLatitude!,
-                        _nearbyLongitude!,
-                      )
-                    : null;
-                return DoctorSearchResultTile(
-                  doctor: doctor,
-                  consultationFilter: _consultationType,
-                  showBottomDivider: false,
-                  distanceKm: distanceKm,
+              itemBuilder: (context, rowIndex) {
+                final start = rowIndex * columns;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var j = 0; j < columns; j++) ...[
+                      if (j > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: start + j < sortedDoctors.length
+                            ? tileFor(start + j)
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
                 );
               },
             ),

@@ -8,6 +8,7 @@ import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
@@ -26,6 +27,7 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
   Timer? _debounce;
+  String? _locationPrefill;
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
 
   Future<void> _initExplore() async {
     final preferred = ref.read(userLocationProvider);
+    _applyLocationPrefill(preferred);
     double? lat = preferred.latitude;
     double? lng = preferred.longitude;
 
@@ -64,7 +67,26 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
     }
   }
 
+  void _applyLocationPrefill(UserLocationState location) {
+    final label = location.displayPlaceCity;
+    if (label == null || label.isEmpty) return;
+
+    final current = _searchController.text.trim();
+    final canReplace = current.isEmpty ||
+        (_locationPrefill != null && current == _locationPrefill);
+    if (!canReplace) return;
+
+    _locationPrefill = label;
+    if (current != label) {
+      _searchController.value = TextEditingValue(
+        text: label,
+        selection: TextSelection.collapsed(offset: label.length),
+      );
+    }
+  }
+
   void _onLocationResolved(UserLocationState location) {
+    _applyLocationPrefill(location);
     if (!location.hasCoordinates) return;
     final state = ref.read(scanExploreProvider);
     if (state.latitude != null && state.longitude != null) return;
@@ -92,7 +114,13 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      ref.read(scanExploreProvider.notifier).setQuery(value.trim());
+      final text = value.trim();
+      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
+        ref.read(scanExploreProvider.notifier).setQuery('');
+        return;
+      }
+      _locationPrefill = null;
+      ref.read(scanExploreProvider.notifier).setQuery(text);
     });
   }
 
@@ -229,6 +257,23 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
       _onLocationResolved(next);
     });
     final state = ref.watch(scanExploreProvider);
+    final columns = ResponsiveUtils.gridColumns(
+      context,
+      mobile: 1,
+      tablet: 2,
+      laptop: 2,
+      desktop: 3,
+      largeDesktop: 3,
+    );
+    final hPad = ResponsiveUtils.valueFor(
+      context,
+      mobile: 16,
+      tablet: 24,
+      laptop: 32,
+    );
+    final rowCount = state.centers.isEmpty
+        ? 0
+        : (state.centers.length / columns).ceil();
 
     return UserTabBackScope(
       isHomeTab: false,
@@ -331,11 +376,11 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 24),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (index >= state.centers.length) {
+                      (context, rowIndex) {
+                        if (rowIndex >= rowCount) {
                           return state.isLoadingMore
                               ? const Padding(
                                   padding: EdgeInsets.all(16),
@@ -345,15 +390,36 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
                                 )
                               : const SizedBox(height: 8);
                         }
-                        final center = state.centers[index];
-                        return ScanExploreCard(
-                          center: center,
-                          onViewDetails: () => context.push(
-                            '${AppConstants.routeScanCenterDetail}/${center.id}',
+
+                        final start = rowIndex * columns;
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: rowIndex < rowCount - 1 ? 4 : 0,
+                          ),
+                          child: IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (var col = 0; col < columns; col++) ...[
+                                  if (col > 0) const SizedBox(width: 12),
+                                  Expanded(
+                                    child: start + col < state.centers.length
+                                        ? ScanExploreCard(
+                                            center:
+                                                state.centers[start + col],
+                                            onViewDetails: () => context.push(
+                                              '${AppConstants.routeScanCenterDetail}/${state.centers[start + col].id}',
+                                            ),
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         );
                       },
-                      childCount: state.centers.length + 1,
+                      childCount: rowCount + 1,
                     ),
                   ),
                 ),

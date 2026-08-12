@@ -153,6 +153,12 @@ router.put('/profile', authOptional, async (req, res) => {
       homeVisitAvailable: body.homeVisitAvailable,
       available24x7: body.available24x7,
       cashPaymentEnabled: body.cashPaymentEnabled,
+      mainOfferPercent:
+        body.mainOfferPercent === null || body.mainOfferPercent === ''
+          ? null
+          : body.mainOfferPercent !== undefined
+            ? Number(body.mainOfferPercent)
+            : undefined,
       offeredScans: body.offeredScans,
       offers: body.offers,
       appointmentSlots: body.appointmentSlots,
@@ -303,6 +309,12 @@ router.post('/register', async (req, res) => {
           homeVisitAvailable: Boolean(body.homeVisitAvailable),
           available24x7: Boolean(body.available24x7),
           cashPaymentEnabled: body.cashPaymentEnabled !== false,
+          mainOfferPercent:
+            body.mainOfferPercent === null || body.mainOfferPercent === ''
+              ? null
+              : body.mainOfferPercent !== undefined
+                ? Number(body.mainOfferPercent)
+                : undefined,
           offeredScans: Array.isArray(body.offeredScans) ? body.offeredScans : [],
           offers: Array.isArray(body.offers) ? body.offers : [],
           appointmentSlots: Array.isArray(body.appointmentSlots)

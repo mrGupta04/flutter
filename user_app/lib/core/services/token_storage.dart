@@ -23,6 +23,7 @@ class TokenStorage {
   static const String _patientGenderKey = 'patient_gender';
   static const String _patientAgeKey = 'patient_age';
   static const String _preferredCityKey = 'preferred_city';
+  static const String _preferredPlaceKey = 'preferred_place';
   static const String _lastLatitudeKey = 'last_latitude';
   static const String _lastLongitudeKey = 'last_longitude';
   static const String _locationPromptedKey = 'location_prompted';
@@ -220,6 +221,11 @@ class TokenStorage {
     return prefs.getString(_preferredCityKey);
   }
 
+  Future<String?> getPreferredPlace() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_preferredPlaceKey);
+  }
+
   Future<double?> getLastLatitude() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getDouble(_lastLatitudeKey);
@@ -237,12 +243,21 @@ class TokenStorage {
 
   Future<void> saveLocationPreference({
     String? city,
+    String? place,
     double? latitude,
     double? longitude,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     if (city != null && city.trim().isNotEmpty) {
       await prefs.setString(_preferredCityKey, city.trim());
+    }
+    if (place != null) {
+      final trimmed = place.trim();
+      if (trimmed.isEmpty) {
+        await prefs.remove(_preferredPlaceKey);
+      } else {
+        await prefs.setString(_preferredPlaceKey, trimmed);
+      }
     }
     if (latitude != null) {
       await prefs.setDouble(_lastLatitudeKey, latitude);

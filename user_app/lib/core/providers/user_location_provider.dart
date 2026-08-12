@@ -10,6 +10,7 @@ import '../../features/doctor_registration/provider/care_filter_constants.dart';
 class UserLocationState {
   const UserLocationState({
     this.city,
+    this.place,
     this.latitude,
     this.longitude,
     this.isResolving = false,
@@ -17,6 +18,8 @@ class UserLocationState {
   });
 
   final String? city;
+  /// Locality / area (e.g. neighbourhood) when reverse-geocoded.
+  final String? place;
   final double? latitude;
   final double? longitude;
   final bool isResolving;
@@ -27,16 +30,34 @@ class UserLocationState {
   String get displayCity =>
       (city != null && city!.trim().isNotEmpty) ? city!.trim() : 'All cities across India';
 
+  /// "Place, City" for search boxes; falls back to city or place alone.
+  String? get displayPlaceCity {
+    final c = city?.trim();
+    final p = place?.trim();
+    final hasCity = c != null && c.isNotEmpty;
+    final hasPlace = p != null && p.isNotEmpty;
+    if (hasPlace && hasCity) {
+      if (p.toLowerCase() == c.toLowerCase()) return c;
+      return '$p, $c';
+    }
+    if (hasCity) return c;
+    if (hasPlace) return p;
+    return null;
+  }
+
   UserLocationState copyWith({
     String? city,
+    String? place,
     double? latitude,
     double? longitude,
     bool? isResolving,
     bool? hasResolved,
     bool clearCity = false,
+    bool clearPlace = false,
   }) {
     return UserLocationState(
       city: clearCity ? null : (city ?? this.city),
+      place: clearPlace ? null : (place ?? this.place),
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       isResolving: isResolving ?? this.isResolving,
@@ -55,12 +76,16 @@ class UserLocationNotifier extends StateNotifier<UserLocationState> {
 
   Future<void> _loadCached() async {
     final city = await _storage.getPreferredCity();
+    final place = await _storage.getPreferredPlace();
     final lat = await _storage.getLastLatitude();
     final lng = await _storage.getLastLongitude();
     if (!mounted) return;
-    if ((city != null && city.isNotEmpty) || (lat != null && lng != null)) {
+    if ((city != null && city.isNotEmpty) ||
+        (place != null && place.isNotEmpty) ||
+        (lat != null && lng != null)) {
       state = state.copyWith(
         city: city,
+        place: place,
         latitude: lat,
         longitude: lng,
         hasResolved: true,
@@ -125,6 +150,7 @@ class UserLocationNotifier extends StateNotifier<UserLocationState> {
 
   Future<void> _applyCoordinates(double latitude, double longitude) async {
     String? city = state.city;
+    String? place = state.place;
     try {
       final resolved = await GeocodingService.reverseGeocode(
         latitude: latitude,
@@ -133,18 +159,29 @@ class UserLocationNotifier extends StateNotifier<UserLocationState> {
       city = normalizeMarketplaceCity(resolved.city) ??
           normalizeMarketplaceCity(resolved.address) ??
           city;
+      final rawPlace = resolved.place.trim().isNotEmpty
+          ? resolved.place.trim()
+          : resolved.address.split(',').first.trim();
+      if (rawPlace.isNotEmpty &&
+          (city == null || rawPlace.toLowerCase() != city.toLowerCase())) {
+        place = rawPlace;
+      } else {
+        place = null;
+      }
     } catch (_) {
       // Keep coords even if reverse geocode fails.
     }
 
     await _storage.saveLocationPreference(
       city: city,
+      place: place ?? '',
       latitude: latitude,
       longitude: longitude,
     );
     if (!mounted) return;
     state = UserLocationState(
       city: city,
+      place: place,
       latitude: latitude,
       longitude: longitude,
       isResolving: false,

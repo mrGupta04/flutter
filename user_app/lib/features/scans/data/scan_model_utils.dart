@@ -20,7 +20,32 @@ extension ScanCenterModelDisplay on ScanCenterModel {
     return prices.reduce((a, b) => a > b ? a : b);
   }
 
-  bool get hasActiveOfferBadge => activeOffer != null;
+  bool get hasActiveOfferBadge =>
+      highlightedOfferPercent != null || activeOffer != null;
+
+  /// Valid highlighted offer for marketplace cards.
+  int? get highlightedOfferPercent {
+    final offer = mainOfferPercent;
+    if (offer != null && offer > 0) return offer;
+    final active = activeOffer;
+    if (active == null) return null;
+    if (active.discountType == 'percentage' &&
+        active.discountValue != null &&
+        active.discountValue! > 0) {
+      return active.discountValue!.round();
+    }
+    return null;
+  }
+
+  String? get highlightedOfferLabel {
+    final offer = highlightedOfferPercent;
+    if (offer != null) return '$offer% OFF';
+    final active = activeOffer;
+    if (active == null) return null;
+    final title = active.offerTitle?.trim();
+    if (title != null && title.isNotEmpty) return title;
+    return 'Offer';
+  }
 
   bool get supportsHomeVisit =>
       homeVisitAvailable == true ||

@@ -11,6 +11,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/phone_countries.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/text_controller_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -234,25 +235,28 @@ class _AmbulanceStep1ServiceOwnerState
               label: 'Mobile Number',
             ),
             const SizedBox(height: 12),
-            CustomTextField(
-              controller: _password,
-              label: 'Password',
-              hint: 'Create a strong password',
-              prefixIcon: Icons.lock_outline_rounded,
-              obscureText: true,
-              validator: ValidationUtils.validatePassword,
-            ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              controller: _confirmPassword,
-              label: 'Confirm Password',
-              hint: 'Re-enter password',
-              prefixIcon: Icons.lock_outline_rounded,
-              obscureText: true,
-              validator: (v) => ValidationUtils.validatePasswordMatch(
-                _password.text,
-                v,
-              ),
+            ResponsiveFormRow(
+              children: [
+                CustomTextField(
+                  controller: _password,
+                  label: 'Password',
+                  hint: 'Create a strong password',
+                  prefixIcon: Icons.lock_outline_rounded,
+                  obscureText: true,
+                  validator: ValidationUtils.validatePassword,
+                ),
+                CustomTextField(
+                  controller: _confirmPassword,
+                  label: 'Confirm Password',
+                  hint: 'Re-enter password',
+                  prefixIcon: Icons.lock_outline_rounded,
+                  obscureText: true,
+                  validator: (v) => ValidationUtils.validatePasswordMatch(
+                    _password.text,
+                    v,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             MobileNumberField(

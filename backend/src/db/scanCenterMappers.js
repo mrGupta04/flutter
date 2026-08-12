@@ -26,6 +26,10 @@ function toScanCenter(doc) {
     homeVisitAvailable: Boolean(d.homeVisitAvailable),
     available24x7: Boolean(d.available24x7),
     cashPaymentEnabled: Boolean(d.cashPaymentEnabled ?? true),
+    mainOfferPercent:
+      d.mainOfferPercent == null || d.mainOfferPercent === ''
+        ? null
+        : Number(d.mainOfferPercent),
     offeredScans: d.offeredScans || [],
     offers: d.offers || [],
     appointmentSlots: d.appointmentSlots || [],

@@ -271,6 +271,7 @@ class ScanCenterModel {
     this.homeVisitAvailable,
     this.available24x7,
     this.cashPaymentEnabled,
+    this.mainOfferPercent,
     this.offeredScans,
     this.offers,
     this.appointmentSlots,
@@ -307,6 +308,7 @@ class ScanCenterModel {
   final bool? homeVisitAvailable;
   final bool? available24x7;
   final bool? cashPaymentEnabled;
+  final int? mainOfferPercent;
   final List<ScanOfferedProcedure>? offeredScans;
   final List<ScanCenterOffer>? offers;
   final List<ScanAppointmentSlot>? appointmentSlots;
@@ -361,6 +363,7 @@ class ScanCenterModel {
       homeVisitAvailable: json['homeVisitAvailable'] as bool?,
       available24x7: json['available24x7'] as bool?,
       cashPaymentEnabled: json['cashPaymentEnabled'] as bool?,
+      mainOfferPercent: (json['mainOfferPercent'] as num?)?.toInt(),
       offeredScans: (json['offeredScans'] as List?)
           ?.map((e) => ScanOfferedProcedure.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -414,6 +417,7 @@ class ScanCenterModel {
         if (homeVisitAvailable != null) 'homeVisitAvailable': homeVisitAvailable,
         if (available24x7 != null) 'available24x7': available24x7,
         if (cashPaymentEnabled != null) 'cashPaymentEnabled': cashPaymentEnabled,
+        if (mainOfferPercent != null) 'mainOfferPercent': mainOfferPercent,
         if (offeredScans != null)
           'offeredScans': offeredScans!.map((e) => e.toJson()).toList(),
         if (offers != null) 'offers': offers!.map((e) => e.toJson()).toList(),
@@ -460,6 +464,7 @@ class ScanCenterModel {
     bool? homeVisitAvailable,
     bool? available24x7,
     bool? cashPaymentEnabled,
+    int? mainOfferPercent,
     List<ScanOfferedProcedure>? offeredScans,
     List<ScanCenterOffer>? offers,
     List<ScanAppointmentSlot>? appointmentSlots,
@@ -491,6 +496,7 @@ class ScanCenterModel {
       homeVisitAvailable: homeVisitAvailable ?? this.homeVisitAvailable,
       available24x7: available24x7 ?? this.available24x7,
       cashPaymentEnabled: cashPaymentEnabled ?? this.cashPaymentEnabled,
+      mainOfferPercent: mainOfferPercent ?? this.mainOfferPercent,
       offeredScans: offeredScans ?? this.offeredScans,
       offers: offers ?? this.offers,
       appointmentSlots: appointmentSlots ?? this.appointmentSlots,

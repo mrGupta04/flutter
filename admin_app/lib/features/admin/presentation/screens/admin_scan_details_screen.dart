@@ -106,6 +106,12 @@ class AdminScanDetailsScreen extends ConsumerWidget {
           _DetailRow('City', center.city ?? '-'),
           _DetailRow('Operating hours', center.operatingHours ?? '-'),
           _DetailRow(
+            'Main offer',
+            center.mainOfferPercent == null
+                ? 'None'
+                : '${center.mainOfferPercent}% OFF',
+          ),
+          _DetailRow(
             'Home visit',
             center.homeVisitAvailable == true ? 'Yes' : 'No',
           ),

@@ -16,9 +16,11 @@ import '../features/labs/data/lab_test_illustrations.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
+import '../core/utils/responsive_utils.dart';
 import '../shared/widgets/health_service_card.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/hero_wallpaper_carousel.dart';
+import '../shared/widgets/user_adaptive_scaffold.dart';
 import '../shared/widgets/user_app_footer.dart';
 import '../data/models/api_response_model.dart';
 import '../data/services/dio_service.dart';
@@ -85,164 +87,230 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
         ? dash.upcomingBookings.first
         : null;
 
+    Widget constrain(Widget child) => ResponsivePage(child: child);
+
     return UserTabBackScope(
       isHomeTab: true,
       homeRoute: AppConstants.routeUserHome,
-      child: Scaffold(
-      backgroundColor: AppColors.background,
-      bottomNavigationBar: const UserBottomNavBar(currentTab: UserNavTab.home),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: () async {
-          ref.invalidate(homeHeroBannersProvider);
-          if (mounted) {
-            await ref
-                .read(userLocationProvider.notifier)
-                .ensureResolved(context, forcePrompt: false);
-          }
-          if (await TokenStorage.instance.isPatientLoggedIn()) {
-            await ref.read(patientDashboardProvider.notifier).refreshAll();
-          }
-        },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          slivers: [
-            SliverToBoxAdapter(
-              child: OneMgHeader(
-                locationLabel: location.hasCoordinates
-                    ? 'Near you in'
-                    : 'Service available in',
-                locationValue: location.displayCity,
-                searchHint: 'Search doctors, tests, labs...',
-                trailing: user != null
-                    ? PatientHeaderAvatar(user: user)
-                    : const Icon(Icons.person_outline_rounded, size: 20),
-                onTrailingTap: () => _onProfileTap(context, ref),
-                onSearchTap: () => context.push(AppConstants.routeGlobalSearch),
-              ),
+      child: UserAdaptiveScaffold(
+        currentTab: UserNavTab.home,
+        body: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () async {
+            ref.invalidate(homeHeroBannersProvider);
+            if (mounted) {
+              await ref
+                  .read(userLocationProvider.notifier)
+                  .ensureResolved(context, forcePrompt: false);
+            }
+            if (await TokenStorage.instance.isPatientLoggedIn()) {
+              await ref.read(patientDashboardProvider.notifier).refreshAll();
+            }
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverToBoxAdapter(
-              child: HealthServiceGrid(
-                items: _homeServices
-                    .map(
-                      (service) => HealthServiceItem(
-                        title: service.title,
-                        subtitle: service.subtitle,
-                        icon: service.icon,
-                        color: service.color,
-                        illustrationImage: service.illustrationImage,
-                        illustrationScale: service.illustrationScale,
-                        onTap: () => _openService(context, service),
+            slivers: [
+              // Header stays edge-to-edge; content below is max-width constrained.
+              SliverToBoxAdapter(
+                child: OneMgHeader(
+                  locationLabel: location.hasCoordinates
+                      ? 'Near you in'
+                      : 'Service available in',
+                  locationValue:
+                      location.displayPlaceCity ?? location.displayCity,
+                  searchHint: 'Search doctors, tests, labs...',
+                  trailing: user != null
+                      ? PatientHeaderAvatar(user: user)
+                      : const Icon(Icons.person_outline_rounded, size: 20),
+                  onTrailingTap: () => _onProfileTap(context, ref),
+                  onSearchTap: () =>
+                      context.push(AppConstants.routeGlobalSearch),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              SliverToBoxAdapter(
+                child: constrain(
+                  HealthServiceGrid(
+                    items: _homeServices
+                        .map(
+                          (service) => HealthServiceItem(
+                            title: service.title,
+                            subtitle: service.subtitle,
+                            icon: service.icon,
+                            color: service.color,
+                            illustrationImage: service.illustrationImage,
+                            illustrationScale: service.illustrationScale,
+                            onTap: () => _openService(context, service),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 14)),
+              SliverToBoxAdapter(
+                child: constrain(
+                  OneMgDualCtaRow(
+                    left: OneMgDualCta(
+                      icon: Icons.videocam_rounded,
+                      title: 'Online consult',
+                      subtitle: 'Video with verified doctors',
+                      color: AppColors.primary,
+                      onTap: () => context.push(
+                        routeWithPreferredCity(
+                          AppConstants.routeDoctorSearch,
+                          ref.read(userLocationProvider).city,
+                        ),
                       ),
-                    )
-                    .toList(),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 14)),
-            SliverToBoxAdapter(
-              child: OneMgDualCtaRow(
-                left: OneMgDualCta(
-                  icon: Icons.videocam_rounded,
-                  title: 'Online consult',
-                  subtitle: 'Video with verified doctors',
-                  color: AppColors.primary,
-                  onTap: () => context.push(
-                    routeWithPreferredCity(
-                      AppConstants.routeDoctorSearch,
-                      ref.read(userLocationProvider).city,
                     ),
-                  ),
-                ),
-                right: OneMgDualCta(
-                  icon: Icons.biotech_rounded,
-                  title: 'Lab tests',
-                  subtitle: 'Home sample collection',
-                  color: const Color(0xFF00838F),
-                  onTap: () => context.push(
-                    routeWithPreferredCity(
-                      AppConstants.routeLabs,
-                      ref.read(userLocationProvider).city,
+                    right: OneMgDualCta(
+                      icon: Icons.biotech_rounded,
+                      title: 'Lab tests',
+                      subtitle: 'Home sample collection',
+                      color: const Color(0xFF00838F),
+                      onTap: () => context.push(
+                        routeWithPreferredCity(
+                          AppConstants.routeLabs,
+                          ref.read(userLocationProvider).city,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 14)),
-            const SliverToBoxAdapter(child: OneMgTrustStrip()),
-            if (nextBooking != null) ...[
+              const SliverToBoxAdapter(child: SizedBox(height: 14)),
+              SliverToBoxAdapter(
+                child: constrain(const OneMgTrustStrip()),
+              ),
+              if (nextBooking != null) ...[
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                SliverToBoxAdapter(
+                  child: constrain(
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _UpcomingBookingCard(
+                        booking: nextBooking,
+                        onTap: () =>
+                            context.push(AppConstants.routeUserDashboard),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _UpcomingBookingCard(
-                    booking: nextBooking,
-                    onTap: () => context.push(AppConstants.routeUserDashboard),
+                child: constrain(
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: OfferPromoCard(
+                      title: 'Every provider is admin-verified',
+                      subtitle:
+                          'Book with confidence — quality care, transparent pricing',
+                      badge: 'TRUSTED',
+                      icon: Icons.verified_user_rounded,
+                      includeMargin: false,
+                      compact: true,
+                    ),
                   ),
                 ),
               ),
-            ],
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: OfferPromoCard(
-                  title: 'Every provider is admin-verified',
-                  subtitle: 'Book with confidence — quality care, transparent pricing',
-                  badge: 'TRUSTED',
-                  icon: Icons.verified_user_rounded,
-                  includeMargin: false,
-                  compact: true,
+              SliverToBoxAdapter(
+                child: constrain(
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: HeroWallpaperCarousel(
+                      slides: bannersAsync.asData?.value,
+                    ),
+                  ),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: HeroWallpaperCarousel(
-                  slides: bannersAsync.asData?.value,
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              SliverToBoxAdapter(
+                child: constrain(
+                  MarketplaceSectionTitle(
+                    title: 'Browse by specialty',
+                    actionLabel: 'View doctors',
+                    onAction: () =>
+                        context.push(AppConstants.routeDoctorSearch),
+                  ),
                 ),
               ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
-            SliverToBoxAdapter(
-              child: MarketplaceSectionTitle(
-                title: 'Browse by specialty',
-                actionLabel: 'View doctors',
-                onAction: () => context.push(AppConstants.routeDoctorSearch),
+              SliverToBoxAdapter(
+                child: constrain(
+                  SizedBox(
+                    height: 108,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _specialties.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final item = _specialties[index];
+                        return _SpecialtyChip(
+                          organAsset: item.organAsset,
+                          label: item.label,
+                          softColor: item.softColor,
+                          accentColor: item.accentColor,
+                          onTap: () => _openDoctorSearch(
+                            context,
+                            specialization: item.searchTerm,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 108,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _specialties.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    final item = _specialties[index];
-                    return _SpecialtyChip(
-                      organAsset: item.organAsset,
-                      label: item.label,
-                      softColor: item.softColor,
-                      accentColor: item.accentColor,
-                      onTap: () => _openDoctorSearch(
-                        context,
-                        specialization: item.searchTerm,
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              SliverToBoxAdapter(
+                child: constrain(
+                  MarketplaceSectionTitle(
+                    title: 'Browse by role',
+                    actionLabel: 'View nurses',
+                    onAction: () => context.push(
+                      routeWithPreferredCity(
+                        AppConstants.routeNurseSearch,
+                        ref.read(userLocationProvider).city,
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
-            ),
-            const SliverToBoxAdapter(child: UserScrollFooter()),
-          ],
+              SliverToBoxAdapter(
+                child: constrain(
+                  SizedBox(
+                    height: 108,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _nurseRoles.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final item = _nurseRoles[index];
+                        return _SpecialtyChip(
+                          organAsset: item.organAsset,
+                          label: item.label,
+                          softColor: item.softColor,
+                          accentColor: item.accentColor,
+                          onTap: () => _openNurseSearch(
+                            context,
+                            specialization: item.searchTerm,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: constrain(const UserScrollFooter()),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -279,6 +347,27 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     final path = params.isEmpty
         ? AppConstants.routeDoctorSearch
         : '${AppConstants.routeDoctorSearch}?${Uri(queryParameters: params).query}';
+
+    context.push(path);
+  }
+
+  void _openNurseSearch(
+    BuildContext context, {
+    String? city,
+    String? specialization,
+  }) {
+    final preferredCity = city ?? ref.read(userLocationProvider).city;
+    final params = <String, String>{};
+    if (preferredCity != null && preferredCity.isNotEmpty) {
+      params['city'] = preferredCity;
+    }
+    if (specialization != null && specialization.isNotEmpty) {
+      params['specialization'] = specialization;
+    }
+
+    final path = params.isEmpty
+        ? AppConstants.routeNurseSearch
+        : '${AppConstants.routeNurseSearch}?${Uri(queryParameters: params).query}';
 
     context.push(path);
   }
@@ -542,8 +631,7 @@ const _homeServices = [
     illustrationImage:
         'assets/images/home_cards/ambulance_remove_pg_preview.png',
     illustrationScale: 1.3,
-    route: AppConstants.routeCareListing,
-    routeParams: 'role=ambulance',
+    route: AppConstants.routeAmbulanceSearch,
   ),
   _HomeService(
     title: 'Blood\nBank',
@@ -552,7 +640,7 @@ const _homeServices = [
     color: Color(0xffEC4899),
     illustrationImage:
         'assets/images/home_cards/blood-removebg-preview.png',
-    route: AppConstants.routeBloodBanks,
+    route: AppConstants.routeBloodBankSearch,
   ),
 ];
 
@@ -612,6 +700,51 @@ const _specialties = [
     softColor: Color(0xFFE0F2F1),
     accentColor: Color(0xFF00897B),
     searchTerm: 'General Physician',
+  ),
+];
+
+const _nurseRoles = [
+  _SpecialtyItem(
+    organAsset: OrganAssets.bone,
+    label: 'Elder care',
+    softColor: Color(0xFFEDE7F6),
+    accentColor: Color(0xFF7E57C2),
+    searchTerm: 'Elder care',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.vitamin,
+    label: 'Pediatric',
+    softColor: Color(0xFFE8F5E9),
+    accentColor: Color(0xFF43A047),
+    searchTerm: 'Pediatric',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.muscle,
+    label: 'Post-op',
+    softColor: Color(0xFFFFF3E0),
+    accentColor: Color(0xFFFB8C00),
+    searchTerm: 'Post-op',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.lungs,
+    label: 'ICU',
+    softColor: Color(0xFFFFEBEE),
+    accentColor: Color(0xFFE53935),
+    searchTerm: 'ICU',
+  ),
+  _SpecialtyItem(
+    organAsset: 'assets/images/home_cards/nurse_home_care.png',
+    label: 'Home care',
+    softColor: Color(0xFFF3E5F5),
+    accentColor: Color(0xFF8B5CF6),
+    searchTerm: 'Home care',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.immuneSystem,
+    label: 'Geriatric',
+    softColor: Color(0xFFE0F2F1),
+    accentColor: Color(0xFF00897B),
+    searchTerm: 'Geriatric',
   ),
 ];
 

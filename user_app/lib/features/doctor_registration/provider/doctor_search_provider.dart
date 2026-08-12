@@ -61,6 +61,39 @@ String? _trimOrNull(String? value) {
   return trimmed.isEmpty ? null : trimmed;
 }
 
+bool doctorMatchesKeyword(DoctorModel doctor, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return true;
+
+  final haystacks = <String>[
+    doctor.fullName,
+    doctor.firstName ?? '',
+    doctor.lastName ?? '',
+    doctor.clinicName ?? '',
+    doctor.qualification ?? '',
+    ...?doctor.specializations,
+  ];
+
+  return haystacks.any((value) => value.toLowerCase().contains(q));
+}
+
+int _doctorKeywordRank(DoctorModel doctor, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return 0;
+
+  final fullName = doctor.fullName.toLowerCase();
+  final first = (doctor.firstName ?? '').toLowerCase();
+  final last = (doctor.lastName ?? '').toLowerCase();
+  if (fullName.startsWith(q) || first.startsWith(q) || last.startsWith(q)) {
+    return 0;
+  }
+  if (fullName.contains(q) || first.contains(q) || last.contains(q)) {
+    return 1;
+  }
+  if ((doctor.clinicName ?? '').toLowerCase().contains(q)) return 2;
+  return 3;
+}
+
 final doctorSearchProvider =
     FutureProvider.autoDispose.family<List<DoctorModel>, DoctorSearchParams>(
   (ref, params) async {
@@ -80,6 +113,16 @@ final doctorSearchProvider =
             .toList(growable: false),
         params.consultationType,
       );
+      final keyword = _trimOrNull(params.query);
+      if (keyword != null) {
+        doctors = doctors
+            .where((doctor) => doctorMatchesKeyword(doctor, keyword))
+            .toList()
+          ..sort(
+            (a, b) => _doctorKeywordRank(a, keyword)
+                .compareTo(_doctorKeywordRank(b, keyword)),
+          );
+      }
       final minYears = params.minYearsExperience;
       if (minYears != null) {
         doctors = doctors

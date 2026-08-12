@@ -70,6 +70,19 @@ extension LabModelDisplay on LabModel {
   double get ratingValue => averageRating ?? 4.5;
 
   int get reviewsCount => reviewCount ?? 0;
+
+  /// Valid highlighted offer for marketplace cards.
+  int? get highlightedOfferPercent {
+    final offer = mainOfferPercent;
+    if (offer == null || offer <= 0) return null;
+    return offer;
+  }
+
+  String? get highlightedOfferLabel {
+    final offer = highlightedOfferPercent;
+    if (offer == null) return null;
+    return '$offer% OFF';
+  }
 }
 
 extension LabOfferedTestDisplay on LabOfferedTest {

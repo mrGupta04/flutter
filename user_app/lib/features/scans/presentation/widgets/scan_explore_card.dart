@@ -18,6 +18,8 @@ class ScanExploreCard extends StatelessWidget {
   final ScanCenterModel center;
   final VoidCallback onViewDetails;
 
+  static const double _imageSize = 108; // 72 * 1.5
+
   @override
   Widget build(BuildContext context) {
     final logoUrl = MediaUrlUtils.resolve(center.profilePicture);
@@ -28,6 +30,7 @@ class ScanExploreCard extends StatelessWidget {
     final imageUrl = coverUrl.isNotEmpty ? coverUrl : logoUrl;
     final distance = formatNearbyDistanceLabel(center.distanceKm);
     final startingPrice = center.startingPriceInr;
+    final offerLabel = center.highlightedOfferLabel;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -42,30 +45,41 @@ class ScanExploreCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      color: AppColors.grey100,
-                      child: imageUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: imageUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Image.asset(
-                                'assets/images/home_cards/diagnostic_scans.png',
-                                fit: BoxFit.cover,
-                              ),
-                              errorWidget: (_, __, ___) => Image.asset(
-                                'assets/images/home_cards/scan_card-removebg-preview.png',
-                                fit: BoxFit.contain,
-                              ),
-                            )
-                          : Image.asset(
-                              'assets/images/home_cards/scan_card-removebg-preview.png',
-                              fit: BoxFit.contain,
-                            ),
-                    ),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: _imageSize,
+                          height: _imageSize,
+                          color: AppColors.grey100,
+                          child: imageUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, _) => Image.asset(
+                                    'assets/images/home_cards/diagnostic_scans.png',
+                                    fit: BoxFit.cover,
+                                  ),
+                                  errorWidget: (_, _, _) => Image.asset(
+                                    'assets/images/home_cards/scan_card-removebg-preview.png',
+                                    fit: BoxFit.contain,
+                                  ),
+                                )
+                              : Image.asset(
+                                  'assets/images/home_cards/scan_card-removebg-preview.png',
+                                  fit: BoxFit.contain,
+                                ),
+                        ),
+                      ),
+                      if (offerLabel != null)
+                        Positioned(
+                          left: -4,
+                          top: -4,
+                          child: _OfferRibbon(label: offerLabel),
+                        ),
+                    ],
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -101,11 +115,8 @@ class ScanExploreCard extends StatelessWidget {
                           spacing: 6,
                           runSpacing: 6,
                           children: [
-                            if (center.hasActiveOfferBadge)
-                              const _Badge(
-                                label: 'Offer',
-                                color: AppColors.offer,
-                              ),
+                            if (offerLabel != null)
+                              _OfferPill(label: offerLabel),
                             if (center.supportsHomeVisit)
                               const _Badge(
                                 label: 'Home visit',
@@ -195,6 +206,65 @@ class ScanExploreCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OfferRibbon extends StatelessWidget {
+  const _OfferRibbon({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.offer,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.offer.withValues(alpha: 0.35),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: 10,
+          height: 1.1,
+        ),
+      ),
+    );
+  }
+}
+
+class _OfferPill extends StatelessWidget {
+  const _OfferPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.offerLight,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.offer.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.offerDark,
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
         ),
       ),
     );

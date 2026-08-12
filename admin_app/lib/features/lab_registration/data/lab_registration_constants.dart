@@ -109,6 +109,9 @@ class LabRegistrationConstants {
 }
 
 /// Extended registration payload merged with [LabModel.toJson] on submit.
+/// Preset main offer percentages labs can highlight on marketplace cards.
+const labMainOfferPercentOptions = <int>[10, 20, 30, 40, 50];
+
 class LabRegistrationExtras {
   const LabRegistrationExtras({
     this.coverImage,
@@ -134,6 +137,7 @@ class LabRegistrationExtras {
     this.serviceCities = const [],
     this.serviceAreas = const [],
     this.homeCollectionRadiusKm,
+    this.mainOfferPercent,
   });
 
   final String? coverImage;
@@ -159,6 +163,7 @@ class LabRegistrationExtras {
   final List<String> serviceCities;
   final List<String> serviceAreas;
   final double? homeCollectionRadiusKm;
+  final int? mainOfferPercent;
 
   Map<String, dynamic> toJson() => {
         if (coverImage != null) 'coverImage': coverImage,
@@ -191,6 +196,7 @@ class LabRegistrationExtras {
         if (serviceAreas.isNotEmpty) 'serviceAreas': serviceAreas,
         if (homeCollectionRadiusKm != null)
           'homeCollectionRadiusKm': homeCollectionRadiusKm,
+        'mainOfferPercent': mainOfferPercent,
       };
 }
 

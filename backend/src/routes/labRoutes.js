@@ -294,6 +294,47 @@ router.post('/register', async (req, res) => {
           operatingHours: body.operatingHours?.trim(),
           homeCollectionAvailable: Boolean(body.homeCollectionAvailable),
           available24x7: Boolean(body.available24x7),
+          mainOfferPercent:
+            body.mainOfferPercent === null || body.mainOfferPercent === ''
+              ? null
+              : body.mainOfferPercent !== undefined
+                ? Number(body.mainOfferPercent)
+                : undefined,
+          coverImage: body.coverImage?.trim(),
+          labType: body.labType?.trim(),
+          yearEstablished: body.yearEstablished,
+          registrationNumber: body.registrationNumber?.trim(),
+          nablAccreditationNumber: body.nablAccreditationNumber?.trim(),
+          otherCertifications: body.otherCertifications?.trim(),
+          buildingName: body.buildingName?.trim(),
+          street: body.street?.trim(),
+          area: body.area?.trim(),
+          landmark: body.landmark?.trim(),
+          openingTime: body.openingTime?.trim(),
+          closingTime: body.closingTime?.trim(),
+          workingDays: Array.isArray(body.workingDays) ? body.workingDays : undefined,
+          emergencyServiceAvailable: body.emergencyServiceAvailable,
+          facilities: Array.isArray(body.facilities) ? body.facilities : undefined,
+          supportedCategories: Array.isArray(body.supportedCategories)
+            ? body.supportedCategories
+            : undefined,
+          healthPackages: Array.isArray(body.healthPackages)
+            ? body.healthPackages
+            : undefined,
+          offeredScans: Array.isArray(body.offeredScans)
+            ? body.offeredScans
+            : undefined,
+          staffMembers: Array.isArray(body.staffMembers)
+            ? body.staffMembers
+            : undefined,
+          bankDetails: body.bankDetails,
+          serviceCities: Array.isArray(body.serviceCities)
+            ? body.serviceCities
+            : undefined,
+          serviceAreas: Array.isArray(body.serviceAreas)
+            ? body.serviceAreas
+            : undefined,
+          homeCollectionRadiusKm: body.homeCollectionRadiusKm,
           offeredTests: Array.isArray(body.offeredTests) ? body.offeredTests : [],
           branches: Array.isArray(body.branches) ? body.branches : [],
           serviceablePincodes: Array.isArray(body.serviceablePincodes)

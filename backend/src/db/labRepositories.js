@@ -122,6 +122,14 @@ async function upsertLab(data) {
     homeCollectionAvailable:
       data.homeCollectionAvailable ?? existing?.homeCollectionAvailable ?? false,
     available24x7: data.available24x7 ?? existing?.available24x7 ?? false,
+    mainOfferPercent: (() => {
+      if (data.mainOfferPercent === null) return null;
+      if (data.mainOfferPercent !== undefined) {
+        const n = Number(data.mainOfferPercent);
+        return Number.isFinite(n) ? n : existing?.mainOfferPercent ?? null;
+      }
+      return existing?.mainOfferPercent ?? null;
+    })(),
     offeredTests: data.offeredTests ?? existing?.offeredTests ?? [],
     healthPackages: data.healthPackages ?? existing?.healthPackages ?? [],
     offeredScans: data.offeredScans ?? existing?.offeredScans ?? [],

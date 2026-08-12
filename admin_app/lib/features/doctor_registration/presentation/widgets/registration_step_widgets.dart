@@ -8,6 +8,7 @@ import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/text_controller_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -264,27 +265,30 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
           else
             const _EmailVerificationSection(),
           const SizedBox(height: 16),
-          CustomTextField(
-            controller: _passwordController,
-            label: 'Password',
-            hint: 'Create a strong password',
-            prefixIcon: Icons.lock_outline,
-            obscureText: true,
-            suffixIcon: Icons.visibility,
-            validator: ValidationUtils.validatePassword,
-          ),
-          const SizedBox(height: 16),
-          CustomTextField(
-            controller: _confirmPasswordController,
-            label: 'Confirm Password',
-            hint: 'Re-enter password',
-            prefixIcon: Icons.lock_outline,
-            obscureText: true,
-            suffixIcon: Icons.visibility,
-            validator: (value) => ValidationUtils.validatePasswordMatch(
-              _passwordController.text,
-              value,
-            ),
+          ResponsiveFormRow(
+            children: [
+              CustomTextField(
+                controller: _passwordController,
+                label: 'Password',
+                hint: 'Create a strong password',
+                prefixIcon: Icons.lock_outline,
+                obscureText: true,
+                suffixIcon: Icons.visibility,
+                validator: ValidationUtils.validatePassword,
+              ),
+              CustomTextField(
+                controller: _confirmPasswordController,
+                label: 'Confirm Password',
+                hint: 'Re-enter password',
+                prefixIcon: Icons.lock_outline,
+                obscureText: true,
+                suffixIcon: Icons.visibility,
+                validator: (value) => ValidationUtils.validatePasswordMatch(
+                  _passwordController.text,
+                  value,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           GenderRadioField(

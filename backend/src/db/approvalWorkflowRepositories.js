@@ -429,7 +429,7 @@ function statusFromProviderStatus(status) {
 
 function providerSnapshot(providerType, provider) {
   const def = PROVIDER_DEFINITIONS[providerType];
-  return {
+  const snapshot = {
     name: def?.name(provider) || 'Provider',
     email: provider.email,
     phone: def?.phone(provider),
@@ -441,6 +441,12 @@ function providerSnapshot(providerType, provider) {
     registrationDate: toDate(provider.createdAt) || new Date(),
     rawStatus: provider.verificationStatus,
   };
+  if (providerType === 'doctor') {
+    snapshot.offersOnlineConsult = Boolean(provider.offersOnlineConsult);
+    snapshot.offersBookHome = Boolean(provider.offersBookHome);
+    snapshot.offersVisitSite = Boolean(provider.offersVisitSite);
+  }
+  return snapshot;
 }
 
 function toApprover(doc, metrics = {}) {
@@ -2789,7 +2795,7 @@ async function buildApprovalReport({ period = 'monthly', format } = {}) {
       ['On Hold', dashboard.stats.onHold],
       ['Need Documents', dashboard.stats.needDocuments],
       ['Escalated', dashboard.stats.escalated],
-      ['SLA Breached', dashboard.stats.slaBreached],
+      ['Past deadline', dashboard.stats.slaBreached],
       [
         'Average Approval Time (minutes)',
         dashboard.stats.averageApprovalTimeMinutes,
@@ -2897,7 +2903,7 @@ async function buildApprovalReport({ period = 'monthly', format } = {}) {
         `On Hold: ${dashboard.stats.onHold}`,
         `Need Documents: ${dashboard.stats.needDocuments}`,
         `Escalated: ${dashboard.stats.escalated}`,
-        `SLA Breached: ${dashboard.stats.slaBreached}`,
+        `Past deadline: ${dashboard.stats.slaBreached}`,
         `Average Approval Time (min): ${dashboard.stats.averageApprovalTimeMinutes}`,
         '',
         'Approvers:',
@@ -3193,7 +3199,7 @@ async function processSlaEscalationsAndReminders() {
         await createApprovalNotification({
           recipientId: request.currentAssigneeId,
           recipientRole: 'approver',
-          title: 'SLA breached',
+          title: 'Past deadline',
           body: `${request.provider?.name || 'Provider'} is overdue and escalated to admin.`,
           type: 'sla_breach',
           data: {

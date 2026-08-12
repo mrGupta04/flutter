@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../provider/patient_auth_provider.dart';
@@ -63,8 +64,9 @@ class _UserLoginScreenState extends ConsumerState<UserLoginScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Login')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Form(
+        padding: ResponsiveUtils.pagePadding(context),
+        child: ResponsiveFormWidth(
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -130,6 +132,7 @@ class _UserLoginScreenState extends ConsumerState<UserLoginScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
