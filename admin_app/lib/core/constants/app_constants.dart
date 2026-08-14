@@ -172,6 +172,18 @@ class AppConstants {
   static const String endpointLabForgotPassword = '/lab/forgot-password';
   static const String endpointLabResetPassword = '/lab/reset-password';
   static const String endpointLabBookings = '/lab/bookings';
+  static const String endpointLabPrescriptionInbox =
+      '/prescription-requests/lab/inbox';
+  static String endpointLabPrescriptionById(String id) =>
+      '/prescription-requests/$id';
+  static String endpointLabPrescriptionQuote(String id) =>
+      '/prescription-requests/$id/quotations';
+  static String endpointLabPrescriptionReject(String id) =>
+      '/prescription-requests/$id/quotations/reject';
+  static String endpointLabPrescriptionChat(String id) =>
+      '/prescription-requests/$id/chat';
+  static const String routeLabPrescriptionInbox = '/lab-prescription-inbox';
+  static const String routeLabPrescriptionDetail = '/lab-prescription-detail';
   static const String endpointLabUploadProfile = '/lab/upload-profile';
   static const String endpointLabUploadDocument = '/lab/upload-document';
   static const String endpointLabUploadImage = '/lab/upload-image';

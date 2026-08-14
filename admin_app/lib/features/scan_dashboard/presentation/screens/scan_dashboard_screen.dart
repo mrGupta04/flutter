@@ -134,6 +134,14 @@ class _ScanDashboardScreenState extends ConsumerState<ScanDashboardScreen> {
                       const SizedBox(height: 24),
                       const MarketplaceSectionTitle(title: 'Manage'),
                       ServiceBenefitCard(
+                        icon: Icons.receipt_long_rounded,
+                        title: 'Prescription quotes',
+                        subtitle: 'View requests and submit price quotations',
+                        color: AppColors.primary,
+                        onTap: () => context.push(AppConstants.routeLabPrescriptionInbox),
+                      ),
+                      const SizedBox(height: 10),
+                      ServiceBenefitCard(
                         icon: Icons.person_outline_rounded,
                         title: 'Center profile',
                         subtitle: 'View verification status & contact details',

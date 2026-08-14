@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -19,6 +19,7 @@ const patientFeatureRoutes = require('./routes/patientFeatureRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const cmsRoutes = require('./routes/cmsRoutes');
+const prescriptionRequestRoutes = require('./routes/prescriptionRequestRoutes');
 const { getProviderInfo: getRazorpayInfo } = require('./services/razorpayService');
 const { getProviderInfo: getVideoProviderInfo } = require('./services/videoConsultService');
 const { sendSuccess, sendError } = require('./utils/response');
@@ -120,6 +121,7 @@ app.use('/api/v1/patient', patientFeatureRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/consultations', consultationRoutes);
 app.use('/api/v1/cms', cmsRoutes);
+app.use('/api/v1/prescription-requests', prescriptionRequestRoutes);
 app.use((req, res) => {
   sendError(res, `Route not found: ${req.method} ${req.path}`, 404);
 });
@@ -214,3 +216,4 @@ start().catch((err) => {
   console.error('Failed to start server:', err.message);
   process.exit(1);
 });
+

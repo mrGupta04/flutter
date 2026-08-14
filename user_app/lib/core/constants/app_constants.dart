@@ -187,6 +187,9 @@ class AppConstants {
   static const String routeScanSearch = '/scan-search';
   static const String routeScanCenterDetail = '/scan-center';
   static const String routeLabSearch = '/lab-search';
+  static const String routeUploadPrescription = '/upload-prescription';
+  static const String routePrescriptionRequests = '/prescription-requests';
+  static const String routePrescriptionRequestDetail = '/prescription-request';
   static const String routeConsultationDemo = '/consultation-demo';
   static const String routeOnlineConsultBooking = '/online-consult';
   static const String routeHospitalVisitBooking = '/hospital-visit';
@@ -218,10 +221,26 @@ class AppConstants {
   static const String endpointPatientValidateCoupon = '/patient/coupons/validate';
   static const String endpointLabPaymentsCreateOrder = '/lab/payments/create-order';
   static const String endpointLabPaymentsVerify = '/lab/payments/verify';
-  static const String endpointScanBookings = '/scan/bookings';
-  static const String endpointScanPaymentsCreateOrder =
-      '/scan/payments/create-order';
-  static const String endpointScanPaymentsVerify = '/scan/payments/verify';
+
+  // Prescription quote requests
+  static const String endpointPrescriptionUpload =
+      '/prescription-requests/upload';
+  static const String endpointPrescriptionRequest =
+      '/prescription-requests/request';
+  static const String endpointPrescriptionMyRequests =
+      '/prescription-requests/my-requests';
+  static String endpointPrescriptionById(String id) =>
+      '/prescription-requests/$id';
+  static String endpointPrescriptionSelectLab(String id) =>
+      '/prescription-requests/$id/select-lab';
+  static String endpointPrescriptionPaymentCreate(String id) =>
+      '/prescription-requests/$id/payments/create-order';
+  static String endpointPrescriptionPaymentVerify(String id) =>
+      '/prescription-requests/$id/payments/verify';
+  static String endpointPrescriptionPaymentFailed(String id) =>
+      '/prescription-requests/$id/payments/failed';
+  static String endpointPrescriptionChat(String id) =>
+      '/prescription-requests/$id/chat';
 
   // Scan API Endpoints (patient discovery)
   static const String endpointGetScanCenterProfile = '/scan/profile';

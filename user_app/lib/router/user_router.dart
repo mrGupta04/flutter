@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/constants/app_constants.dart';
@@ -40,6 +40,9 @@ import '../features/labs/presentation/screens/lab_detail_screen.dart';
 import '../features/labs/presentation/screens/lab_cart_screen.dart';
 import '../features/labs/presentation/screens/lab_booking_confirmation_screen.dart';
 import '../features/labs/presentation/screens/lab_search_screen.dart';
+import '../features/prescription_quotes/presentation/screens/upload_prescription_screen.dart';
+import '../features/prescription_quotes/presentation/screens/prescription_requests_list_screen.dart';
+import '../features/prescription_quotes/presentation/screens/prescription_request_detail_screen.dart';
 import '../features/scans/presentation/screens/scans_screen.dart';
 import '../features/scans/presentation/screens/scan_explore_screen.dart';
 import '../features/scans/presentation/screens/scan_search_screen.dart';
@@ -115,6 +118,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             BookingChatScreen(
               bookingId: bookingId,
               title: state.uri.queryParameters['title'] ?? 'Chat',
+              chatEndpoint: state.uri.queryParameters['chatPath'],
             ),
           );
         },
@@ -387,6 +391,33 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           state,
           const LabExploreScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeUploadPrescription,
+        name: 'uploadPrescription',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const UploadPrescriptionScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routePrescriptionRequests,
+        name: 'prescriptionRequests',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const PrescriptionRequestsListScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routePrescriptionRequestDetail,
+        name: 'prescriptionRequestDetail',
+        pageBuilder: (context, state) {
+          final id = state.uri.queryParameters['id'] ?? '';
+          return slidePage(
+            state,
+            PrescriptionRequestDetailScreen(requestId: id),
+          );
+        },
       ),
       GoRoute(
         path: '${AppConstants.routeLabDetail}/:labId',

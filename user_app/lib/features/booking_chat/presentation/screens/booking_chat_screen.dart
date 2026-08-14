@@ -11,10 +11,12 @@ class BookingChatScreen extends ConsumerStatefulWidget {
     super.key,
     required this.bookingId,
     this.title = 'Chat',
+    this.chatEndpoint,
   });
 
   final String bookingId;
   final String title;
+  final String? chatEndpoint;
 
   @override
   ConsumerState<BookingChatScreen> createState() => _BookingChatScreenState();
@@ -58,7 +60,7 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
       });
     }
     try {
-      final messages = await _repo.list(widget.bookingId);
+      final messages = await _repo.list(widget.bookingId, chatEndpoint: widget.chatEndpoint);
       if (!mounted) return;
       setState(() {
         _messages = messages;
@@ -81,6 +83,7 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
       final newer = await _repo.list(
         widget.bookingId,
         after: _lastCreatedAt,
+        chatEndpoint: widget.chatEndpoint,
       );
       if (!mounted || newer.isEmpty) return;
       final existingIds = _messages.map((m) => m.id).toSet();
@@ -110,7 +113,7 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      final msg = await _repo.send(widget.bookingId, text);
+      final msg = await _repo.send(widget.bookingId, text, chatEndpoint: widget.chatEndpoint);
       _controller.clear();
       setState(() {
         _messages = [..._messages, msg];

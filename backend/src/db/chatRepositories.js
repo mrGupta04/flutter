@@ -3,6 +3,8 @@ const BookingChatMessage = require('./models/BookingChatMessage');
 const ConsultationBooking = require('./models/ConsultationBooking');
 const LabBooking = require('./models/LabBooking');
 const ScanBooking = require('./models/ScanBooking');
+const PrescriptionRequest = require('./models/PrescriptionRequest');
+const PrescriptionQuotation = require('./models/PrescriptionQuotation');
 const { createAndPushNotification } = require('./notificationRepositories');
 
 const LAB_CHAT_STATUSES = new Set([
@@ -32,6 +34,11 @@ async function resolveBooking(bookingId) {
   const scan = await ScanBooking.findOne({ id: bookingId }).lean();
   if (scan) {
     return { kind: 'scan', booking: scan };
+  }
+
+  const prescription = await PrescriptionRequest.findOne({ id: bookingId }).lean();
+  if (prescription) {
+    return { kind: 'prescription_request', booking: prescription };
   }
 
   return null;
@@ -64,6 +71,21 @@ function assertChatAllowed(kind, booking) {
       err.statusCode = 403;
       throw err;
     }
+    return;
+  }
+  if (kind === 'prescription_request') {
+    if (booking.paymentStatus !== 'PAID' || !booking.chatEnabled) {
+      const err = new Error(
+        'Chat will be available after payment confirmation.',
+      );
+      err.statusCode = 403;
+      throw err;
+    }
+    if (!booking.selectedLabId) {
+      const err = new Error('No lab selected for this prescription request');
+      err.statusCode = 403;
+      throw err;
+    }
   }
 }
 
@@ -80,8 +102,10 @@ async function assertChatParticipant(bookingId, auth) {
 
   const isPatient =
     auth?.type === 'patient' &&
-    booking.patientId &&
-    auth.patientId === booking.patientId;
+    ((booking.patientId && auth.patientId === booking.patientId) ||
+      (kind === 'prescription_request' &&
+        booking.userId &&
+        auth.patientId === booking.userId));
 
   const isDoctor =
     kind === 'consultation' &&
@@ -96,16 +120,24 @@ async function assertChatParticipant(bookingId, auth) {
     auth.nurseId === booking.nurseId;
 
   const isLab =
-    kind === 'lab' &&
-    auth?.type === 'lab' &&
-    booking.labId &&
-    auth.labId === booking.labId;
+    (kind === 'lab' &&
+      auth?.type === 'lab' &&
+      booking.labId &&
+      auth.labId === booking.labId) ||
+    (kind === 'prescription_request' &&
+      auth?.type === 'lab' &&
+      booking.selectedLabId &&
+      auth.labId === booking.selectedLabId);
 
   const isScanCenter =
-    kind === 'scan' &&
-    auth?.type === 'scan_center' &&
-    booking.scanCenterId &&
-    auth.scanCenterId === booking.scanCenterId;
+    (kind === 'scan' &&
+      auth?.type === 'scan_center' &&
+      booking.scanCenterId &&
+      auth.scanCenterId === booking.scanCenterId) ||
+    (kind === 'prescription_request' &&
+      auth?.type === 'scan_center' &&
+      booking.selectedLabId &&
+      auth.scanCenterId === booking.selectedLabId);
 
   if (!isPatient && !isDoctor && !isNurse && !isLab && !isScanCenter) {
     const err = new Error('You are not allowed to access this chat');
@@ -232,10 +264,24 @@ async function sendChatMessage(bookingId, auth, body) {
           type: 'chat_message',
           data: { bookingId },
         });
+      } else if (booking.selectedLabId) {
+        const quotation = await PrescriptionQuotation.findOne({
+          prescriptionRequestId: bookingId,
+          labId: booking.selectedLabId,
+        }).lean();
+        await createAndPushNotification({
+          userId: booking.selectedLabId,
+          userType:
+            quotation?.providerType === 'scan_center' ? 'scan_center' : 'lab',
+          title: 'New message',
+          body: text.slice(0, 120),
+          type: 'chat_message',
+          data: { bookingId, prescriptionRequestId: bookingId },
+        });
       }
-    } else if (booking.patientId) {
+    } else if (booking.patientId || booking.userId) {
       await createAndPushNotification({
-        userId: booking.patientId,
+        userId: booking.patientId || booking.userId,
         userType: 'patient',
         title: 'New message',
         body: text.slice(0, 120),

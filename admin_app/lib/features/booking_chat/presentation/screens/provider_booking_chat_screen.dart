@@ -38,11 +38,13 @@ class ProviderBookingChatScreen extends StatefulWidget {
     required this.bookingId,
     required this.role,
     this.title = 'Chat with patient',
+    this.chatEndpoint,
   });
 
   final String bookingId;
   final String role; // doctor | nurse | lab | scan_center
   final String title;
+  final String? chatEndpoint;
 
   @override
   State<ProviderBookingChatScreen> createState() =>
@@ -60,6 +62,9 @@ class _ProviderBookingChatScreenState extends State<ProviderBookingChatScreen> {
   Timer? _poll;
 
   String get _endpoint {
+    if (widget.chatEndpoint != null && widget.chatEndpoint!.isNotEmpty) {
+      return widget.chatEndpoint!;
+    }
     switch (widget.role) {
       case 'nurse':
         return AppConstants.endpointNurseBookingChat(widget.bookingId);

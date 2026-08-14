@@ -289,7 +289,14 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
             }
           },
         ),
-        actions: const [DiagnosticCartIconButton()],
+        actions: [
+          IconButton(
+            tooltip: 'My prescription requests',
+            icon: const Icon(Icons.receipt_long_rounded),
+            onPressed: () => context.push(AppConstants.routePrescriptionRequests),
+          ),
+          const DiagnosticCartIconButton(),
+        ],
       ),
       bottomNavigationBar: const DiagnosticStickyCartBar(),
       body: RefreshIndicator(
@@ -318,6 +325,13 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
                         ),
                       ),
                       onChanged: _onSearchChanged,
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          context.push(AppConstants.routeUploadPrescription),
+                      icon: const Icon(Icons.upload_file_rounded),
+                      label: const Text('Upload Prescription'),
                     ),
                     const SizedBox(height: 10),
                     SizedBox(

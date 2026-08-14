@@ -38,6 +38,7 @@ import '../features/scan_registration/presentation/screens/scan_application_subm
 import '../features/scan_registration/presentation/screens/scan_registration_screen.dart';
 import '../features/scan_dashboard/presentation/screens/scan_dashboard_screen.dart';
 import '../features/lab_dashboard/presentation/screens/lab_dashboard_screen.dart';
+import '../features/lab_dashboard/presentation/screens/lab_prescription_inbox_screen.dart';
 import '../features/blood_bank_dashboard/presentation/screens/blood_bank_dashboard_screen.dart';
 import '../features/doctor_dashboard/presentation/screens/doctor_dashboard_screen.dart';
 import '../features/doctor_registration/presentation/screens/application_submitted_screen.dart';
@@ -134,6 +135,8 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           loc == AppConstants.routeNurseDashboard ||
           loc == AppConstants.routeScanDashboard ||
           loc == AppConstants.routeLabDashboard ||
+          loc == AppConstants.routeLabPrescriptionInbox ||
+          loc == AppConstants.routeLabPrescriptionDetail ||
           loc == AppConstants.routeBloodBankDashboard ||
           loc == AppConstants.routeProviderProfile) {
         if (ref.read(providerAuthProvider).isAuthenticated) {
@@ -434,6 +437,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
               bookingId: bookingId,
               role: role,
               title: title,
+              chatEndpoint: state.uri.queryParameters['chatPath'],
             ),
           );
         },
@@ -453,6 +457,25 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           state,
           const LabDashboardScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeLabPrescriptionInbox,
+        name: 'labPrescriptionInbox',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const LabPrescriptionInboxScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeLabPrescriptionDetail,
+        name: 'labPrescriptionDetail',
+        pageBuilder: (context, state) {
+          final id = state.uri.queryParameters['id'] ?? '';
+          return slidePage(
+            state,
+            LabPrescriptionDetailScreen(requestId: id),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeBloodBankDashboard,
