@@ -28,6 +28,7 @@ class AppLists {
     'General Physician',
     'General Surgery',
     'Geriatrics',
+    'Gynecologic Oncology',
     'Gynecology',
     'Gynecology & Obstetrics',
     'Hematology',

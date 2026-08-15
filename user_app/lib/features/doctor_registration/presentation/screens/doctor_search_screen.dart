@@ -20,10 +20,12 @@ import '../../../../core/services/location_service.dart';
 import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/widgets/enable_location_services_dialog.dart';
+import '../../data/medical_specialities.dart';
 import '../../provider/care_filter_constants.dart';
 import '../../provider/doctor_search_provider.dart';
 import '../../provider/doctor_live_status_provider.dart';
 import '../widgets/doctor_search_result_tile.dart';
+import '../widgets/medical_specialities_section.dart';
 
 class DoctorSearchScreen extends ConsumerStatefulWidget {
   const DoctorSearchScreen({
@@ -67,7 +69,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
     super.initState();
     _query = widget.initialQuery;
     _city = widget.initialCity;
-    _specialization = widget.initialSpecialization;
+    _specialization = resolveSpecialitySearchTerm(widget.initialSpecialization);
     _consultationType =
         widget.initialConsultationType ?? ConsultationType.onlineConsult;
     _controller = TextEditingController(text: widget.initialQuery ?? '');
@@ -404,8 +406,20 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
           ),
         ),
         const SizedBox(height: 12),
+        MedicalSpecialitiesSection(
+          selectedSearchTerm: _specialization,
+          onSpecialitySelected: _onSpecialitySelected,
+        ),
       ],
     );
+  }
+
+  void _onSpecialitySelected(MedicalSpeciality speciality) {
+    setState(() {
+      _specialization = _specialization == speciality.searchTerm
+          ? null
+          : speciality.searchTerm;
+    });
   }
 
   List<Widget> _buildResultSlivers(AsyncValue<List<DoctorModel>> asyncResults) {

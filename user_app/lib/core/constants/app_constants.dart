@@ -167,6 +167,8 @@ class AppConstants {
   // Routes — patient marketplace
   static const String routeGlobalSearch = '/search';
   static const String routeDoctorSearch = '/doctor-search';
+  /// Alias for [routeDoctorSearch] (`/doctors?speciality=cardiology`).
+  static const String routeDoctors = '/doctors';
   static const String routeDoctorProfile = '/doctor-profile';
   static const String routeNurseSearch = '/nurse-search';
   static const String routeNurseProfile = '/nurse-profile';

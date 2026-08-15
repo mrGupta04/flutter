@@ -27,6 +27,8 @@ abstract final class LabTestIllustrations {
   static const shield = '$_base/shield.svg';
   static const fullBody = '$_base/full_body.svg';
   static const thermometer = '$_base/thermometer.svg';
+  static const tooth = '$_base/tooth.svg';
+  static const ecg = '$_base/ecg.svg';
 }
 
 /// SVG illustration path for a browse group, package, or category id.

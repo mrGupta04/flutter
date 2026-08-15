@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../core/constants/app_constants.dart';
 import '../core/router/router_transitions.dart';
 import '../data/models/consultation_type.dart';
+import '../features/doctor_registration/data/medical_specialities.dart';
 import '../features/doctor_registration/presentation/screens/care_listing_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_consultation_demo_screen.dart';
 import '../features/doctor_registration/presentation/screens/ambulance_search_screen.dart';
@@ -307,12 +308,23 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: AppConstants.routeDoctors,
+        redirect: (context, state) {
+          final query = state.uri.query;
+          return query.isEmpty
+              ? AppConstants.routeDoctorSearch
+              : '${AppConstants.routeDoctorSearch}?$query';
+        },
+      ),
+      GoRoute(
         path: AppConstants.routeDoctorSearch,
         name: 'doctorSearch',
         pageBuilder: (context, state) {
           final q = state.uri.queryParameters['q'];
           final city = state.uri.queryParameters['city'];
-          final specialization = state.uri.queryParameters['specialization'];
+          final specialityParam = state.uri.queryParameters['speciality'] ??
+              state.uri.queryParameters['specialization'];
+          final specialization = resolveSpecialitySearchTerm(specialityParam);
           final typeParam = state.uri.queryParameters['type'];
           ConsultationType? initialType;
           if (typeParam == 'home' || typeParam == 'bookHome') {
