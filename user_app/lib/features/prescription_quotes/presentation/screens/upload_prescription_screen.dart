@@ -11,6 +11,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/lab_model.dart';
 import '../../../../data/repositories/lab_repository.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
+import '../../../../shared/widgets/user_app_footer.dart';
 import '../../data/prescription_request_repository.dart';
 import '../../provider/prescription_requests_provider.dart';
 
@@ -105,10 +106,13 @@ class _UploadPrescriptionScreenState
   }
 
   void _toggleLab(LabModel lab) {
-    if (_selectedLabIds.contains(lab.id)) {
+    final id = lab.id;
+    if (id == null || id.isEmpty) return;
+
+    if (_selectedLabIds.contains(id)) {
       setState(() {
-        _selectedLabIds.remove(lab.id);
-        _selectedLabs.remove(lab.id);
+        _selectedLabIds.remove(id);
+        _selectedLabs.remove(id);
       });
       return;
     }
@@ -120,8 +124,8 @@ class _UploadPrescriptionScreenState
       return;
     }
     setState(() {
-      _selectedLabIds.add(lab.id);
-      _selectedLabs[lab.id] = lab;
+      _selectedLabIds.add(id);
+      _selectedLabs[id] = lab;
     });
   }
 

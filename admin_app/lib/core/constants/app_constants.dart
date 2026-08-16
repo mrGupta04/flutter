@@ -119,6 +119,23 @@ class AppConstants {
       '/doctor/bookings/$bookingId/visit-progress';
   static String endpointNurseVisitProgress(String bookingId) =>
       '/nurse/bookings/$bookingId/visit-progress';
+  static String endpointDoctorBookingTracking(String bookingId) =>
+      '/doctor/bookings/$bookingId/tracking';
+  static String endpointNurseBookingTracking(String bookingId) =>
+      '/nurse/bookings/$bookingId/tracking';
+  static String endpointDoctorTrackingStart(String bookingId) =>
+      '/doctor/bookings/$bookingId/tracking/start';
+  static String endpointNurseTrackingStart(String bookingId) =>
+      '/nurse/bookings/$bookingId/tracking/start';
+  static String endpointDoctorTrackingStop(String bookingId) =>
+      '/doctor/bookings/$bookingId/tracking/stop';
+  static String endpointNurseTrackingStop(String bookingId) =>
+      '/nurse/bookings/$bookingId/tracking/stop';
+  static String endpointDoctorBookingLocation(String bookingId) =>
+      '/doctor/bookings/$bookingId/location';
+  static String endpointNurseBookingLocation(String bookingId) =>
+      '/nurse/bookings/$bookingId/location';
+  static const String routeProviderHomeVisitTrip = '/provider-home-visit-trip';
   static String endpointDoctorBookingChat(String bookingId) =>
       '/doctor/bookings/$bookingId/chat';
   static String endpointNurseBookingChat(String bookingId) =>

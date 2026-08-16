@@ -235,6 +235,12 @@ class PatientBookingModel {
     };
     return liveStatuses.contains(status);
   }
+
+  bool get canTrackHomeVisitLive {
+    if (!isHomeVisit && !isNurseVisit) return false;
+    if (status != 'confirmed') return false;
+    return visitProgress != 'completed';
+  }
   bool get isClinicVisit => consultationType == 'visit_site';
 
   bool get isHomeVisit => consultationType == 'book_home';

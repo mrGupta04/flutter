@@ -75,6 +75,10 @@ class AppConstants {
       '/patient/bookings/$bookingId/chat';
   static String endpointPatientVisitNote(String bookingId) =>
       '/patient/bookings/$bookingId/visit-note';
+  static String endpointPatientBookingTracking(String bookingId) =>
+      '/patient/bookings/$bookingId/tracking';
+  static String endpointPatientBookingRoute(String bookingId) =>
+      '/patient/bookings/$bookingId/route';
   static const String endpointPatientNursingReports = '/patient/nursing-reports';
   static String endpointPatientNursingReport(String bookingId) =>
       '/patient/bookings/$bookingId/nursing-report';
@@ -174,6 +178,7 @@ class AppConstants {
   static const String routeNurseProfile = '/nurse-profile';
   static const String routeAmbulanceSearch = '/ambulance-search';
   static const String routeAmbulanceTrack = '/ambulance-track';
+  static const String routeHomeVisitTrack = '/home-visit-track';
   static const String routeBloodBankSearch = '/blood-bank-search';
   static const String routeBloodBanks = '/blood-banks';
   static const String routeBloodBankDetail = '/blood-bank';
@@ -244,9 +249,13 @@ class AppConstants {
   static String endpointPrescriptionChat(String id) =>
       '/prescription-requests/$id/chat';
 
-  // Scan API Endpoints (patient discovery)
+  // Scan API Endpoints (patient discovery & booking)
   static const String endpointGetScanCenterProfile = '/scan/profile';
   static const String endpointVerifiedScanCenters = '/scan/verified';
+  static const String endpointScanBookings = '/scan/bookings';
+  static const String endpointScanPaymentsCreateOrder =
+      '/scan/payments/create-order';
+  static const String endpointScanPaymentsVerify = '/scan/payments/verify';
 
   // Blood bank profile (patient discovery)
   static const String endpointGetBloodBankProfile = '/blood-bank/profile';

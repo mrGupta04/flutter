@@ -1380,6 +1380,16 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                           icon: const Icon(Icons.my_location_rounded, size: 16),
                           label: const Text('Track live'),
                         ),
+                      if (booking.canTrackHomeVisitLive)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            context.push(
+                              '${AppConstants.routeHomeVisitTrack}?bookingId=${booking.id}',
+                            );
+                          },
+                          icon: const Icon(Icons.my_location_rounded, size: 16),
+                          label: const Text('Track live'),
+                        ),
                       if (booking.canChat)
                         OutlinedButton.icon(
                           onPressed: () {

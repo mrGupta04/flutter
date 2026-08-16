@@ -100,6 +100,14 @@ const consultationBookingSchema = new mongoose.Schema(
     },
     visitStartedAt: Date,
     visitCompletedAt: Date,
+    /** Latest provider GPS for an active home-visit trip (overwritten, not appended). */
+    currentLatitude: Number,
+    currentLongitude: Number,
+    currentHeading: Number,
+    currentSpeed: Number,
+    liveLocationUpdatedAt: Date,
+    trackingStartedAt: Date,
+    trackingStoppedAt: Date,
     /** Hashed 6-digit OTP for nurse visit completion verification. */
     completionOtpHash: String,
     completionOtpExpiresAt: Date,

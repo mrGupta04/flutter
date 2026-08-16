@@ -572,16 +572,42 @@ class _BookingTile extends ConsumerWidget {
                 mapHeight: 150,
               ),
             ],
+            if (isConfirmed && booking.visitProgress != 'completed') ...[
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: () {
+                  final params = {
+                    'role': 'nurse',
+                    'bookingId': booking.id,
+                    if (booking.patientName != null)
+                      'patientName': booking.patientName!,
+                    if (addressLine != null) 'address': addressLine,
+                    if (booking.patientLatitude != null)
+                      'lat': '${booking.patientLatitude}',
+                    if (booking.patientLongitude != null)
+                      'lng': '${booking.patientLongitude}',
+                  };
+                  context.push(
+                    Uri(
+                      path: AppConstants.routeProviderHomeVisitTrip,
+                      queryParameters: params,
+                    ).toString(),
+                  );
+                },
+                icon: const Icon(Icons.navigation_rounded, size: 18),
+                label: Text(
+                  booking.visitProgress == 'en_route'
+                      ? 'Open live trip'
+                      : 'Start trip',
+                ),
+              ),
+            ],
             if (isConfirmed) ...[
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  OutlinedButton(
-                    onPressed: () => _setProgress(context, ref, 'en_route'),
-                    child: const Text('On the way'),
-                  ),
                   OutlinedButton(
                     onPressed: () => _setProgress(context, ref, 'arrived'),
                     child: const Text('Arrived'),

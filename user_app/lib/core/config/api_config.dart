@@ -54,6 +54,15 @@ class ApiConfig {
     return url.endsWith('/') ? url : '$url/';
   }
 
+  /// Socket.IO origin (no `/api/v1`). Override with `--dart-define=SOCKET_URL=`.
+  static String get socketUrl {
+    const override = String.fromEnvironment('SOCKET_URL', defaultValue: '');
+    if (override.isNotEmpty) {
+      return override.replaceAll(RegExp(r'/+$'), '');
+    }
+    return baseUrl.replaceAll(RegExp(r'/+$'), '').replaceFirst(RegExp(r'/api/v1$'), '');
+  }
+
   /// Optional legacy admin API key (automation). Prefer admin JWT login in the app.
   static String get adminApiKey =>
       const String.fromEnvironment('ADMIN_API_KEY', defaultValue: '');

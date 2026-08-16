@@ -2704,34 +2704,48 @@ class _BookingCard extends StatelessWidget {
               mapHeight: 150,
             ),
           ],
+          if (booking.isHomeVisit &&
+              booking.status == 'confirmed' &&
+              booking.visitProgress != 'completed') ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  final params = {
+                    'role': 'doctor',
+                    'bookingId': booking.id,
+                    if (booking.patientName != null)
+                      'patientName': booking.patientName!,
+                    if (booking.patientLocationLine != null)
+                      'address': booking.patientLocationLine!,
+                    if (booking.patientLatitude != null)
+                      'lat': '${booking.patientLatitude}',
+                    if (booking.patientLongitude != null)
+                      'lng': '${booking.patientLongitude}',
+                  };
+                  context.push(
+                    Uri(
+                      path: AppConstants.routeProviderHomeVisitTrip,
+                      queryParameters: params,
+                    ).toString(),
+                  );
+                },
+                icon: const Icon(Icons.navigation_rounded, size: 18),
+                label: Text(
+                  booking.visitProgress == 'en_route'
+                      ? 'Open live trip'
+                      : 'Start trip',
+                ),
+              ),
+            ),
+          ],
           if (booking.isHomeVisit && booking.status == 'confirmed') ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                OutlinedButton(
-                  onPressed: () async {
-                    try {
-                      await DioService().post(
-                        AppConstants.endpointDoctorVisitProgress(booking.id),
-                        data: {'progress': 'en_route'},
-                      );
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Marked on the way')),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('$e')),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('On the way'),
-                ),
                 OutlinedButton(
                   onPressed: () async {
                     try {

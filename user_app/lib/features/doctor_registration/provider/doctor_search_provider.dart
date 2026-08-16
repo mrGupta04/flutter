@@ -51,7 +51,7 @@ class DoctorSearchParams {
 const categorySpecializationMap = <String, String>{
   'Cardiology': 'Cardiology',
   'Mental': 'Psychiatry',
-  'Pediatric': 'Pediatric',
+  'Pediatric': 'Pediatrics',
   'Eye Care': 'Ophthalmology',
 };
 

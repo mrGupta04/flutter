@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
+import '../../../../shared/widgets/user_app_footer.dart';
 import '../../provider/prescription_requests_provider.dart';
 
 class PrescriptionRequestsListScreen extends ConsumerStatefulWidget {

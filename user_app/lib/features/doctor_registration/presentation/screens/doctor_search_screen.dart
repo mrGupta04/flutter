@@ -406,10 +406,23 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        MedicalSpecialitiesSection(
-          selectedSearchTerm: _specialization,
-          onSpecialitySelected: _onSpecialitySelected,
-        ),
+        if (_specialization == null)
+          MedicalSpecialitiesSection(
+            selectedSearchTerm: _specialization,
+            onSpecialitySelected: _onSpecialitySelected,
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => setState(() => _specialization = null),
+                icon: const Icon(Icons.grid_view_rounded, size: 18),
+                label: const Text('Browse all specialities'),
+              ),
+            ),
+          ),
       ],
     );
   }

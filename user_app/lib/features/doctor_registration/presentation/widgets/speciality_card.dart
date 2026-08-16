@@ -41,119 +41,100 @@ class _SpecialityCardState extends State<SpecialityCard> {
     final scale = _pressed ? 0.97 : (_hovered ? 1.02 : 1.0);
     final lift = _hovered && !_pressed ? -3.0 : 0.0;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final fillHeight =
-            constraints.hasBoundedHeight && constraints.maxHeight.isFinite;
-
-        Widget card = MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() {
-            _hovered = false;
-            _pressed = false;
-          }),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: (_) => _setPressed(true),
-            onTapUp: (_) => _setPressed(false),
-            onTapCancel: () => _setPressed(false),
-            onTap: widget.onTap,
-            child: AnimatedScale(
-              scale: scale,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${_item.name}. ${_item.description}',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => _setPressed(true),
+          onTapUp: (_) => _setPressed(false),
+          onTapCancel: () => _setPressed(false),
+          onTap: widget.onTap,
+          child: AnimatedScale(
+            scale: scale,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                transform: Matrix4.translationValues(0, lift, 0),
-                constraints: const BoxConstraints(minHeight: 128),
-                padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: AppDecorations.borderRadiusXl,
-                  border: Border.all(
-                    color: selected
-                        ? accent.withValues(alpha: 0.55)
-                        : (_hovered
-                            ? accent.withValues(alpha: 0.28)
-                            : AppColors.border),
-                    width: selected ? 1.5 : 1,
+              transform: Matrix4.translationValues(0, lift, 0),
+              padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: AppDecorations.borderRadiusXl,
+                border: Border.all(
+                  color: selected
+                      ? accent.withValues(alpha: 0.55)
+                      : (_hovered
+                          ? accent.withValues(alpha: 0.28)
+                          : AppColors.border),
+                  width: selected ? 1.5 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(
+                      alpha: _hovered || selected ? 0.16 : 0.07,
+                    ),
+                    blurRadius: _hovered ? 18 : 10,
+                    offset: Offset(0, _hovered ? 8 : 4),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: accent.withValues(
-                        alpha: _hovered || selected ? 0.16 : 0.07,
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      _SpecialityIconBadge(speciality: _item),
+                      const Spacer(),
+                      _ChevronButton(
+                        color: accent,
+                        highlighted: selected || _hovered,
                       ),
-                      blurRadius: _hovered ? 18 : 10,
-                      offset: Offset(0, _hovered ? 8 : 4),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.titleSmall.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      height: 1.2,
+                      letterSpacing: -0.15,
                     ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    _item.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.3,
+                      fontSize: 11.5,
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        _SpecialityIconBadge(speciality: _item),
-                        const Spacer(),
-                        _ChevronButton(
-                          color: accent,
-                          highlighted: selected || _hovered,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _item.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.titleSmall.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                            height: 1.2,
-                            letterSpacing: -0.15,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _item.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                            height: 1.3,
-                            fontSize: 11.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-        );
-
-        if (fillHeight) {
-          card = SizedBox.expand(child: card);
-        }
-        return Semantics(
-          button: true,
-          selected: selected,
-          label: '${_item.name}. ${_item.description}',
-          child: card,
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -165,7 +146,7 @@ class _SpecialityIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const size = 44.0;
+    const size = 42.0;
     final accent = speciality.accent;
 
     return SizedBox(
@@ -209,6 +190,11 @@ class _SpecialityIconBadge extends StatelessWidget {
         height: size,
         fit: BoxFit.contain,
         colorFilter: ColorFilter.mode(speciality.accent, BlendMode.srcIn),
+        placeholderBuilder: (_) => Icon(
+          speciality.icon,
+          size: size,
+          color: speciality.accent,
+        ),
       );
     }
 
@@ -222,6 +208,11 @@ class _SpecialityIconBadge extends StatelessWidget {
           height: size,
           fit: BoxFit.contain,
           filterQuality: FilterQuality.high,
+          errorBuilder: (_, _, _) => Icon(
+            speciality.icon,
+            size: size,
+            color: speciality.accent,
+          ),
         ),
       );
     }

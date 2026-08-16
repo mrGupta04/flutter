@@ -1713,6 +1713,7 @@ async function listDoctorBookings(doctorId) {
       subtitle: slotLabel,
       status: b.status,
       paymentStatus: b.paymentStatus,
+      visitProgress: b.visitProgress || null,
       slotStart: b.slotStart,
       slotEnd: b.slotEnd,
       patientName: b.patientName,

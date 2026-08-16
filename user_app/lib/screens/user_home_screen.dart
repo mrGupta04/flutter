@@ -11,6 +11,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_decorations.dart';
 import '../core/theme/app_text_styles.dart';
 import '../data/models/patient_booking_model.dart';
+import '../features/doctor_registration/data/medical_specialities.dart';
 import '../features/labs/data/health_package_visuals.dart';
 import '../features/labs/data/lab_test_illustrations.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
@@ -232,8 +233,12 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   MarketplaceSectionTitle(
                     title: 'Browse by specialty',
                     actionLabel: 'View doctors',
-                    onAction: () =>
-                        context.push(AppConstants.routeDoctorSearch),
+                    onAction: () => context.push(
+                      routeWithPreferredCity(
+                        AppConstants.routeDoctorSearch,
+                        ref.read(userLocationProvider).city,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -341,7 +346,12 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
       params['city'] = preferredCity;
     }
     if (specialization != null && specialization.isNotEmpty) {
-      params['specialization'] = specialization;
+      final resolved = findMedicalSpeciality(specialization);
+      if (resolved != null) {
+        params['speciality'] = resolved.slug;
+      } else {
+        params['specialization'] = specialization;
+      }
     }
 
     final path = params.isEmpty
@@ -664,7 +674,7 @@ const _specialties = [
     label: 'Pediatric',
     softColor: Color(0xFFE8F5E9),
     accentColor: Color(0xFF43A047),
-    searchTerm: 'Pediatric',
+    searchTerm: 'Pediatrics',
   ),
   _SpecialtyItem(
     organAsset: OrganAssets.eye,

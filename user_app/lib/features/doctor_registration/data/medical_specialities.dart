@@ -342,13 +342,29 @@ const medicalSpecialities = <MedicalSpeciality>[
 /// Number of specialities shown before "View All" on compact screens.
 const kMedicalSpecialityPreviewCount = 12;
 
+const _specialityAliases = <String, String>{
+  'pediatric': 'pediatrics',
+  'paediatric': 'pediatrics',
+  'mental': 'psychiatry',
+  'ortho': 'orthopedics',
+  'gynae': 'gynecology',
+  'gyne': 'gynecology',
+  'dermat': 'dermatology',
+  'general': 'general-physician',
+  'eye care': 'ophthalmology',
+  'eye': 'ophthalmology',
+  'ent (otolaryngology)': 'ent',
+};
+
 MedicalSpeciality? findMedicalSpeciality(String? value) {
   if (value == null) return null;
   final q = value.trim().toLowerCase();
   if (q.isEmpty) return null;
+  final aliased = _specialityAliases[q] ?? q;
 
   for (final speciality in medicalSpecialities) {
-    if (speciality.slug == q ||
+    if (speciality.slug == aliased ||
+        speciality.slug == q ||
         speciality.name.toLowerCase() == q ||
         speciality.searchTerm.toLowerCase() == q) {
       return speciality;

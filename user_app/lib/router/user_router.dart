@@ -31,6 +31,7 @@ import '../features/user_dashboard/presentation/screens/user_dashboard_screen.da
 import '../features/user_dashboard/presentation/screens/nursing_reports_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_rewards_screen.dart';
 import '../features/ambulance/presentation/screens/ambulance_tracking_screen.dart';
+import '../features/home_visit_tracking/presentation/screens/patient_tracking_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/favorites/presentation/screens/favorites_screen.dart';
@@ -183,6 +184,17 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           return slidePage(
             state,
             AmbulanceTrackingScreen(bookingId: bookingId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeHomeVisitTrack,
+        name: 'homeVisitTrack',
+        pageBuilder: (context, state) {
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          return slidePage(
+            state,
+            PatientTrackingScreen(bookingId: bookingId),
           );
         },
       ),

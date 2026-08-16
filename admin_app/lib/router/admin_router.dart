@@ -47,6 +47,7 @@ import '../features/nurse_registration/presentation/screens/nurse_application_su
 import '../features/nurse_dashboard/presentation/screens/nurse_dashboard_screen.dart';
 import '../features/nurse_dashboard/presentation/screens/nurse_visit_assessment_screen.dart';
 import '../features/nurse_dashboard/presentation/screens/nurse_visit_otp_screen.dart';
+import '../features/home_visit_tracking/presentation/screens/provider_trip_screen.dart';
 import '../features/earnings/presentation/screens/provider_earnings_screen.dart';
 import '../features/notifications/presentation/screens/provider_notifications_screen.dart';
 import '../features/booking_chat/presentation/screens/provider_booking_chat_screen.dart';
@@ -133,6 +134,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
 
       if (loc == AppConstants.routeDoctorDashboard ||
           loc == AppConstants.routeNurseDashboard ||
+          loc == AppConstants.routeProviderHomeVisitTrip ||
           loc == AppConstants.routeScanDashboard ||
           loc == AppConstants.routeLabDashboard ||
           loc == AppConstants.routeLabPrescriptionInbox ||
@@ -363,6 +365,24 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           state,
           const NurseDashboardScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeProviderHomeVisitTrip,
+        name: 'providerHomeVisitTrip',
+        pageBuilder: (context, state) {
+          final q = state.uri.queryParameters;
+          return slidePage(
+            state,
+            ProviderTripScreen(
+              bookingId: q['bookingId'] ?? '',
+              role: q['role'] ?? 'doctor',
+              patientName: q['patientName'],
+              patientAddress: q['address'],
+              patientLatitude: double.tryParse(q['lat'] ?? ''),
+              patientLongitude: double.tryParse(q['lng'] ?? ''),
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routeNurseVisitAssessment,

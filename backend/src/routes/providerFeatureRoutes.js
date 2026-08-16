@@ -26,6 +26,14 @@ const {
 } = require('../db/nurseVisitWorkflowRepositories');
 const { listPublicNurseFeedback } = require('../db/feedbackRepositories');
 const Nurse = require('../db/models/Nurse');
+const {
+  startTracking,
+  stopTracking,
+  applyLocationUpdate,
+  getTrackingSnapshot,
+  getTrackingRoute,
+} = require('../db/trackingRepositories');
+const { emitLocationToRoom } = require('../services/trackingSocket');
 const { sendSuccess, sendError } = require('../utils/response');
 const { authRequired } = require('../middleware/auth');
 
@@ -128,6 +136,63 @@ function attachProviderFeatureRoutes(router, providerType) {
     } catch (err) {
       const status = err.statusCode || 500;
       return sendError(res, err.message || 'Failed to load timeline', status);
+    }
+  });
+
+  router.get('/bookings/:bookingId/tracking', authRequired, async (req, res) => {
+    try {
+      if (!requireProvider(req, res)) return;
+      const data = await getTrackingSnapshot(req.params.bookingId, req.auth, {
+        includeRoute: req.query.route !== 'false',
+      });
+      return sendSuccess(res, { data });
+    } catch (err) {
+      return sendError(res, err.message || 'Failed to load tracking', err.statusCode || 500);
+    }
+  });
+
+  router.get('/bookings/:bookingId/route', authRequired, async (req, res) => {
+    try {
+      if (!requireProvider(req, res)) return;
+      const data = await getTrackingRoute(req.params.bookingId, req.auth);
+      return sendSuccess(res, { data });
+    } catch (err) {
+      return sendError(res, err.message || 'Failed to load route', err.statusCode || 500);
+    }
+  });
+
+  router.post('/bookings/:bookingId/tracking/start', authRequired, async (req, res) => {
+    try {
+      if (!requireProvider(req, res)) return;
+      const data = await startTracking(req.params.bookingId, req.auth);
+      const { emitTrackingStatus } = require('../services/trackingSocket');
+      emitTrackingStatus(req.params.bookingId, 'on_the_way');
+      return sendSuccess(res, { message: 'Trip started', data });
+    } catch (err) {
+      return sendError(res, err.message || 'Failed to start tracking', err.statusCode || 500);
+    }
+  });
+
+  router.post('/bookings/:bookingId/tracking/stop', authRequired, async (req, res) => {
+    try {
+      if (!requireProvider(req, res)) return;
+      const data = await stopTracking(req.params.bookingId, req.auth, {
+        progress: req.body?.progress || req.body?.visitProgress,
+      });
+      return sendSuccess(res, { message: 'Tracking stopped', data });
+    } catch (err) {
+      return sendError(res, err.message || 'Failed to stop tracking', err.statusCode || 500);
+    }
+  });
+
+  router.post('/bookings/:bookingId/location', authRequired, async (req, res) => {
+    try {
+      if (!requireProvider(req, res)) return;
+      const location = await applyLocationUpdate(req.params.bookingId, req.auth, req.body);
+      emitLocationToRoom(req.params.bookingId, location);
+      return sendSuccess(res, { message: 'Location updated', data: location });
+    } catch (err) {
+      return sendError(res, err.message || 'Failed to update location', err.statusCode || 500);
     }
   });
 

@@ -34,6 +34,7 @@ class DoctorBookingModel {
     this.previousReports = const [],
     this.distanceKm,
     this.paymentStatus,
+    this.visitProgress,
   });
 
   final double? patientLatitude;
@@ -41,6 +42,7 @@ class DoctorBookingModel {
 
   final double? distanceKm;
   final String? paymentStatus;
+  final String? visitProgress;
 
   final String id;
   final String title;
@@ -145,6 +147,7 @@ class DoctorBookingModel {
           .map((e) => PreviousReportModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+      visitProgress: json['visitProgress'] as String?,
     );
   }
 }

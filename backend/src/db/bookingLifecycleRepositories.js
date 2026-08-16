@@ -152,6 +152,15 @@ async function cancelBooking(bookingId, auth, reason) {
   appendStatusHistory(booking, 'cancelled', actor);
   await booking.save();
 
+  try {
+    const { stopTrackingInternal } = require('./trackingRepositories');
+    await stopTrackingInternal(booking, { actor: 'system' });
+    const { emitTrackingStopped } = require('../services/trackingSocket');
+    emitTrackingStopped(booking.id, 'cancelled');
+  } catch (err) {
+    console.error('[Cancel] stop tracking failed:', err.message);
+  }
+
   // Notify counterpart
   try {
     if (isPatient) {
@@ -333,8 +342,33 @@ async function updateVisitProgress(bookingId, auth, progress) {
   }
 
   booking.visitProgress = progress;
+  if (progress === 'en_route') {
+    booking.trackingStartedAt = booking.trackingStartedAt || new Date();
+    booking.trackingStoppedAt = undefined;
+  }
+  if (['arrived', 'visit_started', 'completed'].includes(progress)) {
+    booking.trackingStoppedAt = booking.trackingStoppedAt || new Date();
+  }
   appendStatusHistory(booking, progress, isDoctor ? 'doctor' : 'nurse');
   await booking.save();
+
+  if (['arrived', 'visit_started', 'completed'].includes(progress)) {
+    try {
+      const { stopTrackingInternal } = require('./trackingRepositories');
+      await stopTrackingInternal(booking, { actor: isDoctor ? 'doctor' : 'nurse' });
+      const { emitTrackingStopped } = require('../services/trackingSocket');
+      emitTrackingStopped(booking.id, progress);
+    } catch (err) {
+      console.error('[VisitProgress] stop tracking failed:', err.message);
+    }
+  } else if (progress === 'en_route') {
+    try {
+      const { emitTrackingStatus } = require('../services/trackingSocket');
+      emitTrackingStatus(booking.id, 'on_the_way');
+    } catch (err) {
+      console.error('[VisitProgress] emit tracking failed:', err.message);
+    }
+  }
 
   if (booking.patientId && progress === 'arrived') {
     try {
@@ -429,6 +463,7 @@ module.exports = {
   updateVisitProgress,
   getBookingTimeline,
   markNoShow,
+  assertBookingActor,
   CANCEL_FREE_HOURS,
   NO_SHOW_FEE_PERCENT,
 };

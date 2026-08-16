@@ -130,41 +130,25 @@ class _SpecialityGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rowCount = (specialities.length / columns).ceil();
-
-    return Column(
-      children: [
-        for (var row = 0; row < rowCount; row++) ...[
-          if (row > 0) SizedBox(height: gap),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var col = 0; col < columns; col++) ...[
-                  if (col > 0) SizedBox(width: gap),
-                  Expanded(
-                    child: colSlot(row, col),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget colSlot(int row, int col) {
-    final index = row * columns + col;
-    if (index >= specialities.length) {
-      return const SizedBox.shrink();
-    }
-    final item = specialities[index];
-    return SpecialityCard(
-      speciality: item,
-      selected: selectedSearchTerm != null &&
-          selectedSearchTerm == item.searchTerm,
-      onTap: () => onSpecialitySelected(item),
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: specialities.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: gap,
+        crossAxisSpacing: gap,
+        mainAxisExtent: 148,
+      ),
+      itemBuilder: (context, index) {
+        final item = specialities[index];
+        return SpecialityCard(
+          speciality: item,
+          selected: selectedSearchTerm != null &&
+              selectedSearchTerm == item.searchTerm,
+          onTap: () => onSpecialitySelected(item),
+        );
+      },
     );
   }
 }

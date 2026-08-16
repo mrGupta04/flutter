@@ -167,6 +167,7 @@ class PrescriptionRequestRepository {
     try {
       final response = await _dio.post(
         AppConstants.endpointPrescriptionPaymentCreate(requestId),
+        data: <String, dynamic>{},
       );
       final body = response.data as Map<String, dynamic>;
       if (body['success'] != true) {
@@ -211,6 +212,7 @@ class PrescriptionRequestRepository {
     try {
       final response = await _dio.post(
         AppConstants.endpointPrescriptionPaymentFailed(requestId),
+        data: <String, dynamic>{},
       );
       return _parseRequest(response);
     } on DioException catch (e) {

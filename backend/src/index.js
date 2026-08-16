@@ -1,5 +1,6 @@
 ﻿require('dotenv').config();
 const path = require('path');
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const { rateLimit } = require('express-rate-limit');
@@ -37,9 +38,11 @@ const {
 const {
   startApprovalSlaEscalationScheduler,
 } = require('./services/approvalSlaEscalationService');
+const { attachTrackingSocket } = require('./services/trackingSocket');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const app = express();
+const httpServer = http.createServer(app);
 
 
 app.set('trust proxy', 1);
@@ -180,11 +183,14 @@ async function start() {
     console.log('Database seeded with sample data (SEED_DATABASE=true)');
   }
 
+  attachTrackingSocket(httpServer);
+
   await new Promise((resolve) => {
-    app.listen(PORT, '0.0.0.0', () => {
+    httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`1mg Doctors API [${NODE_ENV}] http://0.0.0.0:${PORT}`);
       console.log(`  Health: http://localhost:${PORT}/health`);
       console.log(`  API:    http://localhost:${PORT}/api/v1`);
+      console.log(`  Socket: ws://localhost:${PORT}/socket.io`);
       resolve();
     });
   });

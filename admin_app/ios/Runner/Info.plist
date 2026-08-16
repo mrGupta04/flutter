@@ -68,9 +68,15 @@
 	</array>
 
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We use your location to pin your clinic on the map during registration.</string>
+	<string>We use your location to pin your clinic during registration and to share your live location with the patient during an active home visit.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>We use your location to pin your clinic on the map during registration.</string>
+	<string>Allow location while the app is in the background so the patient can follow your trip if you lock the phone or switch apps. Sharing stops when you arrive or complete the visit.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Allow location while the app is in the background so the patient can follow your trip if you lock the phone or switch apps. Sharing stops when you arrive or complete the visit.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>
 

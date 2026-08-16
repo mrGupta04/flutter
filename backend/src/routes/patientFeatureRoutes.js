@@ -24,6 +24,10 @@ const {
   listPatientNursingReports,
   getNurseVisitReportForBooking,
 } = require('../db/nurseVisitWorkflowRepositories');
+const {
+  getTrackingSnapshot,
+  getTrackingRoute,
+} = require('../db/trackingRepositories');
 const { sendSuccess, sendError } = require('../utils/response');
 const { authRequired } = require('../middleware/auth');
 
@@ -203,6 +207,32 @@ router.post('/bookings/:bookingId/reschedule', authRequired, async (req, res) =>
   } catch (err) {
     const status = err.statusCode || 500;
     return sendError(res, err.message || 'Failed to reschedule', status);
+  }
+});
+
+router.get('/bookings/:bookingId/tracking', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const data = await getTrackingSnapshot(req.params.bookingId, req.auth, {
+      includeRoute: req.query.route !== 'false',
+    });
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load tracking', status);
+  }
+});
+
+router.get('/bookings/:bookingId/route', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const data = await getTrackingRoute(req.params.bookingId, req.auth);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load route', status);
   }
 });
 

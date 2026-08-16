@@ -59,8 +59,18 @@ async function startNurseVisit({ bookingId, nurseId }) {
   const now = new Date();
   booking.visitProgress = 'visit_started';
   booking.visitStartedAt = booking.visitStartedAt || now;
+  booking.trackingStoppedAt = booking.trackingStoppedAt || now;
   appendStatusHistory(booking, 'visit_started', 'nurse');
   await booking.save();
+
+  try {
+    const { stopTrackingInternal } = require('./trackingRepositories');
+    await stopTrackingInternal(booking, { actor: 'nurse' });
+    const { emitTrackingStopped } = require('../services/trackingSocket');
+    emitTrackingStopped(booking.id, 'visit_started');
+  } catch (err) {
+    console.error('[NurseVisit] stop tracking failed:', err.message);
+  }
 
   let note = await NurseVisitNote.findOne({ bookingId });
   if (!note) {
@@ -354,9 +364,19 @@ async function verifyVisitCompletionOtp({ bookingId, nurseId, otp }) {
   booking.completionOtpExpiresAt = undefined;
   booking.visitProgress = 'completed';
   booking.visitCompletedAt = now;
+  booking.trackingStoppedAt = booking.trackingStoppedAt || now;
   appendStatusHistory(booking, 'otp_verified', 'nurse');
   appendStatusHistory(booking, 'completed', 'nurse');
   await booking.save();
+
+  try {
+    const { stopTrackingInternal } = require('./trackingRepositories');
+    await stopTrackingInternal(booking, { actor: 'nurse' });
+    const { emitTrackingStopped } = require('../services/trackingSocket');
+    emitTrackingStopped(booking.id, 'completed');
+  } catch (err) {
+    console.error('[NurseVisit] stop tracking on complete failed:', err.message);
+  }
 
   note.status = 'locked';
   note.lockedAt = now;
