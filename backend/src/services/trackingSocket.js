@@ -19,6 +19,15 @@ function bookingRoom(bookingId) {
   return `booking_${bookingId}`;
 }
 
+function userRoom(userType, userId) {
+  return `${userType}_${userId}`;
+}
+
+function emitToUser(userType, userId, event, payload) {
+  if (!io || !userType || !userId) return;
+  io.to(userRoom(userType, userId)).emit(event, payload);
+}
+
 function safeAck(ack, payload) {
   if (typeof ack === 'function') {
     ack(payload);
@@ -138,6 +147,15 @@ function attachTrackingSocket(httpServer) {
   });
 
   io.on('connection', (socket) => {
+    const auth = socket.data.auth || {};
+    if (auth.type === 'patient' && auth.patientId) {
+      socket.join(userRoom('patient', auth.patientId));
+    } else if (auth.type === 'doctor' && auth.doctorId) {
+      socket.join(userRoom('doctor', auth.doctorId));
+    } else if (auth.type === 'nurse' && auth.nurseId) {
+      socket.join(userRoom('nurse', auth.nurseId));
+    }
+
     socket.on('join_booking_room', async (payload = {}, ack) => {
       try {
         const bookingId = String(payload.bookingId || '').trim();
@@ -275,6 +293,7 @@ function getTrackingIo() {
 module.exports = {
   attachTrackingSocket,
   emitToBooking,
+  emitToUser,
   emitTrackingStopped,
   emitTrackingStatus,
   emitLocationToRoom,

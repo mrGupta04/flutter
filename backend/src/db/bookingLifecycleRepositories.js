@@ -3,7 +3,7 @@ const {
   appendStatusHistory,
   buildVisitTimeline,
 } = require('./bookingLifecycleHelpers');
-const { createAndPushNotification } = require('./notificationRepositories');
+const { createAndPushNotification, notifyPatient } = require('./notificationRepositories');
 const { formatSlotLabel, slotEndFromStart } = require('../utils/slotDateTime');
 
 const CANCEL_FREE_HOURS = Number(process.env.CANCEL_FREE_HOURS || 2);
@@ -183,14 +183,11 @@ async function cancelBooking(bookingId, auth, reason) {
           data: { bookingId },
         });
       }
-    } else if (booking.patientId) {
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
+    } else {
+      await notifyPatient(booking, {
         title: 'Booking cancelled',
         body: 'Your appointment was cancelled by the provider.',
         type: 'booking_cancelled',
-        data: { bookingId },
       });
     }
   } catch (err) {
@@ -373,30 +370,24 @@ async function updateVisitProgress(bookingId, auth, progress) {
     }
   }
 
-  if (booking.patientId && progress === 'arrived') {
+  if (progress === 'arrived') {
     try {
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
+      await notifyPatient(booking, {
         title: isNurse ? 'Nurse has arrived' : 'Doctor has arrived',
         body: 'Your home visit provider has arrived at your location.',
         type: 'arrived',
-        data: { bookingId },
       });
     } catch (err) {
       console.error('[VisitProgress] arrived notify failed:', err.message);
     }
   }
 
-  if (booking.patientId && progress === 'en_route') {
+  if (progress === 'en_route') {
     try {
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
+      await notifyPatient(booking, {
         title: isNurse ? 'Nurse on the way' : 'Doctor on the way',
         body: 'Your home visit provider is on the way.',
         type: 'en_route',
-        data: { bookingId },
       });
     } catch (err) {
       console.error('[VisitProgress] notify failed:', err.message);

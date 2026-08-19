@@ -205,26 +205,21 @@ async function startTracking(bookingId, auth) {
     booking.trackingStartedAt &&
     !booking.trackingStoppedAt;
 
-  if (!alreadyStarted) {
+    if (!alreadyStarted) {
     booking.visitProgress = 'en_route';
     booking.trackingStartedAt = booking.trackingStartedAt || new Date();
     booking.trackingStoppedAt = undefined;
     appendStatusHistory(booking, 'en_route', auth.type);
     await booking.save();
-    if (booking.patientId) {
-      try {
-        const { createAndPushNotification } = require('./notificationRepositories');
-        await createAndPushNotification({
-          userId: booking.patientId,
-          userType: 'patient',
-          title: booking.nurseId ? 'Nurse on the way' : 'Doctor on the way',
-          body: 'Your home visit provider is on the way. Open live tracking to follow them.',
-          type: 'en_route',
-          data: { bookingId: booking.id },
-        });
-      } catch (err) {
-        console.error('[Tracking] en_route notify failed:', err.message);
-      }
+    try {
+      const { notifyPatient } = require('./notificationRepositories');
+      await notifyPatient(booking, {
+        title: booking.nurseId ? 'Nurse on the way' : 'Doctor on the way',
+        body: 'Your home visit provider is on the way. Open live tracking to follow them.',
+        type: 'en_route',
+      });
+    } catch (err) {
+      console.error('[Tracking] en_route notify failed:', err.message);
     }
   }
 

@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const NurseVisitNote = require('./models/NurseVisitNote');
 const ConsultationBooking = require('./models/ConsultationBooking');
-const { createAndPushNotification } = require('./notificationRepositories');
+const { notifyPatient } = require('./notificationRepositories');
 const { saveNurseVisitReportDraft } = require('./nurseVisitWorkflowRepositories');
 
 async function saveNurseVisitNote({
@@ -33,15 +33,12 @@ async function saveNurseVisitNote({
 
   if (note) {
     const booking = await ConsultationBooking.findOne({ id: bookingId });
-    if (booking?.patientId) {
+    if (booking) {
       try {
-        await createAndPushNotification({
-          userId: booking.patientId,
-          userType: 'patient',
+        await notifyPatient(booking, {
           title: 'Visit care summary updated',
           body: 'Your nurse has updated the care summary for your home visit.',
           type: 'visit_note_ready',
-          data: { bookingId },
         });
       } catch (err) {
         console.error('[NurseVisitNote] notify failed:', err.message);

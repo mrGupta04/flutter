@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/services/tracking_location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../provider/provider_trip_provider.dart';
+
+const _kMapStyle = '''
+[
+  {"featureType":"poi","elementType":"labels","stylers":[{"visibility":"off"}]},
+  {"featureType":"transit","stylers":[{"visibility":"off"}]},
+  {"elementType":"geometry","stylers":[{"saturation":-18}]}
+]
+''';
 
 class ProviderTripScreen extends ConsumerStatefulWidget {
   const ProviderTripScreen({
@@ -32,6 +41,7 @@ class ProviderTripScreen extends ConsumerStatefulWidget {
 class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
   GoogleMapController? _mapController;
   bool _cameraFitted = false;
+  bool _userMovedCamera = false;
   late final ProviderTripArgs _args;
 
   @override
@@ -50,39 +60,55 @@ class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
   }
 
   Future<void> _startTrip() async {
-    final ok = await TrackingLocationService.instance.ensurePermissions(context);
+    final ok =
+        await TrackingLocationService.instance.ensurePermissions(context);
     if (!ok || !mounted) return;
     await ref.read(providerTripProvider(_args).notifier).startTrip();
   }
 
-  void _fitCamera(LatLng? patient, LatLng? self) {
-    if (_cameraFitted || _mapController == null) return;
+  Future<void> _openDirections(LatLng dest) async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${dest.latitude},${dest.longitude}&travelmode=driving',
+    );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      await launchUrl(uri);
+    }
+  }
+
+  LatLngBounds _bounds(LatLng a, LatLng b) {
+    return LatLngBounds(
+      southwest: LatLng(
+        a.latitude < b.latitude ? a.latitude : b.latitude,
+        a.longitude < b.longitude ? a.longitude : b.longitude,
+      ),
+      northeast: LatLng(
+        a.latitude > b.latitude ? a.latitude : b.latitude,
+        a.longitude > b.longitude ? a.longitude : b.longitude,
+      ),
+    );
+  }
+
+  Future<void> _fitCamera(LatLng? patient, LatLng? self, {bool force = false}) async {
+    if (_mapController == null) return;
+    if (!force && _cameraFitted && _userMovedCamera) return;
     if (patient != null && self != null) {
       _cameraFitted = true;
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          LatLngBounds(
-            southwest: LatLng(
-              patient.latitude < self.latitude ? patient.latitude : self.latitude,
-              patient.longitude < self.longitude
-                  ? patient.longitude
-                  : self.longitude,
-            ),
-            northeast: LatLng(
-              patient.latitude > self.latitude ? patient.latitude : self.latitude,
-              patient.longitude > self.longitude
-                  ? patient.longitude
-                  : self.longitude,
-            ),
-          ),
-          72,
-        ),
-      );
+      try {
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(_bounds(patient, self), 90),
+        );
+      } catch (_) {
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(self, 15),
+        );
+      }
     } else {
       final focus = self ?? patient;
       if (focus != null) {
         _cameraFitted = true;
-        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(focus, 15));
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(focus, 15.4),
+        );
       }
     }
   }
@@ -108,139 +134,441 @@ class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
     final onTheWay = snapshot?.isOnTheWay == true;
     final terminal = snapshot?.isTerminal == true;
     final initial = patient ?? self ?? const LatLng(20.5937, 78.9629);
+    final eta = snapshot?.etaMinutes;
+    final distance = snapshot?.distanceText;
+
+    final routePoints = <LatLng>[
+      ...?snapshot?.polyline
+          .map((p) => LatLng(p.latitude, p.longitude)),
+    ];
+    if (routePoints.length < 2 && patient != null && self != null) {
+      routePoints
+        ..clear()
+        ..add(self)
+        ..add(patient);
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fitCamera(patient, self);
+      if (!mounted) return;
+      if (onTheWay && self != null && !_userMovedCamera && _mapController != null) {
+        _mapController!.animateCamera(CameraUpdate.newLatLng(self));
+      } else {
+        _fitCamera(patient, self);
+      }
     });
 
+    final topInset = MediaQuery.paddingOf(context).top;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Home visit'),
-      ),
-      body: trip.loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: initial,
-                      zoom: 14,
-                    ),
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
-                    zoomControlsEnabled: false,
-                    markers: {
-                      if (patient != null)
-                        Marker(
-                          markerId: const MarkerId('patient'),
-                          position: patient,
-                          infoWindow: InfoWindow(title: name),
-                          icon: BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueAzure,
-                          ),
-                        ),
-                      if (self != null)
-                        Marker(
-                          markerId: const MarkerId('provider'),
-                          position: self,
-                          infoWindow: const InfoWindow(title: 'You'),
-                          icon: BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueGreen,
-                          ),
-                        ),
-                    },
-                    onMapCreated: (controller) => _mapController = controller,
+      backgroundColor: AppColors.grey100,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(target: initial, zoom: 14.6),
+              style: _kMapStyle,
+              myLocationEnabled: onTheWay,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              compassEnabled: false,
+              mapToolbarEnabled: false,
+              padding: const EdgeInsets.only(bottom: 300, top: 88),
+              polylines: {
+                if (routePoints.length >= 2)
+                  Polyline(
+                    polylineId: const PolylineId('route'),
+                    color: AppColors.primary,
+                    width: 6,
+                    startCap: Cap.roundCap,
+                    endCap: Cap.roundCap,
+                    jointType: JointType.round,
+                    points: routePoints,
                   ),
+              },
+              circles: {
+                if (patient != null)
+                  Circle(
+                    circleId: const CircleId('patient_halo'),
+                    center: patient,
+                    radius: 42,
+                    fillColor: AppColors.primary.withOpacity(0.16),
+                    strokeColor: AppColors.primary,
+                    strokeWidth: 2,
+                  ),
+              },
+              markers: {
+                if (patient != null)
+                  Marker(
+                    markerId: const MarkerId('patient'),
+                    position: patient,
+                    infoWindow: InfoWindow(title: name, snippet: address),
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueRed,
+                    ),
+                  ),
+                if (self != null)
+                  Marker(
+                    markerId: const MarkerId('provider'),
+                    position: self,
+                    rotation: snapshot?.heading ?? 0,
+                    flat: true,
+                    anchor: const Offset(0.5, 0.5),
+                    infoWindow: const InfoWindow(title: 'You'),
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueAzure,
+                    ),
+                  ),
+              },
+              onMapCreated: (controller) {
+                _mapController = controller;
+                _fitCamera(patient, self, force: true);
+              },
+              onCameraMoveStarted: () => _userMovedCamera = true,
+            ),
+          ),
+          Positioned(
+            top: topInset + 8,
+            left: 12,
+            right: 12,
+            child: Row(
+              children: [
+                _RoundMapButton(
+                  icon: Icons.arrow_back_rounded,
+                  onTap: () => Navigator.maybePop(context),
                 ),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                  color: AppColors.white,
-                  child: SafeArea(
-                    top: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          onTheWay
-                              ? 'Trip started'
-                              : terminal
-                                  ? 'Tracking stopped'
-                                  : 'Patient location',
-                          style: AppTextStyles.titleSmall.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x22000000),
+                          blurRadius: 16,
+                          offset: Offset(0, 4),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          onTheWay
-                              ? 'You are on the way to $name'
-                              : name,
-                          style: AppTextStyles.bodyMedium,
-                        ),
-                        if (address.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            address,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                        if (trip.error != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            trip.error!,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.error,
-                            ),
-                          ),
-                        ],
-                        if (!trip.socketConnected) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            'Reconnecting live updates… location is still being saved.',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.warning,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Text(
-                          'Booking ID: ${widget.bookingId}',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        if (!onTheWay && !terminal)
-                          FilledButton(
-                            onPressed: trip.starting ? null : _startTrip,
-                            child: Text(trip.starting ? 'Starting…' : 'Start trip'),
-                          )
-                        else if (onTheWay) ...[
-                          FilledButton(
-                            onPressed: () => ref
-                                .read(providerTripProvider(_args).notifier)
-                                .markArrived(),
-                            child: const Text('Arrived'),
-                          ),
-                          const SizedBox(height: 8),
-                          OutlinedButton(
-                            onPressed: () => ref
-                                .read(providerTripProvider(_args).notifier)
-                                .stopTrip(),
-                            child: const Text('Stop trip'),
-                          ),
-                        ],
                       ],
+                    ),
+                    child: Text(
+                      onTheWay
+                          ? 'On the way to $name'
+                          : terminal
+                              ? 'Visit tracking ended'
+                              : 'Navigate to $name',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
+          ),
+          if (trip.loading)
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+          Positioned(
+            right: 16,
+            bottom: 292,
+            child: _RoundMapButton(
+              icon: Icons.my_location_rounded,
+              onTap: () {
+                _userMovedCamera = false;
+                _fitCamera(patient, self, force: true);
+              },
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _TripSheet(
+              name: name,
+              address: address,
+              onTheWay: onTheWay,
+              terminal: terminal,
+              etaMinutes: eta,
+              distanceText: distance,
+              durationText: snapshot?.durationText,
+              error: trip.error,
+              socketConnected: trip.socketConnected,
+              starting: trip.starting,
+              patient: patient,
+              onStart: _startTrip,
+              onArrived: () =>
+                  ref.read(providerTripProvider(_args).notifier).markArrived(),
+              onStop: () =>
+                  ref.read(providerTripProvider(_args).notifier).stopTrip(),
+              onNavigate:
+                  patient == null ? null : () => _openDirections(patient),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundMapButton extends StatelessWidget {
+  const _RoundMapButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      shape: const CircleBorder(),
+      elevation: 3,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: AppColors.textPrimary),
+        ),
+      ),
+    );
+  }
+}
+
+class _TripSheet extends StatelessWidget {
+  const _TripSheet({
+    required this.name,
+    required this.address,
+    required this.onTheWay,
+    required this.terminal,
+    required this.etaMinutes,
+    required this.distanceText,
+    required this.durationText,
+    required this.error,
+    required this.socketConnected,
+    required this.starting,
+    required this.patient,
+    required this.onStart,
+    required this.onArrived,
+    required this.onStop,
+    required this.onNavigate,
+  });
+
+  final String name;
+  final String address;
+  final bool onTheWay;
+  final bool terminal;
+  final int? etaMinutes;
+  final String? distanceText;
+  final String? durationText;
+  final String? error;
+  final bool socketConnected;
+  final bool starting;
+  final LatLng? patient;
+  final VoidCallback onStart;
+  final VoidCallback onArrived;
+  final VoidCallback onStop;
+  final VoidCallback? onNavigate;
+
+  @override
+  Widget build(BuildContext context) {
+    final etaLabel = etaMinutes != null
+        ? '$etaMinutes min'
+        : (durationText ?? (onTheWay ? '…' : '--'));
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 24,
+              offset: Offset(0, -6),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey300,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            etaLabel.replaceAll(' min', ''),
+                            style: AppTextStyles.titleLarge.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                          Text(
+                            'min',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            onTheWay
+                                ? 'Heading to patient'
+                                : terminal
+                                    ? 'Tracking stopped'
+                                    : 'Ready to start trip',
+                            style: AppTextStyles.titleSmall.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            [
+                              if (distanceText != null &&
+                                  distanceText!.isNotEmpty)
+                                distanceText,
+                              name,
+                            ].join(' · '),
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (address.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              address,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    error!,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.error,
+                    ),
+                  ),
+                ],
+                if (onTheWay && !socketConnected) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Reconnecting live updates… GPS is still being saved.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                if (!onTheWay && !terminal)
+                  FilledButton(
+                    onPressed: starting ? null : onStart,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(starting ? 'Starting…' : 'Start trip'),
+                  )
+                else if (onTheWay) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: onArrived,
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text('I have arrived'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        height: 52,
+                        width: 52,
+                        child: OutlinedButton(
+                          onPressed: onNavigate,
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Icon(Icons.turn_right_rounded),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: onStop,
+                    child: const Text('Stop trip'),
+                  ),
+                ]
+                else if (patient != null)
+                  OutlinedButton.icon(
+                    onPressed: onNavigate,
+                    icon: const Icon(Icons.directions_rounded),
+                    label: const Text('Open in Google Maps'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

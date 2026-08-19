@@ -5,7 +5,7 @@ const ConsultationBooking = require('./models/ConsultationBooking');
 const NurseVisitNote = require('./models/NurseVisitNote');
 const Nurse = require('./models/Nurse');
 const { appendStatusHistory } = require('./bookingLifecycleHelpers');
-const { createAndPushNotification } = require('./notificationRepositories');
+const { createAndPushNotification, notifyPatient } = require('./notificationRepositories');
 const { generateNurseVisitNotePdf } = require('../services/nurseVisitNotePdfService');
 const { sendTransactionalEmail } = require('../services/emailProviders/smtpProvider');
 
@@ -89,19 +89,14 @@ async function startNurseVisit({ bookingId, nurseId }) {
     await note.save();
   }
 
-  if (booking.patientId) {
-    try {
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
-        title: 'Nurse visit started',
-        body: 'Your nurse has started today\'s home visit.',
-        type: 'visit_started',
-        data: { bookingId },
-      });
-    } catch (err) {
-      console.error('[NurseVisit] start notify failed:', err.message);
-    }
+  try {
+    await notifyPatient(booking, {
+      title: 'Nurse visit started',
+      body: 'Your nurse has started today\'s home visit.',
+      type: 'visit_started',
+    });
+  } catch (err) {
+    console.error('[NurseVisit] start notify failed:', err.message);
   }
 
   return { booking: booking.toObject(), note: note.toObject() };
@@ -241,19 +236,15 @@ async function submitNurseVisitReport({ bookingId, nurseId, payload }) {
   appendStatusHistory(booking, 'report_submitted', 'nurse');
   await booking.save();
 
-  if (booking.patientId) {
-    try {
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
-        title: 'Nursing report ready',
-        body: 'Your nurse has submitted the visit report. PDF is available in Medical Records.',
-        type: 'nursing_report_ready',
-        data: { bookingId, pdfUrl: note.pdfUrl },
-      });
-    } catch (err) {
-      console.error('[NurseVisit] report notify failed:', err.message);
-    }
+  try {
+    await notifyPatient(booking, {
+      title: 'Nursing report ready',
+      body: 'Your nurse has submitted the visit report. PDF is available in Medical Records.',
+      type: 'nursing_report_ready',
+      data: { bookingId, pdfUrl: note.pdfUrl },
+    });
+  } catch (err) {
+    console.error('[NurseVisit] report notify failed:', err.message);
   }
 
   return note.toObject();
@@ -283,34 +274,30 @@ async function requestVisitCompletionOtp({ bookingId, nurseId }) {
   appendStatusHistory(booking, 'otp_generated', 'nurse');
   await booking.save();
 
-  if (booking.patientId) {
-    const message =
-      `Your nurse has completed today's visit. Share this OTP with the nurse to verify successful completion. OTP: ${otp}`;
+  const message =
+    `Your nurse has completed today's visit. Share this OTP with the nurse to verify successful completion. OTP: ${otp}`;
 
+  try {
+    await notifyPatient(booking, {
+      title: 'Visit completion OTP',
+      body: message,
+      type: 'visit_completion_otp',
+      data: { bookingId, otp, otpExpiresAt: expiresAt.toISOString() },
+    });
+  } catch (err) {
+    console.error('[NurseVisit] OTP push failed:', err.message);
+  }
+
+  if (booking.patientEmail) {
     try {
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
-        title: 'Visit completion OTP',
-        body: message,
-        type: 'visit_completion_otp',
-        data: { bookingId, otp, otpExpiresAt: expiresAt.toISOString() },
+      await sendTransactionalEmail({
+        to: booking.patientEmail,
+        subject: 'Nurse visit completion OTP',
+        text: message,
+        html: `<p>${message}</p><p>This OTP expires in 5 minutes.</p>`,
       });
     } catch (err) {
-      console.error('[NurseVisit] OTP push failed:', err.message);
-    }
-
-    if (booking.patientEmail) {
-      try {
-        await sendTransactionalEmail({
-          to: booking.patientEmail,
-          subject: 'Nurse visit completion OTP',
-          text: message,
-          html: `<p>${message}</p><p>This OTP expires in 5 minutes.</p>`,
-        });
-      } catch (err) {
-        console.error('[NurseVisit] OTP email failed:', err.message);
-      }
+      console.error('[NurseVisit] OTP email failed:', err.message);
     }
   }
 
@@ -382,19 +369,14 @@ async function verifyVisitCompletionOtp({ bookingId, nurseId, otp }) {
   note.lockedAt = now;
   await note.save();
 
-  if (booking.patientId) {
-    try {
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
-        title: 'Visit completed',
-        body: 'Your nurse home visit has been successfully completed.',
-        type: 'visit_completed',
-        data: { bookingId },
-      });
-    } catch (err) {
-      console.error('[NurseVisit] complete notify failed:', err.message);
-    }
+  try {
+    await notifyPatient(booking, {
+      title: 'Visit completed',
+      body: 'Your nurse home visit has been successfully completed.',
+      type: 'visit_completed',
+    });
+  } catch (err) {
+    console.error('[NurseVisit] complete notify failed:', err.message);
   }
 
   try {

@@ -528,7 +528,7 @@ async function createNurseHomeVisitRequest(payload) {
     h,
     mobile,
     name,
-    patientId,
+    patientId: payloadPatientId,
     patientEmail,
     patientNotes,
     patientAddress,
@@ -538,6 +538,14 @@ async function createNurseHomeVisitRequest(payload) {
     visitReason,
     fee,
   } = validated;
+
+  const { resolvePatientId } = require('./notificationRepositories');
+  const patientId =
+    (payloadPatientId && String(payloadPatientId)) ||
+    (await resolvePatientId({
+      patientMobile: mobile,
+      patientEmail,
+    }));
 
   const patientLatitude = payload.patientLatitude;
   const patientLongitude = payload.patientLongitude;
@@ -681,28 +689,20 @@ async function approveNurseHomeVisitRequest(bookingId, nurseId) {
   appendStatusHistory(booking, 'approved_pending_payment', 'nurse');
   await booking.save();
 
-  if (booking.patientId) {
-    try {
-      const { createAndPushNotification } = require('./notificationRepositories');
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
-        title: 'Nurse visit approved',
-        body: 'Your nurse approved the visit. Please pay to confirm.',
-        type: 'booking_approved',
-        data: { bookingId: booking.id },
-      });
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
-        title: 'Payment due',
-        body: 'Complete payment to confirm your nurse home visit.',
-        type: 'payment_due',
-        data: { bookingId: booking.id },
-      });
-    } catch (err) {
-      console.error('[NurseApprove] notify failed:', err.message);
-    }
+  try {
+    const { notifyPatient } = require('./notificationRepositories');
+    await notifyPatient(booking, {
+      title: 'Nurse visit approved',
+      body: 'Your nurse approved the visit. Please pay to confirm.',
+      type: 'booking_approved',
+    });
+    await notifyPatient(booking, {
+      title: 'Payment due',
+      body: 'Complete payment to confirm your nurse home visit.',
+      type: 'payment_due',
+    });
+  } catch (err) {
+    console.error('[NurseApprove] notify failed:', err.message);
   }
 
   const nurse = await findNurseById(nurseId);
@@ -741,20 +741,15 @@ async function rejectNurseHomeVisitRequest(bookingId, nurseId) {
   appendStatusHistory(booking, 'cancelled', 'nurse');
   await booking.save();
 
-  if (booking.patientId) {
-    try {
-      const { createAndPushNotification } = require('./notificationRepositories');
-      await createAndPushNotification({
-        userId: booking.patientId,
-        userType: 'patient',
-        title: 'Nurse visit declined',
-        body: 'Your nurse could not accept this home visit request.',
-        type: 'booking_rejected',
-        data: { bookingId: booking.id },
-      });
-    } catch (err) {
-      console.error('[NurseReject] notify failed:', err.message);
-    }
+  try {
+    const { notifyPatient } = require('./notificationRepositories');
+    await notifyPatient(booking, {
+      title: 'Nurse visit declined',
+      body: 'Your nurse could not accept this home visit request.',
+      type: 'booking_rejected',
+    });
+  } catch (err) {
+    console.error('[NurseReject] notify failed:', err.message);
   }
 
   const nurse = await findNurseById(nurseId);

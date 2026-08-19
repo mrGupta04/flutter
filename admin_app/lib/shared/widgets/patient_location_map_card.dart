@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,7 +18,7 @@ class PatientLocationMapCard extends StatefulWidget {
     required this.longitude,
     this.addressLine,
     this.title = 'Patient location',
-    this.mapHeight = 190,
+    this.mapHeight = 220,
   });
 
   final double latitude;
@@ -91,7 +92,7 @@ class _PatientLocationMapCardState extends State<PatientLocationMapCard> {
           ],
           const SizedBox(height: 10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             child: SizedBox(
               height: widget.mapHeight,
               child: kIsWeb
@@ -102,13 +103,20 @@ class _PatientLocationMapCardState extends State<PatientLocationMapCard> {
                   : GoogleMap(
                       initialCameraPosition: CameraPosition(
                         target: pin,
-                        zoom: 15,
+                        zoom: 15.2,
                       ),
-                      myLocationEnabled: true,
-                      myLocationButtonEnabled: true,
+                      myLocationEnabled: false,
+                      myLocationButtonEnabled: false,
                       zoomControlsEnabled: false,
-                      compassEnabled: true,
+                      compassEnabled: false,
                       mapToolbarEnabled: false,
+                      liteModeEnabled: true,
+                      zoomGesturesEnabled: false,
+                      scrollGesturesEnabled: false,
+                      rotateGesturesEnabled: false,
+                      tiltGesturesEnabled: false,
+                      gestureRecognizers: const <Factory<
+                          OneSequenceGestureRecognizer>>{},
                       markers: {
                         Marker(
                           markerId: const MarkerId('patient_pin'),
@@ -117,6 +125,19 @@ class _PatientLocationMapCardState extends State<PatientLocationMapCard> {
                             title: widget.title,
                             snippet: widget.addressLine,
                           ),
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueRed,
+                          ),
+                        ),
+                      },
+                      circles: {
+                        Circle(
+                          circleId: const CircleId('pin_halo'),
+                          center: pin,
+                          radius: 48,
+                          fillColor: AppColors.primary.withOpacity(0.14),
+                          strokeColor: AppColors.primary,
+                          strokeWidth: 2,
                         ),
                       },
                       onMapCreated: (c) => _controller = c,

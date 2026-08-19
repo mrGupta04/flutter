@@ -82,6 +82,11 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
             onPressed: _openNotifications,
           ),
           IconButton(
+            icon: const Icon(Icons.schedule_rounded),
+            tooltip: 'Weekly availability',
+            onPressed: () => _showAvailabilitySheet(dashboard),
+          ),
+          IconButton(
             icon: const Icon(Icons.account_balance_wallet_outlined),
             tooltip: 'Earnings',
             onPressed: () => context.push(
@@ -135,10 +140,27 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                         history: dashboard.pastBookings.length,
                       ),
                       const SizedBox(height: 16),
-                      if (dashboard.needsAvailabilityUpdate)
+                      ServiceBenefitCard(
+                        icon: Icons.schedule_rounded,
+                        title: 'Weekly availability',
+                        subtitle: () {
+                          final count = dashboard.homeAvailability
+                                  ?.selectedSlotKeys.length ??
+                              0;
+                          if (count == 0) {
+                            return 'Tap to set home visit hours (12 AM–12 AM). Patients can book only after you save slots.';
+                          }
+                          return '$count hour(s) selected this week. Tap to add, remove, or update slots.';
+                        }(),
+                        color: AppColors.primary,
+                        onTap: () => _showAvailabilitySheet(dashboard),
+                      ),
+                      if (dashboard.needsAvailabilityUpdate) ...[
+                        const SizedBox(height: 12),
                         _AvailabilityReminder(
                           onUpdate: () => _showAvailabilitySheet(dashboard),
                         ),
+                      ],
                       if (dashboard.bookingsError != null) ...[
                         Text(
                           dashboard.bookingsError!,
@@ -538,7 +560,7 @@ class _PendingRequestCard extends StatelessWidget {
                 longitude: booking.patientLongitude!,
                 addressLine: addressLine,
                 title: 'Patient location',
-                mapHeight: 170,
+                mapHeight: 220,
               ),
             ],
             if (booking.visitReason != null &&
@@ -739,7 +761,7 @@ class _BookingTile extends ConsumerWidget {
                 longitude: booking.patientLongitude!,
                 addressLine: addressLine,
                 title: 'Patient location',
-                mapHeight: 150,
+                mapHeight: 220,
               ),
             ],
             if (!readOnly &&

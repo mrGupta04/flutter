@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -32,6 +30,7 @@ class DevicePushService {
   bool _initialized = false;
   bool _firebaseReady = false;
   String? _tokenEndpoint;
+  final _shownIds = <String>{};
 
   Future<void> init({required String deviceTokenEndpoint}) async {
     _tokenEndpoint = deviceTokenEndpoint;
@@ -90,13 +89,33 @@ class DevicePushService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
+    await _local
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
   }
 
   Future<void> _showForegroundMessage(RemoteMessage message) async {
-    final title = message.notification?.title ?? message.data['title'] ?? 'Update';
-    final body = message.notification?.body ?? message.data['body'] ?? '';
+    await showLocalAlert(
+      id: message.data['notificationId']?.toString() ??
+          message.messageId ??
+          '${message.hashCode}',
+      title: message.notification?.title ?? message.data['title'] ?? 'Update',
+      body: message.notification?.body ?? message.data['body'] ?? '',
+    );
+  }
+
+  Future<void> showLocalAlert({
+    required String title,
+    String body = '',
+    String id = '',
+  }) async {
+    if (id.isNotEmpty && !_shownIds.add(id)) return;
+    if (_shownIds.length > 80) {
+      _shownIds.remove(_shownIds.first);
+    }
     await _local.show(
-      message.hashCode,
+      id.hashCode == 0 ? title.hashCode : id.hashCode,
       title,
       body,
       NotificationDetails(
@@ -112,7 +131,6 @@ class DevicePushService {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
-      payload: jsonEncode(message.data),
     );
   }
 

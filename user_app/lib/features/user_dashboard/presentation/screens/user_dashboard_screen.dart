@@ -22,6 +22,7 @@ import '../utils/nursing_report_view_utils.dart';
 import '../widgets/visit_completion_otp_banner.dart';
 import '../../../feedback/presentation/utils/feedback_prompt_helper.dart';
 import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../../data/services/lab_scan_payment_flow.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
@@ -71,6 +72,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       ref.read(patientDashboardProvider.notifier).loadBookings();
+      ref.invalidate(notificationsProvider);
     }
   }
 
@@ -133,11 +135,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                 : null,
             actions: [
               const DiagnosticCartIconButton(iconColor: AppColors.white),
-              IconButton(
-                tooltip: 'Notifications',
-                onPressed: () => context.push(AppConstants.routeNotifications),
-                icon: const Icon(Icons.notifications_outlined),
-              ),
+              const NotificationBellButton(iconColor: AppColors.white),
             ],
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.parallax,

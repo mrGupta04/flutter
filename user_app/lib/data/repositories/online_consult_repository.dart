@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/services/token_storage.dart';
 import '../models/bookable_slot_model.dart';
 import '../models/api_response_model.dart';
 import '../services/dio_service.dart';
@@ -224,10 +225,12 @@ class OnlineConsultRepository {
     required DateTime slotStart,
   }) async {
     try {
+      final patientId = await TokenStorage.instance.getPatientId();
       final response = await _dio.post(
         AppConstants.endpointHomeVisitRequest,
         data: {
           'doctorId': doctorId,
+          if (patientId != null && patientId.isNotEmpty) 'patientId': patientId,
           'patientName': patientName,
           'patientMobile': patientMobile,
           'patientAddress': patientAddress,

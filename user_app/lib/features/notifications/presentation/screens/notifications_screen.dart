@@ -7,9 +7,32 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/repositories/notifications_repository.dart';
 
 final notificationsProvider =
-    FutureProvider.autoDispose<({List<AppNotification> notifications, int unreadCount})>(
+    FutureProvider<({List<AppNotification> notifications, int unreadCount})>(
   (ref) => NotificationsRepository().list(),
 );
+
+class NotificationBellButton extends ConsumerWidget {
+  const NotificationBellButton({super.key, this.iconColor});
+
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(notificationsProvider).maybeWhen(
+          data: (data) => data.unreadCount,
+          orElse: () => 0,
+        );
+    return IconButton(
+      tooltip: 'Notifications',
+      onPressed: () => context.push(AppConstants.routeNotifications),
+      icon: Badge(
+        isLabelVisible: unread > 0,
+        label: Text(unread > 99 ? '99+' : '$unread'),
+        child: Icon(Icons.notifications_outlined, color: iconColor),
+      ),
+    );
+  }
+}
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});

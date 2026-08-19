@@ -15,6 +15,7 @@ class OneMgHeader extends StatelessWidget {
     this.trailing,
     this.onTrailingTap,
     this.onSearchTap,
+    this.actions,
   });
 
   final String locationLabel;
@@ -23,6 +24,7 @@ class OneMgHeader extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTrailingTap;
   final VoidCallback? onSearchTap;
+  final Widget? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +63,7 @@ class OneMgHeader extends StatelessWidget {
           children: [
             _OneMgLogo(),
             const Spacer(),
+            if (actions != null) actions!,
             if (trailing != null) _trailingButton(),
           ],
         ),
@@ -84,6 +87,10 @@ class OneMgHeader extends StatelessWidget {
               Flexible(child: _locationRow()),
               const SizedBox(width: 24),
               Expanded(flex: 2, child: _searchField()),
+              if (actions != null) ...[
+                const SizedBox(width: 8),
+                actions!,
+              ],
               if (trailing != null) ...[
                 const SizedBox(width: 16),
                 _trailingButton(),

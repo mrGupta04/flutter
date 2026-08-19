@@ -4,6 +4,94 @@ const Patient = require('./models/Patient');
 const Doctor = require('./models/Doctor');
 const Nurse = require('./models/Nurse');
 const { sendPushNotification } = require('../services/pushNotificationService');
+const { normalizeMobile } = require('../utils/mobile');
+
+const NOTIFICATION_TYPES = new Set([
+  'booking_approved',
+  'booking_rejected',
+  'payment_due',
+  'visit_reminder',
+  'en_route',
+  'prescription_ready',
+  'visit_note_ready',
+  'chat_message',
+  'booking_cancelled',
+  'booking_rescheduled',
+  'home_visit_request',
+  'arrived',
+  'visit_started',
+  'visit_completed',
+  'visit_completion_otp',
+  'nursing_report_ready',
+  'prescription_request',
+  'prescription_quotation',
+  'prescription_selected',
+  'prescription_quote',
+  'prescription_paid',
+  'general',
+]);
+
+function safeNotificationType(type) {
+  const value = String(type || 'general').trim();
+  return NOTIFICATION_TYPES.has(value) ? value : 'general';
+}
+
+async function resolvePatientId(booking = {}) {
+  if (booking.patientId) {
+    const existing = await Patient.findOne({ id: String(booking.patientId) })
+      .select('id')
+      .lean();
+    if (existing?.id) return existing.id;
+  }
+
+  const mobile = normalizeMobile(booking.patientMobile);
+  if (mobile.length === 10) {
+    const byMobile = await Patient.findOne({ mobileNumber: mobile })
+      .select('id')
+      .lean();
+    if (byMobile?.id) return byMobile.id;
+  }
+
+  const email = String(booking.patientEmail || '')
+    .trim()
+    .toLowerCase();
+  if (email) {
+    const byEmail = await Patient.findOne({ email }).select('id').lean();
+    if (byEmail?.id) return byEmail.id;
+  }
+
+  return null;
+}
+
+async function attachPatientId(booking) {
+  if (!booking) return null;
+  const patientId = await resolvePatientId(booking);
+  if (!patientId) return null;
+  if (String(booking.patientId || '') !== patientId) {
+    booking.patientId = patientId;
+    if (typeof booking.save === 'function') {
+      try {
+        await booking.save();
+      } catch (err) {
+        console.warn('[Notify] persist patientId failed:', err.message);
+      }
+    }
+  }
+  return patientId;
+}
+
+function emitRealtime(userType, userId, payload) {
+  try {
+    const { emitToUser, emitToBooking } = require('../services/trackingSocket');
+    emitToUser(userType, userId, 'app_notification', payload);
+    const bookingId = payload?.data?.bookingId;
+    if (bookingId) {
+      emitToBooking(bookingId, 'app_notification', payload);
+    }
+  } catch (err) {
+    console.warn('[Notify] realtime emit failed:', err.message);
+  }
+}
 
 async function createAndPushNotification({
   userId,
@@ -13,15 +101,48 @@ async function createAndPushNotification({
   type = 'general',
   data = {},
 }) {
-  const notification = await Notification.create({
-    id: uuidv4(),
-    userId,
-    userType,
+  if (!userId) {
+    console.warn('[Notify] skipped — missing userId', { userType, title });
+    return null;
+  }
+
+  const safeType = safeNotificationType(type);
+  let notification;
+  try {
+    notification = await Notification.create({
+      id: uuidv4(),
+      userId,
+      userType,
+      title,
+      body,
+      type: safeType,
+      data,
+    });
+  } catch (err) {
+    if (err?.name === 'ValidationError' && safeType !== 'general') {
+      notification = await Notification.create({
+        id: uuidv4(),
+        userId,
+        userType,
+        title,
+        body,
+        type: 'general',
+        data,
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  const payload = {
+    id: notification.id,
     title,
     body,
-    type,
+    type: notification.type,
     data,
-  });
+    createdAt: notification.createdAt,
+  };
+  emitRealtime(userType, userId, payload);
 
   let deviceTokens = [];
   if (userType === 'patient') {
@@ -41,7 +162,7 @@ async function createAndPushNotification({
     body,
     data: {
       ...data,
-      type,
+      type: notification.type,
       notificationId: notification.id,
       deviceTokens,
       deviceToken: deviceTokens[0],
@@ -49,6 +170,29 @@ async function createAndPushNotification({
   });
 
   return notification.toObject();
+}
+
+async function notifyPatient(booking, { title, body, type, data = {} } = {}) {
+  const userId = await attachPatientId(booking);
+  if (!userId) {
+    console.warn(
+      '[Notify] no patient account for booking',
+      booking?.id || booking?._id,
+      booking?.patientMobile,
+    );
+    return null;
+  }
+  return createAndPushNotification({
+    userId,
+    userType: 'patient',
+    title,
+    body,
+    type,
+    data: {
+      bookingId: booking.id,
+      ...data,
+    },
+  });
 }
 
 async function listNotifications(userId, userType, { limit = 50, unreadOnly = false } = {}) {
@@ -104,11 +248,9 @@ async function registerDeviceToken(userId, userType, token) {
 
   const Model =
     userType === 'patient' ? Patient : userType === 'doctor' ? Doctor : Nurse;
-  const idField =
-    userType === 'patient' ? 'id' : userType === 'doctor' ? 'id' : 'id';
 
   await Model.updateOne(
-    { [idField]: userId },
+    { id: userId },
     { $addToSet: { fcmTokens: clean } },
   );
   return { success: true };
@@ -116,6 +258,9 @@ async function registerDeviceToken(userId, userType, token) {
 
 module.exports = {
   createAndPushNotification,
+  notifyPatient,
+  resolvePatientId,
+  attachPatientId,
   listNotifications,
   markNotificationRead,
   markAllNotificationsRead,

@@ -2,10 +2,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/services/device_push_service.dart';
+import 'core/services/socket_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_back_navigation.dart';
+import 'features/notifications/presentation/screens/notifications_screen.dart';
 import 'features/upcoming_meeting/presentation/widgets/floating_meeting_timer_overlay.dart';
 import 'features/user_auth/provider/patient_auth_provider.dart';
+import 'features/user_dashboard/provider/patient_dashboard_provider.dart';
 import 'router/user_router.dart';
 
 Future<void> main() async {
@@ -21,6 +24,8 @@ class UserApp extends ConsumerStatefulWidget {
 }
 
 class _UserAppState extends ConsumerState<UserApp> {
+  bool _inboxBound = false;
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +38,31 @@ class _UserAppState extends ConsumerState<UserApp> {
       await DevicePushService.instance.init(
         deviceTokenEndpoint: PushEndpoints.patient,
       );
+      await _bindRealtimeInbox();
     }
+  }
+
+  Future<void> _bindRealtimeInbox() async {
+    if (!_inboxBound) {
+      _inboxBound = true;
+      SocketService.instance.on('app_notification', _onAppNotification);
+    }
+    await SocketService.instance.connectIfAuthenticated();
+  }
+
+  void _onAppNotification(dynamic data) {
+    final map = data is Map
+        ? Map<String, dynamic>.from(data)
+        : const <String, dynamic>{};
+    DevicePushService.instance.showLocalAlert(
+      id: map['id']?.toString() ?? '',
+      title: map['title']?.toString() ?? 'Update',
+      body: map['body']?.toString() ?? '',
+    );
+    ref.invalidate(notificationsProvider);
+    try {
+      ref.read(patientDashboardProvider.notifier).loadBookings();
+    } catch (_) {}
   }
 
   @override
@@ -43,6 +72,8 @@ class _UserAppState extends ConsumerState<UserApp> {
         DevicePushService.instance.init(
           deviceTokenEndpoint: PushEndpoints.patient,
         );
+        _bindRealtimeInbox();
+        ref.invalidate(notificationsProvider);
       }
     });
 

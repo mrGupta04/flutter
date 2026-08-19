@@ -14,6 +14,7 @@ import '../data/models/patient_booking_model.dart';
 import '../features/doctor_registration/data/medical_specialities.dart';
 import '../features/labs/data/health_package_visuals.dart';
 import '../features/labs/data/lab_test_illustrations.dart';
+import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
@@ -126,6 +127,9 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                       ? PatientHeaderAvatar(user: user)
                       : const Icon(Icons.person_outline_rounded, size: 20),
                   onTrailingTap: () => _onProfileTap(context, ref),
+                  actions: user == null
+                      ? null
+                      : const NotificationBellButton(iconColor: AppColors.white),
                   onSearchTap: () =>
                       context.push(AppConstants.routeGlobalSearch),
                 ),

@@ -22,6 +22,14 @@ class SocketService {
   bool get isConnected => _socket?.connected == true;
   String? get joinedBookingId => _joinedBookingId;
 
+  Future<void> connectIfAuthenticated() async {
+    try {
+      await connect();
+    } catch (_) {
+      // Stay offline until the user signs in.
+    }
+  }
+
   Future<void> connect() async {
     if (_socket?.connected == true) return;
     final token = await TokenStorage.instance.getPatientToken();
@@ -79,6 +87,7 @@ class SocketService {
       'tracking_status',
       'tracking_error',
       'provider_offline',
+      'app_notification',
     ]) {
       socket.on(event, (data) => _dispatch(event, data));
     }

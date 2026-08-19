@@ -2445,7 +2445,7 @@ class _PendingHomeVisitRequestCard extends StatelessWidget {
               longitude: booking.patientLongitude!,
               addressLine: booking.patientLocationLine,
               title: 'Patient location',
-              mapHeight: 170,
+              mapHeight: 220,
             ),
           ],
           if (booking.visitReason != null &&
@@ -2704,7 +2704,7 @@ class _BookingCard extends StatelessWidget {
               longitude: booking.patientLongitude!,
               addressLine: booking.patientLocationLine,
               title: 'Patient location',
-              mapHeight: 150,
+              mapHeight: 220,
             ),
           ],
           if (booking.isHomeVisit &&
