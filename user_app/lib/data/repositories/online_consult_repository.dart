@@ -60,6 +60,7 @@ class OnlineConsultRepository {
     required String consultationType,
     required int dayOfWeek,
     required int startHour,
+    int startMinute = 0,
     required DateTime slotStart,
     String? holdId,
   }) async {
@@ -71,6 +72,7 @@ class OnlineConsultRepository {
           'consultationType': consultationType,
           'dayOfWeek': dayOfWeek,
           'startHour': startHour,
+          'startMinute': startMinute,
           'slotStart': slotStart.toIso8601String(),
           if (holdId != null && holdId.isNotEmpty) 'holdId': holdId,
         },
@@ -167,6 +169,7 @@ class OnlineConsultRepository {
     String? patientNotes,
     required int dayOfWeek,
     required int startHour,
+    int startMinute = 0,
     required DateTime slotStart,
   }) async {
     try {
@@ -182,6 +185,7 @@ class OnlineConsultRepository {
             'patientNotes': patientNotes,
           'dayOfWeek': dayOfWeek,
           'startHour': startHour,
+          'startMinute': startMinute,
           'slotStart': slotStart.toIso8601String(),
         },
       );

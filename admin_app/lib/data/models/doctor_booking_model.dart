@@ -76,7 +76,16 @@ class DoctorBookingModel {
   bool get isOnlineConsult => consultationType == 'online_consult';
   bool get isClinicVisit => consultationType == 'visit_site';
   bool get isAppointmentVerified => appointmentVerifiedAt != null;
-  bool get isHomeVisit => consultationType == 'book_home';
+  bool get isHomeVisit =>
+      consultationType == 'book_home' ||
+      typeLabel == 'Home visit' ||
+      (consultationType == null &&
+          (patientAddress != null || patientLatitude != null));
+
+  bool get isActiveHomeVisit =>
+      status == 'confirmed' &&
+      visitProgress != 'completed' &&
+      isHomeVisit;
 
   bool get isAwaitingDoctorApproval =>
       status == 'awaiting_doctor_approval';
@@ -87,6 +96,10 @@ class DoctorBookingModel {
   String get displayStatusLabel {
     if (isAwaitingDoctorApproval) return 'Awaiting your approval';
     if (isApprovedPendingPayment) return 'Awaiting patient payment';
+    if (visitProgress == 'completed') return 'Completed';
+    if (visitProgress == 'en_route') return 'On the way';
+    if (visitProgress == 'arrived') return 'Arrived';
+    if (visitProgress == 'visit_started') return 'Visit in progress';
     if (status == 'confirmed') return 'Confirmed';
     if (status == 'cancelled') return 'Cancelled';
     return status.toUpperCase();
@@ -118,7 +131,8 @@ class DoctorBookingModel {
       subtitle: json['subtitle']?.toString() ?? '',
       status: json['status']?.toString() ?? 'confirmed',
       paymentStatus: json['paymentStatus'] as String?,
-      consultationType: json['consultationType'] as String?,
+      consultationType: json['consultationType'] as String? ??
+          (json['typeLabel']?.toString() == 'Home visit' ? 'book_home' : null),
       typeLabel: json['typeLabel'] as String?,
       patientName: json['patientName'] as String?,
       patientMobile: json['patientMobile'] as String?,

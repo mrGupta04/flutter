@@ -4,11 +4,18 @@ const { findDoctorById, getConsultationFeeForType, getRegularConsultationFeeForT
 const { findNurseById } = require('./nurseRepositories');
 const { normalizeUploadUrl } = require('../utils/uploadUrl');
 const { findAvailabilityForActiveWeek } = require('./availabilityRepositories');
-const { isWeekExpired } = require('../utils/availabilityWeek');
+const {
+  isWeekExpired,
+  SLOT_START_HOUR,
+  SLOT_END_HOUR,
+} = require('../utils/availabilityWeek');
 const {
   slotDateTime,
-  slotEndDateTime,
+  slotEndFromStart,
   formatSlotLabel,
+  startMinuteOffsets,
+  normalizeStartMinute,
+  isOnlineConsultType,
 } = require('../utils/slotDateTime');
 const { videoJoinFields } = require('../utils/videoJoinWindow');
 const { findFeedbackByBookingIds, feedbackFieldsForBooking } = require('./feedbackRepositories');
@@ -323,11 +330,14 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
   }).lean();
 
   const bookedKeys = new Set();
-  const bookedSlotStarts = new Set();
+  const reservedRanges = [];
   for (const booking of reserved) {
     if (!isSlotReserved(booking, now)) continue;
     bookedKeys.add(`${booking.dayOfWeek}_${booking.startHour}`);
-    bookedSlotStarts.add(new Date(booking.slotStart).getTime());
+    reservedRanges.push({
+      start: new Date(booking.slotStart).getTime(),
+      end: new Date(booking.slotEnd).getTime(),
+    });
   }
 
   const slotMap = new Map();
@@ -335,25 +345,35 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
     slotMap.set(`${s.dayOfWeek}_${s.startHour}`, s);
   });
 
+  const minuteOffsets = startMinuteOffsets(consultationType);
   const bookable = [];
   for (let day = 0; day <= 6; day += 1) {
-    for (let hour = 8; hour <= 17; hour += 1) {
+    for (let hour = SLOT_START_HOUR; hour <= SLOT_END_HOUR; hour += 1) {
       const key = `${day}_${hour}`;
       const slot = slotMap.get(key) || { dayOfWeek: day, startHour: hour, available: false };
-      if (!slot.available || bookedKeys.has(key)) continue;
+      if (!slot.available) continue;
+      if (!isOnlineConsultType(consultationType) && bookedKeys.has(key)) continue;
 
-      const slotStart = slotDateTime(weekStart, day, hour);
-      const slotEnd = slotEndDateTime(weekStart, day, hour);
-      if (slotStart <= now) continue;
-      if (bookedSlotStarts.has(slotStart.getTime())) continue;
+      for (const minute of minuteOffsets) {
+        const slotStart = slotDateTime(weekStart, day, hour, minute);
+        const slotEnd = slotEndFromStart(slotStart, consultationType);
+        if (slotStart <= now) continue;
+        const startMs = slotStart.getTime();
+        const endMs = slotEnd.getTime();
+        const overlaps = reservedRanges.some(
+          (range) => startMs < range.end && endMs > range.start,
+        );
+        if (overlaps) continue;
 
-      bookable.push({
-        dayOfWeek: day,
-        startHour: hour,
-        slotStart: slotStart.toISOString(),
-        slotEnd: slotEnd.toISOString(),
-        label: formatSlotLabel(slotStart, slotEnd),
-      });
+        bookable.push({
+          dayOfWeek: day,
+          startHour: hour,
+          startMinute: minute,
+          slotStart: slotStart.toISOString(),
+          slotEnd: slotEnd.toISOString(),
+          label: formatSlotLabel(slotStart, slotEnd),
+        });
+      }
     }
   }
 
@@ -414,6 +434,7 @@ function formatBookingResponse(booking, doctor) {
     doctorApprovedAt: booking.doctorApprovedAt ?? null,
     dayOfWeek: booking.dayOfWeek,
     startHour: booking.startHour,
+    startMinute: booking.startMinute || 0,
     slotStart: booking.slotStart,
     slotEnd: booking.slotEnd,
     weekStartDate: booking.weekStartDate,
@@ -442,6 +463,7 @@ async function validateBookingPayload(payload, consultationType) {
     patientNotes,
     dayOfWeek,
     startHour,
+    startMinute,
     slotStart: slotStartRaw,
     patientId,
     patientAddress,
@@ -487,11 +509,15 @@ async function validateBookingPayload(payload, consultationType) {
   const weekStart = availability.weekStartDate;
   const d = Number(dayOfWeek);
   const h = Number(startHour);
+  const parsedSlotStart = slotStartRaw ? new Date(slotStartRaw) : null;
+  const m = normalizeStartMinute({
+    startMinute,
+    slotStart: parsedSlotStart,
+    consultationType,
+  });
 
-  const slotStart = slotStartRaw
-    ? new Date(slotStartRaw)
-    : slotDateTime(weekStart, d, h);
-  const slotEnd = slotEndDateTime(weekStart, d, h);
+  const slotStart = slotDateTime(weekStart, d, h, m);
+  const slotEnd = slotEndFromStart(slotStart, consultationType);
 
   const slotDef = (availability.slots || []).find(
     (s) => s.dayOfWeek === d && s.startHour === h,
@@ -526,6 +552,29 @@ async function validateBookingPayload(payload, consultationType) {
     const err = new Error('This slot was just booked. Please choose another time.');
     err.statusCode = 409;
     throw err;
+  }
+
+  if (isOnlineConsultType(consultationType)) {
+    const overlapping = await ConsultationBooking.find({
+      doctorId,
+      consultationType,
+      status: {
+        $in: [
+          'confirmed',
+          'pending',
+          'held',
+          'awaiting_doctor_approval',
+          'approved_pending_payment',
+        ],
+      },
+      slotStart: { $lt: slotEnd },
+      slotEnd: { $gt: slotStart },
+    });
+    if (overlapping.some((booking) => isSlotReserved(booking))) {
+      const err = new Error('This slot was just booked. Please choose another time.');
+      err.statusCode = 409;
+      throw err;
+    }
   }
 
   const mobile = normalizeMobile(patientMobile);
@@ -575,6 +624,7 @@ async function validateBookingPayload(payload, consultationType) {
     slotEnd,
     d,
     h,
+    m,
     mobile,
     name,
     patientId,
@@ -598,6 +648,7 @@ async function createPendingBookingForPayment(payload, holdMinutes = 15) {
     slotEnd,
     d,
     h,
+    m,
     mobile,
     name,
     patientId,
@@ -678,6 +729,7 @@ async function createPendingBookingForPayment(payload, holdMinutes = 15) {
     visitReason: visitReason ? String(visitReason).trim() : undefined,
     dayOfWeek: d,
     startHour: h,
+    startMinute: m,
     slotStart,
     slotEnd,
     weekStartDate: weekStart,
@@ -857,6 +909,7 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
     doctorId,
     dayOfWeek,
     startHour,
+    startMinute,
     slotStart: slotStartRaw,
     patientId,
     holdId,
@@ -910,10 +963,14 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
   const weekStart = availability.weekStartDate;
   const d = Number(dayOfWeek);
   const h = Number(startHour);
-  const slotStart = slotStartRaw
-    ? new Date(slotStartRaw)
-    : slotDateTime(weekStart, d, h);
-  const slotEnd = slotEndDateTime(weekStart, d, h);
+  const parsedSlotStart = slotStartRaw ? new Date(slotStartRaw) : null;
+  const m = normalizeStartMinute({
+    startMinute,
+    slotStart: parsedSlotStart,
+    consultationType,
+  });
+  const slotStart = slotDateTime(weekStart, d, h, m);
+  const slotEnd = slotEndFromStart(slotStart, consultationType);
 
   const slotDef = (availability.slots || []).find(
     (s) => s.dayOfWeek === d && s.startHour === h,
@@ -963,6 +1020,29 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
     throw err;
   }
 
+  if (isOnlineConsultType(consultationType)) {
+    const overlapping = await ConsultationBooking.find({
+      doctorId,
+      consultationType,
+      status: {
+        $in: [
+          'confirmed',
+          'pending',
+          'held',
+          'awaiting_doctor_approval',
+          'approved_pending_payment',
+        ],
+      },
+      slotStart: { $lt: slotEnd },
+      slotEnd: { $gt: slotStart },
+    });
+    if (overlapping.some((booking) => isSlotReserved(booking))) {
+      const err = new Error('This slot was just booked. Please choose another time.');
+      err.statusCode = 409;
+      throw err;
+    }
+  }
+
   if (patientId) {
     await ConsultationBooking.updateMany(
       {
@@ -990,6 +1070,7 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
     patientMobile: '0000000000',
     dayOfWeek: d,
     startHour: h,
+    startMinute: m,
     slotStart,
     slotEnd,
     weekStartDate: weekStart,
@@ -1728,7 +1809,9 @@ async function listDoctorBookings(doctorId) {
       consultationType: b.consultationType,
       typeLabel,
       consultationFee: b.consultationFee,
-      isUpcoming: slotStart >= now,
+      isUpcoming:
+        slotEnd >= now ||
+        ['en_route', 'arrived', 'visit_started'].includes(b.visitProgress),
       patientLatitude: b.patientLatitude ?? null,
       patientLongitude: b.patientLongitude ?? null,
       distanceKm: b.distanceKm ?? null,

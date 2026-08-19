@@ -96,6 +96,7 @@ class _RescheduleSheetState extends ConsumerState<_RescheduleSheet> {
         slotEnd: slot.slotEnd,
         dayOfWeek: slot.dayOfWeek,
         startHour: slot.startHour,
+        startMinute: slot.startMinute,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {

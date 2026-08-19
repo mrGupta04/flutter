@@ -133,28 +133,42 @@ class LocationService {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 20),
+          timeLimit: Duration(seconds: 15),
         ),
       );
       return (latitude: position.latitude, longitude: position.longitude);
-    } on LocationServiceDisabledException {
-      throw LocationFailure(
-        'Location services are disabled. Turn them on and try again.',
-      );
-    } on PermissionDeniedException {
-      throw LocationFailure(
-        'Location permission denied. Allow access and try again.',
-      );
-    } catch (e) {
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('timeout') || msg.contains('time limit')) {
+    } catch (_) {
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null) {
+        return (latitude: lastKnown.latitude, longitude: lastKnown.longitude);
+      }
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 20),
+          ),
+        );
+        return (latitude: position.latitude, longitude: position.longitude);
+      } on LocationServiceDisabledException {
         throw LocationFailure(
-          'Could not get your location in time. Move to an open area or try again.',
+          'Location services are disabled. Turn them on and try again.',
+        );
+      } on PermissionDeniedException {
+        throw LocationFailure(
+          'Location permission denied. Allow access and try again.',
+        );
+      } catch (e) {
+        final msg = e.toString().toLowerCase();
+        if (msg.contains('timeout') || msg.contains('time limit')) {
+          throw LocationFailure(
+            'Could not get your location in time. Move to an open area or try again.',
+          );
+        }
+        throw LocationFailure(
+          'Unable to read current location. Check permissions and try again.',
         );
       }
-      throw LocationFailure(
-        'Unable to read current location. Check permissions and try again.',
-      );
     }
   }
 

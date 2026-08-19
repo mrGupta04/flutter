@@ -1,12 +1,12 @@
-/** Sunday (0) through Saturday (6); hourly slots start at 8, last at 17 (5–6 PM). */
+/** Sunday (0) through Saturday (6); hourly slots 12 AM–12 AM (hours 0–23). */
 const {
   getClinicWeekBounds,
   getClinicActiveWeekBounds,
   sameClinicWeekStart,
 } = require('./clinicTime');
 
-const SLOT_START_HOUR = 8;
-const SLOT_END_HOUR = 17;
+const SLOT_START_HOUR = 0;
+const SLOT_END_HOUR = 23;
 
 /** Week bounds for the Sunday–Saturday week containing referenceDate (clinic TZ). */
 function getWeekBounds(referenceDate = new Date()) {
@@ -68,12 +68,13 @@ function sameWeekStart(a, b) {
 }
 
 function formatHourLabel(hour) {
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-  const h12 = hour % 12 === 0 ? 12 : hour % 12;
-  const end = hour + 1;
-  const end12 = end % 12 === 0 ? 12 : end % 12;
-  const endSuffix = end >= 12 ? 'PM' : 'AM';
-  return `${h12}:00 ${suffix} – ${end12}:00 ${endSuffix}`;
+  const fmt = (h) => {
+    const hour24 = ((h % 24) + 24) % 24;
+    const suffix = hour24 >= 12 ? 'PM' : 'AM';
+    const h12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+    return `${h12}:00 ${suffix}`;
+  };
+  return `${fmt(hour)} – ${fmt(hour + 1)}`;
 }
 
 module.exports = {

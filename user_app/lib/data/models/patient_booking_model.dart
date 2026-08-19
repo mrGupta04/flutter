@@ -238,8 +238,12 @@ class PatientBookingModel {
 
   bool get canTrackHomeVisitLive {
     if (!isHomeVisit && !isNurseVisit) return false;
-    if (status != 'confirmed') return false;
-    return visitProgress != 'completed';
+    if (status == 'cancelled' || status == 'rejected') return false;
+    if (visitProgress == 'completed') return false;
+    return status == 'confirmed' ||
+        visitProgress == 'en_route' ||
+        visitProgress == 'arrived' ||
+        visitProgress == 'visit_started';
   }
   bool get isClinicVisit => consultationType == 'visit_site';
 

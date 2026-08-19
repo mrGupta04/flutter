@@ -4,7 +4,7 @@ const {
   buildVisitTimeline,
 } = require('./bookingLifecycleHelpers');
 const { createAndPushNotification } = require('./notificationRepositories');
-const { formatSlotLabel } = require('../utils/slotDateTime');
+const { formatSlotLabel, slotEndFromStart } = require('../utils/slotDateTime');
 
 const CANCEL_FREE_HOURS = Number(process.env.CANCEL_FREE_HOURS || 2);
 const NO_SHOW_FEE_PERCENT = Number(process.env.NO_SHOW_FEE_PERCENT || 50);
@@ -212,7 +212,7 @@ async function cancelBooking(bookingId, auth, reason) {
   };
 }
 
-async function rescheduleBooking(bookingId, auth, { slotStart, slotEnd, dayOfWeek, startHour }) {
+async function rescheduleBooking(bookingId, auth, { slotStart, slotEnd, dayOfWeek, startHour, startMinute }) {
   const booking = await ConsultationBooking.findOne({ id: bookingId });
   if (!booking) {
     const err = new Error('Booking not found');
@@ -242,7 +242,9 @@ async function rescheduleBooking(bookingId, auth, { slotStart, slotEnd, dayOfWee
   }
 
   const newStart = new Date(slotStart);
-  const newEnd = new Date(slotEnd || new Date(newStart.getTime() + 60 * 60 * 1000));
+  const newEnd = new Date(
+    slotEnd || slotEndFromStart(newStart, booking.consultationType),
+  );
   if (Number.isNaN(newStart.getTime()) || Number.isNaN(newEnd.getTime())) {
     const err = new Error('Invalid slot times');
     err.statusCode = 400;
@@ -282,6 +284,7 @@ async function rescheduleBooking(bookingId, auth, { slotStart, slotEnd, dayOfWee
   booking.slotEnd = newEnd;
   if (dayOfWeek != null) booking.dayOfWeek = Number(dayOfWeek);
   if (startHour != null) booking.startHour = Number(startHour);
+  if (startMinute != null) booking.startMinute = Number(startMinute);
   booking.reminderSentAt = null;
   appendStatusHistory(booking, 'rescheduled', 'patient');
   await booking.save();

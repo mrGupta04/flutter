@@ -128,6 +128,7 @@ class OnlineConsultBookingNotifier extends StateNotifier<OnlineConsultBookingSta
       consultationType: 'online_consult',
       dayOfWeek: slot.dayOfWeek,
       startHour: slot.startHour,
+      startMinute: slot.startMinute,
       slotStart: slot.slotStart,
       holdId: state.slotHoldId,
     );

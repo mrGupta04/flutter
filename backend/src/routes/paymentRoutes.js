@@ -35,6 +35,7 @@ router.post('/create-order', authOptional, async (req, res) => {
       visitReason,
       dayOfWeek,
       startHour,
+      startMinute,
       slotStart,
       couponCode,
     } = body;
@@ -72,6 +73,7 @@ router.post('/create-order', authOptional, async (req, res) => {
           visitReason,
           dayOfWeek,
           startHour,
+          startMinute,
           slotStart,
           couponCode,
         },

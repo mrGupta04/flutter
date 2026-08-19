@@ -57,7 +57,7 @@ class DoctorDashboardState {
       .toList(growable: false);
 
   List<DoctorBookingModel> get upcomingHomeBookings => bookings
-      .where((b) => b.isUpcoming && b.isHomeVisit && b.status == 'confirmed')
+      .where((b) => b.isActiveHomeVisit)
       .toList(growable: false);
 
   List<DoctorBookingModel> get pendingHomeVisitRequests => bookings
@@ -65,7 +65,7 @@ class DoctorDashboardState {
       .toList(growable: false);
 
   List<DoctorBookingModel> get pastBookings =>
-      bookings.where((b) => !b.isUpcoming).toList();
+      bookings.where((b) => !b.isUpcoming && !b.isActiveHomeVisit).toList();
 
   bool get needsAvailabilityUpdate =>
       availabilityReminder?.needsUpdate == true ||

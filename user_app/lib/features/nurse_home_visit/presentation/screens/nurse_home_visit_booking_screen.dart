@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/live_address_service.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
@@ -69,6 +70,9 @@ class _NurseHomeVisitBookingScreenState
         _mobileController.text = user.mobileNumber;
       }
     }
+    if (mounted && _addressController.text.trim().isEmpty) {
+      await _fillFromLiveLocation(promptIfNeeded: false);
+    }
   }
 
   @override
@@ -85,33 +89,69 @@ class _NurseHomeVisitBookingScreenState
     super.dispose();
   }
 
-  Future<void> _useMyLocation() async {
+  Future<void> _fillFromLiveLocation({bool promptIfNeeded = true}) async {
     setState(() => _isFetchingLocation = true);
     try {
-      final position =
-          await LocationService.getCurrentPositionWithPrompt(context);
+      final captured = await LiveAddressService.capture(
+        context,
+        promptIfNeeded: promptIfNeeded,
+      );
       if (!mounted) return;
-      if (position == null) {
-        SnackBarHelper.showError(
-          context,
-          'Location is required. Enable location services and try again.',
-        );
+      if (captured == null) {
+        if (promptIfNeeded) {
+          SnackBarHelper.showError(
+            context,
+            'Location is required. Enable location services and try again.',
+          );
+        }
         return;
       }
-      setState(() {
-        _patientLatitude = position.latitude;
-        _patientLongitude = position.longitude;
-      });
-      SnackBarHelper.showSuccess(
-        context,
-        'Location captured. Add your address details below.',
-      );
+
+      _applyCapturedAddress(captured, overwrite: promptIfNeeded);
+      if (promptIfNeeded) {
+        SnackBarHelper.showSuccess(
+          context,
+          captured.hasAddress
+              ? 'Live location captured and address filled.'
+              : 'Location pinned. Enter the remaining address details.',
+        );
+      }
     } on LocationFailure catch (e) {
-      if (mounted) SnackBarHelper.showError(context, e.message);
+      if (mounted && promptIfNeeded) SnackBarHelper.showError(context, e.message);
     } finally {
       if (mounted) setState(() => _isFetchingLocation = false);
     }
   }
+
+  void _applyCapturedAddress(
+    CapturedLiveAddress captured, {
+    required bool overwrite,
+  }) {
+    _patientLatitude = captured.latitude;
+    _patientLongitude = captured.longitude;
+    final resolved = captured.resolved;
+    if (resolved == null) {
+      setState(() {});
+      return;
+    }
+    if (overwrite || _addressController.text.trim().isEmpty) {
+      _addressController.text = resolved.address;
+    }
+    if (overwrite || _cityController.text.trim().isEmpty) {
+      if (resolved.city.isNotEmpty) _cityController.text = resolved.city;
+    }
+    if (overwrite || _stateController.text.trim().isEmpty) {
+      if (resolved.state.isNotEmpty) _stateController.text = resolved.state;
+    }
+    if (overwrite || _pincodeController.text.trim().isEmpty) {
+      if (resolved.pincode.isNotEmpty) {
+        _pincodeController.text = resolved.pincode;
+      }
+    }
+    setState(() {});
+  }
+
+  Future<void> _useMyLocation() => _fillFromLiveLocation(promptIfNeeded: true);
 
   Future<void> _submit(NurseModel nurse) async {
     if (!await ensureUserLoggedIn(context)) return;
@@ -296,7 +336,7 @@ class _NurseHomeVisitBookingScreenState
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Share your contact and address for the home visit',
+                        'Share your contact and address for the home visit. Tap below to pin GPS and auto-fill the form.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -305,8 +345,22 @@ class _NurseHomeVisitBookingScreenState
                       OutlinedButton.icon(
                         onPressed:
                             _isFetchingLocation ? null : _useMyLocation,
-                        icon: const Icon(Icons.my_location_rounded),
-                        label: const Text('Use my live location'),
+                        icon: _isFetchingLocation
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.my_location_rounded),
+                        label: Text(
+                          _isFetchingLocation
+                              ? 'Getting live location…'
+                              : _patientLatitude != null
+                                  ? 'Update from live location'
+                                  : 'Use my live location',
+                        ),
                       ),
                       const SizedBox(height: 12),
                       CustomTextField(

@@ -33,12 +33,36 @@ class NurseDashboardState {
   });
 
   List<DoctorBookingModel> get pendingHomeVisitRequests => bookings
-      .where((b) => b.isHomeVisit && b.isAwaitingDoctorApproval)
+      .where((b) => b.isAwaitingDoctorApproval)
       .toList(growable: false);
 
-  List<DoctorBookingModel> get upcomingHomeBookings => bookings
-      .where((b) => b.isHomeVisit && b.isUpcoming && b.status == 'confirmed')
-      .toList(growable: false);
+  List<DoctorBookingModel> get awaitingPaymentBookings {
+    final items = bookings.where((b) => b.isApprovedPendingPayment).toList();
+    items.sort((a, b) => (a.slotStart ?? DateTime(0)).compareTo(b.slotStart ?? DateTime(0)));
+    return items;
+  }
+
+  List<DoctorBookingModel> get upcomingHomeBookings {
+    final items = bookings.where((b) => b.isActiveHomeVisit).toList();
+    items.sort((a, b) => (a.slotStart ?? DateTime(0)).compareTo(b.slotStart ?? DateTime(0)));
+    return items;
+  }
+
+  List<DoctorBookingModel> get pastBookings {
+    final upcomingIds = upcomingHomeBookings.map((b) => b.id).toSet();
+    final pendingIds = pendingHomeVisitRequests.map((b) => b.id).toSet();
+    final paymentIds = awaitingPaymentBookings.map((b) => b.id).toSet();
+    final items = bookings
+        .where(
+          (b) =>
+              !upcomingIds.contains(b.id) &&
+              !pendingIds.contains(b.id) &&
+              !paymentIds.contains(b.id),
+        )
+        .toList();
+    items.sort((a, b) => (b.slotStart ?? DateTime(0)).compareTo(a.slotStart ?? DateTime(0)));
+    return items;
+  }
 
   bool get needsAvailabilityUpdate =>
       homeAvailability?.needsUpdate == true ||

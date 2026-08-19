@@ -173,12 +173,18 @@ class MockDatabase {
     );
   }
 
-  DateTime _slotStart(DateTime weekStart, int dayOfWeek, int startHour) {
+  DateTime _slotStart(
+    DateTime weekStart,
+    int dayOfWeek,
+    int startHour, [
+    int startMinute = 0,
+  ]) {
     return DateTime(
       weekStart.year,
       weekStart.month,
       weekStart.day + dayOfWeek,
       startHour,
+      startMinute,
     );
   }
 
@@ -187,7 +193,8 @@ class MockDatabase {
       final hour = dt.hour;
       final suffix = hour >= 12 ? 'PM' : 'AM';
       final h12 = hour % 12 == 0 ? 12 : hour % 12;
-      return '$h12:00 $suffix';
+      final mm = dt.minute.toString().padLeft(2, '0');
+      return '$h12:$mm $suffix';
     }
     return '${fmt(start)} – ${fmt(end)}';
   }
@@ -213,15 +220,22 @@ class MockDatabase {
     final now = DateTime.now();
     final weekStart = _weekStart(now);
     final weekEnd = _weekEnd(weekStart);
-    final bookedKeys = _consultationBookings
+    final bookedStarts = _consultationBookings
         .where(
           (b) =>
               b['doctorId'] == doctorId &&
               b['consultationType'] == consultationType &&
               _isActiveReservation(b),
         )
-        .map((b) => '${b['dayOfWeek']}_${b['startHour']}')
+        .map((b) => DateTime.tryParse(b['slotStart'] as String? ?? '')?.millisecondsSinceEpoch)
+        .whereType<int>()
         .toSet();
+
+    final isOnline = consultationType == 'online_consult';
+    final minutes = isOnline ? const [0, 20, 40] : const [0];
+    final duration = isOnline
+        ? const Duration(minutes: 20)
+        : const Duration(hours: 1);
 
     final slots = <Map<String, dynamic>>[];
     for (var day = 1; day <= 5; day++) {
@@ -230,18 +244,20 @@ class MockDatabase {
         hour <= DoctorAvailabilityConstants.slotEndHour;
         hour++
       ) {
-        final key = '${day}_$hour';
-        if (bookedKeys.contains(key)) continue;
-        final slotStart = _slotStart(weekStart, day, hour);
-        final slotEnd = slotStart.add(const Duration(hours: 1));
-        if (!slotStart.isAfter(now)) continue;
-        slots.add({
-          'dayOfWeek': day,
-          'startHour': hour,
-          'slotStart': slotStart.toIso8601String(),
-          'slotEnd': slotEnd.toIso8601String(),
-          'label': _slotLabel(slotStart, slotEnd),
-        });
+        for (final minute in minutes) {
+          final slotStart = _slotStart(weekStart, day, hour, minute);
+          final slotEnd = slotStart.add(duration);
+          if (!slotStart.isAfter(now)) continue;
+          if (bookedStarts.contains(slotStart.millisecondsSinceEpoch)) continue;
+          slots.add({
+            'dayOfWeek': day,
+            'startHour': hour,
+            'startMinute': minute,
+            'slotStart': slotStart.toIso8601String(),
+            'slotEnd': slotEnd.toIso8601String(),
+            'label': _slotLabel(slotStart, slotEnd),
+          });
+        }
       }
     }
 
@@ -289,6 +305,7 @@ class MockDatabase {
     required int dayOfWeek,
     required int startHour,
     required DateTime slotStart,
+    int startMinute = 0,
     String? holdId,
   }) {
     if (holdId != null) {
@@ -297,12 +314,13 @@ class MockDatabase {
       );
     }
 
-    final key = '${dayOfWeek}_$startHour';
     final duplicate = _consultationBookings.any(
       (b) =>
           b['doctorId'] == doctorId &&
           b['consultationType'] == consultationType &&
-          '${b['dayOfWeek']}_${b['startHour']}' == key &&
+          DateTime.tryParse(b['slotStart'] as String? ?? '')
+                  ?.millisecondsSinceEpoch ==
+              slotStart.millisecondsSinceEpoch &&
           _isActiveReservation(b),
     );
     if (duplicate) {
@@ -310,13 +328,17 @@ class MockDatabase {
     }
 
     final weekStart = _weekStart(DateTime.now());
-    final slotEnd = slotStart.add(const Duration(hours: 1));
+    final isOnline = consultationType == 'online_consult';
+    final slotEnd = slotStart.add(
+      isOnline ? const Duration(minutes: 20) : const Duration(hours: 1),
+    );
     final hold = {
       'id': 'mock-hold-${_uuid.v4()}',
       'doctorId': doctorId,
       'consultationType': consultationType,
       'dayOfWeek': dayOfWeek,
       'startHour': startHour,
+      'startMinute': startMinute,
       'slotStart': slotStart.toIso8601String(),
       'slotEnd': slotEnd.toIso8601String(),
       'weekStartDate': weekStart.toIso8601String(),
@@ -349,17 +371,22 @@ class MockDatabase {
 
     final dayOfWeek = payload['dayOfWeek'] as int? ?? 0;
     final startHour = payload['startHour'] as int? ?? 8;
+    final startMinute = payload['startMinute'] as int? ?? 0;
     final weekStart = _weekStart(DateTime.now());
+    final isOnline = consultationType == 'online_consult';
     final slotStart = DateTime.tryParse(payload['slotStart'] as String? ?? '') ??
-        _slotStart(weekStart, dayOfWeek, startHour);
-    final slotEnd = slotStart.add(const Duration(hours: 1));
-    final key = '${dayOfWeek}_$startHour';
+        _slotStart(weekStart, dayOfWeek, startHour, startMinute);
+    final slotEnd = slotStart.add(
+      isOnline ? const Duration(minutes: 20) : const Duration(hours: 1),
+    );
 
     final duplicate = _consultationBookings.any(
       (b) =>
           b['doctorId'] == doctorId &&
           b['consultationType'] == consultationType &&
-          '${b['dayOfWeek']}_${b['startHour']}' == key &&
+          DateTime.tryParse(b['slotStart'] as String? ?? '')
+                  ?.millisecondsSinceEpoch ==
+              slotStart.millisecondsSinceEpoch &&
           _isActiveReservation(b),
     );
     if (duplicate) {
@@ -370,7 +397,9 @@ class MockDatabase {
       (b) =>
           b['doctorId'] == doctorId &&
           b['consultationType'] == consultationType &&
-          '${b['dayOfWeek']}_${b['startHour']}' == key &&
+          DateTime.tryParse(b['slotStart'] as String? ?? '')
+                  ?.millisecondsSinceEpoch ==
+              slotStart.millisecondsSinceEpoch &&
           b['status'] == 'held',
     );
 
@@ -394,6 +423,7 @@ class MockDatabase {
       'visitReason': payload['visitReason'],
       'dayOfWeek': dayOfWeek,
       'startHour': startHour,
+      'startMinute': startMinute,
       'slotStart': slotStart.toIso8601String(),
       'slotEnd': slotEnd.toIso8601String(),
       'weekStartDate': weekStart.toIso8601String(),

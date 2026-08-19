@@ -58,7 +58,7 @@ async function getTypeAvailabilityStatus(nurseId) {
       availability: null,
       needsUpdate: true,
       reminderMessage:
-        'Set your weekly home visit slots (Sunday–Saturday, 8 AM–6 PM).',
+        'Set your weekly home visit slots (Sunday–Saturday, 12 AM–12 AM).',
       suggestedWeekStart: weekStart,
       suggestedWeekEnd: weekEnd,
     };

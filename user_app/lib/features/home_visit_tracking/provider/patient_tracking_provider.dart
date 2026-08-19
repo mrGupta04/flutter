@@ -69,14 +69,13 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
     _socket.on('tracking_stopped', _onStopped);
     _socket.on('tracking_error', _onError);
     _socket.on('provider_offline', _onOffline);
+    await refresh(includeRoute: true);
+    _startPollFallback();
     try {
       await _socket.connect();
       _socket.joinBookingRoom(bookingId);
-      await refresh(includeRoute: true);
-    } catch (e) {
-      if (!mounted) return;
-      state = state.copyWith(loading: false, error: e.toString());
-      _startPollFallback();
+    } catch (_) {
+      // Keep polling if the live socket cannot connect.
     }
   }
 

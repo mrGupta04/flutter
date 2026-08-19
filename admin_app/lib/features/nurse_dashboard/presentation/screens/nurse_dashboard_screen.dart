@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/doctor_booking_model.dart';
@@ -126,11 +127,27 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                         const SizedBox(height: 8),
                         _ProfileCard(nurse: nurse),
                       ],
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+                      _BookingStatsRow(
+                        pending: dashboard.pendingHomeVisitRequests.length,
+                        upcoming: dashboard.upcomingHomeBookings.length,
+                        awaitingPay: dashboard.awaitingPaymentBookings.length,
+                        history: dashboard.pastBookings.length,
+                      ),
+                      const SizedBox(height: 16),
                       if (dashboard.needsAvailabilityUpdate)
                         _AvailabilityReminder(
                           onUpdate: () => _showAvailabilitySheet(dashboard),
                         ),
+                      if (dashboard.bookingsError != null) ...[
+                        Text(
+                          dashboard.bookingsError!,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.error,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       if (dashboard.pendingHomeVisitRequests.isNotEmpty) ...[
                         const MarketplaceSectionTitle(
                           title: 'Pending home visit requests',
@@ -144,6 +161,15 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                         ),
                         const SizedBox(height: 16),
                       ],
+                      if (dashboard.awaitingPaymentBookings.isNotEmpty) ...[
+                        const MarketplaceSectionTitle(
+                          title: 'Waiting for patient payment',
+                        ),
+                        ...dashboard.awaitingPaymentBookings.map(
+                          (b) => _BookingTile(booking: b, readOnly: true),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       const MarketplaceSectionTitle(title: 'Upcoming visits'),
                       if (dashboard.isLoadingBookings)
                         const Padding(
@@ -152,7 +178,7 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                         )
                       else if (dashboard.upcomingHomeBookings.isEmpty)
                         Text(
-                          'No confirmed home visits yet.',
+                          'No confirmed visits yet. After you approve a request and the patient pays, it appears here with Start trip.',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -160,6 +186,24 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                       else
                         ...dashboard.upcomingHomeBookings.map(
                           (b) => _BookingTile(booking: b),
+                        ),
+                      const SizedBox(height: 20),
+                      MarketplaceSectionTitle(
+                        title:
+                            'Booking history (${dashboard.pastBookings.length})',
+                      ),
+                      if (dashboard.isLoadingBookings)
+                        const SizedBox.shrink()
+                      else if (dashboard.pastBookings.isEmpty)
+                        Text(
+                          'Completed and cancelled visits will show here.',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        )
+                      else
+                        ...dashboard.pastBookings.map(
+                          (b) => _BookingTile(booking: b, readOnly: true),
                         ),
                     ],
                   ),
@@ -273,6 +317,16 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final details = <String>[
+      if (nurse.qualification != null && nurse.qualification!.trim().isNotEmpty)
+        nurse.qualification!.trim(),
+      if (nurse.yearsOfExperience != null)
+        '${nurse.yearsOfExperience} yrs experience',
+      if (nurse.city != null && nurse.city!.trim().isNotEmpty)
+        nurse.city!.trim(),
+    ];
+    final spec = (nurse.specialization ?? '').trim();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -289,12 +343,21 @@ class _ProfileCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          if (nurse.specialization != null) ...[
+          if (spec.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              nurse.specialization!,
+              spec,
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.white.withValues(alpha: 0.9),
+              ),
+            ),
+          ],
+          if (details.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              details.join(' · '),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.white.withValues(alpha: 0.85),
               ),
             ),
           ],
@@ -302,6 +365,16 @@ class _ProfileCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               nurse.gender!.trim(),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.white.withValues(alpha: 0.85),
+              ),
+            ),
+          ],
+          if (nurse.mobileNumber != null &&
+              nurse.mobileNumber!.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              FormattingUtils.formatPhoneNumber(nurse.mobileNumber!),
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.white.withValues(alpha: 0.85),
               ),
@@ -319,6 +392,68 @@ class _ProfileCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _BookingStatsRow extends StatelessWidget {
+  const _BookingStatsRow({
+    required this.pending,
+    required this.upcoming,
+    required this.awaitingPay,
+    required this.history,
+  });
+
+  final int pending;
+  final int upcoming;
+  final int awaitingPay;
+  final int history;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget chip(String label, int value, Color color) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            children: [
+              Text(
+                '$value',
+                style: AppTextStyles.titleSmall.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        chip('Pending', pending, AppColors.warning),
+        const SizedBox(width: 8),
+        chip('Upcoming', upcoming, AppColors.primary),
+        const SizedBox(width: 8),
+        chip('To pay', awaitingPay, AppColors.offer),
+        const SizedBox(width: 8),
+        chip('History', history, AppColors.grey600),
+      ],
     );
   }
 }
@@ -437,9 +572,10 @@ class _PendingRequestCard extends StatelessWidget {
 }
 
 class _BookingTile extends ConsumerWidget {
-  const _BookingTile({required this.booking});
+  const _BookingTile({required this.booking, this.readOnly = false});
 
   final DoctorBookingModel booking;
+  final bool readOnly;
 
   Future<void> _setProgress(
     BuildContext context,
@@ -543,8 +679,42 @@ class _BookingTile extends ConsumerWidget {
                     ],
                   ),
                 ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    booking.displayStatusLabel,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ],
             ),
+            if (booking.consultationFee != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Fee: ₹${booking.consultationFee}'
+                '${booking.paymentStatus != null ? ' · ${booking.paymentStatus}' : ''}',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            if (booking.patientMobile != null &&
+                booking.patientMobile!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                FormattingUtils.formatPhoneNumber(booking.patientMobile!),
+                style: AppTextStyles.bodySmall,
+              ),
+            ],
             if (addressLine != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -572,37 +742,34 @@ class _BookingTile extends ConsumerWidget {
                 mapHeight: 150,
               ),
             ],
-            if (isConfirmed && booking.visitProgress != 'completed') ...[
+            if (!readOnly &&
+                isConfirmed &&
+                booking.visitProgress != 'completed') ...[
               const SizedBox(height: 10),
-              FilledButton.icon(
-                onPressed: () {
-                  final params = {
-                    'role': 'nurse',
-                    'bookingId': booking.id,
-                    if (booking.patientName != null)
-                      'patientName': booking.patientName!,
-                    if (addressLine != null) 'address': addressLine,
-                    if (booking.patientLatitude != null)
-                      'lat': '${booking.patientLatitude}',
-                    if (booking.patientLongitude != null)
-                      'lng': '${booking.patientLongitude}',
-                  };
-                  context.push(
-                    Uri(
-                      path: AppConstants.routeProviderHomeVisitTrip,
-                      queryParameters: params,
-                    ).toString(),
-                  );
-                },
-                icon: const Icon(Icons.navigation_rounded, size: 18),
-                label: Text(
-                  booking.visitProgress == 'en_route'
-                      ? 'Open live trip'
-                      : 'Start trip',
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    context.push(
+                      '${AppConstants.routeProviderHomeVisitTrip}'
+                      '?role=nurse&bookingId=${Uri.encodeComponent(booking.id)}'
+                      '${booking.patientName != null && booking.patientName!.isNotEmpty ? '&patientName=${Uri.encodeComponent(booking.patientName!)}' : ''}'
+                      '${addressLine != null ? '&address=${Uri.encodeComponent(addressLine)}' : ''}'
+                      '${booking.patientLatitude != null ? '&lat=${booking.patientLatitude}' : ''}'
+                      '${booking.patientLongitude != null ? '&lng=${booking.patientLongitude}' : ''}',
+                    );
+                  },
+                  icon: const Icon(Icons.navigation_rounded, size: 18),
+                  label: Text(
+                    booking.visitProgress == 'en_route' ||
+                            booking.visitProgress == 'arrived'
+                        ? 'Open live trip'
+                        : 'Start trip',
+                  ),
                 ),
               ),
             ],
-            if (isConfirmed) ...[
+            if (!readOnly && isConfirmed) ...[
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,

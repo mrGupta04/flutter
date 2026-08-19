@@ -52,6 +52,15 @@ class ProviderTripArgs {
 
   final String bookingId;
   final String role;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProviderTripArgs &&
+      other.bookingId == bookingId &&
+      other.role == role;
+
+  @override
+  int get hashCode => Object.hash(bookingId, role);
 }
 
 class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
@@ -79,16 +88,16 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
     _socket.on('tracking_started', _onStarted);
     _socket.on('tracking_stopped', _onStopped);
     _socket.on('tracking_error', _onError);
+    await refresh();
     try {
       await _socket.connect();
       _socket.joinBookingRoom(bookingId);
-      await refresh();
-      if (state.snapshot?.isOnTheWay == true) {
-        await _resumeGps();
-      }
-    } catch (e) {
-      if (!mounted) return;
-      state = state.copyWith(loading: false, error: e.toString());
+    } catch (_) {
+      // REST snapshot is enough to show the trip screen.
+    }
+    if (!mounted) return;
+    if (state.snapshot?.isOnTheWay == true) {
+      await _resumeGps();
     }
   }
 

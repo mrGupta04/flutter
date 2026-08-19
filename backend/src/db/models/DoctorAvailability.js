@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const slotSchema = new mongoose.Schema(
   {
     dayOfWeek: { type: Number, required: true, min: 0, max: 6 },
-    startHour: { type: Number, required: true, min: 8, max: 17 },
+    startHour: { type: Number, required: true, min: 0, max: 23 },
     available: { type: Boolean, default: false },
   },
   { _id: false },

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/phone_countries.dart';
-import '../../../../core/services/location_service.dart';
+import '../../../../core/services/live_address_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/user_auth_guard.dart';
@@ -88,10 +88,9 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
   }
 
   Future<void> _useCurrentLocation() async {
-    final position =
-        await LocationService.getCurrentPositionWithPrompt(context);
+    final captured = await LiveAddressService.capture(context);
     if (!mounted) return;
-    if (position == null) {
+    if (captured == null) {
       SnackBarHelper.showError(
         context,
         'Could not get your location. Please type the pickup address.',
@@ -99,15 +98,20 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
       return;
     }
     setState(() {
-      _pickupLat = position.latitude;
-      _pickupLng = position.longitude;
-      if (_pickupController.text.trim().isEmpty) {
-        _pickupController.text =
-            'Near GPS ${position.latitude.toStringAsFixed(5)}, '
-            '${position.longitude.toStringAsFixed(5)} — add landmark';
-      }
+      _pickupLat = captured.latitude;
+      _pickupLng = captured.longitude;
+      final address = captured.resolved?.address.trim() ?? '';
+      _pickupController.text = address.isNotEmpty
+          ? address
+          : 'Near GPS ${captured.latitude.toStringAsFixed(5)}, '
+              '${captured.longitude.toStringAsFixed(5)} — add landmark';
     });
-    SnackBarHelper.showSuccess(context, 'Location attached to request');
+    SnackBarHelper.showSuccess(
+      context,
+      captured.hasAddress
+          ? 'Pickup address filled from live location'
+          : 'Location attached to request',
+    );
   }
 
   Future<void> _submitRequest() async {

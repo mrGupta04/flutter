@@ -98,6 +98,7 @@ class BookingLifecycleRepository {
     required DateTime slotEnd,
     int? dayOfWeek,
     int? startHour,
+    int? startMinute,
   }) async {
     try {
       await _dio.post(
@@ -107,6 +108,7 @@ class BookingLifecycleRepository {
           'slotEnd': slotEnd.toUtc().toIso8601String(),
           if (dayOfWeek != null) 'dayOfWeek': dayOfWeek,
           if (startHour != null) 'startHour': startHour,
+          if (startMinute != null) 'startMinute': startMinute,
         },
       );
     } on DioException catch (e) {

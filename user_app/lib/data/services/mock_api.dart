@@ -152,6 +152,7 @@ class MockApi {
             data?['consultationType'] as String? ?? 'online_consult';
         final dayOfWeek = (data?['dayOfWeek'] as num?)?.toInt() ?? 0;
         final startHour = (data?['startHour'] as num?)?.toInt() ?? 8;
+        final startMinute = (data?['startMinute'] as num?)?.toInt() ?? 0;
         final slotStart = DateTime.tryParse(data?['slotStart'] as String? ?? '') ??
             DateTime.now().add(const Duration(days: 1));
         final hold = _db.holdSlot(
@@ -159,6 +160,7 @@ class MockApi {
           consultationType: consultationType,
           dayOfWeek: dayOfWeek,
           startHour: startHour,
+          startMinute: startMinute,
           slotStart: slotStart,
           holdId: data?['holdId'] as String?,
         );

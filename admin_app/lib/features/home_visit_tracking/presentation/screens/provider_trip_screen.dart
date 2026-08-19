@@ -32,11 +32,16 @@ class ProviderTripScreen extends ConsumerStatefulWidget {
 class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
   GoogleMapController? _mapController;
   bool _cameraFitted = false;
+  late final ProviderTripArgs _args;
 
-  ProviderTripArgs get _args => ProviderTripArgs(
-        bookingId: widget.bookingId,
-        role: widget.role,
-      );
+  @override
+  void initState() {
+    super.initState();
+    _args = ProviderTripArgs(
+      bookingId: widget.bookingId,
+      role: widget.role,
+    );
+  }
 
   @override
   void dispose() {

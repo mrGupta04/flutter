@@ -113,8 +113,10 @@ function attachTrackingSocket(httpServer) {
 
   io.use((socket, next) => {
     const header = socket.handshake.headers?.authorization;
+    const queryToken = socket.handshake.query?.token;
     const token =
       socket.handshake.auth?.token ||
+      (Array.isArray(queryToken) ? queryToken[0] : queryToken) ||
       (typeof header === 'string' && header.startsWith('Bearer ')
         ? header.slice(7)
         : null);

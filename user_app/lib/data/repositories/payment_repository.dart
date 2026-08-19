@@ -18,6 +18,7 @@ class PaymentRepository {
     required String patientMobile,
     required int dayOfWeek,
     required int startHour,
+    int startMinute = 0,
     required DateTime slotStart,
     String? patientEmail,
     String? patientNotes,
@@ -54,6 +55,7 @@ class PaymentRepository {
             'couponCode': couponCode.trim().toUpperCase(),
           'dayOfWeek': dayOfWeek,
           'startHour': startHour,
+          'startMinute': startMinute,
           'slotStart': slotStart.toIso8601String(),
         },
       );

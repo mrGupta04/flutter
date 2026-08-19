@@ -23,10 +23,19 @@ class NotificationsScreen extends ConsumerWidget {
           '${AppConstants.routeBookingChat}?bookingId=$bookingId&title=${Uri.encodeComponent('Chat')}',
         );
         return;
+      case 'en_route':
+      case 'arrived':
+        if (bookingId.isNotEmpty) {
+          context.push(
+            '${AppConstants.routeHomeVisitTrack}?bookingId=$bookingId',
+          );
+        } else {
+          context.push(AppConstants.routeUserDashboard);
+        }
+        return;
       case 'payment_due':
       case 'booking_approved':
       case 'home_visit_request':
-      case 'en_route':
       case 'visit_reminder':
         context.push(AppConstants.routeUserDashboard);
         return;

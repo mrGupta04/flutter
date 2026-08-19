@@ -110,16 +110,10 @@ class GeocodingService {
     ].where((s) => s.trim().isNotEmpty).toList();
 
     var line = streetParts.join(', ');
-    if (line.isEmpty && displayName != null) {
-      final parts = displayName.split(',');
-      if (parts.length > 2) {
-        line = parts.take(3).join(', ').trim();
-      } else {
-        line = displayName;
-      }
-    }
-
-    if (line.isEmpty) {
+    final display = (displayName ?? '').trim();
+    if (display.isNotEmpty) {
+      line = display;
+    } else if (line.isEmpty) {
       throw GeocodingFailure('Address not found for this location.');
     }
 

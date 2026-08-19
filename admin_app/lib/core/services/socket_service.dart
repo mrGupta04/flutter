@@ -38,13 +38,16 @@ class SocketService {
     final socket = io.io(
       ApiConfig.socketUrl,
       io.OptionBuilder()
-          .setTransports(['websocket'])
+          .setTransports(['polling', 'websocket'])
+          .setPath('/socket.io')
           .disableAutoConnect()
           .enableReconnection()
+          .enableForceNew()
           .setReconnectionAttempts(50)
           .setReconnectionDelay(1000)
           .setReconnectionDelayMax(8000)
           .setAuth({'token': token})
+          .setQuery({'token': token})
           .build(),
     );
 

@@ -32,7 +32,7 @@ class _NurseRegistrationScreenState
     ('Base location', 'Address, map pin & service radius'),
     ('Upload documents', 'License, PAN, police verification & more'),
     ('Payout details', 'Bank account & cancelled cheque'),
-    ('Weekly availability', 'Home visit slots (Sun–Sat, 8 AM–6 PM)'),
+    ('Weekly availability', 'Home visit slots (Sun–Sat, 12 AM–12 AM)'),
     ('Review & submit', 'Confirm before admin verification'),
   ];
 

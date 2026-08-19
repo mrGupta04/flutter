@@ -31,7 +31,7 @@ class _RegistrationFormScreenState
     ('Clinic address', 'Location & hospital photos'),
     ('Upload documents', 'License, ID & certificates'),
     ('Payout details', 'Bank account & UPI for consultation fees'),
-    ('Weekly availability', 'Online & clinic visit slots (Sun–Sat, 8 AM–6 PM)'),
+    ('Weekly availability', 'Online & clinic visit slots (Sun–Sat, 12 AM–12 AM)'),
     ('Review & submit', 'Confirm before we verify'),
   ];
 

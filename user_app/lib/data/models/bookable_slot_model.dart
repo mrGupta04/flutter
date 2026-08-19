@@ -1,6 +1,7 @@
 class BookableSlot {
   final int dayOfWeek;
   final int startHour;
+  final int startMinute;
   final DateTime slotStart;
   final DateTime slotEnd;
   final String label;
@@ -8,6 +9,7 @@ class BookableSlot {
   const BookableSlot({
     required this.dayOfWeek,
     required this.startHour,
+    this.startMinute = 0,
     required this.slotStart,
     required this.slotEnd,
     required this.label,
@@ -17,13 +19,14 @@ class BookableSlot {
     return BookableSlot(
       dayOfWeek: (json['dayOfWeek'] as num?)?.toInt() ?? 0,
       startHour: (json['startHour'] as num?)?.toInt() ?? 8,
+      startMinute: (json['startMinute'] as num?)?.toInt() ?? 0,
       slotStart: DateTime.parse(json['slotStart'] as String),
       slotEnd: DateTime.parse(json['slotEnd'] as String),
       label: json['label'] as String? ?? '',
     );
   }
 
-  String get slotKey => '${dayOfWeek}_$startHour';
+  String get slotKey => '${dayOfWeek}_${startHour}_$startMinute';
 
   /// Calendar date in local time — used to group slots in the booking UI.
   String get dateKey {

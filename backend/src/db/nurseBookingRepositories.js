@@ -2,7 +2,11 @@ const { v4: uuidv4 } = require('uuid');
 const ConsultationBooking = require('./models/ConsultationBooking');
 const { findNurseById } = require('./nurseRepositories');
 const { findAvailabilityForActiveWeek } = require('./nurseAvailabilityRepositories');
-const { isWeekExpired } = require('../utils/availabilityWeek');
+const {
+  isWeekExpired,
+  SLOT_START_HOUR,
+  SLOT_END_HOUR,
+} = require('../utils/availabilityWeek');
 const {
   slotDateTime,
   slotEndDateTime,
@@ -185,7 +189,7 @@ async function getNurseBookableSlots(nurseId) {
 
   const bookable = [];
   for (let day = 0; day <= 6; day += 1) {
-    for (let hour = 8; hour <= 17; hour += 1) {
+    for (let hour = SLOT_START_HOUR; hour <= SLOT_END_HOUR; hour += 1) {
       const key = `${day}_${hour}`;
       const slot = slotMap.get(key) || {
         dayOfWeek: day,
@@ -766,11 +770,12 @@ async function listNurseBookings(nurseId) {
         'awaiting_doctor_approval',
         'approved_pending_payment',
         'pending',
+        'cancelled',
       ],
     },
   })
-    .sort({ slotStart: 1 })
-    .limit(50)
+    .sort({ slotStart: -1 })
+    .limit(200)
     .lean();
 
   const now = new Date();
@@ -779,6 +784,9 @@ async function listNurseBookings(nurseId) {
     const slotStart = new Date(b.slotStart);
     const slotEnd = new Date(b.slotEnd);
     const slotLabel = formatSlotLabel(slotStart, slotEnd);
+    const activeProgress = ['en_route', 'arrived', 'visit_started'].includes(
+      b.visitProgress,
+    );
     return {
       id: b.id,
       title: `Home visit — ${b.patientName}`,
@@ -797,10 +805,10 @@ async function listNurseBookings(nurseId) {
       patientState: b.patientState,
       patientPincode: b.patientPincode,
       visitReason: b.visitReason,
-      consultationType: b.consultationType,
+      consultationType: b.consultationType || 'book_home',
       typeLabel: 'Home visit',
       consultationFee: b.consultationFee,
-      isUpcoming: slotStart >= now,
+      isUpcoming: (slotEnd >= now && b.visitProgress !== 'completed') || activeProgress,
       patientLatitude: b.patientLatitude ?? null,
       patientLongitude: b.patientLongitude ?? null,
       distanceKm: b.distanceKm ?? null,

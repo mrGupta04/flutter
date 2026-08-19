@@ -1250,7 +1250,7 @@ class NurseStep6Availability extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Select when you can visit patients at home (Sun–Sat, 8 AM–6 PM).',
+            'Select when you can visit patients at home (Sun–Sat, 12 AM–12 AM).',
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
             ),

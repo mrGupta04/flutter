@@ -109,7 +109,7 @@ async function getTypeAvailabilityStatus(doctorId, consultationType) {
       consultationType: type,
       availability: null,
       needsUpdate: true,
-      reminderMessage: `Set your weekly ${label} slots (Sunday–Saturday, 8 AM–6 PM).`,
+      reminderMessage: `Set your weekly ${label} slots (Sunday–Saturday, 12 AM–12 AM).`,
       suggestedWeekStart: weekStart,
       suggestedWeekEnd: weekEnd,
     };

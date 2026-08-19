@@ -1355,6 +1355,25 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                       ),
                     ),
                   ],
+                  if (_showDetails && booking.canTrackHomeVisitLive) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          context.push(
+                            '${AppConstants.routeHomeVisitTrack}?bookingId=${Uri.encodeComponent(booking.id)}',
+                          );
+                        },
+                        icon: const Icon(Icons.my_location_rounded, size: 18),
+                        label: Text(
+                          booking.isNurseVisit
+                              ? 'Track nurse live'
+                              : 'Track doctor live',
+                        ),
+                      ),
+                    ),
+                  ],
                   if (_showDetails) ...[
                   const SizedBox(height: 10),
                   Wrap(
@@ -1375,16 +1394,6 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                           onPressed: () {
                             context.push(
                               '${AppConstants.routeAmbulanceTrack}?bookingId=${booking.id}',
-                            );
-                          },
-                          icon: const Icon(Icons.my_location_rounded, size: 16),
-                          label: const Text('Track live'),
-                        ),
-                      if (booking.canTrackHomeVisitLive)
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            context.push(
-                              '${AppConstants.routeHomeVisitTrack}?bookingId=${booking.id}',
                             );
                           },
                           icon: const Icon(Icons.my_location_rounded, size: 16),

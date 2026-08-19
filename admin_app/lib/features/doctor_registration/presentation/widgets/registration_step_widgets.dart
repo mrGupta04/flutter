@@ -1514,7 +1514,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
           const SectionHeader(
             title: 'Weekly availability',
             subtitle:
-                'Set separate schedules for online consult, clinic visits, and home visits (Sunday–Saturday, 8 AM–6 PM). The same hour cannot be used for more than one type.',
+                'Set separate schedules for online consult, clinic visits, and home visits (Sunday–Saturday, 12 AM–12 AM). The same hour cannot be used for more than one type.',
           ),
           if (!showAnyPicker)
             Container(
@@ -1538,7 +1538,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
               icon: Icons.videocam_rounded,
               title: 'Online consult slots',
               subtitle:
-                  'When patients can book video / chat consultations with you.',
+                  'When patients can book video / chat consultations with you. Each hour is split into 20-minute slots.',
               color: AppColors.primary,
             ),
             const SizedBox(height: 12),
@@ -1546,6 +1546,8 @@ class Step6WeeklyAvailability extends ConsumerWidget {
               weekLabel: weekLabel,
               selectedSlots: selectedOnlineAvailabilitySlots,
               blockedSlots: blockedForOnline,
+              helperText:
+                  'Tap hours when you are available. Patients book 20-minute slots within those hours (12:00 AM – 12:00 AM).',
               onToggle: (day, hour, selected) => ref
                   .read(registrationFormProvider.notifier)
                   .toggleOnlineAvailabilitySlot(day, hour, selected),

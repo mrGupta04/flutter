@@ -332,6 +332,7 @@ router.post('/slot-hold', authOptional, async (req, res) => {
       consultationType = 'online_consult',
       dayOfWeek,
       startHour,
+      startMinute,
       slotStart,
       holdId,
     } = body;
@@ -348,6 +349,7 @@ router.post('/slot-hold', authOptional, async (req, res) => {
       consultationType,
       dayOfWeek,
       startHour,
+      startMinute,
       slotStart,
       patientId,
       holdId,

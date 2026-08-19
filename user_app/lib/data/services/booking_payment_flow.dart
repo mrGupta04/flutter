@@ -56,6 +56,7 @@ class BookingPaymentFlow {
       couponCode: couponCode,
       dayOfWeek: slot.dayOfWeek,
       startHour: slot.startHour,
+      startMinute: slot.startMinute,
       slotStart: slot.slotStart,
     );
 

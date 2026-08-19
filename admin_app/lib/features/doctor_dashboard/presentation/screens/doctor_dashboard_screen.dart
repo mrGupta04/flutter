@@ -593,6 +593,9 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                     selectedSlots: activeSelected(),
                     blockedSlots: blockedForActive(),
                     selectedColor: activeColor(),
+                    helperText: activeType == 'online_consult'
+                        ? 'Tap hours when you are available. Patients book 20-minute online consults within those hours.'
+                        : null,
                     onToggle: (day, hour, isSelected) {
                       setModalState(() {
                         final key =
@@ -2712,28 +2715,19 @@ class _BookingCard extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () {
-                  final params = {
-                    'role': 'doctor',
-                    'bookingId': booking.id,
-                    if (booking.patientName != null)
-                      'patientName': booking.patientName!,
-                    if (booking.patientLocationLine != null)
-                      'address': booking.patientLocationLine!,
-                    if (booking.patientLatitude != null)
-                      'lat': '${booking.patientLatitude}',
-                    if (booking.patientLongitude != null)
-                      'lng': '${booking.patientLongitude}',
-                  };
                   context.push(
-                    Uri(
-                      path: AppConstants.routeProviderHomeVisitTrip,
-                      queryParameters: params,
-                    ).toString(),
+                    '${AppConstants.routeProviderHomeVisitTrip}'
+                    '?role=doctor&bookingId=${Uri.encodeComponent(booking.id)}'
+                    '${booking.patientName != null && booking.patientName!.isNotEmpty ? '&patientName=${Uri.encodeComponent(booking.patientName!)}' : ''}'
+                    '${booking.patientLocationLine != null ? '&address=${Uri.encodeComponent(booking.patientLocationLine!)}' : ''}'
+                    '${booking.patientLatitude != null ? '&lat=${booking.patientLatitude}' : ''}'
+                    '${booking.patientLongitude != null ? '&lng=${booking.patientLongitude}' : ''}',
                   );
                 },
                 icon: const Icon(Icons.navigation_rounded, size: 18),
                 label: Text(
-                  booking.visitProgress == 'en_route'
+                  booking.visitProgress == 'en_route' ||
+                          booking.visitProgress == 'arrived'
                       ? 'Open live trip'
                       : 'Start trip',
                 ),

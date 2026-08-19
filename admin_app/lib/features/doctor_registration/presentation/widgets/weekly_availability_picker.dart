@@ -3,7 +3,7 @@ import '../../../../core/constants/doctor_availability_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
-/// Sunday–Saturday grid with 1-hour slots from 8 AM to 6 PM.
+/// Sunday–Saturday grid with 1-hour slots from 12 AM to 12 AM.
 class WeeklyAvailabilityPicker extends StatelessWidget {
   const WeeklyAvailabilityPicker({
     super.key,
@@ -11,6 +11,7 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
     required this.onToggle,
     this.blockedSlots = const {},
     this.weekLabel,
+    this.helperText,
     this.selectedColor = AppColors.primary,
   });
 
@@ -18,6 +19,7 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
   final Set<String> blockedSlots;
   final void Function(int dayOfWeek, int startHour, bool selected) onToggle;
   final String? weekLabel;
+  final String? helperText;
   final Color selectedColor;
 
   @override
@@ -39,7 +41,8 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
         ],
         Text(
           blockedSlots.isEmpty
-              ? 'Tap slots when you are available. Each slot is 1 hour (8 AM – 6 PM).'
+              ? (helperText ??
+                  'Tap slots when you are available. Each slot is 1 hour (12:00 AM – 12:00 AM, full day).')
               : 'Slots already chosen for the other consultation type are hidden here.',
           style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
         ),

@@ -76,10 +76,29 @@ function getClinicActiveWeekBounds(referenceDate = new Date()) {
   return { weekStart, weekEnd };
 }
 
-function clinicSlotDateTime(weekStartDate, dayOfWeek, startHour) {
+function clinicTimeParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: CLINIC_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const pick = (type) => Number(parts.find((p) => p.type === type)?.value);
+  return { hour: pick('hour'), minute: pick('minute') };
+}
+
+function clinicSlotDateTime(weekStartDate, dayOfWeek, startHour, startMinute = 0) {
   const { year, month, day } = clinicParts(weekStartDate);
   const slotDay = addClinicDays(year, month, day, dayOfWeek);
-  return clinicDateTime(slotDay.year, slotDay.month, slotDay.day, startHour, 0, 0, 0);
+  return clinicDateTime(
+    slotDay.year,
+    slotDay.month,
+    slotDay.day,
+    startHour,
+    startMinute || 0,
+    0,
+    0,
+  );
 }
 
 function sameClinicWeekStart(a, b) {
@@ -94,6 +113,7 @@ module.exports = {
   clinicDateTime,
   getClinicWeekBounds,
   getClinicActiveWeekBounds,
+  clinicTimeParts,
   clinicSlotDateTime,
   sameClinicWeekStart,
 };
