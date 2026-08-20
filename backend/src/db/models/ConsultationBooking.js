@@ -154,14 +154,22 @@ const activeBookingStatuses = {
   ],
 };
 
+/** MongoDB partial indexes reject $ne/$not. $gt: '' matches non-empty strings. */
+function uniqueOccupiedSlotFilter(idField) {
+  return {
+    $and: [
+      { [idField]: { $type: 'string' } },
+      { [idField]: { $gt: '' } },
+      { status: activeBookingStatuses },
+    ],
+  };
+}
+
 consultationBookingSchema.index(
   { doctorId: 1, slotStart: 1 },
   {
     unique: true,
-    partialFilterExpression: {
-      doctorId: { $exists: true, $type: 'string', $ne: '' },
-      status: activeBookingStatuses,
-    },
+    partialFilterExpression: uniqueOccupiedSlotFilter('doctorId'),
   },
 );
 
@@ -169,10 +177,7 @@ consultationBookingSchema.index(
   { nurseId: 1, slotStart: 1 },
   {
     unique: true,
-    partialFilterExpression: {
-      nurseId: { $exists: true, $type: 'string', $ne: '' },
-      status: activeBookingStatuses,
-    },
+    partialFilterExpression: uniqueOccupiedSlotFilter('nurseId'),
   },
 );
 
