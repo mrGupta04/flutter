@@ -13,6 +13,7 @@ import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/patient_location_map_card.dart';
 import '../../../../data/services/dio_service.dart';
+import '../../../../core/services/socket_service.dart';
 import '../../../auth/provider/provider_auth_provider.dart';
 import '../../../doctor_registration/presentation/widgets/weekly_availability_picker.dart';
 import '../../provider/nurse_dashboard_provider.dart';
@@ -34,7 +35,28 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(nurseDashboardProvider.notifier).refreshAll();
       _loadUnreadNotifications();
+      _listenRealtime();
     });
+  }
+
+  void _listenRealtime() {
+    SocketService.instance.connect().catchError((_) {});
+    SocketService.instance.on('booking-notification', _onRealtime);
+    SocketService.instance.on('app_notification', _onRealtime);
+    SocketService.instance.on('booking-status-update', _onRealtime);
+  }
+
+  void _onRealtime(dynamic _) {
+    ref.read(nurseDashboardProvider.notifier).loadBookings();
+    _loadUnreadNotifications();
+  }
+
+  @override
+  void dispose() {
+    SocketService.instance.off('booking-notification', _onRealtime);
+    SocketService.instance.off('app_notification', _onRealtime);
+    SocketService.instance.off('booking-status-update', _onRealtime);
+    super.dispose();
   }
 
   Future<void> _loadUnreadNotifications() async {
@@ -240,7 +262,7 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
     if (!mounted) return;
     SnackBarHelper.showSuccess(
       context,
-      ok ? 'Request approved. Patient can pay to confirm.' : 'Approval failed',
+      ok ? 'Request accepted. The patient has 10 minutes to pay.' : 'Approval failed',
     );
   }
 
@@ -574,14 +596,14 @@ class _PendingRequestCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: onReject,
-                    child: const Text('Decline'),
+                    child: const Text('REJECT'),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton(
                     onPressed: onApprove,
-                    child: const Text('Approve'),
+                    child: const Text('ACCEPT'),
                   ),
                 ),
               ],

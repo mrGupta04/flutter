@@ -19,6 +19,9 @@ class LabRegistrationConstants {
     'Swab',
     'Semen',
     'Tissue',
+    'Fluid',
+    'Sputum',
+    'Bone marrow',
   ];
 
   static const staffRoles = [

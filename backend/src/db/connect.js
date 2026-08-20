@@ -58,6 +58,10 @@ async function connectDB() {
       }
       const { syncDoctorAvailabilityIndexes } = require('./migrations/doctorAvailabilityIndexes');
       await syncDoctorAvailabilityIndexes();
+      const {
+        syncConsultationBookingIndexes,
+      } = require('./migrations/consultationBookingIndexes');
+      await syncConsultationBookingIndexes();
       return mongoose.connection;
     } catch (err) {
       lastErr = err;

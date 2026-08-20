@@ -44,6 +44,7 @@ String labTestIllustrationForId(String id) {
     'cholesterol' ||
     'cholesterol-risk' ||
     'lipid' ||
+    'cardiac' ||
     'hypertension' ||
     'hypertension-risk' =>
       LabTestIllustrations.heart,
@@ -59,6 +60,7 @@ String labTestIllustrationForId(String id) {
     'fatty-liver' ||
     'liver-pkg' ||
     'stomach' ||
+    'stool' ||
     'lft' =>
       LabTestIllustrations.liver,
     'thyroid' ||
@@ -71,7 +73,7 @@ String labTestIllustrationForId(String id) {
     'arthritis' ||
     'senior' =>
       LabTestIllustrations.bone,
-    'blood' || 'anemia' => LabTestIllustrations.blood,
+    'blood' || 'anemia' || 'coagulation' => LabTestIllustrations.blood,
     'lungs' || 'asthma' => LabTestIllustrations.lungs,
     'vitamin-risk' ||
     'vitamin-d' ||
@@ -82,8 +84,9 @@ String labTestIllustrationForId(String id) {
     'cancer-risk' || 'cancer-pkg' => LabTestIllustrations.shield,
     'fever' => LabTestIllustrations.thermometer,
     'dengue' || 'malaria' => LabTestIllustrations.mosquito,
-    'covid' => LabTestIllustrations.virus,
+    'covid' || 'serology' || 'microbiology' => LabTestIllustrations.virus,
     'pregnancy' => LabTestIllustrations.pregnancy,
+    'cancer' || 'cytopathology' => LabTestIllustrations.shield,
     'pcos' => LabTestIllustrations.reproductive,
     'allergy' => LabTestIllustrations.allergy,
     'obesity-risk' => LabTestIllustrations.fullBody,

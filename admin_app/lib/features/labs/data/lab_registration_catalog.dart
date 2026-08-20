@@ -1,6 +1,9 @@
+part 'lab_registration_board_catalog.dart';
+
 /// Categories for lab registration test selection.
 enum LabRegistrationCategory {
   bloodTests('Blood Tests', 'blood'),
+  coagulationTests('Coagulation Tests', 'coagulation'),
   urineTests('Urine Tests', 'urine'),
   stoolTests('Stool Tests', 'stool'),
   diabetesTests('Diabetes Tests', 'diabetes'),
@@ -14,6 +17,9 @@ enum LabRegistrationCategory {
   cardiacTests('Cardiac Tests', 'cardiac'),
   pregnancyTests('Pregnancy Tests', 'pregnancy'),
   cancerMarkerTests('Cancer Marker Tests', 'cancer'),
+  serologyTests('Serology Tests', 'serology'),
+  microbiologyTests('Microbiology Tests', 'microbiology'),
+  cytopathologyTests('Cytopathology Tests', 'cytopathology'),
   covid19Tests('COVID-19 Tests', 'covid'),
   fullBodyCheckups('Full Body Checkup Packages', 'checkup'),
   other('Other Diagnostic Tests', 'other');
@@ -265,6 +271,17 @@ class LabRegistrationCatalog {
       defaultDescription: 'Early dengue fever detection.',
       defaultPrice: 599,
     ),
+    LabRegistrationTestTemplate(
+      id: 'ppbs',
+      name: 'Post Prandial Blood Sugar (PPBS)',
+      category: LabRegistrationCategory.diabetesTests,
+      defaultDescription: 'Blood sugar measured 2 hours after a meal.',
+      defaultPreparation: 'Eat a standard meal 2 hours before sample.',
+      defaultPrice: 99,
+      defaultReportTime: '4–6 hours',
+    ),
+
+    ...LabRegistrationBoardCatalog.templates,
   ];
 
   static List<LabRegistrationTestTemplate> byCategory(

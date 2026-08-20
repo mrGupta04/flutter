@@ -157,6 +157,28 @@ class NurseHomeVisitRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> getBooking({
+    required String bookingId,
+  }) async {
+    try {
+      final response = await _dio.get(
+        AppConstants.endpointPatientBooking(bookingId),
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: data,
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   ApiResponse<T> _handleError<T>(DioException error) {
     String message = AppConstants.errorSomethingWentWrong;
     int statusCode = 500;

@@ -80,6 +80,29 @@ router.post('/notifications/read-all', authRequired, async (req, res) => {
   }
 });
 
+router.patch('/notifications/:id/read', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const data = await markNotificationRead(req.params.id, patientId);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to mark read', status);
+  }
+});
+
+router.patch('/notifications/read-all', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const data = await markAllNotificationsRead(patientId, 'patient');
+    return sendSuccess(res, { data });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to mark all read', 500);
+  }
+});
+
 router.post('/device-token', authRequired, async (req, res) => {
   try {
     const patientId = requirePatientAuth(req, res);
@@ -154,6 +177,19 @@ router.get('/favorites/check/:providerType/:providerId', authRequired, async (re
 });
 
 // --- Booking lifecycle (patient) ---
+router.get('/bookings/:bookingId', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const { getPatientBookingById } = require('../db/bookingRepositories');
+    const data = await getPatientBookingById(req.params.bookingId, req.auth);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load booking', status);
+  }
+});
+
 router.get('/bookings/:bookingId/timeline', authRequired, async (req, res) => {
   try {
     const patientId = requirePatientAuth(req, res);

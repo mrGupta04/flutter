@@ -28,6 +28,9 @@ const NOTIFICATION_TYPES = new Set([
   'prescription_selected',
   'prescription_quote',
   'prescription_paid',
+  'payment_expired',
+  'payment_failed',
+  'booking_confirmed',
   'general',
 ]);
 
@@ -84,9 +87,11 @@ function emitRealtime(userType, userId, payload) {
   try {
     const { emitToUser, emitToBooking } = require('../services/trackingSocket');
     emitToUser(userType, userId, 'app_notification', payload);
+    emitToUser(userType, userId, 'booking-notification', payload);
     const bookingId = payload?.data?.bookingId;
     if (bookingId) {
       emitToBooking(bookingId, 'app_notification', payload);
+      emitToBooking(bookingId, 'booking-notification', payload);
     }
   } catch (err) {
     console.warn('[Notify] realtime emit failed:', err.message);

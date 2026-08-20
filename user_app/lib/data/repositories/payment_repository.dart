@@ -121,6 +121,37 @@ class PaymentRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> submitMockPayment({
+    required String bookingId,
+    required String result,
+    int? amount,
+  }) async {
+    try {
+      final response = await _dio.post(
+        AppConstants.endpointPaymentMock,
+        data: {
+          'bookingId': bookingId,
+          'result': result,
+          if (amount != null) 'amount': amount,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: body['data'] is Map
+            ? Map<String, dynamic>.from(body['data'] as Map)
+            : null,
+        error: body['success'] == false
+            ? (body['error'] as String? ?? body['message'] as String?)
+            : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   ApiResponse<T> _handleError<T>(DioException error) {
     String message = AppConstants.errorSomethingWentWrong;
     int statusCode = 500;

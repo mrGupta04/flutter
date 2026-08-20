@@ -16,7 +16,9 @@ import '../../data/prescription_request_repository.dart';
 import '../../provider/prescription_requests_provider.dart';
 
 class UploadPrescriptionScreen extends ConsumerStatefulWidget {
-  const UploadPrescriptionScreen({super.key});
+  const UploadPrescriptionScreen({super.key, this.initialLab});
+
+  final LabModel? initialLab;
 
   @override
   ConsumerState<UploadPrescriptionScreen> createState() =>
@@ -42,6 +44,17 @@ class _UploadPrescriptionScreenState
   bool _searchingLabs = false;
   bool _uploading = false;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final lab = widget.initialLab;
+    final id = lab?.id;
+    if (lab != null && id != null && id.isNotEmpty) {
+      _selectedLabIds.add(id);
+      _selectedLabs[id] = lab;
+    }
+  }
 
   @override
   void dispose() {

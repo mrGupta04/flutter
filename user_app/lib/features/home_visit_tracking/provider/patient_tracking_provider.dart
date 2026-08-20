@@ -64,9 +64,13 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
       }
     });
     _socket.on('doctor_location_update', _onLocation);
+    _socket.on('nurse-location-update', _onLocation);
+    _socket.on('nurse_location_update', _onLocation);
     _socket.on('tracking_status', _onStatus);
     _socket.on('tracking_started', _onStarted);
+    _socket.on('nurse-started-trip', _onStarted);
     _socket.on('tracking_stopped', _onStopped);
+    _socket.on('nurse-arrived', _onStopped);
     _socket.on('tracking_error', _onError);
     _socket.on('provider_offline', _onOffline);
     await refresh(includeRoute: true);
@@ -196,9 +200,13 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
     _pollTimer?.cancel();
     _routeTimer?.cancel();
     _socket.off('doctor_location_update', _onLocation);
+    _socket.off('nurse-location-update', _onLocation);
+    _socket.off('nurse_location_update', _onLocation);
     _socket.off('tracking_status', _onStatus);
     _socket.off('tracking_started', _onStarted);
+    _socket.off('nurse-started-trip', _onStarted);
     _socket.off('tracking_stopped', _onStopped);
+    _socket.off('nurse-arrived', _onStopped);
     _socket.off('tracking_error', _onError);
     _socket.off('provider_offline', _onOffline);
     _socket.leaveBookingRoom();

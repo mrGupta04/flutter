@@ -40,12 +40,13 @@ LabOrganLogo labOrganLogoForId(String id) {
     'kidney-risk' || 'kidney' || 'kidney-disease' || 'kft' => LabOrganLogo.kidney,
     'liver-risk' || 'liver' || 'fatty-liver' || 'lft' => LabOrganLogo.liver,
     'thyroid-risk' || 'thyroid' || 'thyroid-organ' => LabOrganLogo.thyroid,
-    'heart-risk' || 'heart' || 'cholesterol' || 'cholesterol-risk' || 'lipid' =>
+    'heart-risk' || 'heart' || 'cholesterol' || 'cholesterol-risk' || 'lipid' ||
+    'cardiac' =>
       LabOrganLogo.heart,
+    'stomach' || 'stool' => LabOrganLogo.stomach,
+    'blood' || 'anemia' || 'coagulation' => LabOrganLogo.bloodDrop,
     'lungs' || 'asthma' => LabOrganLogo.lungs,
     'brain' => LabOrganLogo.brain,
-    'stomach' => LabOrganLogo.stomach,
-    'blood' || 'anemia' => LabOrganLogo.bloodDrop,
     'bones' || 'bone-risk' || 'arthritis' => LabOrganLogo.bone,
     'eyes' => LabOrganLogo.eye,
     'skin' => LabOrganLogo.skin,
@@ -55,8 +56,9 @@ LabOrganLogo labOrganLogoForId(String id) {
     'diabetes-risk' || 'diabetes' => LabOrganLogo.sugar,
     'fever' => LabOrganLogo.thermometer,
     'dengue' || 'malaria' => LabOrganLogo.mosquito,
-    'covid' => LabOrganLogo.virus,
+    'covid' || 'serology' || 'microbiology' => LabOrganLogo.virus,
     'pregnancy' || 'pcos' => LabOrganLogo.pregnancy,
+    'cancer' || 'cytopathology' => LabOrganLogo.cancer,
     'vitamin-risk' || 'vitamin-d' || 'vitamin' => LabOrganLogo.sun,
     'vitamin-b12' => LabOrganLogo.bolt,
     'allergy' => LabOrganLogo.allergy,

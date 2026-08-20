@@ -14,8 +14,12 @@ import '../features/blood_bank/presentation/screens/blood_bank_detail_screen.dar
 import '../features/blood_bank/presentation/screens/emergency_blood_request_screen.dart';
 import '../features/blood_bank/presentation/screens/blood_order_confirmation_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_search_screen.dart';
+import '../features/doctor_registration/presentation/screens/find_specialists_screen.dart';
 import '../features/hospital_visit/presentation/screens/hospital_visit_booking_screen.dart';
 import '../features/nurse_home_visit/presentation/screens/nurse_home_visit_booking_screen.dart';
+import '../features/nurse_home_visit/presentation/screens/nurse_booking_status_screen.dart';
+import '../features/nurse_home_visit/presentation/screens/nurse_payment_screen.dart';
+import '../features/nurse_home_visit/presentation/screens/nurse_mock_payment_screen.dart';
 import '../features/home_visit/presentation/screens/home_visit_booking_screen.dart';
 import '../features/online_consult/presentation/screens/online_consult_booking_screen.dart';
 import '../features/doctor_registration/presentation/screens/global_search_screen.dart';
@@ -37,6 +41,7 @@ import '../features/notifications/presentation/screens/notifications_screen.dart
 import '../features/favorites/presentation/screens/favorites_screen.dart';
 import '../features/booking_chat/presentation/screens/booking_chat_screen.dart';
 import '../features/booking_timeline/presentation/screens/booking_timeline_screen.dart';
+import '../data/models/lab_model.dart';
 import '../features/labs/presentation/screens/lab_explore_screen.dart';
 import '../features/labs/presentation/screens/lab_detail_screen.dart';
 import '../features/labs/presentation/screens/lab_cart_screen.dart';
@@ -287,6 +292,41 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: AppConstants.routeNurseBookingStatus,
+        name: 'nurseBookingStatus',
+        pageBuilder: (context, state) {
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          return slidePage(
+            state,
+            NurseBookingStatusScreen(bookingId: bookingId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeNursePayment,
+        name: 'nursePayment',
+        pageBuilder: (context, state) {
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          return slidePage(
+            state,
+            NursePaymentScreen(bookingId: bookingId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeNurseMockPayment,
+        name: 'nurseMockPayment',
+        pageBuilder: (context, state) {
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          final amount =
+              int.tryParse(state.uri.queryParameters['amount'] ?? '') ?? 0;
+          return slidePage(
+            state,
+            NurseMockPaymentScreen(bookingId: bookingId, amount: amount),
+          );
+        },
+      ),
+      GoRoute(
         path: AppConstants.routeHomeVisitBooking,
         name: 'homeVisitBooking',
         pageBuilder: (context, state) {
@@ -327,6 +367,14 @@ final userRouterProvider = Provider<GoRouter>((ref) {
               ? AppConstants.routeDoctorSearch
               : '${AppConstants.routeDoctorSearch}?$query';
         },
+      ),
+      GoRoute(
+        path: AppConstants.routeFindSpecialists,
+        name: 'findSpecialists',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const FindSpecialistsScreen(),
+        ),
       ),
       GoRoute(
         path: AppConstants.routeDoctorSearch,
@@ -419,10 +467,15 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppConstants.routeUploadPrescription,
         name: 'uploadPrescription',
-        pageBuilder: (context, state) => slidePage(
-          state,
-          const UploadPrescriptionScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          return slidePage(
+            state,
+            UploadPrescriptionScreen(
+              initialLab: extra is LabModel ? extra : null,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.routePrescriptionRequests,

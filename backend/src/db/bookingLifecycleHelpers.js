@@ -39,6 +39,7 @@ function buildVisitTimeline(booking) {
     'Requested',
     true,
     byStatus.get('awaiting_doctor_approval') ||
+      byStatus.get('pending_nurse_approval') ||
       byStatus.get('requested') ||
       booking.createdAt,
   );
@@ -46,17 +47,33 @@ function buildVisitTimeline(booking) {
   if (isHome) {
     const approved =
       Boolean(booking.doctorApprovedAt) ||
-      ['approved_pending_payment', 'pending', 'confirmed'].includes(
+      ['approved_pending_payment', 'payment_pending', 'pending', 'confirmed'].includes(
         booking.status,
       );
     push(
       'approved',
       'Approved',
       approved,
-      booking.doctorApprovedAt || byStatus.get('approved_pending_payment'),
+      booking.doctorApprovedAt ||
+        byStatus.get('approved_pending_payment') ||
+        byStatus.get('payment_pending') ||
+        byStatus.get('nurse_verified'),
     );
-    if (booking.doctorRejectedAt) {
-      push('rejected', 'Rejected', true, booking.doctorRejectedAt);
+    if (booking.doctorRejectedAt || booking.status === 'nurse_rejected') {
+      push(
+        'rejected',
+        'Rejected',
+        true,
+        booking.doctorRejectedAt || byStatus.get('nurse_rejected'),
+      );
+    }
+    if (booking.status === 'payment_expired') {
+      push(
+        'payment_expired',
+        'Payment expired',
+        true,
+        booking.cancelledAt || byStatus.get('payment_expired'),
+      );
     }
   }
 

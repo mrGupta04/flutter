@@ -774,7 +774,7 @@ async function confirmBookingAfterPayment({
     return formatBookingResponse(booking, doctor);
   }
 
-  if (booking.status !== 'pending' && booking.status !== 'approved_pending_payment') {
+  if (booking.status !== 'pending' && booking.status !== 'approved_pending_payment' && booking.status !== 'payment_pending') {
     const err = new Error('This booking is no longer available for payment');
     err.statusCode = 409;
     throw err;
@@ -1485,9 +1485,21 @@ async function createPaymentOrderForBooking(bookingId, { couponCode } = {}) {
     return { booking, doctorName };
   }
 
-  if (booking.status !== 'approved_pending_payment') {
-    const err = new Error('This booking is not ready for payment');
+  if (booking.status !== 'approved_pending_payment' && booking.status !== 'payment_pending') {
+    const err = new Error(
+      isNurseBooking
+        ? 'Use mock payment for nurse bookings'
+        : 'This booking is not ready for payment',
+    );
     err.statusCode = 409;
+    throw err;
+  }
+
+  if (isNurseBooking) {
+    const err = new Error(
+      'Nurse bookings use the mock payment flow. Open the payment screen instead of Razorpay.',
+    );
+    err.statusCode = 400;
     throw err;
   }
 
@@ -1577,7 +1589,11 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
           $in: [
             'confirmed',
             'awaiting_doctor_approval',
+            'pending_nurse_approval',
             'approved_pending_payment',
+            'payment_pending',
+            'payment_expired',
+            'nurse_rejected',
             'pending',
             'cancelled',
           ],
@@ -1654,14 +1670,27 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
       slotEnd: b.slotEnd,
       label: slotLabel,
       consultationFee: b.consultationFee,
+      amount: b.consultationFee,
       status: b.status,
+      workflowStatus: require('./nurseBookingStatus').workflowStatus(b),
       paymentStatus: b.paymentStatus,
+      paymentExpiresAt: b.paymentExpiresAt || null,
+      remainingPaymentSeconds: require('./nurseBookingStatus').isPaymentPendingStatus(
+        b.status,
+      )
+        ? require('./nurseBookingStatus').remainingPaymentSeconds(b, now)
+        : 0,
+      serverTime: now.toISOString(),
       visitProgress: b.visitProgress || null,
       distanceKm: b.distanceKm ?? null,
       clinicName: provider.clinicName,
       clinicAddress: provider.clinicAddress,
       createdAt: b.createdAt,
-      isUpcoming: new Date(b.slotEnd) >= now,
+      isUpcoming:
+        ['payment_expired', 'nurse_rejected', 'cancelled'].includes(b.status)
+          ? false
+          : new Date(b.slotEnd) >= now ||
+            ['en_route', 'arrived', 'visit_started'].includes(b.visitProgress),
       timeline: buildVisitTimeline(b),
       ...bookingAppointmentFields(b),
       ...videoJoinFields(b, now),
@@ -1744,6 +1773,40 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
   }
 
   return results;
+}
+
+async function getPatientBookingById(bookingId, auth) {
+  const booking = await ConsultationBooking.findOne({ id: bookingId });
+  if (!booking) {
+    const err = new Error('Booking not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (auth?.type !== 'patient' || auth.patientId !== booking.patientId) {
+    const err = new Error('Not allowed to view this booking');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (booking.nurseId) {
+    const {
+      expirePendingNurseBookings,
+      formatNurseBookingResponse,
+    } = require('./nurseBookingRepositories');
+    await expirePendingNurseBookings(booking.nurseId);
+    const fresh = await ConsultationBooking.findOne({ id: bookingId });
+    const nurse = await findNurseById(fresh.nurseId);
+    const formatted = formatNurseBookingResponse(fresh, nurse);
+    const provider = await resolveBookingProviderForPatient(fresh);
+    return {
+      ...formatted,
+      ...provider,
+      typeLabel: 'Nurse home visit',
+      isUpcoming:
+        !['payment_expired', 'nurse_rejected', 'cancelled'].includes(fresh.status),
+    };
+  }
+  const doctor = await findDoctorById(booking.doctorId);
+  return formatBookingResponse(booking, doctor);
 }
 
 async function listDoctorBookings(doctorId) {
@@ -1836,6 +1899,7 @@ module.exports = {
   verifyClinicAppointment,
   listDoctorBookings,
   listPatientBookings,
+  getPatientBookingById,
   addPreviousReportToBooking,
   MAX_PREVIOUS_REPORTS,
 };

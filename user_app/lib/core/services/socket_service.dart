@@ -64,6 +64,7 @@ class SocketService {
       final bookingId = _joinedBookingId;
       if (bookingId != null && bookingId.isNotEmpty) {
         socket.emit('join_booking_room', {'bookingId': bookingId});
+        socket.emit('join-booking-room', {'bookingId': bookingId});
       }
     });
     socket.onDisconnect((_) {
@@ -77,6 +78,7 @@ class SocketService {
       final bookingId = _joinedBookingId;
       if (bookingId != null && bookingId.isNotEmpty) {
         socket.emit('join_booking_room', {'bookingId': bookingId});
+        socket.emit('join-booking-room', {'bookingId': bookingId});
       }
     });
 
@@ -88,6 +90,12 @@ class SocketService {
       'tracking_error',
       'provider_offline',
       'app_notification',
+      'booking-notification',
+      'booking-status-update',
+      'booking_status_update',
+      'nurse-location-update',
+      'nurse-started-trip',
+      'nurse-arrived',
     ]) {
       socket.on(event, (data) => _dispatch(event, data));
     }
@@ -114,9 +122,15 @@ class SocketService {
   void joinBookingRoom(String bookingId) {
     _joinedBookingId = bookingId;
     _socket?.emit('join_booking_room', {'bookingId': bookingId});
+    _socket?.emit('join-booking-room', {'bookingId': bookingId});
   }
 
   void leaveBookingRoom() {
+    final bookingId = _joinedBookingId;
+    if (bookingId != null && bookingId.isNotEmpty) {
+      _socket?.emit('leave_booking_room', {'bookingId': bookingId});
+      _socket?.emit('leave-booking-room', {'bookingId': bookingId});
+    }
     _joinedBookingId = null;
   }
 

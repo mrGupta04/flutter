@@ -19,7 +19,9 @@ function getCancellationPolicy(booking) {
     booking.paymentStatus === 'paid' && Number(booking.amountPaid || 0) > 0;
   const canCancel = [
     'awaiting_doctor_approval',
+    'pending_nurse_approval',
     'approved_pending_payment',
+    'payment_pending',
     'pending',
     'confirmed',
   ].includes(booking.status);
@@ -374,7 +376,9 @@ async function updateVisitProgress(bookingId, auth, progress) {
     try {
       await notifyPatient(booking, {
         title: isNurse ? 'Nurse has arrived' : 'Doctor has arrived',
-        body: 'Your home visit provider has arrived at your location.',
+        body: isNurse
+          ? 'Nurse has arrived.'
+          : 'Your home visit provider has arrived at your location.',
         type: 'arrived',
       });
     } catch (err) {

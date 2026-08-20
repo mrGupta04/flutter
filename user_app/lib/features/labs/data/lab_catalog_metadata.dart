@@ -91,6 +91,80 @@ class LabCatalogMetadata {
 
   static const healthPackages = [
     LabHealthPackage(
+      id: 'general-health-checkup',
+      name: 'General Health Check Up',
+      testIds: ['general-health-checkup'],
+      originalPriceInr: 1999,
+      discountedPriceInr: 1400,
+      reportTime: '24 hours',
+      badge: 'POPULAR',
+      subtitle: 'CBC, LFT, Lipid, Thyroid & more',
+      description:
+          'CBC, FBS, PPBS, LFT, lipid profile, RFT, electrolytes, calcium, thyroid, urine routine',
+      parameterCount: 40,
+    ),
+    LabHealthPackage(
+      id: 'cardiac-checkup',
+      name: 'Cardiac Check Up',
+      testIds: ['cardiac-checkup'],
+      originalPriceInr: 4999,
+      discountedPriceInr: 3900,
+      reportTime: '24–48 hours',
+      subtitle: 'Lipid, Homocysteine, ECG, ECHO',
+      description:
+          'Heart-focused panel with lipid profile, homocysteine, TSH, vitamin B12, ECG and ECHO',
+      parameterCount: 28,
+    ),
+    LabHealthPackage(
+      id: 'diabetic-health-checkup',
+      name: 'Diabetic Health Check Up',
+      testIds: ['diabetic-health-checkup'],
+      originalPriceInr: 3999,
+      discountedPriceInr: 2900,
+      reportTime: '24–48 hours',
+      subtitle: 'FBS, PPBS, HbA1c, ACR, ECG',
+      description:
+          'Diabetes monitoring with kidney, lipid, thyroid, vitamin B12, ECG and diabetic eye check',
+      parameterCount: 32,
+    ),
+    LabHealthPackage(
+      id: 'executive-master-checkup',
+      name: 'Executive / Master Health Check Up',
+      testIds: ['executive-master-checkup'],
+      originalPriceInr: 7499,
+      discountedPriceInr: 5500,
+      reportTime: '48 hours',
+      badge: 'BEST VALUE',
+      subtitle: '70 parameters + imaging',
+      description:
+          'Complete haemogram, organ panels, vitamins, thyroid, ECG, chest X-ray, USG, ECHO and eye check',
+      parameterCount: 70,
+    ),
+    LabHealthPackage(
+      id: 'senior-male-checkup',
+      name: 'Senior Citizen Health Care (Male)',
+      testIds: ['senior-male-checkup'],
+      originalPriceInr: 7999,
+      discountedPriceInr: 5800,
+      reportTime: '48 hours',
+      subtitle: 'Includes PSA & imaging',
+      description:
+          'Age-focused male package with PSA, vitamins, thyroid, ECG, chest X-ray, USG, ECHO and eye check',
+      parameterCount: 72,
+    ),
+    LabHealthPackage(
+      id: 'senior-female-checkup',
+      name: 'Senior Citizen Health Care (Female)',
+      testIds: ['senior-female-checkup'],
+      originalPriceInr: 7999,
+      discountedPriceInr: 5800,
+      reportTime: '48 hours',
+      subtitle: 'Includes CA-125 & imaging',
+      description:
+          'Age-focused female package with CA-125, vitamins, thyroid, ECG, chest X-ray, USG, ECHO and eye check',
+      parameterCount: 72,
+    ),
+    LabHealthPackage(
       id: 'popular',
       name: 'Popular Health Pack',
       testIds: ['basic-checkup', 'comprehensive-checkup'],

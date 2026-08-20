@@ -78,8 +78,59 @@ function emitTrackingStatus(bookingId, trackingStatus) {
   });
 }
 
+function emitBookingStatusUpdate(booking) {
+  if (!booking) return;
+  let payload;
+  try {
+    const {
+      workflowStatus,
+      remainingPaymentSeconds,
+      isPaymentPendingStatus,
+    } = require('../db/nurseBookingStatus');
+    payload = {
+      bookingId: booking.id,
+      status: booking.status,
+      workflowStatus: workflowStatus(booking),
+      paymentStatus: booking.paymentStatus,
+      visitProgress: booking.visitProgress || null,
+      paymentExpiresAt: booking.paymentExpiresAt || null,
+      remainingPaymentSeconds: isPaymentPendingStatus(booking.status)
+        ? remainingPaymentSeconds(booking)
+        : 0,
+      lastNurseLatitude: booking.currentLatitude ?? null,
+      lastNurseLongitude: booking.currentLongitude ?? null,
+      lastNurseHeading: booking.currentHeading ?? null,
+      lastLocationUpdatedAt: booking.liveLocationUpdatedAt || null,
+      serverTime: new Date().toISOString(),
+    };
+  } catch {
+    payload = {
+      bookingId: booking.id,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      visitProgress: booking.visitProgress || null,
+      timestamp: Date.now(),
+    };
+  }
+  emitToBooking(booking.id, 'booking-status-update', payload);
+  emitToBooking(booking.id, 'booking_status_update', payload);
+  if (booking.patientId) {
+    emitToUser('patient', booking.patientId, 'booking-status-update', payload);
+    emitToUser('patient', booking.patientId, 'booking_status_update', payload);
+  }
+  if (booking.nurseId) {
+    emitToUser('nurse', booking.nurseId, 'booking-status-update', payload);
+    emitToUser('nurse', booking.nurseId, 'booking_status_update', payload);
+  }
+  if (booking.doctorId) {
+    emitToUser('doctor', booking.doctorId, 'booking-status-update', payload);
+  }
+}
+
 function emitLocationToRoom(bookingId, location) {
   emitToBooking(bookingId, 'doctor_location_update', location);
+  emitToBooking(bookingId, 'nurse-location-update', location);
+  emitToBooking(bookingId, 'nurse_location_update', location);
 }
 
 function clearOfflineTimer(bookingId) {
@@ -156,7 +207,10 @@ function attachTrackingSocket(httpServer) {
       socket.join(userRoom('nurse', auth.nurseId));
     }
 
-    socket.on('join_booking_room', async (payload = {}, ack) => {
+    socket.on('join_booking_room', onJoin);
+    socket.on('join-booking-room', onJoin);
+
+    async function onJoin(payload = {}, ack) {
       try {
         const bookingId = String(payload.bookingId || '').trim();
         if (!bookingId) {
@@ -177,15 +231,22 @@ function attachTrackingSocket(httpServer) {
           socket.data.providerBookings.add(bookingId);
           clearOfflineTimer(bookingId);
         }
-        const snapshot = await getTrackingSnapshot(bookingId, socket.data.auth, {
-          includeRoute: true,
-        });
+        let snapshot = null;
+        try {
+          if (booking.status === 'confirmed' && booking.consultationType === 'book_home') {
+            snapshot = await getTrackingSnapshot(bookingId, socket.data.auth, {
+              includeRoute: true,
+            });
+            socket.emit('tracking_status', {
+              bookingId,
+              trackingStatus: snapshot.trackingStatus,
+              snapshot,
+            });
+          }
+        } catch {
+          snapshot = null;
+        }
         const result = { ok: true, bookingId, snapshot };
-        socket.emit('tracking_status', {
-          bookingId,
-          trackingStatus: snapshot.trackingStatus,
-          snapshot,
-        });
         safeAck(ack, result);
       } catch (err) {
         const payloadErr = {
@@ -196,9 +257,27 @@ function attachTrackingSocket(httpServer) {
         socket.emit('tracking_error', payloadErr);
         safeAck(ack, payloadErr);
       }
+    }
+
+    socket.on('leave_booking_room', (payload = {}) => {
+      const bookingId = String(payload.bookingId || '').trim();
+      if (bookingId) {
+        socket.leave(bookingRoom(bookingId));
+        socket.data.rooms.delete(bookingId);
+      }
+    });
+    socket.on('leave-booking-room', (payload = {}) => {
+      const bookingId = String(payload.bookingId || '').trim();
+      if (bookingId) {
+        socket.leave(bookingRoom(bookingId));
+        socket.data.rooms.delete(bookingId);
+      }
     });
 
-    socket.on('start_tracking', async (payload = {}, ack) => {
+    socket.on('start_tracking', onStartTracking);
+    socket.on('nurse-started-trip', onStartTracking);
+
+    async function onStartTracking(payload = {}, ack) {
       try {
         const bookingId = String(payload.bookingId || '').trim();
         const { alreadyStarted, snapshot } = await startTracking(
@@ -215,7 +294,25 @@ function attachTrackingSocket(httpServer) {
           trackingStatus: 'on_the_way',
           timestamp: Date.now(),
         });
+        emitToBooking(bookingId, 'nurse-started-trip', {
+          bookingId,
+          alreadyStarted,
+          trackingStatus: 'on_the_way',
+          timestamp: Date.now(),
+        });
         emitTrackingStatus(bookingId, 'on_the_way');
+        try {
+          emitBookingStatusUpdate({
+            id: bookingId,
+            status: 'confirmed',
+            visitProgress: 'en_route',
+            nurseId: socket.data.auth.nurseId,
+            doctorId: socket.data.auth.doctorId,
+            patientId: snapshot?.patientId,
+          });
+        } catch {
+          // snapshot may not include patientId
+        }
         safeAck(ack, { ok: true, alreadyStarted, snapshot });
       } catch (err) {
         const payloadErr = {
@@ -226,9 +323,13 @@ function attachTrackingSocket(httpServer) {
         socket.emit('tracking_error', payloadErr);
         safeAck(ack, payloadErr);
       }
-    });
+    }
 
-    socket.on('doctor_location_update', async (payload = {}, ack) => {
+    socket.on('doctor_location_update', onLocation);
+    socket.on('nurse-location-update', onLocation);
+    socket.on('nurse_location_update', onLocation);
+
+    async function onLocation(payload = {}, ack) {
       try {
         const now = Date.now();
         const last = lastLocationAt.get(socket.id) || 0;
@@ -251,9 +352,14 @@ function attachTrackingSocket(httpServer) {
         socket.emit('tracking_error', payloadErr);
         safeAck(ack, payloadErr);
       }
-    });
+    }
 
-    socket.on('stop_tracking', async (payload = {}, ack) => {
+    socket.on('stop_tracking', onStopTracking);
+    socket.on('nurse-arrived', (payload = {}, ack) =>
+      onStopTracking({ ...payload, progress: payload.progress || 'arrived' }, ack),
+    );
+
+    async function onStopTracking(payload = {}, ack) {
       try {
         const bookingId = String(payload.bookingId || '').trim();
         const progress = payload.progress || payload.visitProgress;
@@ -263,6 +369,13 @@ function attachTrackingSocket(httpServer) {
         socket.data.providerBookings.delete(bookingId);
         clearOfflineTimer(bookingId);
         emitTrackingStopped(bookingId, progress || 'stopped');
+        if (progress === 'arrived') {
+          emitToBooking(bookingId, 'nurse-arrived', {
+            bookingId,
+            trackingStatus: 'arrived',
+            timestamp: Date.now(),
+          });
+        }
         safeAck(ack, { ok: true, snapshot });
       } catch (err) {
         const payloadErr = {
@@ -273,7 +386,7 @@ function attachTrackingSocket(httpServer) {
         socket.emit('tracking_error', payloadErr);
         safeAck(ack, payloadErr);
       }
-    });
+    }
 
     socket.on('disconnect', () => {
       lastLocationAt.delete(socket.id);
@@ -297,5 +410,6 @@ module.exports = {
   emitTrackingStopped,
   emitTrackingStatus,
   emitLocationToRoom,
+  emitBookingStatusUpdate,
   getTrackingIo,
 };

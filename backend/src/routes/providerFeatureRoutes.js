@@ -95,6 +95,29 @@ function attachProviderFeatureRoutes(router, providerType) {
     }
   });
 
+  router.patch('/notifications/:id/read', authRequired, async (req, res) => {
+    try {
+      const provider = requireProvider(req, res);
+      if (!provider) return;
+      const data = await markNotificationRead(req.params.id, provider.id);
+      return sendSuccess(res, { data });
+    } catch (err) {
+      const status = err.statusCode || 500;
+      return sendError(res, err.message || 'Failed to mark read', status);
+    }
+  });
+
+  router.patch('/notifications/read-all', authRequired, async (req, res) => {
+    try {
+      const provider = requireProvider(req, res);
+      if (!provider) return;
+      const data = await markAllNotificationsRead(provider.id, provider.type);
+      return sendSuccess(res, { data });
+    } catch (err) {
+      return sendError(res, err.message || 'Failed to mark all read', 500);
+    }
+  });
+
   router.post('/device-token', authRequired, async (req, res) => {
     try {
       const provider = requireProvider(req, res);
@@ -360,6 +383,22 @@ function attachProviderFeatureRoutes(router, providerType) {
     });
 
     router.post('/bookings/:bookingId/visit-complete/verify-otp', authRequired, async (req, res) => {
+      try {
+        const provider = requireProvider(req, res);
+        if (!provider) return;
+        const data = await verifyVisitCompletionOtp({
+          bookingId: req.params.bookingId,
+          nurseId: provider.id,
+          otp: req.body?.otp,
+        });
+        return sendSuccess(res, { message: 'Visit completed successfully', data });
+      } catch (err) {
+        const status = err.statusCode || 500;
+        return sendError(res, err.message || 'OTP verification failed', status);
+      }
+    });
+
+    router.post('/bookings/:bookingId/complete', authRequired, async (req, res) => {
       try {
         const provider = requireProvider(req, res);
         if (!provider) return;

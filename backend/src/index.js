@@ -38,6 +38,9 @@ const {
 const {
   startApprovalSlaEscalationScheduler,
 } = require('./services/approvalSlaEscalationService');
+const {
+  startNursePaymentExpirationScheduler,
+} = require('./services/nursePaymentExpirationService');
 const { attachTrackingSocket } = require('./services/trackingSocket');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -199,6 +202,7 @@ async function start() {
   startPrescriptionAutoSendScheduler();
   startVisitReminderScheduler();
   startApprovalSlaEscalationScheduler();
+  startNursePaymentExpirationScheduler();
 }
 
 async function verifySmtpAtStartup() {

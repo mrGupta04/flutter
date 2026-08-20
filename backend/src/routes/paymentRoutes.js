@@ -1,11 +1,12 @@
 const express = require('express');
 const { sendSuccess, sendError } = require('../utils/response');
-const { authOptional } = require('../middleware/auth');
+const { authOptional, authRequired } = require('../middleware/auth');
 const {
   createPendingBookingForPayment,
   confirmBookingAfterPayment,
   createPaymentOrderForBooking,
 } = require('../db/bookingRepositories');
+const { processMockPayment } = require('../db/mockPaymentRepositories');
 const {
   createOrder,
   verifyPaymentSignature,
@@ -176,6 +177,33 @@ router.post('/verify', authOptional, async (req, res) => {
     console.error(err);
     const status = err.statusCode || 500;
     return sendError(res, err.message || 'Payment verification failed', status);
+  }
+});
+
+// POST /payments/mock — nurse booking development payment (no real charge)
+router.post('/mock', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'patient' || !req.auth?.patientId) {
+      return sendError(res, 'Patient authentication required', 401);
+    }
+    const { bookingId, result, amount } = req.body || {};
+    const data = await processMockPayment({
+      bookingId,
+      result,
+      amount,
+      auth: req.auth,
+    });
+    const failed = data.payment?.status === 'FAILED';
+    return sendSuccess(res, {
+      message: failed
+        ? 'Payment failed. You can try again before the 10-minute payment window expires.'
+        : 'Payment successful. Booking confirmed.',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Mock payment failed', status);
   }
 });
 

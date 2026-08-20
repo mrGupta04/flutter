@@ -40,6 +40,7 @@ const {
   approveNurseHomeVisitRequest,
   rejectNurseHomeVisitRequest,
   listNurseBookings,
+  getNurseBookingById,
 } = require('../db/nurseBookingRepositories');
 
 const {
@@ -744,6 +745,154 @@ router.post('/bookings/:bookingId/reject-home-visit', authOptional, async (req, 
 
   }
 
+});
+
+router.post('/bookings/:bookingId/accept', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'nurse' || !req.auth?.nurseId) {
+      return sendError(res, 'Nurse authentication required', 403);
+    }
+    const data = await approveNurseHomeVisitRequest(
+      req.params.bookingId,
+      req.auth.nurseId,
+    );
+    return sendSuccess(res, {
+      message: 'Booking verified. Patient has 10 minutes to pay.',
+      data,
+    });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Approval failed', status);
+  }
+});
+
+router.post('/bookings/:bookingId/reject', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'nurse' || !req.auth?.nurseId) {
+      return sendError(res, 'Nurse authentication required', 403);
+    }
+    const data = await rejectNurseHomeVisitRequest(
+      req.params.bookingId,
+      req.auth.nurseId,
+    );
+    return sendSuccess(res, {
+      message: 'Home visit request declined',
+      data,
+    });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Rejection failed', status);
+  }
+});
+
+router.get('/bookings/:bookingId', authRequired, async (req, res) => {
+  try {
+    const data = await getNurseBookingById(req.params.bookingId, req.auth);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load booking', status);
+  }
+});
+
+router.post('/bookings/:bookingId/start-trip', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'nurse' || !req.auth?.nurseId) {
+      return sendError(res, 'Nurse authentication required', 403);
+    }
+    const { startTracking } = require('../db/trackingRepositories');
+    const { emitToBooking, emitTrackingStatus, emitBookingStatusUpdate } = require('../services/trackingSocket');
+    const { alreadyStarted, snapshot } = await startTracking(
+      req.params.bookingId,
+      req.auth,
+    );
+    emitToBooking(req.params.bookingId, 'tracking_started', {
+      bookingId: req.params.bookingId,
+      alreadyStarted,
+      trackingStatus: 'on_the_way',
+      timestamp: Date.now(),
+    });
+    emitToBooking(req.params.bookingId, 'nurse-started-trip', {
+      bookingId: req.params.bookingId,
+      alreadyStarted,
+      trackingStatus: 'on_the_way',
+      timestamp: Date.now(),
+    });
+    emitTrackingStatus(req.params.bookingId, 'on_the_way');
+    emitBookingStatusUpdate({
+      id: req.params.bookingId,
+      status: 'confirmed',
+      visitProgress: 'en_route',
+      nurseId: req.auth.nurseId,
+    });
+    return sendSuccess(res, {
+      message: 'Trip started',
+      data: { alreadyStarted, snapshot },
+    });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to start trip', status);
+  }
+});
+
+router.post('/bookings/:bookingId/arrived', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'nurse' || !req.auth?.nurseId) {
+      return sendError(res, 'Nurse authentication required', 403);
+    }
+    const { updateVisitProgress } = require('../db/bookingLifecycleRepositories');
+    const data = await updateVisitProgress(
+      req.params.bookingId,
+      req.auth,
+      'arrived',
+    );
+    const { emitToBooking, emitBookingStatusUpdate } = require('../services/trackingSocket');
+    emitToBooking(req.params.bookingId, 'nurse-arrived', {
+      bookingId: req.params.bookingId,
+      trackingStatus: 'arrived',
+      timestamp: Date.now(),
+    });
+    emitBookingStatusUpdate({
+      id: req.params.bookingId,
+      status: 'confirmed',
+      visitProgress: 'arrived',
+      nurseId: req.auth.nurseId,
+    });
+    return sendSuccess(res, { message: 'Marked arrived', data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to mark arrived', status);
+  }
+});
+
+router.post('/bookings/:bookingId/start-service', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'nurse' || !req.auth?.nurseId) {
+      return sendError(res, 'Nurse authentication required', 403);
+    }
+    const { startNurseVisit } = require('../db/nurseVisitWorkflowRepositories');
+    const data = await startNurseVisit({
+      bookingId: req.params.bookingId,
+      nurseId: req.auth.nurseId,
+    });
+    return sendSuccess(res, { message: 'Service started', data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to start service', status);
+  }
+});
+
+router.get('/bookings/:bookingId/location', authRequired, async (req, res) => {
+  try {
+    const { getTrackingSnapshot } = require('../db/trackingRepositories');
+    const data = await getTrackingSnapshot(req.params.bookingId, req.auth, {
+      includeRoute: false,
+    });
+    return sendSuccess(res, { data });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to load location', status);
+  }
 });
 
 

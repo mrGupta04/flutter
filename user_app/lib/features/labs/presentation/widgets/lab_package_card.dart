@@ -3,7 +3,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/lab_catalog_metadata.dart';
-import 'lab_organ_logos.dart';
 
 /// 1mg-style health package card used on lab detail / package lists.
 class LabPackageCard extends StatelessWidget {
@@ -56,26 +55,11 @@ class LabPackageCard extends StatelessWidget {
                         width: 72,
                         height: 56,
                         color: AppColors.primaryLight,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.asset(
-                              'assets/images/home_cards/lab_tests.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const SizedBox.shrink(),
-                            ),
-                            Container(
-                              color: AppColors.primary.withValues(alpha: 0.28),
-                            ),
-                            Center(
-                              child: LabOrganLogoIcon(
-                                groupId: package.id,
-                                size: 28,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
+                        child: Image.asset(
+                          'assets/images/home_cards/lab_tests.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox.shrink(),
                         ),
                       ),
                     ),

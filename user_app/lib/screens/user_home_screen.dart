@@ -13,7 +13,6 @@ import '../core/theme/app_text_styles.dart';
 import '../data/models/patient_booking_model.dart';
 import '../features/doctor_registration/data/medical_specialities.dart';
 import '../features/labs/data/health_package_visuals.dart';
-import '../features/labs/data/lab_test_illustrations.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
@@ -236,12 +235,9 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                 child: constrain(
                   MarketplaceSectionTitle(
                     title: 'Browse by specialty',
-                    actionLabel: 'View doctors',
+                    actionLabel: 'View all',
                     onAction: () => context.push(
-                      routeWithPreferredCity(
-                        AppConstants.routeDoctorSearch,
-                        ref.read(userLocationProvider).city,
-                      ),
+                      AppConstants.routeFindSpecialists,
                     ),
                   ),
                 ),
@@ -253,10 +249,10 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                     child: ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       scrollDirection: Axis.horizontal,
-                      itemCount: _specialties.length,
+                      itemCount: _homeSpecialties.length,
                       separatorBuilder: (_, _) => const SizedBox(width: 12),
                       itemBuilder: (context, index) {
-                        final item = _specialties[index];
+                        final item = _homeSpecialties[index];
                         return _SpecialtyChip(
                           organAsset: item.organAsset,
                           label: item.label,
@@ -679,7 +675,7 @@ const _homeServices = [
   ),
 ];
 
-const _specialties = [
+const _homeSpecialties = [
   _SpecialtyItem(
     organAsset: OrganAssets.heart,
     label: 'Cardiology',
@@ -688,7 +684,7 @@ const _specialties = [
     searchTerm: 'Cardiology',
   ),
   _SpecialtyItem(
-    organAsset: LabTestIllustrations.brain,
+    organAsset: OrganAssets.immuneCell,
     label: 'Mental',
     softColor: Color(0xFFF3E5F5),
     accentColor: Color(0xFF8E24AA),
@@ -720,7 +716,7 @@ const _specialties = [
     label: 'Gynae',
     softColor: Color(0xFFFCE4EC),
     accentColor: Color(0xFFEC407A),
-    searchTerm: 'Gynecology',
+    searchTerm: 'Gynecology & Obstetrics',
   ),
   _SpecialtyItem(
     organAsset: OrganAssets.skin,
@@ -730,11 +726,53 @@ const _specialties = [
     searchTerm: 'Dermatology',
   ),
   _SpecialtyItem(
-    organAsset: OrganAssets.blood,
+    organAsset: OrganAssets.immuneSystem,
     label: 'General',
     softColor: Color(0xFFE0F2F1),
     accentColor: Color(0xFF00897B),
     searchTerm: 'General Physician',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.ear,
+    label: 'ENT',
+    softColor: Color(0xFFFFF8E1),
+    accentColor: Color(0xFFF9A825),
+    searchTerm: 'ENT (Otolaryngology)',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.tooth,
+    label: 'Dental',
+    softColor: Color(0xFFE0F7FA),
+    accentColor: Color(0xFF00ACC1),
+    searchTerm: 'Dentistry',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.spine,
+    label: 'Neuro',
+    softColor: Color(0xFFEDE7F6),
+    accentColor: Color(0xFF7E57C2),
+    searchTerm: 'Neurology',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.stomach,
+    label: 'Gastro',
+    softColor: Color(0xFFE8F5E9),
+    accentColor: Color(0xFF689F38),
+    searchTerm: 'Gastroenterology',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.lungs,
+    label: 'Lungs',
+    softColor: Color(0xFFE0F2F1),
+    accentColor: Color(0xFF00897B),
+    searchTerm: 'Pulmonology',
+  ),
+  _SpecialtyItem(
+    organAsset: OrganAssets.kidney,
+    label: 'Kidney',
+    softColor: Color(0xFFE0F7FA),
+    accentColor: Color(0xFF00897B),
+    searchTerm: 'Nephrology',
   ),
 ];
 

@@ -238,7 +238,7 @@ class _PatientTrackingScreenState extends ConsumerState<PatientTrackingScreen>
                   Marker(
                     markerId: const MarkerId('patient'),
                     position: patient,
-                    infoWindow: const InfoWindow(title: 'Your home'),
+                    infoWindow: const InfoWindow(title: '🏠 Your home'),
                     icon: BitmapDescriptor.defaultMarkerWithHue(
                       BitmapDescriptor.hueRed,
                     ),
@@ -251,8 +251,7 @@ class _PatientTrackingScreenState extends ConsumerState<PatientTrackingScreen>
                     flat: true,
                     anchor: const Offset(0.5, 0.5),
                     infoWindow: InfoWindow(
-                      title: snapshot?.providerName ??
-                          (isNurse ? 'Nurse' : 'Doctor'),
+                      title: '🚗 ${snapshot?.providerName ?? (isNurse ? 'Nurse' : 'Doctor')}',
                     ),
                     icon: BitmapDescriptor.defaultMarkerWithHue(
                       BitmapDescriptor.hueAzure,

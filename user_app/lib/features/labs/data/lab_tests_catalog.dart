@@ -1,5 +1,7 @@
 import 'models/lab_test_model.dart';
 
+part 'lab_board_tests_catalog.dart';
+
 /// Static catalog of diagnostic tests grouped by category.
 class LabTestsCatalog {
   LabTestsCatalog._();
@@ -408,6 +410,8 @@ class LabTestsCatalog {
       reportDeliveryTime: '12–24 hours',
       category: LabTestCategory.other,
     ),
+
+    ...LabBoardTestsCatalog.tests,
   ];
 
   static List<LabTest> filter({

@@ -146,6 +146,9 @@ class PatientBookingModel {
   final String status;
   final String? paymentStatus;
   final String? visitProgress;
+  final DateTime? paymentExpiresAt;
+  final int? remainingPaymentSeconds;
+  final DateTime? serverTime;
   final double? distanceKm;
   final String? clinicName;
   final String? clinicAddress;
@@ -193,6 +196,9 @@ class PatientBookingModel {
     required this.status,
     this.paymentStatus,
     this.visitProgress,
+    this.paymentExpiresAt,
+    this.remainingPaymentSeconds,
+    this.serverTime,
     this.distanceKm,
     this.clinicName,
     this.clinicAddress,
@@ -256,13 +262,15 @@ class PatientBookingModel {
   bool get isPrescriptionEligible => isOnlineConsult || isHomeVisit;
 
   bool get isAwaitingDoctorApproval =>
-      status == 'awaiting_doctor_approval';
+      status == 'awaiting_doctor_approval' ||
+      status == 'pending_nurse_approval';
 
   bool get isApprovedPendingPayment =>
-      status == 'approved_pending_payment';
+      status == 'approved_pending_payment' ||
+      status == 'payment_pending';
 
   bool get needsHomeVisitPayment =>
-      isHomeVisit && isApprovedPendingPayment;
+      (isHomeVisit || isNurseVisit) && isApprovedPendingPayment;
 
   /// Lab/scan confirmed (or requested) but still unpaid online.
   bool get needsLabOrScanPayment {
@@ -351,6 +359,12 @@ class PatientBookingModel {
     if (isApprovedPendingPayment) {
       return 'Approved — pay to confirm';
     }
+    if (status == 'payment_expired') {
+      return 'Payment expired';
+    }
+    if (status == 'nurse_rejected') {
+      return 'Nurse declined';
+    }
     if (visitProgress == 'en_route') {
       return isNurseVisit ? 'Nurse on the way' : 'Doctor on the way';
     }
@@ -416,6 +430,14 @@ class PatientBookingModel {
       status: json['status'] as String? ?? 'confirmed',
       paymentStatus: json['paymentStatus'] as String?,
       visitProgress: json['visitProgress'] as String?,
+      paymentExpiresAt: json['paymentExpiresAt'] != null
+          ? DateTime.tryParse(json['paymentExpiresAt'].toString())
+          : null,
+      remainingPaymentSeconds:
+          (json['remainingPaymentSeconds'] as num?)?.toInt(),
+      serverTime: json['serverTime'] != null
+          ? DateTime.tryParse(json['serverTime'].toString())
+          : null,
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       clinicName: json['clinicName'] as String?,
       clinicAddress: json['clinicAddress'] as String?,

@@ -327,13 +327,6 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
                       onChanged: _onSearchChanged,
                     ),
                     const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      onPressed: () =>
-                          context.push(AppConstants.routeUploadPrescription),
-                      icon: const Icon(Icons.upload_file_rounded),
-                      label: const Text('Upload Prescription'),
-                    ),
-                    const SizedBox(height: 10),
                     SizedBox(
                       height: 38,
                       child: ListView(
@@ -410,6 +403,11 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
                                           lab: state.labs[start + col],
                                           onViewDetails: () => context.push(
                                             '${AppConstants.routeLabDetail}/${state.labs[start + col].id}',
+                                          ),
+                                          onUploadPrescription: () =>
+                                              context.push(
+                                            AppConstants.routeUploadPrescription,
+                                            extra: state.labs[start + col],
                                           ),
                                         )
                                       : const SizedBox.shrink(),

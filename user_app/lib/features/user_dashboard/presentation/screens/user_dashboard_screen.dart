@@ -998,6 +998,13 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
   }
 
   Future<void> _payForBooking(BuildContext context) async {
+    if (booking.isNurseVisit) {
+      if (!context.mounted) return;
+      context.push(
+        '${AppConstants.routeNursePayment}?bookingId=${Uri.encodeComponent(booking.id)}',
+      );
+      return;
+    }
     try {
       await ref.read(bookingPaymentFlowProvider).payForExistingBooking(
             bookingId: booking.id,

@@ -36,6 +36,7 @@ class AppConstants {
       '/doctor/bookings/$bookingId/reject-home-visit';
   static const String endpointPaymentCreateOrder = '/payments/create-order';
   static const String endpointPaymentVerify = '/payments/verify';
+  static const String endpointPaymentMock = '/payments/mock';
   static String endpointConsultationVideoSession(String bookingId) =>
       '/consultations/$bookingId/video-session';
   static String endpointConsultationVideoJoin(String bookingId) =>
@@ -92,6 +93,8 @@ class AppConstants {
   static String endpointNurseSlotHoldRelease(String holdId) =>
       '/nurse/slot-hold/$holdId';
   static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
+  static String endpointPatientBooking(String bookingId) =>
+      '/patient/bookings/$bookingId';
   static const String endpointNurseFeedback = '/nurse/feedback';
 
   // Ambulance API Endpoints (patient discovery & booking)
@@ -173,6 +176,7 @@ class AppConstants {
   static const String routeDoctorSearch = '/doctor-search';
   /// Alias for [routeDoctorSearch] (`/doctors?speciality=cardiology`).
   static const String routeDoctors = '/doctors';
+  static const String routeFindSpecialists = '/specialists';
   static const String routeDoctorProfile = '/doctor-profile';
   static const String routeNurseSearch = '/nurse-search';
   static const String routeNurseProfile = '/nurse-profile';
@@ -202,6 +206,9 @@ class AppConstants {
   static const String routeHospitalVisitBooking = '/hospital-visit';
   static const String routeHomeVisitBooking = '/home-visit';
   static const String routeNurseHomeVisitBooking = '/nurse-home-visit';
+  static const String routeNurseBookingStatus = '/nurse-booking-status';
+  static const String routeNursePayment = '/nurse-payment';
+  static const String routeNurseMockPayment = '/nurse-mock-payment';
   static const String routeVideoConsult = '/video-consult';
   static const String routeNotifications = '/notifications';
   static const String routeFavorites = '/favorites';

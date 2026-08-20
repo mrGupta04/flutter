@@ -146,7 +146,7 @@ class _SpecialityIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const size = 42.0;
+    const size = 48.0;
     final accent = speciality.accent;
 
     return SizedBox(
@@ -160,9 +160,9 @@ class _SpecialityIconBadge extends StatelessWidget {
             height: size,
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Center(child: _icon(size * 0.52)),
+            child: Center(child: _icon(size * 0.78)),
           ),
           Positioned(
             top: 3,
@@ -182,6 +182,25 @@ class _SpecialityIconBadge extends StatelessWidget {
   }
 
   Widget _icon(double size) {
+    final image = speciality.imageAsset;
+    if (image.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(4),
+        child: Image.asset(
+          image,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, _, _) => _illustrationOrIcon(size),
+        ),
+      );
+    }
+
+    return _illustrationOrIcon(size);
+  }
+
+  Widget _illustrationOrIcon(double size) {
     final illustration = speciality.illustration;
     if (illustration != null) {
       return SvgPicture.asset(
@@ -194,25 +213,6 @@ class _SpecialityIconBadge extends StatelessWidget {
           speciality.icon,
           size: size,
           color: speciality.accent,
-        ),
-      );
-    }
-
-    final image = speciality.imageAsset;
-    if (image != null) {
-      return Padding(
-        padding: const EdgeInsets.all(6),
-        child: Image.asset(
-          image,
-          width: size,
-          height: size,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-          errorBuilder: (_, _, _) => Icon(
-            speciality.icon,
-            size: size,
-            color: speciality.accent,
-          ),
         ),
       );
     }

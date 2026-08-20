@@ -212,10 +212,18 @@ async function startTracking(bookingId, auth) {
     appendStatusHistory(booking, 'en_route', auth.type);
     await booking.save();
     try {
+      const { emitBookingStatusUpdate } = require('../services/trackingSocket');
+      emitBookingStatusUpdate(booking);
+    } catch (err) {
+      console.warn('[Tracking] status emit failed:', err.message);
+    }
+    try {
       const { notifyPatient } = require('./notificationRepositories');
       await notifyPatient(booking, {
         title: booking.nurseId ? 'Nurse on the way' : 'Doctor on the way',
-        body: 'Your home visit provider is on the way. Open live tracking to follow them.',
+        body: booking.nurseId
+          ? 'Nurse has started the trip and is on the way.'
+          : 'Your home visit provider is on the way. Open live tracking to follow them.',
         type: 'en_route',
       });
     } catch (err) {

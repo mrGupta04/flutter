@@ -13,11 +13,23 @@ class MedicalSpecialitiesSection extends StatefulWidget {
     required this.onSpecialitySelected,
     this.selectedSearchTerm,
     this.padding = const EdgeInsets.fromLTRB(16, 4, 16, 16),
+    this.showHeader = true,
+    this.showSearch = true,
+    this.expandAll = false,
+    this.title = 'Find Specialists',
+    this.onViewAll,
   });
 
   final ValueChanged<MedicalSpeciality> onSpecialitySelected;
   final String? selectedSearchTerm;
   final EdgeInsetsGeometry padding;
+  final bool showHeader;
+  final bool showSearch;
+  /// When true, every speciality is visible (used on the dedicated browse page).
+  final bool expandAll;
+  final String title;
+  /// If set, "View all" navigates instead of expanding the compact grid.
+  final VoidCallback? onViewAll;
 
   @override
   State<MedicalSpecialitiesSection> createState() =>
@@ -26,9 +38,17 @@ class MedicalSpecialitiesSection extends StatefulWidget {
 
 class _MedicalSpecialitiesSectionState extends State<MedicalSpecialitiesSection> {
   bool _expanded = false;
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   int _previewCount(BuildContext context) {
-    if (ResponsiveUtils.isLaptopOrUp(context)) {
+    if (widget.expandAll || ResponsiveUtils.isLaptopOrUp(context)) {
       return medicalSpecialities.length;
     }
     if (ResponsiveUtils.isTabletOrUp(context)) {
@@ -48,12 +68,15 @@ class _MedicalSpecialitiesSectionState extends State<MedicalSpecialitiesSection>
 
   @override
   Widget build(BuildContext context) {
+    final filtered = filterMedicalSpecialities(_query);
     final previewCount = _previewCount(context);
-    final showAll = _expanded || previewCount >= medicalSpecialities.length;
+    final searching = _query.trim().isNotEmpty;
+    final showAll =
+        widget.expandAll || _expanded || searching || previewCount >= filtered.length;
     final visible = showAll
-        ? medicalSpecialities
-        : medicalSpecialities.take(previewCount).toList(growable: false);
-    final canToggle = medicalSpecialities.length > previewCount;
+        ? filtered
+        : filtered.take(previewCount).toList(growable: false);
+    final canToggle = !widget.expandAll && !searching && filtered.length > previewCount;
     final columns = _columns(context);
     final gap = ResponsiveUtils.valueFor(
       context,
@@ -67,43 +90,93 @@ class _MedicalSpecialitiesSectionState extends State<MedicalSpecialitiesSection>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Explore Medical Specialities',
-            style: AppTextStyles.titleMedium.copyWith(
-              color: AppColors.primaryDark,
-              fontWeight: FontWeight.w800,
-              fontSize: ResponsiveUtils.valueFor(
-                context,
-                mobile: 17,
-                tablet: 18,
-                desktop: 20,
+          if (widget.showHeader) ...[
+            Text(
+              widget.title,
+              style: AppTextStyles.titleMedium.copyWith(
+                color: AppColors.primaryDark,
+                fontWeight: FontWeight.w800,
+                fontSize: ResponsiveUtils.valueFor(
+                  context,
+                  mobile: 17,
+                  tablet: 18,
+                  desktop: 20,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Find the right doctor and healthcare specialist for your needs.',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.35,
+            const SizedBox(height: 4),
+            Text(
+              '${medicalSpecialities.length} specialities available',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.35,
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          _SpecialityGrid(
-            specialities: visible,
-            columns: columns,
-            gap: gap,
-            selectedSearchTerm: widget.selectedSearchTerm,
-            onSpecialitySelected: widget.onSpecialitySelected,
-          ),
+            const SizedBox(height: 12),
+          ],
+          if (widget.showSearch) ...[
+            TextField(
+              controller: _searchController,
+              onChanged: (value) => setState(() => _query = value),
+              decoration: InputDecoration(
+                hintText: 'Search speciality...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                      ),
+                filled: true,
+                fillColor: AppColors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: AppColors.primary),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          if (visible.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                'No speciality matches "$_query".',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            )
+          else
+            _SpecialityGrid(
+              specialities: visible,
+              columns: columns,
+              gap: gap,
+              selectedSearchTerm: widget.selectedSearchTerm,
+              onSpecialitySelected: widget.onSpecialitySelected,
+            ),
           if (canToggle) ...[
             const SizedBox(height: 14),
             Align(
               alignment: Alignment.center,
               child: _ViewAllButton(
                 expanded: _expanded,
-                remaining: medicalSpecialities.length - previewCount,
-                onTap: () => setState(() => _expanded = !_expanded),
+                remaining: filtered.length - previewCount,
+                onTap: widget.onViewAll ??
+                    () => setState(() => _expanded = !_expanded),
               ),
             ),
           ],
@@ -138,7 +211,7 @@ class _SpecialityGrid extends StatelessWidget {
         crossAxisCount: columns,
         mainAxisSpacing: gap,
         crossAxisSpacing: gap,
-        mainAxisExtent: 148,
+        mainAxisExtent: 156,
       ),
       itemBuilder: (context, index) {
         final item = specialities[index];

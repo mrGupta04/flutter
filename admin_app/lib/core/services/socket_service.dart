@@ -56,6 +56,7 @@ class SocketService {
       final bookingId = _joinedBookingId;
       if (bookingId != null && bookingId.isNotEmpty) {
         socket.emit('join_booking_room', {'bookingId': bookingId});
+        socket.emit('join-booking-room', {'bookingId': bookingId});
       }
     });
     socket.onDisconnect((_) {
@@ -69,6 +70,7 @@ class SocketService {
       final bookingId = _joinedBookingId;
       if (bookingId != null && bookingId.isNotEmpty) {
         socket.emit('join_booking_room', {'bookingId': bookingId});
+        socket.emit('join-booking-room', {'bookingId': bookingId});
       }
     });
 
@@ -79,6 +81,12 @@ class SocketService {
       'tracking_status',
       'tracking_error',
       'provider_offline',
+      'app_notification',
+      'booking-notification',
+      'booking-status-update',
+      'nurse-location-update',
+      'nurse-started-trip',
+      'nurse-arrived',
     ]) {
       socket.on(event, (data) => _dispatch(event, data));
     }
@@ -105,15 +113,18 @@ class SocketService {
   void joinBookingRoom(String bookingId) {
     _joinedBookingId = bookingId;
     _socket?.emit('join_booking_room', {'bookingId': bookingId});
+    _socket?.emit('join-booking-room', {'bookingId': bookingId});
   }
 
   void startTracking(String bookingId) {
     _joinedBookingId = bookingId;
     _socket?.emit('start_tracking', {'bookingId': bookingId});
+    _socket?.emit('nurse-started-trip', {'bookingId': bookingId});
   }
 
   void sendLocation(Map<String, dynamic> payload) {
     _socket?.emit('doctor_location_update', payload);
+    _socket?.emit('nurse-location-update', payload);
   }
 
   void stopTracking(String bookingId, {String? progress}) {

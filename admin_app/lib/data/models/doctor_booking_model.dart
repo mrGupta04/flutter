@@ -88,14 +88,18 @@ class DoctorBookingModel {
       isHomeVisit;
 
   bool get isAwaitingDoctorApproval =>
-      status == 'awaiting_doctor_approval';
+      status == 'awaiting_doctor_approval' ||
+      status == 'pending_nurse_approval';
 
   bool get isApprovedPendingPayment =>
-      status == 'approved_pending_payment';
+      status == 'approved_pending_payment' ||
+      status == 'payment_pending';
 
   String get displayStatusLabel {
     if (isAwaitingDoctorApproval) return 'Awaiting your approval';
     if (isApprovedPendingPayment) return 'Awaiting patient payment';
+    if (status == 'nurse_rejected') return 'Rejected';
+    if (status == 'payment_expired') return 'Payment expired';
     if (visitProgress == 'completed') return 'Completed';
     if (visitProgress == 'en_route') return 'On the way';
     if (visitProgress == 'arrived') return 'Arrived';

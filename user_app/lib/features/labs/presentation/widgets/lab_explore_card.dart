@@ -13,10 +13,12 @@ class LabExploreCard extends StatelessWidget {
     super.key,
     required this.lab,
     required this.onViewDetails,
+    this.onUploadPrescription,
   });
 
   final LabModel lab;
   final VoidCallback onViewDetails;
+  final VoidCallback? onUploadPrescription;
 
   static const double _imageSize = 84; // 56 * 1.5
 
@@ -29,176 +31,192 @@ class LabExploreCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onViewDetails,
-        borderRadius: AppDecorations.borderRadiusMd,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: onViewDetails,
+              borderRadius: AppDecorations.borderRadiusMd,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Stack(
-                    clipBehavior: Clip.none,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: _imageSize,
-                          height: _imageSize,
-                          color: AppColors.grey100,
-                          child: logoUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: logoUrl,
-                                  fit: BoxFit.cover,
-                                )
-                              : const Icon(
-                                  Icons.biotech_rounded,
-                                  size: 36,
-                                  color: AppColors.primary,
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: _imageSize,
+                              height: _imageSize,
+                              color: AppColors.grey100,
+                              child: logoUrl.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: logoUrl,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : const Icon(
+                                      Icons.biotech_rounded,
+                                      size: 36,
+                                      color: AppColors.primary,
+                                    ),
+                            ),
+                          ),
+                          if (offerLabel != null)
+                            Positioned(
+                              left: -4,
+                              top: -4,
+                              child: _OfferRibbon(label: offerLabel),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              lab.displayName,
+                              style: AppTextStyles.titleSmall.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.star_rounded,
+                                  size: 16,
+                                  color: Colors.amber,
                                 ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${lab.ratingValue.toStringAsFixed(1)} '
+                                  '(${lab.reviewsCount} reviews)',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                if (offerLabel != null)
+                                  _OfferPill(label: offerLabel),
+                                if (lab.isNablAccredited)
+                                  _Badge(
+                                    label: 'NABL',
+                                    color: AppColors.success,
+                                  ),
+                                if (lab.supportsHomeCollection)
+                                  const _Badge(
+                                    label: 'Home collection',
+                                    color: AppColors.primary,
+                                  ),
+                                _Badge(
+                                  label: lab.openStatusLabel,
+                                  color: lab.isOpenNow
+                                      ? AppColors.success
+                                      : AppColors.textSecondary,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      if (offerLabel != null)
-                        Positioned(
-                          left: -4,
-                          top: -4,
-                          child: _OfferRibbon(label: offerLabel),
-                        ),
                     ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          lab.displayName,
-                          style: AppTextStyles.titleSmall.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                  const SizedBox(height: 10),
+                  Text(
+                    lab.fullAddress,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      if (distance != null) ...[
+                        Icon(
+                          Icons.near_me_outlined,
+                          size: 14,
+                          color: AppColors.primary,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              size: 16,
-                              color: Colors.amber,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${lab.ratingValue.toStringAsFixed(1)} '
-                              '(${lab.reviewsCount} reviews)',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            if (offerLabel != null)
-                              _OfferPill(label: offerLabel),
-                            if (lab.isNablAccredited)
-                              _Badge(
-                                label: 'NABL',
-                                color: AppColors.success,
-                              ),
-                            if (lab.supportsHomeCollection)
-                              const _Badge(
-                                label: 'Home collection',
-                                color: AppColors.primary,
-                              ),
-                            _Badge(
-                              label: lab.openStatusLabel,
-                              color: lab.isOpenNow
-                                  ? AppColors.success
-                                  : AppColors.textSecondary,
-                            ),
-                          ],
-                        ),
+                        const SizedBox(width: 4),
+                        Text(distance, style: AppTextStyles.labelSmall),
+                        const SizedBox(width: 12),
                       ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                lab.fullAddress,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  if (distance != null) ...[
-                    Icon(
-                      Icons.near_me_outlined,
-                      size: 14,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(distance, style: AppTextStyles.labelSmall),
-                    const SizedBox(width: 12),
-                  ],
-                  Icon(
-                    Icons.schedule_rounded,
-                    size: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'Reports in ${lab.reportDeliverySummary}',
-                      style: AppTextStyles.labelSmall.copyWith(
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 14,
                         color: AppColors.textSecondary,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (startingPrice != null)
-                          Text(
-                            'From ₹$startingPrice',
-                            style: AppTextStyles.titleSmall.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        Text(
-                          '${lab.enabledTestCount} tests available',
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Reports in ${lab.reportDeliverySummary}',
                           style: AppTextStyles.labelSmall.copyWith(
                             color: AppColors.textSecondary,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  FilledButton(
-                    onPressed: onViewDetails,
-                    child: const Text('View Details'),
+                      ),
+                    ],
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (startingPrice != null)
+                        Text(
+                          'From ₹$startingPrice',
+                          style: AppTextStyles.titleSmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      Text(
+                        '${lab.enabledTestCount} tests available',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton(
+                  onPressed: onViewDetails,
+                  child: const Text('View Details'),
+                ),
+              ],
+            ),
+            if (onUploadPrescription != null) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onUploadPrescription,
+                  icon: const Icon(Icons.upload_file_rounded, size: 18),
+                  label: const Text('Upload Prescription'),
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

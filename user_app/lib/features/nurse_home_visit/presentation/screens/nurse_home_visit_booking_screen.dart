@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/live_address_service.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -179,6 +180,18 @@ class _NurseHomeVisitBookingScreenState
     if (ok) {
       final booking =
           ref.read(nurseHomeVisitBookingProvider(widget.nurseId)).booking;
+      if (booking != null) {
+        ref
+            .read(upcomingMeetingTimerProvider.notifier)
+            .registerConsultationResult(booking);
+        ref.invalidate(nurseBookableSlotsProvider(widget.nurseId));
+        await ref.read(patientDashboardProvider.notifier).loadBookings();
+        if (!mounted) return;
+        context.go(
+          '${AppConstants.routeNurseBookingStatus}?bookingId=${Uri.encodeComponent(booking.id)}',
+        );
+        return;
+      }
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -200,11 +213,6 @@ class _NurseHomeVisitBookingScreenState
       );
       ref.invalidate(nurseBookableSlotsProvider(widget.nurseId));
       await ref.read(patientDashboardProvider.notifier).loadBookings();
-      if (booking != null) {
-        ref
-            .read(upcomingMeetingTimerProvider.notifier)
-            .registerConsultationResult(booking);
-      }
     } else {
       final err =
           ref.read(nurseHomeVisitBookingProvider(widget.nurseId)).error;

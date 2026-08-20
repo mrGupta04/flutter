@@ -58,8 +58,22 @@ class NotificationsScreen extends ConsumerWidget {
         return;
       case 'payment_due':
       case 'booking_approved':
+      case 'booking_confirmed':
+      case 'payment_expired':
+      case 'payment_failed':
       case 'home_visit_request':
       case 'visit_reminder':
+        if (bookingId.isNotEmpty &&
+            (n.type == 'payment_due' || n.type == 'booking_approved')) {
+          context.push(
+            '${AppConstants.routeNursePayment}?bookingId=$bookingId',
+          );
+          return;
+        }
+        if (bookingId.isNotEmpty && n.type == 'booking_confirmed') {
+          context.push(AppConstants.routeUserDashboard);
+          return;
+        }
         context.push(AppConstants.routeUserDashboard);
         return;
       case 'prescription_ready':
