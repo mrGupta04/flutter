@@ -31,9 +31,6 @@ class AdminLabDetailsScreen extends ConsumerWidget {
         ),
       ),
       body: _buildBody(context, ref, state),
-      bottomNavigationBar: state.lab != null && !state.isLoading
-          ? _ActionBar(labId: labId, state: state)
-          : null,
     );
   }
 
@@ -169,7 +166,9 @@ class AdminLabDetailsScreen extends ConsumerWidget {
                 ),
               ),
           ],
-          const SizedBox(height: 120),
+          const SizedBox(height: 24),
+          _ActionBar(labId: labId, state: state),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -219,23 +218,9 @@ class _ActionBar extends ConsumerWidget {
     final allDocsVerified = allDocumentsVerified(documents);
     final canApprove = canModerate && allDocsVerified && documents.isNotEmpty;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
             if (canModerate) ...[
               if (!allDocsVerified && documents.isNotEmpty)
                 Padding(
@@ -282,8 +267,6 @@ class _ActionBar extends ConsumerWidget {
               onPressed: () => _showRequestDocsDialog(context, ref),
             ),
           ],
-        ),
-      ),
     );
   }
 

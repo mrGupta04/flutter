@@ -439,6 +439,10 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _vehicleType,
+                isExpanded: true,
+                itemHeight: kMinInteractiveDimension,
+                menuMaxHeight: 320,
+                borderRadius: BorderRadius.circular(12),
                 decoration: InputDecoration(
                   labelText: 'Vehicle Type',
                   prefixIcon: const Icon(Icons.medical_services_outlined),
@@ -826,6 +830,10 @@ class _DriverFormSheetState extends State<_DriverFormSheet> {
               if (widget.vehicles.isNotEmpty)
                 DropdownButtonFormField<String>(
                   value: _assignedVehicleId,
+                  isExpanded: true,
+                  itemHeight: kMinInteractiveDimension,
+                  menuMaxHeight: 320,
+                  borderRadius: BorderRadius.circular(12),
                   decoration: InputDecoration(
                     labelText: 'Assigned Vehicle',
                     prefixIcon: const Icon(Icons.directions_car_outlined),

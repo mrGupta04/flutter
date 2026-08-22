@@ -283,7 +283,7 @@ class PatientAuthRepository {
   ) async {
     final data = body['data'] as Map<String, dynamic>? ?? {};
     final user = PatientUserModel.fromJson(data);
-    final token = body['token'] as String?;
+    final token = body['token'] as String? ?? data['token'] as String?;
 
     if (token != null && token.isNotEmpty) {
       await _persistUserSession(user, token: token);

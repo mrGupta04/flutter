@@ -4,6 +4,10 @@ const {
   getClinicActiveWeekBounds,
   sameClinicWeekStart,
 } = require('./clinicTime');
+const {
+  isOnlineConsultType,
+  ONLINE_START_MINUTES,
+} = require('./slotDateTime');
 
 const SLOT_START_HOUR = 0;
 const SLOT_END_HOUR = 23;
@@ -18,17 +22,47 @@ function getActiveWeekBounds(referenceDate = new Date()) {
   return getClinicActiveWeekBounds(referenceDate);
 }
 
-function buildAllSlots(available = false) {
+function buildAllSlots(available = false, consultationType) {
+  if (isOnlineConsultType(consultationType)) {
+    return buildAllOnlineSlots(available);
+  }
   const slots = [];
   for (let dayOfWeek = 0; dayOfWeek <= 6; dayOfWeek += 1) {
     for (let startHour = SLOT_START_HOUR; startHour <= SLOT_END_HOUR; startHour += 1) {
-      slots.push({ dayOfWeek, startHour, available });
+      slots.push({ dayOfWeek, startHour, startMinute: 0, available });
     }
   }
   return slots;
 }
 
-function normalizeSlots(incoming) {
+function buildAllOnlineSlots(available = false) {
+  const slots = [];
+  for (let dayOfWeek = 0; dayOfWeek <= 6; dayOfWeek += 1) {
+    for (let startHour = SLOT_START_HOUR; startHour <= SLOT_END_HOUR; startHour += 1) {
+      for (const startMinute of ONLINE_START_MINUTES) {
+        slots.push({ dayOfWeek, startHour, startMinute, available });
+      }
+    }
+  }
+  return slots;
+}
+
+function isValidDayHour(dayOfWeek, startHour) {
+  return (
+    Number.isInteger(dayOfWeek) &&
+    dayOfWeek >= 0 &&
+    dayOfWeek <= 6 &&
+    Number.isInteger(startHour) &&
+    startHour >= SLOT_START_HOUR &&
+    startHour <= SLOT_END_HOUR
+  );
+}
+
+function normalizeSlots(incoming, consultationType) {
+  if (isOnlineConsultType(consultationType)) {
+    return normalizeOnlineSlots(incoming);
+  }
+
   const map = new Map();
   buildAllSlots(false).forEach((s) => {
     map.set(`${s.dayOfWeek}_${s.startHour}`, { ...s });
@@ -38,22 +72,69 @@ function normalizeSlots(incoming) {
     incoming.forEach((raw) => {
       const dayOfWeek = Number(raw.dayOfWeek);
       const startHour = Number(raw.startHour);
-      if (
-        Number.isInteger(dayOfWeek) &&
-        dayOfWeek >= 0 &&
-        dayOfWeek <= 6 &&
-        Number.isInteger(startHour) &&
-        startHour >= SLOT_START_HOUR &&
-        startHour <= SLOT_END_HOUR
-      ) {
+      if (isValidDayHour(dayOfWeek, startHour)) {
         map.set(`${dayOfWeek}_${startHour}`, {
           dayOfWeek,
           startHour,
+          startMinute: 0,
           available: Boolean(raw.available),
         });
       }
     });
   }
+
+  return Array.from(map.values());
+}
+
+function normalizeOnlineSlots(incoming) {
+  const map = new Map();
+  buildAllOnlineSlots(false).forEach((slot) => {
+    map.set(`${slot.dayOfWeek}_${slot.startHour}_${slot.startMinute}`, { ...slot });
+  });
+
+  const grouped = new Map();
+  if (Array.isArray(incoming)) {
+    incoming.forEach((raw) => {
+      const dayOfWeek = Number(raw.dayOfWeek);
+      const startHour = Number(raw.startHour);
+      if (!isValidDayHour(dayOfWeek, startHour)) return;
+      const hourKey = `${dayOfWeek}_${startHour}`;
+      if (!grouped.has(hourKey)) grouped.set(hourKey, []);
+      grouped.get(hourKey).push(raw);
+    });
+  }
+
+  grouped.forEach((group, hourKey) => {
+    const [dayOfWeek, startHour] = hourKey.split('_').map(Number);
+    const hasExplicitMinutes = group.some((raw) =>
+      [20, 40].includes(Number(raw.startMinute)),
+    );
+
+    if (hasExplicitMinutes) {
+      group.forEach((raw) => {
+        const startMinute = Number(raw.startMinute || 0);
+        if (!ONLINE_START_MINUTES.includes(startMinute)) return;
+        map.set(`${dayOfWeek}_${startHour}_${startMinute}`, {
+          dayOfWeek,
+          startHour,
+          startMinute,
+          available: Boolean(raw.available),
+        });
+      });
+      return;
+    }
+
+    if (group.some((raw) => raw.available)) {
+      ONLINE_START_MINUTES.forEach((startMinute) => {
+        map.set(`${dayOfWeek}_${startHour}_${startMinute}`, {
+          dayOfWeek,
+          startHour,
+          startMinute,
+          available: true,
+        });
+      });
+    }
+  });
 
   return Array.from(map.values());
 }

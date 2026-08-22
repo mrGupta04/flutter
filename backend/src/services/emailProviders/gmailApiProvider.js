@@ -148,7 +148,7 @@ async function sendVerificationEmail({ email, otp }) {
           <p style="margin:0 0 16px;">
             Enter this verification code in the ${appName} doctor registration form:
           </p>
-          <p style="margin:0 0 20px;font-size:28px;font-weight:700;letter-spacing:6px;color:#208376;">
+          <p style="margin:0 0 20px;font-size:28px;font-weight:700;letter-spacing:6px;color:#19A552;">
             ${otp}
           </p>
           <p style="margin:0;color:#6b7280;font-size:14px;">

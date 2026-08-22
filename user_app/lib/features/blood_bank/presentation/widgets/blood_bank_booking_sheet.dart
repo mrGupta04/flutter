@@ -326,6 +326,9 @@ class _BloodBankBookingSheetState extends ConsumerState<_BloodBankBookingSheet> 
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: _timeSlot,
+                      itemHeight: kMinInteractiveDimension,
+                      menuMaxHeight: 280,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Time slot',
                         border: OutlineInputBorder(),

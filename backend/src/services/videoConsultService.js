@@ -5,6 +5,7 @@ const { findDoctorById } = require('../db/repositories');
 const { findPatientById } = require('../db/patientRepositories');
 
 const { getVideoJoinWindow } = require('../utils/videoJoinWindow');
+const { slotDurationMinutes, consultEndFromStart } = require('../utils/slotDateTime');
 
 const { getAgoraConfig, buildRtcToken } = require('./agoraTokenService');
 
@@ -178,7 +179,12 @@ async function getVideoSession(bookingId, auth) {
 
   const access = await assertBookingVideoAccess(auth, booking);
 
-  const window = getVideoJoinWindow(booking.slotStart, booking.slotEnd);
+  const consultEnd = consultEndFromStart(
+    booking.slotStart,
+    booking.slotEnd,
+    booking.consultationType,
+  );
+  const window = getVideoJoinWindow(booking.slotStart, consultEnd);
 
 
 
@@ -218,7 +224,9 @@ async function getVideoSession(bookingId, auth) {
 
     slotStart: new Date(booking.slotStart).toISOString(),
 
-    slotEnd: new Date(booking.slotEnd).toISOString(),
+    slotEnd: consultEnd.toISOString(),
+
+    durationMinutes: slotDurationMinutes(booking.consultationType),
 
     roomId,
 
@@ -306,7 +314,12 @@ async function markVideoCallStarted(bookingId, auth) {
 
 
 
-  const window = getVideoJoinWindow(bookingDoc.slotStart, bookingDoc.slotEnd);
+  const consultEnd = consultEndFromStart(
+    bookingDoc.slotStart,
+    bookingDoc.slotEnd,
+    bookingDoc.consultationType,
+  );
+  const window = getVideoJoinWindow(bookingDoc.slotStart, consultEnd);
 
   if (!window.canJoin) {
 

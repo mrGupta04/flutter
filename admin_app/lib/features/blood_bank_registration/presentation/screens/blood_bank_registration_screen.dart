@@ -862,6 +862,10 @@ class _BloodBankRegistrationScreenState
         if (_offerAvailable) ...[
           DropdownButtonFormField<String>(
             value: _discountType,
+            isExpanded: true,
+            itemHeight: kMinInteractiveDimension,
+            menuMaxHeight: 280,
+            borderRadius: BorderRadius.circular(12),
             decoration: const InputDecoration(
               labelText: 'Discount type',
               border: OutlineInputBorder(),

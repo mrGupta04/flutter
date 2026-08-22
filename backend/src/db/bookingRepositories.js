@@ -6,16 +6,16 @@ const { normalizeUploadUrl } = require('../utils/uploadUrl');
 const { findAvailabilityForActiveWeek } = require('./availabilityRepositories');
 const {
   isWeekExpired,
-  SLOT_START_HOUR,
-  SLOT_END_HOUR,
 } = require('../utils/availabilityWeek');
 const {
   slotDateTime,
   slotEndFromStart,
   formatSlotLabel,
-  startMinuteOffsets,
   normalizeStartMinute,
   isOnlineConsultType,
+  isAvailabilityWindowOpen,
+  listAvailabilityWindows,
+  slotDurationMinutes,
 } = require('../utils/slotDateTime');
 const { videoJoinFields } = require('../utils/videoJoinWindow');
 const { findFeedbackByBookingIds, feedbackFieldsForBooking } = require('./feedbackRepositories');
@@ -340,41 +340,32 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
     });
   }
 
-  const slotMap = new Map();
-  (availability.slots || []).forEach((s) => {
-    slotMap.set(`${s.dayOfWeek}_${s.startHour}`, s);
-  });
-
-  const minuteOffsets = startMinuteOffsets(consultationType);
+  const windows = listAvailabilityWindows(availability.slots, consultationType);
   const bookable = [];
-  for (let day = 0; day <= 6; day += 1) {
-    for (let hour = SLOT_START_HOUR; hour <= SLOT_END_HOUR; hour += 1) {
-      const key = `${day}_${hour}`;
-      const slot = slotMap.get(key) || { dayOfWeek: day, startHour: hour, available: false };
-      if (!slot.available) continue;
-      if (!isOnlineConsultType(consultationType) && bookedKeys.has(key)) continue;
+  for (const window of windows) {
+    const { dayOfWeek: day, startHour: hour, startMinute: minute } = window;
+    const key = `${day}_${hour}`;
+    if (!isOnlineConsultType(consultationType) && bookedKeys.has(key)) continue;
 
-      for (const minute of minuteOffsets) {
-        const slotStart = slotDateTime(weekStart, day, hour, minute);
-        const slotEnd = slotEndFromStart(slotStart, consultationType);
-        if (slotStart <= now) continue;
-        const startMs = slotStart.getTime();
-        const endMs = slotEnd.getTime();
-        const overlaps = reservedRanges.some(
-          (range) => startMs < range.end && endMs > range.start,
-        );
-        if (overlaps) continue;
+    const slotStart = slotDateTime(weekStart, day, hour, minute);
+    const slotEnd = slotEndFromStart(slotStart, consultationType);
+    if (slotStart <= now) continue;
+    const startMs = slotStart.getTime();
+    const endMs = slotEnd.getTime();
+    const overlaps = reservedRanges.some(
+      (range) => startMs < range.end && endMs > range.start,
+    );
+    if (overlaps) continue;
 
-        bookable.push({
-          dayOfWeek: day,
-          startHour: hour,
-          startMinute: minute,
-          slotStart: slotStart.toISOString(),
-          slotEnd: slotEnd.toISOString(),
-          label: formatSlotLabel(slotStart, slotEnd),
-        });
-      }
-    }
+    bookable.push({
+      dayOfWeek: day,
+      startHour: hour,
+      startMinute: minute,
+      durationMinutes: slotDurationMinutes(consultationType),
+      slotStart: slotStart.toISOString(),
+      slotEnd: slotEnd.toISOString(),
+      label: formatSlotLabel(slotStart, slotEnd),
+    });
   }
 
   bookable.sort(
@@ -519,10 +510,15 @@ async function validateBookingPayload(payload, consultationType) {
   const slotStart = slotDateTime(weekStart, d, h, m);
   const slotEnd = slotEndFromStart(slotStart, consultationType);
 
-  const slotDef = (availability.slots || []).find(
-    (s) => s.dayOfWeek === d && s.startHour === h,
-  );
-  if (!slotDef?.available) {
+  if (
+    !isAvailabilityWindowOpen(
+      availability.slots,
+      d,
+      h,
+      m,
+      consultationType,
+    )
+  ) {
     const err = new Error('Selected time slot is not available');
     err.statusCode = 409;
     throw err;
@@ -972,10 +968,15 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
   const slotStart = slotDateTime(weekStart, d, h, m);
   const slotEnd = slotEndFromStart(slotStart, consultationType);
 
-  const slotDef = (availability.slots || []).find(
-    (s) => s.dayOfWeek === d && s.startHour === h,
-  );
-  if (!slotDef?.available) {
+  if (
+    !isAvailabilityWindowOpen(
+      availability.slots,
+      d,
+      h,
+      m,
+      consultationType,
+    )
+  ) {
     const err = new Error('Selected time slot is not available');
     err.statusCode = 409;
     throw err;

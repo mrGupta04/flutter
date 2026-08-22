@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_lists.dart';
+import '../../../../core/constants/doctor_availability_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -1495,16 +1496,16 @@ class Step6WeeklyAvailability extends ConsumerWidget {
     final showHome = offersBookHome;
     final showAnyPicker = showOnline || showClinic || showHome;
     final blockedForOnline = {
-      ...selectedClinicAvailabilitySlots,
-      ...selectedHomeAvailabilitySlots,
+      ...DoctorAvailabilityConstants.hourKeys(selectedClinicAvailabilitySlots),
+      ...DoctorAvailabilityConstants.hourKeys(selectedHomeAvailabilitySlots),
     };
     final blockedForClinic = {
-      ...selectedOnlineAvailabilitySlots,
-      ...selectedHomeAvailabilitySlots,
+      ...DoctorAvailabilityConstants.hourKeys(selectedOnlineAvailabilitySlots),
+      ...DoctorAvailabilityConstants.hourKeys(selectedHomeAvailabilitySlots),
     };
     final blockedForHome = {
-      ...selectedOnlineAvailabilitySlots,
-      ...selectedClinicAvailabilitySlots,
+      ...DoctorAvailabilityConstants.hourKeys(selectedOnlineAvailabilitySlots),
+      ...DoctorAvailabilityConstants.hourKeys(selectedClinicAvailabilitySlots),
     };
 
     return registrationStepScroll(
@@ -1514,7 +1515,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
           const SectionHeader(
             title: 'Weekly availability',
             subtitle:
-                'Set separate schedules for online consult, clinic visits, and home visits (Sunday–Saturday, 12 AM–12 AM). The same hour cannot be used for more than one type.',
+                'Set separate schedules for online consult, clinic visits, and home visits (Sunday–Saturday, 12 AM–12 AM). Online consults are 20 minutes. The same hour cannot be used for more than one type.',
           ),
           if (!showAnyPicker)
             Container(
@@ -1538,7 +1539,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
               icon: Icons.videocam_rounded,
               title: 'Online consult slots',
               subtitle:
-                  'When patients can book video / chat consultations with you. Each hour is split into 20-minute slots.',
+                  'When patients can book video / chat consultations with you. Each slot is 20 minutes.',
               color: AppColors.primary,
             ),
             const SizedBox(height: 12),
@@ -1546,11 +1547,17 @@ class Step6WeeklyAvailability extends ConsumerWidget {
               weekLabel: weekLabel,
               selectedSlots: selectedOnlineAvailabilitySlots,
               blockedSlots: blockedForOnline,
+              slotMinutes: DoctorAvailabilityConstants.onlineSlotMinutes,
               helperText:
-                  'Tap hours when you are available. Patients book 20-minute slots within those hours (12:00 AM – 12:00 AM).',
-              onToggle: (day, hour, selected) => ref
+                  'Tap 20-minute slots when you are available for video consults (12:00 AM – 12:00 AM).',
+              onToggle: (day, hour, selected, {startMinute = 0}) => ref
                   .read(registrationFormProvider.notifier)
-                  .toggleOnlineAvailabilitySlot(day, hour, selected),
+                  .toggleOnlineAvailabilitySlot(
+                    day,
+                    hour,
+                    selected,
+                    startMinute: startMinute,
+                  ),
             ),
           ],
           if (showOnline && (showClinic || showHome)) const SizedBox(height: 28),
@@ -1568,7 +1575,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
               selectedSlots: selectedClinicAvailabilitySlots,
               blockedSlots: blockedForClinic,
               selectedColor: AppColors.accent,
-              onToggle: (day, hour, selected) => ref
+              onToggle: (day, hour, selected, {startMinute = 0}) => ref
                   .read(registrationFormProvider.notifier)
                   .toggleClinicAvailabilitySlot(day, hour, selected),
             ),
@@ -1588,7 +1595,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
               selectedSlots: selectedHomeAvailabilitySlots,
               blockedSlots: blockedForHome,
               selectedColor: AppColors.secondary,
-              onToggle: (day, hour, selected) => ref
+              onToggle: (day, hour, selected, {startMinute = 0}) => ref
                   .read(registrationFormProvider.notifier)
                   .toggleHomeAvailabilitySlot(day, hour, selected),
             ),

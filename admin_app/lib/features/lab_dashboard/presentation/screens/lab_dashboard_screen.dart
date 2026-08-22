@@ -101,9 +101,9 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
                         crossAxisCount: 2,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 1.35,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 1.9,
                         children: [
                           _StatCard(
                             icon: Icons.event_available_rounded,
@@ -137,9 +137,9 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
                         crossAxisCount: 2,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 1.35,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 1.9,
                         children: [
                           _StatCard(
                             icon: Icons.biotech_outlined,
@@ -428,24 +428,27 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 22),
+          Icon(icon, color: color, size: 18),
+          const Spacer(),
           Text(
             value,
-            style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w800),
+            style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),

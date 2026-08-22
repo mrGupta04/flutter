@@ -73,6 +73,15 @@ function normalizeStartMinute({ startMinute, slotStart, consultationType } = {})
   return 0;
 }
 
+function consultEndFromStart(slotStart, slotEnd, consultationType) {
+  const durationEnd = slotEndFromStart(new Date(slotStart), consultationType);
+  if (!slotEnd) return durationEnd;
+  const storedEnd = new Date(slotEnd);
+  if (Number.isNaN(storedEnd.getTime())) return durationEnd;
+  if (!isOnlineConsultType(consultationType)) return storedEnd;
+  return durationEnd.getTime() <= storedEnd.getTime() ? durationEnd : storedEnd;
+}
+
 function formatSlotLabel(slotStart, slotEnd) {
   const tz = { timeZone: 'Asia/Kolkata' };
   const dayOpts = { weekday: 'short', month: 'short', day: 'numeric', ...tz };
@@ -81,6 +90,56 @@ function formatSlotLabel(slotStart, slotEnd) {
   const startPart = slotStart.toLocaleTimeString('en-IN', timeOpts);
   const endPart = slotEnd.toLocaleTimeString('en-IN', timeOpts);
   return `${dayPart} • ${startPart} – ${endPart}`;
+}
+
+function usesMinuteWindows(slots, consultationType) {
+  if (!isOnlineConsultType(consultationType)) return false;
+  return (slots || []).some((slot) =>
+    [20, 40].includes(Number(slot.startMinute)),
+  );
+}
+
+function isAvailabilityWindowOpen(slots, day, hour, minute, consultationType) {
+  const list = slots || [];
+  if (usesMinuteWindows(list, consultationType)) {
+    const match = list.find(
+      (slot) =>
+        Number(slot.dayOfWeek) === day &&
+        Number(slot.startHour) === hour &&
+        Number(slot.startMinute || 0) === minute,
+    );
+    return Boolean(match?.available);
+  }
+  const hourSlot = list.find(
+    (slot) => Number(slot.dayOfWeek) === day && Number(slot.startHour) === hour,
+  );
+  return Boolean(hourSlot?.available);
+}
+
+function listAvailabilityWindows(slots, consultationType) {
+  const list = slots || [];
+  if (usesMinuteWindows(list, consultationType)) {
+    return list
+      .filter((slot) => slot.available)
+      .map((slot) => ({
+        dayOfWeek: Number(slot.dayOfWeek),
+        startHour: Number(slot.startHour),
+        startMinute: Number(slot.startMinute || 0),
+      }));
+  }
+  const minutes = startMinuteOffsets(consultationType);
+  const windows = [];
+  for (const slot of list) {
+    if (!slot.available) continue;
+    for (const minute of minutes) {
+      windows.push({
+        dayOfWeek: Number(slot.dayOfWeek),
+        startHour: Number(slot.startHour),
+        startMinute: minute,
+      });
+    }
+  }
+  return windows;
 }
 
 module.exports = {
@@ -95,5 +154,9 @@ module.exports = {
   slotEndFromStart,
   slotEndDateTime,
   normalizeStartMinute,
+  consultEndFromStart,
   formatSlotLabel,
+  usesMinuteWindows,
+  isAvailabilityWindowOpen,
+  listAvailabilityWindows,
 };

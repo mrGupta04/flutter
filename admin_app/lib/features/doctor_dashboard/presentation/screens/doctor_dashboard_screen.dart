@@ -498,11 +498,12 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
           }
 
           Set<String> blockedForActive() {
-            return {
-              ...onlineSelected,
-              ...clinicSelected,
-              ...homeSelected,
-            }..removeAll(activeSelected());
+            final others = <String>{
+              ...DoctorAvailabilityConstants.hourKeys(onlineSelected),
+              ...DoctorAvailabilityConstants.hourKeys(clinicSelected),
+              ...DoctorAvailabilityConstants.hourKeys(homeSelected),
+            }..removeAll(DoctorAvailabilityConstants.hourKeys(activeSelected()));
+            return others;
           }
 
           Color activeColor() {
@@ -593,35 +594,55 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                     selectedSlots: activeSelected(),
                     blockedSlots: blockedForActive(),
                     selectedColor: activeColor(),
+                    slotMinutes: activeType == 'online_consult'
+                        ? DoctorAvailabilityConstants.onlineSlotMinutes
+                        : DoctorAvailabilityConstants.hourlySlotMinutes,
                     helperText: activeType == 'online_consult'
-                        ? 'Tap hours when you are available. Patients book 20-minute online consults within those hours.'
+                        ? 'Tap 20-minute slots when you are available for video consults.'
                         : null,
-                    onToggle: (day, hour, isSelected) {
+                    onToggle: (day, hour, isSelected, {startMinute = 0}) {
                       setModalState(() {
-                        final key =
+                        final hourKey =
                             DoctorAvailabilityConstants.slotKey(day, hour);
+                        final onlineKey = DoctorAvailabilityConstants.slotKey(
+                          day,
+                          hour,
+                          startMinute: startMinute,
+                          consultationType: 'online_consult',
+                        );
                         if (isSelected) {
-                          onlineSelected.remove(key);
-                          clinicSelected.remove(key);
-                          homeSelected.remove(key);
                           switch (activeType) {
                             case 'visit_site':
-                              clinicSelected.add(key);
+                              onlineSelected.removeWhere(
+                                (key) =>
+                                    DoctorAvailabilityConstants.hourKey(key) ==
+                                    hourKey,
+                              );
+                              homeSelected.remove(hourKey);
+                              clinicSelected.add(hourKey);
                             case 'book_home':
-                              homeSelected.add(key);
+                              onlineSelected.removeWhere(
+                                (key) =>
+                                    DoctorAvailabilityConstants.hourKey(key) ==
+                                    hourKey,
+                              );
+                              clinicSelected.remove(hourKey);
+                              homeSelected.add(hourKey);
                             case 'online_consult':
                             default:
-                              onlineSelected.add(key);
+                              clinicSelected.remove(hourKey);
+                              homeSelected.remove(hourKey);
+                              onlineSelected.add(onlineKey);
                           }
                         } else {
                           switch (activeType) {
                             case 'visit_site':
-                              clinicSelected.remove(key);
+                              clinicSelected.remove(hourKey);
                             case 'book_home':
-                              homeSelected.remove(key);
+                              homeSelected.remove(hourKey);
                             case 'online_consult':
                             default:
-                              onlineSelected.remove(key);
+                              onlineSelected.remove(onlineKey);
                           }
                         }
                       });
@@ -993,114 +1014,57 @@ class _DashboardContent extends StatelessWidget {
               borderRadius: AppDecorations.borderRadiusXl,
               boxShadow: AppDecorations.softShadow(opacity: 0.1),
             ),
-            child: Stack(
+            clipBehavior: Clip.antiAlias,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: AppDecorations.borderRadiusXl,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.14),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      padding: const EdgeInsets.all(2.5),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: AppColors.white.withValues(alpha: 0.65),
-                          width: 2,
+                _DashboardProfilePhoto(url: doctor!.profilePicture),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        doctor!.fullName,
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                            ),
+                          ],
                         ),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(11),
-                        child: doctor!.profilePicture != null &&
-                                doctor!.profilePicture!.startsWith('http')
-                            ? Image.network(
-                                doctor!.profilePicture!,
-                                width: 67,
-                                height: 67,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const ColoredBox(
-                                  color: AppColors.white,
-                                  child: Icon(
-                                    Icons.person_rounded,
-                                    color: AppColors.primary,
-                                    size: 32,
-                                  ),
-                                ),
-                              )
-                            : const ColoredBox(
-                                color: AppColors.white,
-                                child: Icon(
-                                  Icons.person_rounded,
-                                  color: AppColors.primary,
-                                  size: 32,
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            doctor!.fullName,
-                            style: AppTextStyles.titleLarge.copyWith(
-                              color: AppColors.white,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withValues(alpha: 0.25),
-                                  blurRadius: 6,
-                                ),
-                              ],
+                      const SizedBox(height: 4),
+                      Text(
+                        doctor!.specializations?.join(', ') ??
+                            'General Medicine',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.white.withValues(alpha: 0.95),
+                          height: 1.3,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            doctor!.specializations?.join(', ') ??
-                                'General Medicine',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.white.withValues(alpha: 0.95),
-                              height: 1.3,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          VerificationBadge(
-                            status: statusLabel,
-                            backgroundColor: AppColors.white,
-                            textColor: AppColors.white,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      VerificationBadge(
+                        status: statusLabel,
+                        backgroundColor: AppColors.white,
+                        textColor: AppColors.white,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -1271,6 +1235,44 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _DashboardProfilePhoto extends StatelessWidget {
+  const _DashboardProfilePhoto({this.url});
+
+  final String? url;
+
+  static const double _size = 72;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = MediaUrlUtils.resolve(url);
+    const placeholder = ColoredBox(
+      color: AppColors.white,
+      child: Icon(
+        Icons.person_rounded,
+        color: AppColors.primary,
+        size: 32,
+      ),
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: _size,
+        height: _size,
+        child: resolved.isEmpty
+            ? placeholder
+            : Image.network(
+                resolved,
+                width: _size,
+                height: _size,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => placeholder,
+              ),
       ),
     );
   }

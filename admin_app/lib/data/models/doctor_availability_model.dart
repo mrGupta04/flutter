@@ -1,11 +1,15 @@
+import '../../core/constants/doctor_availability_constants.dart';
+
 class DoctorAvailabilitySlot {
   final int dayOfWeek;
   final int startHour;
+  final int startMinute;
   final bool available;
 
   const DoctorAvailabilitySlot({
     required this.dayOfWeek,
     required this.startHour,
+    this.startMinute = 0,
     required this.available,
   });
 
@@ -13,6 +17,7 @@ class DoctorAvailabilitySlot {
     return DoctorAvailabilitySlot(
       dayOfWeek: (json['dayOfWeek'] as num?)?.toInt() ?? 0,
       startHour: (json['startHour'] as num?)?.toInt() ?? 8,
+      startMinute: (json['startMinute'] as num?)?.toInt() ?? 0,
       available: json['available'] as bool? ?? false,
     );
   }
@@ -20,6 +25,7 @@ class DoctorAvailabilitySlot {
   Map<String, dynamic> toJson() => {
         'dayOfWeek': dayOfWeek,
         'startHour': startHour,
+        'startMinute': startMinute,
         'available': available,
       };
 }
@@ -49,9 +55,32 @@ class DoctorAvailabilityModel {
 
   Set<String> get selectedSlotKeys {
     final keys = <String>{};
+    final online = consultationType == 'online_consult';
+    final usesMinutes =
+        slots.any((slot) => slot.startMinute == 20 || slot.startMinute == 40);
+
     for (final slot in slots) {
-      if (slot.available) {
-        keys.add('${slot.dayOfWeek}_${slot.startHour}');
+      if (!slot.available) continue;
+      if (online && !usesMinutes) {
+        for (final minute in DoctorAvailabilityConstants.onlineStartMinutes) {
+          keys.add(
+            DoctorAvailabilityConstants.slotKey(
+              slot.dayOfWeek,
+              slot.startHour,
+              startMinute: minute,
+              consultationType: 'online_consult',
+            ),
+          );
+        }
+      } else {
+        keys.add(
+          DoctorAvailabilityConstants.slotKey(
+            slot.dayOfWeek,
+            slot.startHour,
+            startMinute: slot.startMinute,
+            consultationType: consultationType,
+          ),
+        );
       }
     }
     return keys;

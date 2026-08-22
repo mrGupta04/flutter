@@ -496,8 +496,8 @@ class HealthPackageVisuals {
     'full-body': HealthPackageVisual(
       organAsset: OrganAssets.dna,
       gradientStart: Color(0xFFFFFFFF),
-      gradientEnd: Color(0xFFE8F6F3),
-      accent: Color(0xFF208376),
+      gradientEnd: Color(0xFFE6F7EE),
+      accent: Color(0xFF19A552),
       pattern: HealthCardPattern.hexagon,
       subtitle: '60+ Parameters',
       features: ['Home Collection', 'NABL Certified'],

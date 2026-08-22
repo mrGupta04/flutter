@@ -139,7 +139,7 @@ class _BloodBankDashboardScreenState extends ConsumerState<BloodBankDashboardScr
                                       children: [
                                         IconButton(
                                           icon: const Icon(Icons.check_circle_outline,
-                                              color: Colors.green),
+                                              color: AppColors.success),
                                           onPressed: () => ref
                                               .read(bloodBankDashboardProvider.notifier)
                                               .updateOrderStatus(

@@ -28,12 +28,20 @@ class AppTheme {
         brightness: brightness,
         primary: AppColors.primary,
         onPrimary: AppColors.white,
+        primaryContainer: AppColors.primaryLight,
+        onPrimaryContainer: AppColors.primaryDark,
         secondary: AppColors.offer,
         onSecondary: AppColors.white,
+        secondaryContainer: AppColors.offerLight,
+        onSecondaryContainer: AppColors.offerDark,
+        tertiary: AppColors.secondary,
+        onTertiary: AppColors.white,
         error: AppColors.error,
         onError: AppColors.white,
         surface: surface,
         onSurface: textPrimary,
+        outline: AppColors.border,
+        surfaceTint: AppColors.primary,
       ),
       scaffoldBackgroundColor: background,
       fontFamily: GoogleFonts.inter().fontFamily,
@@ -75,6 +83,101 @@ class AppTheme {
             fontWeight: FontWeight.w600,
           ),
         ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          elevation: 0,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: AppDecorations.borderRadiusMd,
+          ),
+          textStyle: AppTextStyles.button.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.white;
+          return AppColors.grey300;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          return AppColors.grey200;
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          return Colors.transparent;
+        }),
+        checkColor: const WidgetStatePropertyAll(AppColors.white),
+        side: const BorderSide(color: AppColors.grey400, width: 1.5),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          return AppColors.grey400;
+        }),
+      ),
+      sliderTheme: const SliderThemeData(
+        activeTrackColor: AppColors.primary,
+        thumbColor: AppColors.primary,
+        overlayColor: Color(0x3319A552),
+        inactiveTrackColor: AppColors.primarySoft,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color: selected ? AppColors.primary : AppColors.textSecondary,
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return AppTextStyles.labelSmall.copyWith(
+            color: selected ? AppColors.primary : AppColors.textSecondary,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          );
+        }),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textSecondary,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return AppColors.white;
+            return AppColors.primary;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return AppColors.primary;
+            return AppColors.white;
+          }),
+        ),
+      ),
+      datePickerTheme: const DatePickerThemeData(
+        headerBackgroundColor: AppColors.primary,
+        headerForegroundColor: AppColors.white,
+        todayForegroundColor: WidgetStatePropertyAll(AppColors.primary),
+        todayBorder: BorderSide(color: AppColors.primary),
+      ),
+      timePickerTheme: const TimePickerThemeData(
+        dialHandColor: AppColors.primary,
+        hourMinuteTextColor: AppColors.primary,
+        dayPeriodColor: AppColors.primaryLight,
+      ),
+      badgeTheme: const BadgeThemeData(
+        backgroundColor: AppColors.primary,
+        textColor: AppColors.white,
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(

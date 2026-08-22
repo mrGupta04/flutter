@@ -79,7 +79,7 @@ class _BloodOrderConfirmationScreenState
                     children: [
                       const Icon(
                         Icons.check_circle_rounded,
-                        color: Color(0xFF2E7D32),
+                        color: AppColors.success,
                         size: 72,
                       ),
                       const SizedBox(height: 16),

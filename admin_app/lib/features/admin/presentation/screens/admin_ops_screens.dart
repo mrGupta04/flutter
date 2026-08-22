@@ -668,6 +668,10 @@ class _AdminSupportTicketsScreenState
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: status,
+                isExpanded: true,
+                itemHeight: kMinInteractiveDimension,
+                menuMaxHeight: 280,
+                borderRadius: BorderRadius.circular(12),
                 decoration: const InputDecoration(labelText: 'Status'),
                 items: const [
                   DropdownMenuItem(value: 'open', child: Text('Open')),
@@ -867,6 +871,10 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: type,
+                isExpanded: true,
+                itemHeight: kMinInteractiveDimension,
+                menuMaxHeight: 280,
+                borderRadius: BorderRadius.circular(12),
                 decoration: const InputDecoration(labelText: 'Type'),
                 items: const [
                   DropdownMenuItem(
@@ -1251,6 +1259,10 @@ class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _category,
+                isExpanded: true,
+                itemHeight: kMinInteractiveDimension,
+                menuMaxHeight: 280,
+                borderRadius: BorderRadius.circular(12),
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: const [
                   DropdownMenuItem(

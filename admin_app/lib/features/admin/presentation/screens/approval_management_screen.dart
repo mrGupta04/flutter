@@ -444,6 +444,10 @@ class _ApprovalManagementScreenState
                   children: [
                     DropdownButtonFormField<String>(
                       initialValue: strategy,
+                      isExpanded: true,
+                      itemHeight: kMinInteractiveDimension,
+                      menuMaxHeight: 280,
+                      borderRadius: BorderRadius.circular(12),
                       decoration: const InputDecoration(labelText: 'Strategy'),
                       items: const [
                         DropdownMenuItem(
@@ -478,6 +482,10 @@ class _ApprovalManagementScreenState
                         initialValue: approverId?.isEmpty == true
                             ? null
                             : approverId,
+                        isExpanded: true,
+                        itemHeight: kMinInteractiveDimension,
+                        menuMaxHeight: 280,
+                        borderRadius: BorderRadius.circular(12),
                         decoration: const InputDecoration(
                           labelText: 'Approver',
                         ),
@@ -1184,6 +1192,10 @@ class _ApprovalManagementScreenState
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: strategy,
+                    isExpanded: true,
+                    itemHeight: kMinInteractiveDimension,
+                    menuMaxHeight: 280,
+                    borderRadius: BorderRadius.circular(12),
                     decoration: const InputDecoration(
                       labelText: 'Assignment strategy',
                     ),
@@ -1252,6 +1264,10 @@ class _ApprovalManagementScreenState
                             DropdownButtonFormField<String>(
                               initialValue:
                                   level['role']?.toString() ?? 'approver',
+                              isExpanded: true,
+                              itemHeight: kMinInteractiveDimension,
+                              menuMaxHeight: 280,
+                              borderRadius: BorderRadius.circular(12),
                               decoration: const InputDecoration(
                                 labelText: 'Role',
                               ),

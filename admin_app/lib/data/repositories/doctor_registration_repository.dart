@@ -512,7 +512,10 @@ class DoctorRegistrationRepository {
           'doctorId': doctorId,
           'consultationType': consultationType,
           'weekStartDate': weekStartDate?.toIso8601String(),
-          'slots': DoctorAvailabilityConstants.buildSlotPayload(selectedSlotKeys),
+          'slots': DoctorAvailabilityConstants.buildSlotPayload(
+            selectedSlotKeys,
+            consultationType: consultationType,
+          ),
         },
       );
 

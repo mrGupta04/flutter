@@ -274,26 +274,34 @@ class _ProfileHeader extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.primaryLight,
-              backgroundImage:
-                  hasNetworkPhoto ? NetworkImage(nurse.profilePicture!) : null,
-              child: hasNetworkPhoto
-                  ? null
-                  : const Icon(Icons.person, size: 48, color: AppColors.primary),
-            ),
-            const SizedBox(height: 12),
-            Text(nurse.displayName, style: AppTextStyles.headlineSmall),
-            const SizedBox(height: 8),
-            VerificationBadge(
-              status: statusLabel,
-              backgroundColor: statusColor,
-              textColor: statusColor,
-            ),
-          ],
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 48,
+                backgroundColor: AppColors.primaryLight,
+                backgroundImage:
+                    hasNetworkPhoto ? NetworkImage(nurse.profilePicture!) : null,
+                child: hasNetworkPhoto
+                    ? null
+                    : const Icon(Icons.person, size: 48, color: AppColors.primary),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                nurse.displayName,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              VerificationBadge(
+                status: statusLabel,
+                backgroundColor: statusColor,
+                textColor: statusColor,
+              ),
+            ],
+          ),
         ),
       ),
     );

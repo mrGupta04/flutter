@@ -789,7 +789,7 @@ class BloodBankListingCard extends StatelessWidget {
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: bloodBank.isOpenNow
-                                    ? const Color(0xFFE8F5E9)
+                                    ? AppColors.primaryLight
                                     : const Color(0xFFFFEBEE),
                                 borderRadius: BorderRadius.circular(6),
                               ),
@@ -799,7 +799,7 @@ class BloodBankListingCard extends StatelessWidget {
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: bloodBank.isOpenNow
-                                      ? const Color(0xFF2E7D32)
+                                      ? AppColors.success
                                       : const Color(0xFFC62828),
                                 ),
                               ),

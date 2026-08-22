@@ -39,48 +39,61 @@ class UserBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -6),
+          ),
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.05),
             blurRadius: 12,
-            offset: const Offset(0, -4),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          child: Row(
-            children: [
-              _NavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                selected: currentTab == UserNavTab.home,
-                onTap: () => _onTap(context, UserNavTab.home),
-              ),
-              _NavItem(
-                icon: Icons.biotech_outlined,
-                label: 'Lab Tests',
-                selected: currentTab == UserNavTab.labs,
-                onTap: () => _onTap(context, UserNavTab.labs),
-              ),
-              _NavItem(
-                icon: Icons.medical_services_outlined,
-                label: 'Care',
-                selected: currentTab == UserNavTab.care,
-                onTap: () => _onTap(context, UserNavTab.care),
-              ),
-              _NavItem(
-                icon: Icons.person_outline_rounded,
-                label: 'Profile',
-                selected: currentTab == UserNavTab.profile,
-                onTap: () => _onTap(context, UserNavTab.profile),
-              ),
-            ],
+      child: Material(
+        color: AppColors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+            child: Row(
+              children: [
+                _NavItem(
+                  icon: Icons.home_rounded,
+                  selectedIcon: Icons.home_rounded,
+                  label: 'Home',
+                  selected: currentTab == UserNavTab.home,
+                  onTap: () => _onTap(context, UserNavTab.home),
+                ),
+                _NavItem(
+                  icon: Icons.biotech_outlined,
+                  selectedIcon: Icons.biotech_rounded,
+                  label: 'Lab Tests',
+                  selected: currentTab == UserNavTab.labs,
+                  onTap: () => _onTap(context, UserNavTab.labs),
+                ),
+                _NavItem(
+                  icon: Icons.medical_services_outlined,
+                  selectedIcon: Icons.medical_services_rounded,
+                  label: 'Care',
+                  selected: currentTab == UserNavTab.care,
+                  onTap: () => _onTap(context, UserNavTab.care),
+                ),
+                _NavItem(
+                  icon: Icons.person_outline_rounded,
+                  selectedIcon: Icons.person_rounded,
+                  label: 'Profile',
+                  selected: currentTab == UserNavTab.profile,
+                  onTap: () => _onTap(context, UserNavTab.profile),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -91,12 +104,14 @@ class UserBottomNavBar extends StatelessWidget {
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
+    required this.selectedIcon,
     required this.label,
     required this.selected,
     required this.onTap,
   });
 
   final IconData icon;
+  final IconData selectedIcon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -109,13 +124,31 @@ class _NavItem extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          borderRadius: BorderRadius.circular(16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 24, color: color),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.primary.withValues(alpha: 0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(
+                    selected ? selectedIcon : icon,
+                    size: 24,
+                    color: color,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   label,

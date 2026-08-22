@@ -814,16 +814,27 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     state = state.copyWith(documentPaths: updated);
   }
 
-  void toggleOnlineAvailabilitySlot(int dayOfWeek, int startHour, bool selected) {
+  void toggleOnlineAvailabilitySlot(
+    int dayOfWeek,
+    int startHour,
+    bool selected, {
+    int startMinute = 0,
+  }) {
     _toggleAvailabilitySlot(
       slotType: _AvailabilitySlotType.online,
       dayOfWeek: dayOfWeek,
       startHour: startHour,
+      startMinute: startMinute,
       selected: selected,
     );
   }
 
-  void toggleClinicAvailabilitySlot(int dayOfWeek, int startHour, bool selected) {
+  void toggleClinicAvailabilitySlot(
+    int dayOfWeek,
+    int startHour,
+    bool selected, {
+    int startMinute = 0,
+  }) {
     _toggleAvailabilitySlot(
       slotType: _AvailabilitySlotType.clinic,
       dayOfWeek: dayOfWeek,
@@ -832,7 +843,12 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     );
   }
 
-  void toggleHomeAvailabilitySlot(int dayOfWeek, int startHour, bool selected) {
+  void toggleHomeAvailabilitySlot(
+    int dayOfWeek,
+    int startHour,
+    bool selected, {
+    int startMinute = 0,
+  }) {
     _toggleAvailabilitySlot(
       slotType: _AvailabilitySlotType.home,
       dayOfWeek: dayOfWeek,
@@ -846,35 +862,48 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     required int dayOfWeek,
     required int startHour,
     required bool selected,
+    int startMinute = 0,
   }) {
-    final key = DoctorAvailabilityConstants.slotKey(dayOfWeek, startHour);
+    final hourKey = DoctorAvailabilityConstants.slotKey(dayOfWeek, startHour);
+    final onlineKey = DoctorAvailabilityConstants.slotKey(
+      dayOfWeek,
+      startHour,
+      startMinute: startMinute,
+      consultationType: 'online_consult',
+    );
     var online = Set<String>.from(state.selectedOnlineAvailabilitySlots);
     var clinic = Set<String>.from(state.selectedClinicAvailabilitySlots);
     var home = Set<String>.from(state.selectedHomeAvailabilitySlots);
 
+    void removeOnlineHour() {
+      online.removeWhere(
+        (key) => DoctorAvailabilityConstants.hourKey(key) == hourKey,
+      );
+    }
+
     if (selected) {
       switch (slotType) {
         case _AvailabilitySlotType.online:
-          online.add(key);
-          clinic.remove(key);
-          home.remove(key);
+          online.add(onlineKey);
+          clinic.remove(hourKey);
+          home.remove(hourKey);
         case _AvailabilitySlotType.clinic:
-          clinic.add(key);
-          online.remove(key);
-          home.remove(key);
+          clinic.add(hourKey);
+          removeOnlineHour();
+          home.remove(hourKey);
         case _AvailabilitySlotType.home:
-          home.add(key);
-          online.remove(key);
-          clinic.remove(key);
+          home.add(hourKey);
+          removeOnlineHour();
+          clinic.remove(hourKey);
       }
     } else {
       switch (slotType) {
         case _AvailabilitySlotType.online:
-          online.remove(key);
+          online.remove(onlineKey);
         case _AvailabilitySlotType.clinic:
-          clinic.remove(key);
+          clinic.remove(hourKey);
         case _AvailabilitySlotType.home:
-          home.remove(key);
+          home.remove(hourKey);
       }
     }
 

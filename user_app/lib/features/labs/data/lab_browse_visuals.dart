@@ -39,9 +39,9 @@ class LabBrowseVisual {
           deep: Color(0xFF2E7D32),
         ),
       LabBrowseGroupType.package => const LabBrowseVisual(
-          accent: Color(0xFF208376),
-          soft: Color(0xFFE8F6F3),
-          deep: Color(0xFF165C54),
+          accent: Color(0xFF19A552),
+          soft: Color(0xFFE6F7EE),
+          deep: Color(0xFF137C3D),
         ),
     };
   }

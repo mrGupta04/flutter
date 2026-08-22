@@ -34,7 +34,9 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
   bool _ending = false;
   bool _prescriptionSent = false;
   Timer? _elapsedTimer;
-  Duration _elapsed = Duration.zero;
+  Duration _remaining = const Duration(minutes: 20);
+  bool _lowTimeWarned = false;
+  bool _timeUpHandled = false;
   WebViewController? _webController;
 
   @override
@@ -76,6 +78,8 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
           ..loadRequest(Uri.parse(session.joinUrl!));
       }
 
+      _session = session;
+      _remaining = session.remainingAt();
       _startElapsedTimer();
       await _loadPrescriptionStatus();
       if (!mounted) return;
@@ -94,10 +98,121 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
 
   void _startElapsedTimer() {
     _elapsedTimer?.cancel();
+    _tickRemaining();
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() => _elapsed += const Duration(seconds: 1));
+      _tickRemaining();
     });
+  }
+
+  void _tickRemaining() {
+    if (!mounted) return;
+    final session = _session;
+    final remaining = session?.remainingAt() ?? _remaining;
+    setState(() => _remaining = remaining);
+
+    if (!_lowTimeWarned &&
+        remaining > Duration.zero &&
+        remaining <= const Duration(minutes: 2)) {
+      _lowTimeWarned = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '2 minutes left. Write the prescription before this 20-minute consult ends.',
+          ),
+        ),
+      );
+    }
+
+    if (!_timeUpHandled && remaining <= Duration.zero) {
+      _timeUpHandled = true;
+      unawaited(_onConsultTimeUp());
+    }
+  }
+
+  Future<void> _onConsultTimeUp() async {
+    if (_ending) return;
+    if (!_prescriptionSent && mounted) {
+      final action = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('20-minute consult ended'),
+          content: const Text(
+            'The online consult slot is over. Write a prescription now so the patient receives it in the app and by email.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'prescription'),
+              child: const Text('Write prescription'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'end'),
+              child: const Text('End without prescription'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (action == 'prescription') {
+        await _openPrescription();
+      }
+    }
+    await _leaveCall();
+  }
+
+  Future<void> _endCall() async {
+    if (_ending) return;
+
+    if (!_prescriptionSent) {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('End consultation?'),
+          content: const Text(
+            'This online consult is 20 minutes. You can write a prescription before ending the call. The patient will receive a PDF in their profile and by email.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'prescription'),
+              child: const Text('Write prescription'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'end'),
+              child: const Text('End without prescription'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (action == 'prescription') {
+        await _openPrescription();
+        return;
+      }
+      if (action != 'end') return;
+    }
+
+    await _leaveCall();
+  }
+
+  Future<void> _leaveCall() async {
+    if (_ending) return;
+    setState(() => _ending = true);
+    try {
+      await _repository.markEnded(widget.bookingId);
+    } catch (_) {
+      // Still leave the screen if end tracking fails.
+    }
+    if (mounted) context.pop(true);
+  }
+
+  String _formatRemaining(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final hours = d.inHours;
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:$minutes:$seconds';
+    }
+    return '$minutes:$seconds';
   }
 
   Future<void> _loadPrescriptionStatus() async {
@@ -123,56 +238,6 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
     }
   }
 
-  Future<void> _endCall() async {
-    if (_ending) return;
-
-    if (!_prescriptionSent) {
-      final action = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('End consultation?'),
-          content: const Text(
-            'You can write a prescription before ending the call. The patient will receive a PDF in their profile and by email.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'prescription'),
-              child: const Text('Write prescription'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'end'),
-              child: const Text('End without prescription'),
-            ),
-          ],
-        ),
-      );
-      if (!mounted) return;
-      if (action == 'prescription') {
-        await _openPrescription();
-        return;
-      }
-      if (action != 'end') return;
-    }
-
-    setState(() => _ending = true);
-    try {
-      await _repository.markEnded(widget.bookingId);
-    } catch (_) {
-      // Still leave the screen if end tracking fails.
-    }
-    if (mounted) context.pop(true);
-  }
-
-  String _formatElapsed(Duration d) {
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final hours = d.inHours;
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:$minutes:$seconds';
-    }
-    return '$minutes:$seconds';
-  }
-
   @override
   Widget build(BuildContext context) {
     final peer = widget.peerName ?? _session?.peerName ?? 'Consultation';
@@ -192,9 +257,11 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
               padding: const EdgeInsets.only(right: 12),
               child: Center(
                 child: Text(
-                  _formatElapsed(_elapsed),
+                  _formatRemaining(_remaining),
                   style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.white,
+                    color: _remaining <= const Duration(minutes: 2)
+                        ? const Color(0xFFFBBF24)
+                        : AppColors.white,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),

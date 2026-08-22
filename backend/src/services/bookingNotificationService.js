@@ -29,7 +29,7 @@ function buildConfirmationEmailHtml({
 
   return `
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#1f2937;max-width:560px;">
-      <h2 style="margin:0 0 12px;color:#208376;">Online consultation confirmed</h2>
+      <h2 style="margin:0 0 12px;color:#19A552;">Online consultation confirmed</h2>
       <p style="margin:0 0 16px;">Hello ${recipientName},</p>
       <p style="margin:0 0 16px;">
         Your online video consultation with <strong>${peerName}</strong> is confirmed.
@@ -46,7 +46,7 @@ function buildConfirmationEmailHtml({
       </table>
       <p style="margin:0 0 12px;font-weight:600;">Your video meeting link</p>
       <p style="margin:0 0 16px;">
-        <a href="${meetingLink}" style="color:#208376;word-break:break-all;">${meetingLink}</a>
+        <a href="${meetingLink}" style="color:#19A552;word-break:break-all;">${meetingLink}</a>
       </p>
       <p style="margin:0 0 20px;font-size:14px;color:#4b5563;">${joinInstructions}</p>
       <p style="margin:0;font-size:13px;color:#9ca3af;">

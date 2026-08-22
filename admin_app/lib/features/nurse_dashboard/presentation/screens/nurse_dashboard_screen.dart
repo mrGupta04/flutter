@@ -307,7 +307,7 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                     const SizedBox(height: 12),
                     WeeklyAvailabilityPicker(
                       selectedSlots: selected,
-                      onToggle: (day, hour, isSelected) {
+                      onToggle: (day, hour, isSelected, {startMinute = 0}) {
                         setModalState(() {
                           final key = '${day}_$hour';
                           if (isSelected) {

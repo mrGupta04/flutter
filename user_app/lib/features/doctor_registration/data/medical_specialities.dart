@@ -213,7 +213,7 @@ const medicalSpecialities = <MedicalSpeciality>[
     description: 'Primary Care',
     searchTerm: 'General Medicine',
     order: 18,
-    accent: Color(0xFF208376),
+    accent: Color(0xFF19A552),
     icon: Icons.medical_services_rounded,
     imageAsset: OrganAssets.bloodPressure,
   ),

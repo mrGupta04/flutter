@@ -336,7 +336,7 @@ class OneMgCategoryGrid extends StatelessWidget {
   final void Function(String label, String searchTerm)? onCategoryTap;
 
   static final _items = [
-    (Icons.monitor_heart_outlined, 'Cardiology', const Color(0xFFE8F6F3)),
+    (Icons.monitor_heart_outlined, 'Cardiology', const Color(0xFFE6F7EE)),
     (Icons.psychology_outlined, 'Mental', const Color(0xFFFFF0EE)),
     (Icons.child_care_outlined, 'Pediatric', const Color(0xFFE6F5ED)),
     (Icons.visibility_outlined, 'Eye Care', const Color(0xFFE8F1FD)),

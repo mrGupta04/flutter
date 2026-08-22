@@ -24,6 +24,7 @@ class VideoSessionModel {
     this.agoraUid,
     this.agoraTokenExpiresAt,
     this.agoraTestingMode = false,
+    this.durationMinutes = 20,
   });
 
   final String bookingId;
@@ -50,6 +51,7 @@ class VideoSessionModel {
   final int? agoraUid;
   final DateTime? agoraTokenExpiresAt;
   final bool agoraTestingMode;
+  final int durationMinutes;
 
   bool get isJitsi => provider == 'jitsi' && joinUrl != null;
 
@@ -60,6 +62,23 @@ class VideoSessionModel {
       agoraUid != null;
 
   String get peerName => role == 'doctor' ? patientName : doctorName;
+
+  Duration remainingAt([DateTime? now]) {
+    final current = now ?? DateTime.now();
+    final duration = Duration(
+      minutes: durationMinutes > 0 ? durationMinutes : 20,
+    );
+    final DateTime end;
+    if (slotStart != null) {
+      end = slotStart!.add(duration);
+    } else if (slotEnd != null) {
+      end = slotEnd!;
+    } else {
+      return duration;
+    }
+    final left = end.difference(current);
+    return left.isNegative ? Duration.zero : left;
+  }
 
   factory VideoSessionModel.fromJson(Map<String, dynamic> json) {
     DateTime? parseDate(dynamic value) {
@@ -99,6 +118,7 @@ class VideoSessionModel {
       agoraUid: parseUid(json['agoraUid']),
       agoraTokenExpiresAt: parseDate(json['agoraTokenExpiresAt']),
       agoraTestingMode: json['agoraTestingMode'] as bool? ?? false,
+      durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 20,
     );
   }
 }

@@ -85,6 +85,16 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
     await ref.read(patientDashboardProvider.notifier).loadBookings();
   }
 
+  Future<void> _openEditProfile() async {
+    if (ref.read(patientAuthProvider).user == null) return;
+    final updated = await context.push<bool>(
+      AppConstants.routeUserEditProfile,
+    );
+    if (updated == true && mounted) {
+      await ref.read(patientDashboardProvider.notifier).refreshAll();
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -186,30 +196,87 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                         ),
                         const SizedBox(height: 16),
                         if (user != null) ...[
-                          PatientHeaderAvatar(user: user, size: 72, cornerRadius: 16),
-                          const SizedBox(height: 10),
-                          Text(
-                            user.fullName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: AppColors.white,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          if (user.email.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              user.email,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.white.withValues(alpha: 0.92),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _openEditProfile,
+                              borderRadius: BorderRadius.circular(20),
+                              splashColor:
+                                  AppColors.white.withValues(alpha: 0.18),
+                              highlightColor:
+                                  AppColors.white.withValues(alpha: 0.08),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        PatientHeaderAvatar(
+                                          user: user,
+                                          size: 72,
+                                          cornerRadius: 16,
+                                        ),
+                                        Positioned(
+                                          right: -4,
+                                          bottom: -4,
+                                          child: Container(
+                                            width: 26,
+                                            height: 26,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.white,
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.16),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(
+                                              Icons.edit_rounded,
+                                              size: 14,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      user.fullName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.titleMedium.copyWith(
+                                        color: AppColors.white,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    if (user.email.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        user.email,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style:
+                                            AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.white
+                                              .withValues(alpha: 0.92),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ],
+                          ),
                           const SizedBox(height: 12),
                         ],
                       ],
@@ -225,18 +292,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                 child: _DashboardNavRow(
                   tabController: _tabController,
                   user: user,
-                  onEdit: user == null
-                      ? null
-                      : () async {
-                          final updated = await context.push<bool>(
-                            AppConstants.routeUserEditProfile,
-                          );
-                          if (updated == true && mounted) {
-                            await ref
-                                .read(patientDashboardProvider.notifier)
-                                .refreshAll();
-                          }
-                        },
+                  onEdit: user == null ? null : _openEditProfile,
                   onMenuSelected: (value) async {
                     if (value == 'favorites') {
                       if (context.mounted) {

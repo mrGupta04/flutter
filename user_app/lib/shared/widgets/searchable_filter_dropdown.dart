@@ -275,6 +275,9 @@ class FilterDropdown<T> extends StatelessWidget {
     return DropdownButtonFormField<T?>(
       value: value,
       isExpanded: true,
+      itemHeight: kMinInteractiveDimension,
+      menuMaxHeight: 280,
+      borderRadius: BorderRadius.circular(12),
       decoration: InputDecoration(
         labelText: label,
         filled: true,

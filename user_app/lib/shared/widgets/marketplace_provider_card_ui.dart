@@ -6,7 +6,7 @@ import '../../core/theme/app_text_styles.dart';
 const Color kProviderSpecialtyGold = Color(0xFFC9922A);
 
 /// Light mint stats strip behind satisfaction / consult counts.
-const Color kProviderStatsBarBg = Color(0xFFF0FAF7);
+const Color kProviderStatsBarBg = Color(0xFFE6F7EE);
 
 /// Doctor listing card height estimate for home previews.
 const double kDoctorListingCardHeight = 330;

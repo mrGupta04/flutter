@@ -139,7 +139,7 @@ class _DetailBody extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: bank.isOpenNow
-                            ? const Color(0xFFE8F5E9)
+                            ? AppColors.primaryLight
                             : const Color(0xFFFFEBEE),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -147,7 +147,7 @@ class _DetailBody extends StatelessWidget {
                         bank.isOpenNow ? 'Open now' : 'Closed',
                         style: TextStyle(
                           color: bank.isOpenNow
-                              ? const Color(0xFF2E7D32)
+                              ? AppColors.success
                               : const Color(0xFFC62828),
                           fontWeight: FontWeight.w700,
                           fontSize: 12,

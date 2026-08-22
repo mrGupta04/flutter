@@ -58,31 +58,71 @@ class _CustomTextFieldState extends State<CustomTextField> {
     _obscureText = widget.obscureText;
   }
 
+  bool get _isPasswordField => widget.obscureText;
+
+  /// A single tap in a password field should place a caret, not select a range.
+  /// Long-press / drag to select still works because those gestures do not call [onTap].
+  void _onPasswordTap() {
+    final controller = widget.controller;
+    final selection = controller.selection;
+    if (!selection.isValid || selection.isCollapsed) return;
+    controller.selection = TextSelection.collapsed(
+      offset: selection.extentOffset.clamp(0, controller.text.length),
+    );
+  }
+
+  void _toggleObscure() {
+    final selection = widget.controller.selection;
+    setState(() => _obscureText = !_obscureText);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final text = widget.controller.text;
+      final offset = selection.isValid
+          ? selection.extentOffset.clamp(0, text.length)
+          : text.length;
+      widget.controller.selection = TextSelection.collapsed(offset: offset);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
       validator: widget.validator,
       keyboardType: widget.keyboardType,
-      maxLines: widget.obscureText ? 1 : widget.maxLines,
+      maxLines: _isPasswordField ? 1 : widget.maxLines,
       minLines: widget.minLines,
       obscureText: _obscureText,
+      obscuringCharacter: '•',
+      enableSuggestions: !_isPasswordField,
+      autocorrect: !_isPasswordField,
+      smartDashesType: _isPasswordField
+          ? SmartDashesType.disabled
+          : SmartDashesType.enabled,
+      smartQuotesType: _isPasswordField
+          ? SmartQuotesType.disabled
+          : SmartQuotesType.enabled,
       readOnly: widget.readOnly,
       inputFormatters: widget.inputFormatters,
       textInputAction: widget.textInputAction,
       onChanged: (_) => widget.onChanged?.call(),
       onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
-      style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary),
+      onTap: _isPasswordField ? _onPasswordTap : null,
+      style: AppTextStyles.bodyLarge.copyWith(
+        color: AppColors.textPrimary,
+        letterSpacing: 0,
+        height: 1.25,
+      ),
       decoration: InputDecoration(
         labelText: widget.label,
         hintText: widget.hint,
         prefixIcon: widget.prefixIcon != null
             ? Icon(widget.prefixIcon, color: AppColors.primary, size: 22)
             : null,
-        suffixIcon: widget.suffixIcon != null || widget.obscureText
+        suffixIcon: widget.suffixIcon != null || _isPasswordField
             ? IconButton(
                 icon: Icon(
-                  widget.obscureText
+                  _isPasswordField
                       ? (_obscureText
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined)
@@ -90,8 +130,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   color: AppColors.grey500,
                 ),
                 onPressed: () {
-                  if (widget.obscureText) {
-                    setState(() => _obscureText = !_obscureText);
+                  if (_isPasswordField) {
+                    _toggleObscure();
                   } else {
                     widget.onSuffixIconPressed?.call();
                   }
@@ -100,6 +140,55 @@ class _CustomTextFieldState extends State<CustomTextField> {
             : null,
         counterText: widget.counterText,
       ),
+    );
+  }
+}
+
+/// Compact outline dropdown. Flutter's [DropdownButtonFormField] passes
+/// `itemHeight: null`, which makes each option expand to the viewport.
+class AppDropdownFormField<T> extends StatelessWidget {
+  const AppDropdownFormField({
+    super.key,
+    required this.items,
+    required this.onChanged,
+    this.value,
+    this.label,
+    this.prefixIcon,
+    this.validator,
+    this.hint,
+  });
+
+  final T? value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+  final String? label;
+  final IconData? prefixIcon;
+  final String? Function(T?)? validator;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<T>(
+      initialValue: value,
+      isExpanded: true,
+      itemHeight: kMinInteractiveDimension,
+      menuMaxHeight: 280,
+      borderRadius: BorderRadius.circular(12),
+      dropdownColor: AppColors.white,
+      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: prefixIcon != null
+            ? Icon(prefixIcon, color: AppColors.primary, size: 22)
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      items: items,
+      onChanged: onChanged,
+      validator: validator,
     );
   }
 }

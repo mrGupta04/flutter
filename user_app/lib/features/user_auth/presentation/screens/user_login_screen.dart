@@ -51,9 +51,13 @@ class _UserLoginScreenState extends ConsumerState<UserLoginScreen> {
     final redirect = widget.redirect;
     if (redirect != null && redirect.isNotEmpty) {
       context.go(redirect);
-    } else {
-      context.pop(true);
+      return;
     }
+    if (context.canPop()) {
+      context.pop(true);
+      return;
+    }
+    context.go(AppConstants.routeUserHome);
   }
 
   @override
@@ -121,12 +125,18 @@ class _UserLoginScreenState extends ConsumerState<UserLoginScreen> {
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () {
+                onPressed: () async {
                   final redirect = widget.redirect;
                   final q = redirect != null
                       ? '?redirect=${Uri.encodeComponent(redirect)}'
                       : '';
-                  context.push('${AppConstants.routeUserRegister}$q');
+                  final signedUp = await context.push<bool>(
+                    '${AppConstants.routeUserRegister}$q',
+                  );
+                  if (!mounted) return;
+                  if (signedUp == true) {
+                    _finishSuccess();
+                  }
                 },
                 child: const Text('New here? Create an account'),
               ),

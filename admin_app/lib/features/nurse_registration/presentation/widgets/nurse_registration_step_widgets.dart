@@ -513,7 +513,6 @@ class _NurseStep1PersonalState extends ConsumerState<NurseStep1Personal>
               label: 'Languages spoken',
               hint: 'Search language',
               helperText: 'Search and tap to add. You can select more than one.',
-              prefixIcon: Icons.translate_rounded,
               options: AppLists.languages,
               selected: _languages,
               onChanged: (values) {
@@ -716,6 +715,10 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedQualification,
+              isExpanded: true,
+              itemHeight: kMinInteractiveDimension,
+              menuMaxHeight: 320,
+              borderRadius: BorderRadius.circular(12),
               decoration: const InputDecoration(
                 labelText: 'Qualification',
                 prefixIcon: Icon(Icons.school_outlined),
@@ -1019,6 +1022,9 @@ class NurseStep4Documents extends ConsumerWidget {
     final documentBytes = ref.watch(
       nurseRegistrationFormProvider.select((s) => s.documentBytes),
     );
+    final documentFileNames = ref.watch(
+      nurseRegistrationFormProvider.select((s) => s.documentFileNames),
+    );
     return nurseStepScroll(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1045,6 +1051,7 @@ class NurseStep4Documents extends ConsumerWidget {
                   required: requiredNurseDocuments.contains(type),
                   uploaded: documentUrls.containsKey(type) ||
                       documentBytes.containsKey(type),
+                  fileName: documentFileNames[type],
                   onPick: () async {
                     final result = await FilePicker.platform.pickFiles(
                       type: FileType.custom,
@@ -1074,16 +1081,25 @@ class _DocumentTile extends StatelessWidget {
     required this.type,
     required this.uploaded,
     required this.onPick,
+    this.fileName,
     this.required = false,
   });
 
   final NurseDocumentType type;
   final bool uploaded;
+  final String? fileName;
   final VoidCallback onPick;
   final bool required;
 
   @override
   Widget build(BuildContext context) {
+    final name = fileName?.trim();
+    final subtitle = !uploaded
+        ? 'Tap to upload'
+        : (name != null && name.isNotEmpty)
+            ? name
+            : 'Selected';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
@@ -1092,8 +1108,15 @@ class _DocumentTile extends StatelessWidget {
           color: uploaded ? AppColors.success : AppColors.primary,
         ),
         title: Text(required ? '${type.label} *' : type.label),
-        subtitle: Text(uploaded ? 'Selected' : 'Tap to upload'),
-        trailing: TextButton(onPressed: onPick, child: const Text('Upload')),
+        subtitle: Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: TextButton(
+          onPressed: onPick,
+          child: Text(uploaded ? 'Replace' : 'Upload'),
+        ),
       ),
     );
   }
@@ -1258,7 +1281,7 @@ class NurseStep6Availability extends ConsumerWidget {
           const SizedBox(height: 16),
           WeeklyAvailabilityPicker(
             selectedSlots: selectedHomeAvailabilitySlots,
-            onToggle: (day, hour, selected) {
+            onToggle: (day, hour, selected, {startMinute = 0}) {
               final key = '${day}_$hour';
               ref
                   .read(nurseRegistrationFormProvider.notifier)

@@ -190,6 +190,9 @@ class _EmergencyBloodRequestScreenState extends State<EmergencyBloodRequestScree
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _requiredWithin,
+                itemHeight: kMinInteractiveDimension,
+                menuMaxHeight: 280,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Required within',
                   border: OutlineInputBorder(),

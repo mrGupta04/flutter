@@ -8,7 +8,7 @@ const {
   upsertPrescriptionDraft,
   finalizePrescription,
 } = require('../db/prescriptionRepositories');
-const { formatSlotLabel } = require('../utils/slotDateTime');
+const { formatSlotLabel, consultEndFromStart } = require('../utils/slotDateTime');
 const { generatePrescriptionPdf } = require('./prescriptionPdfService');
 const { sendPrescriptionEmail } = require('./prescriptionNotificationService');
 
@@ -112,7 +112,16 @@ function formatPrescriptionResponse(prescription, doctor, booking) {
     createdAt: prescription.createdAt,
     updatedAt: prescription.updatedAt,
     doctorName,
-    slotLabel: booking ? formatSlotLabel(booking.slotStart, booking.slotEnd) : null,
+    slotLabel: booking
+      ? formatSlotLabel(
+          booking.slotStart,
+          consultEndFromStart(
+            booking.slotStart,
+            booking.slotEnd,
+            booking.consultationType,
+          ),
+        )
+      : null,
   };
 }
 
@@ -132,7 +141,14 @@ async function getPrescriptionContext(bookingId, auth) {
     patientName: booking.patientName,
     patientEmail: booking.patientEmail,
     symptoms: bookingSymptoms(booking),
-    slotLabel: formatSlotLabel(booking.slotStart, booking.slotEnd),
+    slotLabel: formatSlotLabel(
+      booking.slotStart,
+      consultEndFromStart(
+        booking.slotStart,
+        booking.slotEnd,
+        booking.consultationType,
+      ),
+    ),
     doctorName: doctor
       ? `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim()
       : 'Doctor',
@@ -182,7 +198,14 @@ async function finalizeAndDeliverPrescription({
         to: booking.patientEmail,
         patientName: booking.patientName,
         doctorName,
-        slotLabel: formatSlotLabel(booking.slotStart, booking.slotEnd),
+        slotLabel: formatSlotLabel(
+      booking.slotStart,
+      consultEndFromStart(
+        booking.slotStart,
+        booking.slotEnd,
+        booking.consultationType,
+      ),
+    ),
         pdfPath: pdf.filePath,
         pdfFileName: pdf.fileName,
         pdfUrl: emailPdfUrl,
@@ -257,7 +280,15 @@ async function autoFinalizePrescriptionForBooking(bookingId, publicBaseUrl) {
   if (!booking) return null;
   if (booking.consultationType !== 'online_consult') return null;
   if (booking.status !== 'confirmed') return null;
-  if (new Date(booking.slotEnd) > new Date()) return null;
+  if (
+    consultEndFromStart(
+      booking.slotStart,
+      booking.slotEnd,
+      booking.consultationType,
+    ) > new Date()
+  ) {
+    return null;
+  }
 
   const existing = await findPrescriptionByBookingId(bookingId);
   if (existing?.status === 'finalized') return null;

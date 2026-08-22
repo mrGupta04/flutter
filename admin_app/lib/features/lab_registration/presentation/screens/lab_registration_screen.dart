@@ -60,7 +60,7 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
   double? _latitude;
   double? _longitude;
   RegistrationLocationInputMode _locationMode =
-      RegistrationLocationInputMode.manual;
+      RegistrationLocationInputMode.map;
   Uint8List? _logoBytes;
   String? _logoFileName;
   Uint8List? _coverBytes;
@@ -228,6 +228,13 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
             ValidationUtils.validatePincode(_pincodeController.text);
         if (pincodeError != null) {
           SnackBarHelper.showError(context, pincodeError);
+          return false;
+        }
+        if (_latitude == null || _longitude == null) {
+          SnackBarHelper.showError(
+            context,
+            'Capture your live location: tap “Use current location” or pin the lab on the map.',
+          );
           return false;
         }
         if (_yearController.text.trim().isNotEmpty) {
@@ -543,6 +550,33 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
     });
   }
 
+  Widget _spacedDialogContent(List<Widget> children) {
+    return SizedBox(
+      width: double.maxFinite,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) const SizedBox(height: 20),
+              children[i],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _dialogFieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      isDense: false,
+      alignLabelWithHint: true,
+      contentPadding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+    );
+  }
+
   void _addCustomTest() {
     showDialog<void>(
       context: context,
@@ -557,36 +591,37 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
               maxWidth: ResponsiveUtils.dialogMaxWidth,
             ),
             title: const Text('Add custom test'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Test name'),
-                  ),
-                  TextField(
-                    controller: priceCtrl,
-                    decoration: const InputDecoration(labelText: 'Price (₹)'),
-                    keyboardType: TextInputType.number,
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: sampleType,
-                    items: LabRegistrationConstants.sampleTypes
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                        .toList(),
-                    onChanged: (v) =>
-                        setDialogState(() => sampleType = v ?? sampleType),
-                    decoration: const InputDecoration(labelText: 'Sample type'),
-                  ),
-                  SwitchListTile(
-                    title: const Text('Fasting required'),
-                    value: fasting,
-                    onChanged: (v) => setDialogState(() => fasting = v),
-                  ),
-                ],
+            content: _spacedDialogContent([
+              TextField(
+                controller: nameCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: _dialogFieldDecoration('Test name'),
               ),
-            ),
+              TextField(
+                controller: priceCtrl,
+                decoration: _dialogFieldDecoration('Price (₹)'),
+                keyboardType: TextInputType.number,
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: sampleType,
+                isExpanded: true,
+                isDense: false,
+                itemHeight: kMinInteractiveDimension,
+                menuMaxHeight: 280,
+                items: LabRegistrationConstants.sampleTypes
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) =>
+                    setDialogState(() => sampleType = v ?? sampleType),
+                decoration: _dialogFieldDecoration('Sample type'),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Fasting required'),
+                value: fasting,
+                onChanged: (v) => setDialogState(() => fasting = v),
+              ),
+            ]),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
@@ -629,24 +664,29 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
             maxWidth: ResponsiveUtils.dialogMaxWidth,
           ),
           title: const Text('Create health package'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Package name'),
+          content: _spacedDialogContent([
+            TextField(
+              controller: nameCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: _dialogFieldDecoration('Package name'),
+            ),
+            TextField(
+              controller: originalCtrl,
+              keyboardType: TextInputType.number,
+              decoration: _dialogFieldDecoration('Original price'),
+            ),
+            TextField(
+              controller: discountCtrl,
+              keyboardType: TextInputType.number,
+              decoration: _dialogFieldDecoration('Offer price'),
+            ),
+            Text(
+              'Includes ${_selectedTests.length} selected tests',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
               ),
-              TextField(
-                controller: originalCtrl,
-                decoration: const InputDecoration(labelText: 'Original price'),
-              ),
-              TextField(
-                controller: discountCtrl,
-                decoration: const InputDecoration(labelText: 'Offer price'),
-              ),
-              Text('Includes ${_selectedTests.length} selected tests'),
-            ],
-          ),
+            ),
+          ]),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             FilledButton(
@@ -684,27 +724,30 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
               maxWidth: ResponsiveUtils.dialogMaxWidth,
             ),
             title: const Text('Add staff member'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: role,
-                  items: LabRegistrationConstants.staffRoles
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (v) => setDialogState(() => role = v ?? role),
-                  decoration: const InputDecoration(labelText: 'Role'),
-                ),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                TextField(
-                  controller: mobileCtrl,
-                  decoration: const InputDecoration(labelText: 'Mobile'),
-                ),
-              ],
-            ),
+            content: _spacedDialogContent([
+              DropdownButtonFormField<String>(
+                initialValue: role,
+                isExpanded: true,
+                isDense: false,
+                itemHeight: kMinInteractiveDimension,
+                menuMaxHeight: 280,
+                items: LabRegistrationConstants.staffRoles
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                    .toList(),
+                onChanged: (v) => setDialogState(() => role = v ?? role),
+                decoration: _dialogFieldDecoration('Role'),
+              ),
+              TextField(
+                controller: nameCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: _dialogFieldDecoration('Name'),
+              ),
+              TextField(
+                controller: mobileCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: _dialogFieldDecoration('Mobile'),
+              ),
+            ]),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               FilledButton(
@@ -832,6 +875,10 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           value: _labType,
+          isExpanded: true,
+          itemHeight: kMinInteractiveDimension,
+          menuMaxHeight: 320,
+          borderRadius: BorderRadius.circular(12),
           decoration: const InputDecoration(
             labelText: 'Laboratory type',
             prefixIcon: Icon(Icons.category_outlined),
@@ -896,10 +943,17 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          'Address details',
+          'Lab location',
           style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
+        Text(
+          'Capture live GPS so patients can find this lab on the map. You can also type the address and locate it.',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
         RegistrationLocationBlock(
           mode: _locationMode,
           onModeChanged: (mode) => setState(() => _locationMode = mode),
@@ -913,6 +967,17 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
             _latitude = lat;
             _longitude = lng;
           }),
+          onAddressResolved: ({
+            required address,
+            required city,
+            required state,
+            required pincode,
+          }) {
+            setState(() {});
+          },
+          mapEmptyHint:
+              'Tap the map or use current location to pin your laboratory.',
+          mapWebTitle: 'Laboratory location',
           extraManualTop: Column(
             children: [
               CustomTextField(

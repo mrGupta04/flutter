@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const Prescription = require('./models/Prescription');
 const ConsultationBooking = require('./models/ConsultationBooking');
 const Doctor = require('./models/Doctor');
+const { ONLINE_SLOT_MINUTES, consultEndFromStart } = require('../utils/slotDateTime');
 
 function bookingSymptoms(booking) {
   const notes = String(booking.patientNotes || '').trim();
@@ -29,10 +30,19 @@ function isPrescriptionEligibleConsultation(consultationType) {
 
 async function findBookingsDueForAutoPrescription() {
   const now = new Date();
+  const onlineDueStart = new Date(
+    now.getTime() - ONLINE_SLOT_MINUTES * 60 * 1000,
+  );
   const bookings = await ConsultationBooking.find({
     consultationType: { $in: ['online_consult', 'book_home'] },
     status: 'confirmed',
-    slotEnd: { $lte: now },
+    $or: [
+      { slotEnd: { $lte: now } },
+      {
+        consultationType: 'online_consult',
+        slotStart: { $lte: onlineDueStart },
+      },
+    ],
   }).lean();
 
   if (!bookings.length) return [];
@@ -168,9 +178,17 @@ function prescriptionFieldsForBooking(booking, prescription, now = new Date()) {
   const eligible = isPrescriptionEligibleConsultation(booking?.consultationType);
   const finalized = prescription?.status === 'finalized';
   const slotStart = booking?.slotStart ? new Date(booking.slotStart) : null;
-  const slotEnd = booking?.slotEnd ? new Date(booking.slotEnd) : null;
+  const consultEnd = slotStart
+    ? consultEndFromStart(
+        booking.slotStart,
+        booking.slotEnd,
+        booking.consultationType,
+      )
+    : booking?.slotEnd
+      ? new Date(booking.slotEnd)
+      : null;
   const slotStarted = Boolean(slotStart && slotStart <= now);
-  const slotEnded = Boolean(slotEnd && slotEnd <= now);
+  const slotEnded = Boolean(consultEnd && consultEnd <= now);
   const prescriptionPending = Boolean(
     eligible && !finalized && slotStarted,
   );

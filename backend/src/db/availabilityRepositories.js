@@ -209,7 +209,7 @@ async function getDoctorAvailability(doctorId, { forWeekStart, consultationType 
     consultationType: type,
     weekStartDate: status.suggestedWeekStart,
     weekEndDate: status.suggestedWeekEnd,
-    slots: buildAllSlots(false),
+    slots: buildAllSlots(false, type),
     availableSlotCount: 0,
     needsUpdate: status.needsUpdate,
     reminderMessage: status.reminderMessage,
@@ -285,7 +285,7 @@ async function saveDoctorAvailability(
   { slots, weekStartDate, consultationType } = {},
 ) {
   const type = normalizeConsultationType(consultationType);
-  const normalized = normalizeSlots(slots);
+  const normalized = normalizeSlots(slots, type);
   const availableCount = normalized.filter((s) => s.available).length;
   if (availableCount === 0) {
     const err = new Error('Select at least one available time slot');

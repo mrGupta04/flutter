@@ -173,6 +173,10 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
                   value: route,
+                  isExpanded: true,
+                  itemHeight: kMinInteractiveDimension,
+                  menuMaxHeight: 280,
+                  borderRadius: BorderRadius.circular(12),
                   decoration: const InputDecoration(labelText: 'Route'),
                   items: const [
                     DropdownMenuItem(value: 'Oral', child: Text('Oral')),
@@ -482,6 +486,10 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
         _field(_sugar, 'Blood sugar (mg/dL)'),
         DropdownButtonFormField<String>(
           value: _sugarType,
+          isExpanded: true,
+          itemHeight: kMinInteractiveDimension,
+          menuMaxHeight: 280,
+          borderRadius: BorderRadius.circular(12),
           decoration: const InputDecoration(labelText: 'Sugar type'),
           items: const [
             DropdownMenuItem(value: 'random', child: Text('Random')),
@@ -698,6 +706,10 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
       padding: const EdgeInsets.only(bottom: 10),
       child: DropdownButtonFormField<String>(
         value: value,
+        isExpanded: true,
+        itemHeight: kMinInteractiveDimension,
+        menuMaxHeight: 280,
+        borderRadius: BorderRadius.circular(12),
         decoration: InputDecoration(labelText: label),
         items: options
             .map((o) => DropdownMenuItem(value: o, child: Text(o)))

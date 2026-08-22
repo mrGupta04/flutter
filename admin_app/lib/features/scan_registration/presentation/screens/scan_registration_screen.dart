@@ -789,6 +789,10 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
         if (_offerAvailable) ...[
           DropdownButtonFormField<String>(
             value: _discountType,
+            isExpanded: true,
+            itemHeight: kMinInteractiveDimension,
+            menuMaxHeight: 280,
+            borderRadius: BorderRadius.circular(12),
             decoration: const InputDecoration(labelText: 'Discount type'),
             items: const [
               DropdownMenuItem(value: 'percentage', child: Text('Percentage')),

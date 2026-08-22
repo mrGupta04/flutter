@@ -210,6 +210,10 @@ class _EditPatientProfileScreenState
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _gender,
+                itemHeight: kMinInteractiveDimension,
+                menuMaxHeight: 280,
+                isExpanded: true,
+                borderRadius: BorderRadius.circular(12),
                 decoration: InputDecoration(
                   labelText: 'Gender',
                   prefixIcon: const Icon(Icons.wc_outlined),

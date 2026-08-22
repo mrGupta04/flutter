@@ -2,6 +2,7 @@ const EARLY_MS =
   parseInt(process.env.VIDEO_JOIN_EARLY_MINUTES || '10', 10) * 60 * 1000;
 const GRACE_MS =
   parseInt(process.env.VIDEO_JOIN_GRACE_MINUTES || '5', 10) * 60 * 1000;
+const { consultEndFromStart } = require('./slotDateTime');
 
 function getVideoJoinWindow(slotStart, slotEnd, now = new Date()) {
   const start = new Date(slotStart);
@@ -35,7 +36,12 @@ function videoJoinFields(booking, now = new Date()) {
     };
   }
 
-  const window = getVideoJoinWindow(booking.slotStart, booking.slotEnd, now);
+  const consultEnd = consultEndFromStart(
+    booking.slotStart,
+    booking.slotEnd,
+    booking.consultationType,
+  );
+  const window = getVideoJoinWindow(booking.slotStart, consultEnd, now);
   return {
     canJoinVideo: window.canJoin,
     videoJoinWindowStart: window.windowStart.toISOString(),

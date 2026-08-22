@@ -26,7 +26,7 @@ function formatDate(value) {
 
 function writeSectionTitle(doc, title) {
   doc.moveDown(0.5);
-  doc.fontSize(12).fillColor('#208376').text(title, { underline: true });
+  doc.fontSize(12).fillColor('#19A552').text(title, { underline: true });
   doc.moveDown(0.25);
   doc.fillColor('#111827');
 }
@@ -60,7 +60,7 @@ function generatePrescriptionPdf({
 
     doc.pipe(stream);
 
-    doc.fontSize(20).fillColor('#208376').text(appName, { align: 'center' });
+    doc.fontSize(20).fillColor('#19A552').text(appName, { align: 'center' });
     doc.fontSize(16).fillColor('#111827').text('Medical Prescription', {
       align: 'center',
     });

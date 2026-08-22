@@ -1,41 +1,41 @@
 import 'package:flutter/material.dart';
 
-/// Tata 1mg design system — teal-green brand, coral offer tags, white surfaces.
+/// Tata 1mg design system — brand green, coral offer tags, white surfaces.
 class AppColors {
   AppColors._();
 
-  // 1mg brand green (header, CTAs, links)
-  static const Color primary = Color(0xFF208376);
-  static const Color primaryLight = Color(0xFFE8F6F3);
-  static const Color primaryDark = Color(0xFF165C54);
-  static const Color primarySoft = Color(0xFFB8DDD6);
-  static const Color headerGreen = Color(0xFF1D6B5C);
+  // Brand green (header, footer, CTAs, links)
+  static const Color primary = Color(0xFF19A552);
+  static const Color primaryLight = Color(0xFFE6F7EE);
+  static const Color primaryDark = Color(0xFF137C3D);
+  static const Color primarySoft = Color(0xFFB3E5C5);
+  static const Color headerGreen = Color(0xFF19A552);
 
   // 1mg coral — offers & discount badges only
   static const Color offer = Color(0xFFFF6F61);
   static const Color offerLight = Color(0xFFFFF0EE);
   static const Color offerDark = Color(0xFFE85A4D);
 
-  // Primary buttons use brand green (1mg style)
-  static const Color cta = Color(0xFF208376);
-  static const Color ctaLight = Color(0xFFE8F6F3);
-  static const Color ctaDark = Color(0xFF165C54);
+  // Primary buttons use brand green
+  static const Color cta = Color(0xFF19A552);
+  static const Color ctaLight = Color(0xFFE6F7EE);
+  static const Color ctaDark = Color(0xFF137C3D);
 
-  static const Color accent = Color(0xFF208376);
-  static const Color accentLight = Color(0xFFE8F6F3);
+  static const Color accent = Color(0xFF19A552);
+  static const Color accentLight = Color(0xFFE6F7EE);
 
-  static const Color secondary = Color(0xFF3D9970);
-  static const Color secondaryLight = Color(0xFFE6F5ED);
-  static const Color secondaryDark = Color(0xFF2D7A56);
+  static const Color secondary = Color(0xFF22B35C);
+  static const Color secondaryLight = Color(0xFFE6F7EE);
+  static const Color secondaryDark = Color(0xFF178A45);
 
   static const Color tertiary = Color(0xFFFFB800);
 
-  static const Color success = Color(0xFF208376);
+  static const Color success = Color(0xFF19A552);
   static const Color error = Color(0xFFD32F2F);
   static const Color warning = Color(0xFFFF9800);
-  static const Color info = Color(0xFF208376);
+  static const Color info = Color(0xFF19A552);
   static const Color pending = Color(0xFFFF9800);
-  static const Color verified = Color(0xFF208376);
+  static const Color verified = Color(0xFF19A552);
   static const Color rejected = Color(0xFFD32F2F);
 
   static const Color white = Color(0xFFFFFFFF);
@@ -69,18 +69,18 @@ class AppColors {
   static const Color darkTextSecondary = Color(0xFF9AA3AF);
 
   static const List<Color> gradientPrimary = [
-    Color(0xFF165C54),
-    Color(0xFF208376),
+    Color(0xFF137C3D),
+    Color(0xFF19A552),
   ];
 
   static const List<Color> gradientHero = [
-    Color(0xFF1D6B5C),
-    Color(0xFF208376),
+    Color(0xFF19A552),
+    Color(0xFF22B35C),
   ];
 
   static const List<Color> gradientCta = [
-    Color(0xFF165C54),
-    Color(0xFF208376),
+    Color(0xFF137C3D),
+    Color(0xFF19A552),
   ];
 
   static const List<Color> gradientOffer = [
@@ -89,18 +89,18 @@ class AppColors {
   ];
 
   static const List<Color> gradientSuccess = [
-    Color(0xFF208376),
-    Color(0xFF3D9970),
+    Color(0xFF19A552),
+    Color(0xFF22B35C),
   ];
 
   static const List<Color> gradientAdmin = [
-    Color(0xFF1D6B5C),
-    Color(0xFF208376),
+    Color(0xFF19A552),
+    Color(0xFF22B35C),
   ];
 
   /// Nurse / secondary care provider accent.
   static const List<Color> gradientNurse = [
-    Color(0xFF2D7A56),
-    Color(0xFF3D9970),
+    Color(0xFF178A45),
+    Color(0xFF22B35C),
   ];
 }

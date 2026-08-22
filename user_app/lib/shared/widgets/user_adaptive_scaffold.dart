@@ -10,10 +10,10 @@ import 'user_app_footer.dart';
 
 /// Adaptive shell for tabbed marketplace screens.
 ///
-/// Mobile: bottom navigation (existing look).
+/// Mobile: bottom navigation that auto-hides on scroll down and returns on scroll up.
 /// Tablet: navigation rail.
 /// Laptop+: persistent sidebar + max-width content.
-class UserAdaptiveScaffold extends StatelessWidget {
+class UserAdaptiveScaffold extends StatefulWidget {
   const UserAdaptiveScaffold({
     super.key,
     required this.currentTab,
@@ -42,8 +42,60 @@ class UserAdaptiveScaffold extends StatelessWidget {
   /// includes a full-bleed header; constrain inner content instead.
   final bool constrainBody;
 
+  @override
+  State<UserAdaptiveScaffold> createState() => _UserAdaptiveScaffoldState();
+}
+
+class _UserAdaptiveScaffoldState extends State<UserAdaptiveScaffold>
+    with SingleTickerProviderStateMixin {
+  static const _hideThreshold = 14.0;
+  static const _showThreshold = 8.0;
+
+  late final AnimationController _footerController;
+  late final Animation<double> _footerSize;
+  late final Animation<double> _footerFade;
+  double _scrollAcc = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _footerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+      reverseDuration: const Duration(milliseconds: 240),
+      value: 1,
+    );
+    _footerSize = CurvedAnimation(
+      parent: _footerController,
+      curve: const Cubic(0.16, 1, 0.3, 1),
+      reverseCurve: const Cubic(0.4, 0, 1, 1),
+    );
+    _footerFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _footerController,
+        curve: const Interval(0.2, 1, curve: Curves.easeOut),
+        reverseCurve: const Interval(0, 0.6, curve: Curves.easeIn),
+      ),
+    );
+  }
+
+  @override
+  void didUpdateWidget(UserAdaptiveScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentTab != widget.currentTab) {
+      _scrollAcc = 0;
+      _footerController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _footerController.dispose();
+    super.dispose();
+  }
+
   Future<void> _onTap(BuildContext context, UserNavTab tab) async {
-    if (tab == currentTab) return;
+    if (tab == widget.currentTab) return;
     switch (tab) {
       case UserNavTab.home:
         context.go(AppConstants.routeUserHome);
@@ -62,36 +114,102 @@ class UserAdaptiveScaffold extends StatelessWidget {
     }
   }
 
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+
+    final atTop = notification.metrics.pixels <= 8;
+    final atBottom = notification.metrics.pixels >=
+        notification.metrics.maxScrollExtent - 24;
+    final outOfRange = notification.metrics.outOfRange;
+
+    if (outOfRange || atTop || atBottom) {
+      _scrollAcc = 0;
+      _showFooter();
+      return false;
+    }
+
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta ?? 0;
+      if (delta == 0) return false;
+
+      if (delta > 0) {
+        if (_scrollAcc < 0) _scrollAcc = 0;
+        _scrollAcc += delta;
+        if (_scrollAcc > _hideThreshold) _hideFooter();
+      } else {
+        if (_scrollAcc > 0) _scrollAcc = 0;
+        _scrollAcc += delta;
+        if (_scrollAcc < -_showThreshold) _showFooter();
+      }
+    } else if (notification is ScrollEndNotification) {
+      _scrollAcc = 0;
+    }
+
+    return false;
+  }
+
+  void _showFooter() {
+    if (_footerController.status == AnimationStatus.forward ||
+        _footerController.status == AnimationStatus.completed) {
+      return;
+    }
+    _footerController.forward();
+  }
+
+  void _hideFooter() {
+    if (_footerController.status == AnimationStatus.reverse ||
+        _footerController.status == AnimationStatus.dismissed) {
+      return;
+    }
+    _footerController.reverse();
+  }
+
+  Widget _animatedFooter(Widget bar) {
+    return SizeTransition(
+      sizeFactor: _footerSize,
+      axisAlignment: -1,
+      child: FadeTransition(
+        opacity: _footerFade,
+        child: bar,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bg = backgroundColor ?? AppColors.background;
+    final bg = widget.backgroundColor ?? AppColors.background;
     final useBottom = ResponsiveUtils.useBottomNavigation(context);
     final useRail = ResponsiveUtils.useNavigationRail(context);
 
-    final constrainedBody = constrainBody
-        ? ResponsivePage(child: body)
-        : body;
+    final constrainedBody = widget.constrainBody
+        ? ResponsivePage(child: widget.body)
+        : widget.body;
+
+    final scrollBody = NotificationListener<ScrollNotification>(
+      onNotification: _onScrollNotification,
+      child: constrainedBody,
+    );
 
     if (useBottom) {
-      final Widget bottomBar = secondaryBottomBar == null
-          ? UserBottomNavBar(currentTab: currentTab)
+      final Widget bottomBar = widget.secondaryBottomBar == null
+          ? UserBottomNavBar(currentTab: widget.currentTab)
           : Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                secondaryBottomBar!,
-                UserBottomNavBar(currentTab: currentTab),
+                widget.secondaryBottomBar!,
+                UserBottomNavBar(currentTab: widget.currentTab),
               ],
             );
 
       return Scaffold(
         backgroundColor: bg,
-        appBar: appBar,
-        extendBodyBehindAppBar: extendBodyBehindAppBar,
-        endDrawer: endDrawer,
-        floatingActionButton: floatingActionButton,
-        floatingActionButtonLocation: floatingActionButtonLocation,
-        bottomNavigationBar: bottomBar,
-        body: constrainedBody,
+        appBar: widget.appBar,
+        extendBodyBehindAppBar: widget.extendBodyBehindAppBar,
+        endDrawer: widget.endDrawer,
+        floatingActionButton: widget.floatingActionButton,
+        floatingActionButtonLocation: widget.floatingActionButtonLocation,
+        bottomNavigationBar: _animatedFooter(bottomBar),
+        body: scrollBody,
       );
     }
 
@@ -123,16 +241,16 @@ class UserAdaptiveScaffold extends StatelessWidget {
     ];
 
     final selectedIndex =
-        destinations.indexWhere((d) => d.tab == currentTab).clamp(0, 3);
+        destinations.indexWhere((d) => d.tab == widget.currentTab).clamp(0, 3);
 
     return Scaffold(
       backgroundColor: bg,
-      appBar: appBar,
-      extendBodyBehindAppBar: extendBodyBehindAppBar,
-      endDrawer: endDrawer,
-      floatingActionButton: floatingActionButton,
-      floatingActionButtonLocation: floatingActionButtonLocation,
-      bottomNavigationBar: secondaryBottomBar,
+      appBar: widget.appBar,
+      extendBodyBehindAppBar: widget.extendBodyBehindAppBar,
+      endDrawer: widget.endDrawer,
+      floatingActionButton: widget.floatingActionButton,
+      floatingActionButtonLocation: widget.floatingActionButtonLocation,
+      bottomNavigationBar: widget.secondaryBottomBar,
       body: Row(
         children: [
           if (useRail)

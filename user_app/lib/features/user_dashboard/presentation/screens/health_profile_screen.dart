@@ -131,6 +131,9 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: relationship,
+                    itemHeight: kMinInteractiveDimension,
+                    menuMaxHeight: 280,
+                    isExpanded: true,
                     decoration:
                         const InputDecoration(labelText: 'Relationship'),
                     items: const [
@@ -154,6 +157,9 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: gender,
+                    itemHeight: kMinInteractiveDimension,
+                    menuMaxHeight: 280,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Gender'),
                     items: const [
                       DropdownMenuItem(value: 'Male', child: Text('Male')),
@@ -172,6 +178,9 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: bloodGroup,
+                    itemHeight: kMinInteractiveDimension,
+                    menuMaxHeight: 280,
+                    isExpanded: true,
                     decoration:
                         const InputDecoration(labelText: 'Blood group'),
                     items: const [
@@ -586,6 +595,9 @@ class _MedicalTabState extends State<_MedicalTab> {
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           value: _bloodGroup,
+          itemHeight: kMinInteractiveDimension,
+          menuMaxHeight: 280,
+          isExpanded: true,
           decoration: const InputDecoration(labelText: 'Blood group'),
           items: const [
             'A+',

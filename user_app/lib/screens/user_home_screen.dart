@@ -173,7 +173,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                       icon: Icons.biotech_rounded,
                       title: 'Lab tests',
                       subtitle: 'Home sample collection',
-                      color: const Color(0xFF00838F),
+                      color: AppColors.primary,
                       onTap: () => context.push(
                         routeWithPreferredCity(
                           AppConstants.routeLabs,

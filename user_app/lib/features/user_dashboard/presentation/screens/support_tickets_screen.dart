@@ -284,6 +284,9 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
               value: _category,
+              itemHeight: kMinInteractiveDimension,
+              menuMaxHeight: 280,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'Category'),
               items: _categories
                   .map(

@@ -14,7 +14,7 @@ class BloodAvailabilityIndicator extends StatelessWidget {
   Color get _color {
     switch (level) {
       case 'high':
-        return const Color(0xFF2E7D32);
+        return AppColors.success;
       case 'medium':
         return const Color(0xFFF9A825);
       case 'low':

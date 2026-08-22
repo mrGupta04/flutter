@@ -30,7 +30,8 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
   bool _loading = true;
   bool _ending = false;
   Timer? _elapsedTimer;
-  Duration _elapsed = Duration.zero;
+  Duration _remaining = const Duration(minutes: 20);
+  bool _timeUpHandled = false;
   WebViewController? _webController;
 
   @override
@@ -72,6 +73,8 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
           ..loadRequest(Uri.parse(session.joinUrl!));
       }
 
+      _session = session;
+      _remaining = session.remainingAt();
       _startElapsedTimer();
       setState(() {
         _session = session;
@@ -88,10 +91,32 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
 
   void _startElapsedTimer() {
     _elapsedTimer?.cancel();
+    _tickRemaining();
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() => _elapsed += const Duration(seconds: 1));
+      _tickRemaining();
     });
+  }
+
+  void _tickRemaining() {
+    if (!mounted) return;
+    final remaining = _session?.remainingAt() ?? _remaining;
+    setState(() => _remaining = remaining);
+    if (!_timeUpHandled && remaining <= Duration.zero) {
+      _timeUpHandled = true;
+      unawaited(_onConsultTimeUp());
+    }
+  }
+
+  Future<void> _onConsultTimeUp() async {
+    if (_ending) return;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your 20-minute online consult has ended.'),
+        ),
+      );
+    }
+    await _endCall();
   }
 
   Future<void> _endCall() async {
@@ -105,7 +130,7 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
     if (mounted) context.pop(true);
   }
 
-  String _formatElapsed(Duration d) {
+  String _formatRemaining(Duration d) {
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     final hours = d.inHours;
@@ -134,9 +159,11 @@ class _VideoConsultScreenState extends State<VideoConsultScreen> {
               padding: const EdgeInsets.only(right: 12),
               child: Center(
                 child: Text(
-                  _formatElapsed(_elapsed),
+                  _formatRemaining(_remaining),
                   style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.white,
+                    color: _remaining <= const Duration(minutes: 2)
+                        ? const Color(0xFFFBBF24)
+                        : AppColors.white,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),

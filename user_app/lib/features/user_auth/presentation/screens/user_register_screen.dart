@@ -109,6 +109,7 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
 
     if (!mounted) return;
     if (ok) {
+      SnackBarHelper.showSuccess(context, 'Account created. You are signed in.');
       _finishSuccess();
     } else {
       final err = ref.read(patientAuthProvider).error;
@@ -120,9 +121,9 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
     final redirect = widget.redirect;
     if (redirect != null && redirect.isNotEmpty) {
       context.go(redirect);
-    } else {
-      context.pop(true);
+      return;
     }
+    context.go(AppConstants.routeUserHome);
   }
 
   @override
@@ -211,15 +212,11 @@ class _UserRegisterScreenState extends ConsumerState<UserRegisterScreen> {
                 validator: (v) => ValidationUtils.validateAge(v ?? ''),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
+              AppDropdownFormField<String>(
                 value: _gender,
-                decoration: InputDecoration(
-                  labelText: 'Gender',
-                  prefixIcon: const Icon(Icons.wc_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                label: 'Gender',
+                prefixIcon: Icons.wc_outlined,
+                hint: 'Select gender',
                 items: AppLists.genders
                     .map(
                       (g) => DropdownMenuItem(value: g, child: Text(g)),
