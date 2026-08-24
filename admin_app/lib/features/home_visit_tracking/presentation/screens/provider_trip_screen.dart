@@ -1,20 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/services/tracking_location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../provider/provider_trip_provider.dart';
-
-const _kMapStyle = '''
-[
-  {"featureType":"poi","elementType":"labels","stylers":[{"visibility":"off"}]},
-  {"featureType":"transit","stylers":[{"visibility":"off"}]},
-  {"elementType":"geometry","stylers":[{"saturation":-18}]}
-]
-''';
+import '../widgets/live_tracking_map.dart';
 
 class ProviderTripScreen extends ConsumerStatefulWidget {
   const ProviderTripScreen({
@@ -39,9 +32,7 @@ class ProviderTripScreen extends ConsumerStatefulWidget {
 }
 
 class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
-  GoogleMapController? _mapController;
-  bool _cameraFitted = false;
-  bool _userMovedCamera = false;
+  int _resetViewToken = 0;
   late final ProviderTripArgs _args;
 
   @override
@@ -51,12 +42,6 @@ class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
       bookingId: widget.bookingId,
       role: widget.role,
     );
-  }
-
-  @override
-  void dispose() {
-    _mapController?.dispose();
-    super.dispose();
   }
 
   Future<void> _startTrip() async {
@@ -72,44 +57,6 @@ class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
     );
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       await launchUrl(uri);
-    }
-  }
-
-  LatLngBounds _bounds(LatLng a, LatLng b) {
-    return LatLngBounds(
-      southwest: LatLng(
-        a.latitude < b.latitude ? a.latitude : b.latitude,
-        a.longitude < b.longitude ? a.longitude : b.longitude,
-      ),
-      northeast: LatLng(
-        a.latitude > b.latitude ? a.latitude : b.latitude,
-        a.longitude > b.longitude ? a.longitude : b.longitude,
-      ),
-    );
-  }
-
-  Future<void> _fitCamera(LatLng? patient, LatLng? self, {bool force = false}) async {
-    if (_mapController == null) return;
-    if (!force && _cameraFitted && _userMovedCamera) return;
-    if (patient != null && self != null) {
-      _cameraFitted = true;
-      try {
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(_bounds(patient, self), 90),
-        );
-      } catch (_) {
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(self, 15),
-        );
-      }
-    } else {
-      final focus = self ?? patient;
-      if (focus != null) {
-        _cameraFitted = true;
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(focus, 15.4),
-        );
-      }
     }
   }
 
@@ -133,7 +80,6 @@ class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
     ].where((e) => e != null && e.trim().isNotEmpty).join(', ');
     final onTheWay = snapshot?.isOnTheWay == true;
     final terminal = snapshot?.isTerminal == true;
-    final initial = patient ?? self ?? const LatLng(20.5937, 78.9629);
     final eta = snapshot?.etaMinutes;
     final distance = snapshot?.distanceText;
 
@@ -148,15 +94,6 @@ class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
         ..add(patient);
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (onTheWay && self != null && !_userMovedCamera && _mapController != null) {
-        _mapController!.animateCamera(CameraUpdate.newLatLng(self));
-      } else {
-        _fitCamera(patient, self);
-      }
-    });
-
     final topInset = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
@@ -164,66 +101,15 @@ class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(target: initial, zoom: 14.6),
-              style: _kMapStyle,
-              myLocationEnabled: onTheWay,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              compassEnabled: false,
-              mapToolbarEnabled: false,
-              padding: const EdgeInsets.only(bottom: 300, top: 88),
-              polylines: {
-                if (routePoints.length >= 2)
-                  Polyline(
-                    polylineId: const PolylineId('route'),
-                    color: AppColors.primary,
-                    width: 6,
-                    startCap: Cap.roundCap,
-                    endCap: Cap.roundCap,
-                    jointType: JointType.round,
-                    points: routePoints,
-                  ),
-              },
-              circles: {
-                if (patient != null)
-                  Circle(
-                    circleId: const CircleId('patient_halo'),
-                    center: patient,
-                    radius: 42,
-                    fillColor: AppColors.primary.withOpacity(0.16),
-                    strokeColor: AppColors.primary,
-                    strokeWidth: 2,
-                  ),
-              },
-              markers: {
-                if (patient != null)
-                  Marker(
-                    markerId: const MarkerId('patient'),
-                    position: patient,
-                    infoWindow: InfoWindow(title: name, snippet: address),
-                    icon: BitmapDescriptor.defaultMarkerWithHue(
-                      BitmapDescriptor.hueRed,
-                    ),
-                  ),
-                if (self != null)
-                  Marker(
-                    markerId: const MarkerId('provider'),
-                    position: self,
-                    rotation: snapshot?.heading ?? 0,
-                    flat: true,
-                    anchor: const Offset(0.5, 0.5),
-                    infoWindow: const InfoWindow(title: 'You'),
-                    icon: BitmapDescriptor.defaultMarkerWithHue(
-                      BitmapDescriptor.hueAzure,
-                    ),
-                  ),
-              },
-              onMapCreated: (controller) {
-                _mapController = controller;
-                _fitCamera(patient, self, force: true);
-              },
-              onCameraMoveStarted: () => _userMovedCamera = true,
+            child: LiveTrackingMap(
+              patient: patient,
+              provider: self,
+              route: routePoints,
+              userAgentPackageName: 'com.onemg.admin',
+              patientLabel: name,
+              providerLabel: 'You',
+              followProvider: onTheWay,
+              resetViewToken: _resetViewToken,
             ),
           ),
           Positioned(
@@ -283,10 +169,7 @@ class _ProviderTripScreenState extends ConsumerState<ProviderTripScreen> {
             bottom: 292,
             child: _RoundMapButton(
               icon: Icons.my_location_rounded,
-              onTap: () {
-                _userMovedCamera = false;
-                _fitCamera(patient, self, force: true);
-              },
+              onTap: () => setState(() => _resetViewToken++),
             ),
           ),
           Align(

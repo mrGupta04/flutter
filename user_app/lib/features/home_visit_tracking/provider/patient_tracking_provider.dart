@@ -53,14 +53,12 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
   DateTime? _lastRouteAt;
 
   Future<void> _init() async {
+    state = state.copyWith(socketConnected: _socket.isConnected);
     _connSub = _socket.connectionChanges.listen((connected) {
       if (!mounted) return;
       state = state.copyWith(socketConnected: connected);
       if (connected) {
         _socket.joinBookingRoom(bookingId);
-        _pollTimer?.cancel();
-      } else {
-        _startPollFallback();
       }
     });
     _socket.on('doctor_location_update', _onLocation);
@@ -78,6 +76,9 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
     try {
       await _socket.connect();
       _socket.joinBookingRoom(bookingId);
+      if (mounted) {
+        state = state.copyWith(socketConnected: _socket.isConnected);
+      }
     } catch (_) {
       // Keep polling if the live socket cannot connect.
     }
@@ -85,9 +86,17 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
 
   void _startPollFallback() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       unawaited(refresh(includeRoute: false));
     });
+  }
+
+  TrackingSnapshot _prepare(TrackingSnapshot snapshot, {bool mergeRoute = false}) {
+    var next = snapshot;
+    if (mergeRoute && state.snapshot != null) {
+      next = next.mergePreservingRoute(state.snapshot!);
+    }
+    return next.withClientRouteFallback();
   }
 
   Future<void> refresh({bool includeRoute = true}) async {
@@ -98,12 +107,15 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
       );
       if (!mounted) return;
       state = state.copyWith(
-        snapshot: snapshot,
+        snapshot: _prepare(snapshot, mergeRoute: !includeRoute),
         loading: false,
         clearError: true,
         socketConnected: _socket.isConnected,
         providerOffline: false,
       );
+      if (includeRoute == false) {
+        _maybeRefreshRoute();
+      }
     } catch (e) {
       if (!mounted) return;
       state = state.copyWith(loading: false, error: e.toString());
@@ -123,16 +135,19 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
     }
     if (!mounted) return;
     state = state.copyWith(
-      snapshot: current.copyWith(
-        currentLatitude: update.latitude,
-        currentLongitude: update.longitude,
-        heading: update.heading,
-        speed: update.speed,
-        lastUpdatedAt: DateTime.fromMillisecondsSinceEpoch(update.timestamp),
-        isTracking: true,
-        trackingStatus: 'on_the_way',
-      ),
+      snapshot: current
+          .copyWith(
+            currentLatitude: update.latitude,
+            currentLongitude: update.longitude,
+            heading: update.heading,
+            speed: update.speed,
+            lastUpdatedAt: DateTime.fromMillisecondsSinceEpoch(update.timestamp),
+            isTracking: true,
+            trackingStatus: 'on_the_way',
+          )
+          .withClientRouteFallback(),
       providerOffline: false,
+      socketConnected: true,
     );
     _maybeRefreshRoute();
   }
@@ -140,7 +155,11 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
   void _maybeRefreshRoute() {
     final now = DateTime.now();
     if (_lastRouteAt != null &&
-        now.difference(_lastRouteAt!) < const Duration(seconds: 45)) {
+        now.difference(_lastRouteAt!) < const Duration(seconds: 20)) {
+      return;
+    }
+    final snap = state.snapshot;
+    if (snap?.currentLatitude == null || snap?.patientLatitude == null) {
       return;
     }
     _lastRouteAt = now;
@@ -151,15 +170,21 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
         final current = state.snapshot;
         if (!mounted || current == null) return;
         state = state.copyWith(
-          snapshot: current.copyWith(
-            distanceText: route.distanceText,
-            etaMinutes: route.etaMinutes,
-            durationText: route.durationText,
-            polyline: route.polyline,
-          ),
+          snapshot: current
+              .copyWith(
+                distanceText: route.distanceText,
+                etaMinutes: route.etaMinutes,
+                durationText: route.durationText,
+                polyline: route.polyline,
+                currentLatitude: route.currentLatitude,
+                currentLongitude: route.currentLongitude,
+              )
+              .withClientRouteFallback(),
         );
       } catch (_) {
-        // Keep last route; GPS marker still moves.
+        final current = state.snapshot;
+        if (!mounted || current == null) return;
+        state = state.copyWith(snapshot: current.withClientRouteFallback());
       }
     });
   }
@@ -170,7 +195,7 @@ class PatientTrackingNotifier extends StateNotifier<PatientTrackingState> {
       state = state.copyWith(
         snapshot: TrackingSnapshot.fromJson(
           Map<String, dynamic>.from(data['snapshot'] as Map),
-        ),
+        ).withClientRouteFallback(),
       );
       return;
     }

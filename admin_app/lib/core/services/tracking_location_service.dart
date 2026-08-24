@@ -40,7 +40,7 @@ class TrackingLocationService {
     if (defaultTargetPlatform == TargetPlatform.android) {
       return AndroidSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 12,
+        distanceFilter: 0,
         intervalDuration: const Duration(seconds: 4),
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: 'Home visit trip in progress',
@@ -55,7 +55,7 @@ class TrackingLocationService {
       return AppleSettings(
         accuracy: LocationAccuracy.high,
         activityType: ActivityType.automotiveNavigation,
-        distanceFilter: 12,
+        distanceFilter: 0,
         pauseLocationUpdatesAutomatically: false,
         showBackgroundLocationIndicator: true,
         allowBackgroundLocationUpdates: true,
@@ -63,7 +63,7 @@ class TrackingLocationService {
     }
     return const LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 12,
+      distanceFilter: 0,
     );
   }
 
@@ -119,45 +119,52 @@ class TrackingLocationService {
     return true;
   }
 
+  void Function(TrackingPoint point)? _onLocation;
+  void Function(String message)? _onError;
+
   Future<void> start({
     required String bookingId,
     required void Function(TrackingPoint point) onLocation,
     void Function(String message)? onError,
   }) async {
+    _onLocation = onLocation;
+    _onError = onError;
     if (_starting) return;
     if (_activeBookingId == bookingId && _subscription != null) return;
 
     _starting = true;
     try {
-      await stop();
+      await _subscription?.cancel();
+      _subscription = null;
+      _activeBookingId = null;
       if (!await Geolocator.isLocationServiceEnabled()) {
-        onError?.call('GPS is turned off. Enable location services to start the trip.');
+        _onError?.call('GPS is turned off. Enable location services to start the trip.');
         return;
       }
       final permission = await Geolocator.checkPermission();
       if (!LocationService.permissionGranted(permission)) {
-        onError?.call('Location permission denied. Allow location access to share your trip.');
+        _onError?.call('Location permission denied. Allow location access to share your trip.');
         return;
       }
 
       _activeBookingId = bookingId;
       _subscription = Geolocator.getPositionStream(locationSettings: _settings()).listen(
         (position) {
-          onLocation(
-            TrackingPoint(
-              latitude: position.latitude,
-              longitude: position.longitude,
-              heading: position.heading.isNaN ? null : position.heading,
-              speed: position.speed.isNaN || position.speed < 0 ? null : position.speed,
-              timestamp: position.timestamp.millisecondsSinceEpoch,
-            ),
-          );
+          _onLocation?.call(_pointFrom(position));
         },
         onError: (Object error) {
-          onError?.call('Location stream interrupted. Trying to continue…');
+          _onError?.call('Location stream interrupted. Trying to continue…');
         },
         cancelOnError: false,
       );
+      try {
+        final current = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        );
+        _onLocation?.call(_pointFrom(current));
+      } catch (_) {
+        // Stream updates will follow.
+      }
     } finally {
       _starting = false;
     }
@@ -167,5 +174,17 @@ class TrackingLocationService {
     await _subscription?.cancel();
     _subscription = null;
     _activeBookingId = null;
+    _onLocation = null;
+    _onError = null;
+  }
+
+  TrackingPoint _pointFrom(Position position) {
+    return TrackingPoint(
+      latitude: position.latitude,
+      longitude: position.longitude,
+      heading: position.heading.isNaN ? null : position.heading,
+      speed: position.speed.isNaN || position.speed < 0 ? null : position.speed,
+      timestamp: position.timestamp.millisecondsSinceEpoch,
+    );
   }
 }

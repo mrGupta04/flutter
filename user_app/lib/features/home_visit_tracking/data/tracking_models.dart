@@ -1,3 +1,5 @@
+import 'tracking_geo.dart';
+
 class TrackingSnapshot {
   const TrackingSnapshot({
     required this.bookingId,
@@ -100,9 +102,7 @@ class TrackingSnapshot {
       currentLongitude: (json['currentLongitude'] as num?)?.toDouble(),
       heading: (json['heading'] as num?)?.toDouble(),
       speed: (json['speed'] as num?)?.toDouble(),
-      lastUpdatedAt: json['lastUpdatedAt'] != null
-          ? DateTime.tryParse(json['lastUpdatedAt'].toString())
-          : null,
+      lastUpdatedAt: TrackingGeo.parseTimestamp(json['lastUpdatedAt']),
       distanceText: json['distanceText']?.toString(),
       etaMinutes: (json['etaMinutes'] as num?)?.toInt(),
       durationText: json['durationText']?.toString(),
@@ -159,6 +159,55 @@ class TrackingSnapshot {
       polyline: polyline ?? this.polyline,
       isTracking: isTracking ?? this.isTracking,
       routeWarning: routeWarning,
+    );
+  }
+
+  TrackingSnapshot mergePreservingRoute(TrackingSnapshot previous) {
+    final keepDetailedLine =
+        previous.polyline.length > 2 && polyline.length <= 2;
+    return copyWith(
+      distanceText: (distanceText != null && distanceText!.isNotEmpty)
+          ? distanceText
+          : previous.distanceText,
+      etaMinutes: etaMinutes ?? previous.etaMinutes,
+      durationText: (durationText != null && durationText!.isNotEmpty)
+          ? durationText
+          : previous.durationText,
+      polyline: keepDetailedLine
+          ? previous.polyline
+          : (polyline.isNotEmpty ? polyline : previous.polyline),
+    );
+  }
+
+  TrackingSnapshot withClientRouteFallback() {
+    if (etaMinutes != null &&
+        distanceText != null &&
+        distanceText!.isNotEmpty &&
+        polyline.length >= 2) {
+      return this;
+    }
+    final fromLat = currentLatitude;
+    final fromLng = currentLongitude;
+    final toLat = patientLatitude;
+    final toLng = patientLongitude;
+    if (fromLat == null || fromLng == null || toLat == null || toLng == null) {
+      return this;
+    }
+    final estimate = TrackingGeo.estimate(
+      fromLat: fromLat,
+      fromLng: fromLng,
+      toLat: toLat,
+      toLng: toLng,
+    );
+    return copyWith(
+      distanceText: (distanceText != null && distanceText!.isNotEmpty)
+          ? distanceText
+          : estimate.distanceText,
+      etaMinutes: etaMinutes ?? estimate.etaMinutes,
+      durationText: (durationText != null && durationText!.isNotEmpty)
+          ? durationText
+          : estimate.durationText,
+      polyline: polyline.length >= 2 ? polyline : estimate.polyline,
     );
   }
 }

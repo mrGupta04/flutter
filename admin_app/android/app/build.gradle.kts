@@ -13,7 +13,9 @@ android {
             file.inputStream().use { load(it) }
         }
     }
-    val mapsApiKey = localProperties.getProperty("MAPS_API_KEY", "")
+    val mapsApiKey = localProperties.getProperty("MAPS_API_KEY")
+        ?: System.getenv("MAPS_API_KEY")
+        ?: ""
 
     namespace = "com.onemg.admin"
     compileSdk = flutter.compileSdkVersion

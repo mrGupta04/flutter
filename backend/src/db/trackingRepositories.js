@@ -10,7 +10,12 @@ const {
   shouldPersist,
   markPersisted,
 } = require('../services/liveLocationStore');
-const { getRouteForBooking, clearRoute } = require('../services/routingService');
+const {
+  getRouteForBooking,
+  peekCachedRoute,
+  fallbackRoute,
+  clearRoute,
+} = require('../services/routingService');
 
 const TERMINAL_PROGRESS = new Set(['arrived', 'visit_started', 'completed']);
 
@@ -132,24 +137,29 @@ async function buildTrackingSnapshot(bookingDoc, { includeRoute = false } = {}) 
   const originLng = live?.longitude ?? booking.currentLongitude;
 
   let route = null;
-  if (
-    includeRoute &&
+  const hasPair =
     Number.isFinite(originLat) &&
     Number.isFinite(originLng) &&
     Number.isFinite(booking.patientLatitude) &&
-    Number.isFinite(booking.patientLongitude)
-  ) {
-    try {
-      route = await getRouteForBooking({
-        bookingId: booking.id,
-        origin: { latitude: originLat, longitude: originLng },
-        destination: {
-          latitude: booking.patientLatitude,
-          longitude: booking.patientLongitude,
-        },
-      });
-    } catch {
-      route = null;
+    Number.isFinite(booking.patientLongitude);
+  if (hasPair) {
+    const origin = { latitude: originLat, longitude: originLng };
+    const destination = {
+      latitude: booking.patientLatitude,
+      longitude: booking.patientLongitude,
+    };
+    if (includeRoute) {
+      try {
+        route = await getRouteForBooking({
+          bookingId: booking.id,
+          origin,
+          destination,
+        });
+      } catch {
+        route = fallbackRoute(origin, destination);
+      }
+    } else {
+      route = peekCachedRoute(booking.id) || fallbackRoute(origin, destination);
     }
   }
 

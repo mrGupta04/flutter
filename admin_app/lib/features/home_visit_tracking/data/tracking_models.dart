@@ -1,3 +1,5 @@
+import 'tracking_geo.dart';
+
 class TrackingSnapshot {
   const TrackingSnapshot({
     required this.bookingId,
@@ -78,9 +80,7 @@ class TrackingSnapshot {
       currentLongitude: (json['currentLongitude'] as num?)?.toDouble(),
       heading: (json['heading'] as num?)?.toDouble(),
       speed: (json['speed'] as num?)?.toDouble(),
-      lastUpdatedAt: json['lastUpdatedAt'] != null
-          ? DateTime.tryParse(json['lastUpdatedAt'].toString())
-          : null,
+      lastUpdatedAt: TrackingGeo.parseTimestamp(json['lastUpdatedAt']),
       distanceText: json['distanceText']?.toString(),
       etaMinutes: (json['etaMinutes'] as num?)?.toInt(),
       durationText: json['durationText']?.toString(),
@@ -96,6 +96,79 @@ class TrackingSnapshot {
           .toList(),
       isTracking: json['isTracking'] as bool? ?? false,
       routeWarning: json['routeWarning']?.toString() ?? json['warning']?.toString(),
+    );
+  }
+
+  TrackingSnapshot copyWith({
+    double? currentLatitude,
+    double? currentLongitude,
+    double? heading,
+    double? speed,
+    DateTime? lastUpdatedAt,
+    String? distanceText,
+    int? etaMinutes,
+    String? durationText,
+    List<({double latitude, double longitude})>? polyline,
+    String? trackingStatus,
+    bool? isTracking,
+  }) {
+    return TrackingSnapshot(
+      bookingId: bookingId,
+      trackingStatus: trackingStatus ?? this.trackingStatus,
+      visitProgress: visitProgress,
+      bookingStatus: bookingStatus,
+      providerType: providerType,
+      providerId: providerId,
+      providerName: providerName,
+      providerMobile: providerMobile,
+      patientName: patientName,
+      patientAddress: patientAddress,
+      patientCity: patientCity,
+      patientLatitude: patientLatitude,
+      patientLongitude: patientLongitude,
+      currentLatitude: currentLatitude ?? this.currentLatitude,
+      currentLongitude: currentLongitude ?? this.currentLongitude,
+      heading: heading ?? this.heading,
+      speed: speed ?? this.speed,
+      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+      distanceText: distanceText ?? this.distanceText,
+      etaMinutes: etaMinutes ?? this.etaMinutes,
+      durationText: durationText ?? this.durationText,
+      polyline: polyline ?? this.polyline,
+      isTracking: isTracking ?? this.isTracking,
+      routeWarning: routeWarning,
+    );
+  }
+
+  TrackingSnapshot withClientRouteFallback() {
+    if (etaMinutes != null &&
+        distanceText != null &&
+        distanceText!.isNotEmpty &&
+        polyline.length >= 2) {
+      return this;
+    }
+    final fromLat = currentLatitude;
+    final fromLng = currentLongitude;
+    final toLat = patientLatitude;
+    final toLng = patientLongitude;
+    if (fromLat == null || fromLng == null || toLat == null || toLng == null) {
+      return this;
+    }
+    final estimate = TrackingGeo.estimate(
+      fromLat: fromLat,
+      fromLng: fromLng,
+      toLat: toLat,
+      toLng: toLng,
+    );
+    return copyWith(
+      distanceText: (distanceText != null && distanceText!.isNotEmpty)
+          ? distanceText
+          : estimate.distanceText,
+      etaMinutes: etaMinutes ?? estimate.etaMinutes,
+      durationText: (durationText != null && durationText!.isNotEmpty)
+          ? durationText
+          : estimate.durationText,
+      polyline: polyline.length >= 2 ? polyline : estimate.polyline,
     );
   }
 }

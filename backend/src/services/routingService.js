@@ -79,6 +79,13 @@ function cacheKey(bookingId) {
   return `route:${bookingId}`;
 }
 
+function peekCachedRoute(bookingId) {
+  const hit = cache.get(cacheKey(bookingId));
+  if (!hit) return null;
+  if (Date.now() - hit.updatedAt > ROUTE_TTL_MS * 4) return null;
+  return hit;
+}
+
 function getCachedRoute(bookingId, origin) {
   const hit = cache.get(cacheKey(bookingId));
   if (!hit) return null;
@@ -173,6 +180,8 @@ function clearRoute(bookingId) {
 
 module.exports = {
   getRouteForBooking,
+  peekCachedRoute,
   clearRoute,
   haversineMeters,
+  fallbackRoute,
 };

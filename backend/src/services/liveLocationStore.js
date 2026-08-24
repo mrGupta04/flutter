@@ -9,7 +9,7 @@
 const locations = new Map();
 const lastPersistAt = new Map();
 
-const PERSIST_INTERVAL_MS = Number(process.env.TRACKING_PERSIST_MS || 15000);
+const PERSIST_INTERVAL_MS = Number(process.env.TRACKING_PERSIST_MS || 5000);
 
 function setLiveLocation(bookingId, payload) {
   if (!bookingId) return null;

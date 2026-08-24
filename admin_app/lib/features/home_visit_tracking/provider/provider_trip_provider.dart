@@ -109,7 +109,7 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
       );
       if (!mounted) return;
       state = state.copyWith(
-        snapshot: snapshot,
+        snapshot: snapshot.withClientRouteFallback(),
         loading: false,
         clearError: true,
         socketConnected: _socket.isConnected,
@@ -121,7 +121,7 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
   }
 
   Future<void> startTrip() async {
-    if (state.starting || _location.isTracking) return;
+    if (state.starting) return;
     state = state.copyWith(starting: true, clearError: true);
     try {
       final snapshot = await _repository.startTrip(
@@ -130,7 +130,10 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
       );
       _socket.startTracking(bookingId);
       if (!mounted) return;
-      state = state.copyWith(snapshot: snapshot, starting: false);
+      state = state.copyWith(
+        snapshot: snapshot.withClientRouteFallback(),
+        starting: false,
+      );
       await _resumeGps();
     } catch (e) {
       if (!mounted) return;
@@ -156,7 +159,10 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
         progress: progress,
       );
       if (!mounted) return;
-      state = state.copyWith(snapshot: snapshot, gpsActive: false);
+      state = state.copyWith(
+        snapshot: snapshot.withClientRouteFallback(),
+        gpsActive: false,
+      );
     } catch (e) {
       if (!mounted) return;
       state = state.copyWith(gpsActive: false, error: e.toString());
@@ -177,36 +183,24 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
   }
 
   void _onGps(TrackingPoint point) {
-    final current = state.snapshot;
-    if (current != null && mounted) {
-      state = state.copyWith(
-        snapshot: TrackingSnapshot(
-          bookingId: current.bookingId,
-          trackingStatus: current.trackingStatus,
-          visitProgress: current.visitProgress,
-          bookingStatus: current.bookingStatus,
-          providerType: current.providerType,
-          providerId: current.providerId,
-          providerName: current.providerName,
-          providerMobile: current.providerMobile,
-          patientName: current.patientName,
-          patientAddress: current.patientAddress,
-          patientCity: current.patientCity,
-          patientLatitude: current.patientLatitude,
-          patientLongitude: current.patientLongitude,
-          currentLatitude: point.latitude,
-          currentLongitude: point.longitude,
-          heading: point.heading,
-          speed: point.speed,
-          lastUpdatedAt: DateTime.fromMillisecondsSinceEpoch(point.timestamp),
-          distanceText: current.distanceText,
-          etaMinutes: current.etaMinutes,
-          durationText: current.durationText,
-          polyline: current.polyline,
-          isTracking: true,
-          routeWarning: current.routeWarning,
-        ),
-      );
+    if (mounted) {
+      final current = state.snapshot;
+      if (current != null) {
+        state = state.copyWith(
+          snapshot: current
+              .copyWith(
+                currentLatitude: point.latitude,
+                currentLongitude: point.longitude,
+                heading: point.heading,
+                speed: point.speed,
+                lastUpdatedAt:
+                    DateTime.fromMillisecondsSinceEpoch(point.timestamp),
+                isTracking: true,
+                trackingStatus: 'on_the_way',
+              )
+              .withClientRouteFallback(),
+        );
+      }
     }
     final payload = {
       'bookingId': bookingId,
@@ -221,7 +215,7 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
     } else {
       final now = DateTime.now();
       if (_lastRestFallback == null ||
-          now.difference(_lastRestFallback!) > const Duration(seconds: 8)) {
+          now.difference(_lastRestFallback!) > const Duration(seconds: 5)) {
         _lastRestFallback = now;
         unawaited(
           _repository.sendLocationFallback(
@@ -244,7 +238,7 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
         Map<String, dynamic>.from(data['snapshot'] as Map),
       );
       if (!mounted) return;
-      state = state.copyWith(snapshot: snapshot);
+      state = state.copyWith(snapshot: snapshot.withClientRouteFallback());
     }
   }
 
@@ -276,8 +270,9 @@ class ProviderTripNotifier extends StateNotifier<ProviderTripState> {
     _socket.off('tracking_started', _onStarted);
     _socket.off('tracking_stopped', _onStopped);
     _socket.off('tracking_error', _onError);
-    _socket.leaveBookingRoom();
-    unawaited(_location.stop());
+    if (_location.activeBookingId != bookingId) {
+      _socket.leaveBookingRoom();
+    }
     super.dispose();
   }
 }

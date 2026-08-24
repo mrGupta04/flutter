@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../provider/patient_tracking_provider.dart';
-
-const _kMapStyle = '''
-[
-  {"featureType":"poi","elementType":"labels","stylers":[{"visibility":"off"}]},
-  {"featureType":"transit","stylers":[{"visibility":"off"}]},
-  {"elementType":"geometry","stylers":[{"saturation":-18}]}
-]
-''';
+import '../widgets/live_tracking_map.dart';
 
 class PatientTrackingScreen extends ConsumerStatefulWidget {
   const PatientTrackingScreen({
@@ -28,86 +21,8 @@ class PatientTrackingScreen extends ConsumerStatefulWidget {
       _PatientTrackingScreenState();
 }
 
-class _PatientTrackingScreenState extends ConsumerState<PatientTrackingScreen>
-    with SingleTickerProviderStateMixin {
-  GoogleMapController? _mapController;
-  AnimationController? _markerAnim;
-  LatLng? _animatedProvider;
-  LatLng? _animFrom;
-  LatLng? _animTo;
-  bool _cameraFitted = false;
-  bool _userMovedCamera = false;
-
-  @override
-  void dispose() {
-    _markerAnim?.dispose();
-    _mapController?.dispose();
-    super.dispose();
-  }
-
-  void _animateProvider(LatLng next) {
-    final from = _animatedProvider ?? next;
-    _markerAnim?.dispose();
-    _animFrom = from;
-    _animTo = next;
-    _markerAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..addListener(() {
-        final a = _animFrom;
-        final b = _animTo;
-        if (a == null || b == null) return;
-        final t = Curves.easeInOut.transform(_markerAnim!.value);
-        setState(() {
-          _animatedProvider = LatLng(
-            a.latitude + (b.latitude - a.latitude) * t,
-            a.longitude + (b.longitude - a.longitude) * t,
-          );
-        });
-      });
-    _markerAnim!.forward();
-    if (!_userMovedCamera && _mapController != null) {
-      _mapController!.animateCamera(CameraUpdate.newLatLng(next));
-    }
-  }
-
-  LatLngBounds _bounds(LatLng a, LatLng b) {
-    return LatLngBounds(
-      southwest: LatLng(
-        a.latitude < b.latitude ? a.latitude : b.latitude,
-        a.longitude < b.longitude ? a.longitude : b.longitude,
-      ),
-      northeast: LatLng(
-        a.latitude > b.latitude ? a.latitude : b.latitude,
-        a.longitude > b.longitude ? a.longitude : b.longitude,
-      ),
-    );
-  }
-
-  Future<void> _fitOnce(LatLng? patient, LatLng? provider, {bool force = false}) async {
-    if (_mapController == null) return;
-    if (!force && _cameraFitted) return;
-    if (patient != null && provider != null) {
-      _cameraFitted = true;
-      try {
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(_bounds(patient, provider), 90),
-        );
-      } catch (_) {
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(provider, 15),
-        );
-      }
-    } else {
-      final focus = provider ?? patient;
-      if (focus != null) {
-        _cameraFitted = true;
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(focus, 15.2),
-        );
-      }
-    }
-  }
+class _PatientTrackingScreenState extends ConsumerState<PatientTrackingScreen> {
+  int _resetViewToken = 0;
 
   Future<void> _call(String? mobile) async {
     if (mobile == null || mobile.trim().isEmpty) return;
@@ -130,29 +45,11 @@ class _PatientTrackingScreenState extends ConsumerState<PatientTrackingScreen>
             snapshot?.patientLongitude != null)
         ? LatLng(snapshot!.patientLatitude!, snapshot.patientLongitude!)
         : null;
-    final rawProvider = (snapshot?.currentLatitude != null &&
+    final providerPos = (snapshot?.currentLatitude != null &&
             snapshot?.currentLongitude != null)
         ? LatLng(snapshot!.currentLatitude!, snapshot.currentLongitude!)
         : null;
 
-    if (rawProvider != null &&
-        (_animatedProvider == null ||
-            _animTo == null ||
-            _animTo!.latitude != rawProvider.latitude ||
-            _animTo!.longitude != rawProvider.longitude)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _animateProvider(rawProvider);
-        _fitOnce(patient, rawProvider);
-      });
-    } else if (patient != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _fitOnce(patient, rawProvider);
-      });
-    }
-
-    final providerPos = _animatedProvider ?? rawProvider;
-    final initial = providerPos ?? patient ?? const LatLng(20.5937, 78.9629);
     final isNurse = snapshot?.isNurse == true;
     final routePoints = <LatLng>[
       ...snapshot?.polyline.map((p) => LatLng(p.latitude, p.longitude)) ??
@@ -201,68 +98,16 @@ class _PatientTrackingScreenState extends ConsumerState<PatientTrackingScreen>
       body: Stack(
         children: [
           Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(target: initial, zoom: 14.6),
-              style: _kMapStyle,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              compassEnabled: false,
-              mapToolbarEnabled: false,
-              padding: const EdgeInsets.only(bottom: 300, top: 88),
-              polylines: {
-                if (routePoints.length >= 2)
-                  Polyline(
-                    polylineId: const PolylineId('route'),
-                    color: AppColors.primary,
-                    width: 6,
-                    startCap: Cap.roundCap,
-                    endCap: Cap.roundCap,
-                    jointType: JointType.round,
-                    points: routePoints,
-                  ),
-              },
-              circles: {
-                if (patient != null)
-                  Circle(
-                    circleId: const CircleId('home_halo'),
-                    center: patient,
-                    radius: 42,
-                    fillColor: AppColors.primary.withOpacity(0.16),
-                    strokeColor: AppColors.primary,
-                    strokeWidth: 2,
-                  ),
-              },
-              markers: {
-                if (patient != null)
-                  Marker(
-                    markerId: const MarkerId('patient'),
-                    position: patient,
-                    infoWindow: const InfoWindow(title: '🏠 Your home'),
-                    icon: BitmapDescriptor.defaultMarkerWithHue(
-                      BitmapDescriptor.hueRed,
-                    ),
-                  ),
-                if (providerPos != null)
-                  Marker(
-                    markerId: const MarkerId('provider'),
-                    position: providerPos,
-                    rotation: snapshot?.heading ?? 0,
-                    flat: true,
-                    anchor: const Offset(0.5, 0.5),
-                    infoWindow: InfoWindow(
-                      title: '🚗 ${snapshot?.providerName ?? (isNurse ? 'Nurse' : 'Doctor')}',
-                    ),
-                    icon: BitmapDescriptor.defaultMarkerWithHue(
-                      BitmapDescriptor.hueAzure,
-                    ),
-                  ),
-              },
-              onMapCreated: (controller) {
-                _mapController = controller;
-                _fitOnce(patient, providerPos, force: true);
-              },
-              onCameraMoveStarted: () => _userMovedCamera = true,
+            child: LiveTrackingMap(
+              patient: patient,
+              provider: providerPos,
+              route: routePoints,
+              userAgentPackageName: 'com.onemg.care',
+              patientLabel: 'Your home',
+              providerLabel: snapshot?.providerName ??
+                  (isNurse ? 'Nurse' : 'Doctor'),
+              followProvider: snapshot?.isOnTheWay == true,
+              resetViewToken: _resetViewToken,
             ),
           ),
           Positioned(
@@ -318,11 +163,7 @@ class _PatientTrackingScreenState extends ConsumerState<PatientTrackingScreen>
             bottom: 292,
             child: _RoundMapButton(
               icon: Icons.my_location_rounded,
-              onTap: () {
-                _userMovedCamera = false;
-                _cameraFitted = false;
-                _fitOnce(patient, providerPos, force: true);
-              },
+              onTap: () => setState(() => _resetViewToken++),
             ),
           ),
           Align(
@@ -447,7 +288,7 @@ class _PatientTrackingScreenState extends ConsumerState<PatientTrackingScreen>
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
-                              'Reconnecting live updates…',
+                              'Reconnecting live updates… last location is still shown.',
                               style: AppTextStyles.bodySmall.copyWith(
                                 color: AppColors.warning,
                               ),
