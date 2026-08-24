@@ -270,7 +270,7 @@ class _UploadPrescriptionScreenState
             ),
             const SizedBox(height: 12),
           ],
-          TextField(
+          CaretOnTapTextField(
             controller: _labSearchController,
             decoration: const InputDecoration(
               hintText: 'Search labs...',
@@ -308,7 +308,7 @@ class _UploadPrescriptionScreenState
               );
             }),
           const SizedBox(height: 16),
-          TextField(
+          CaretOnTapTextField(
             controller: _testsController,
             maxLines: 3,
             decoration: const InputDecoration(
@@ -318,7 +318,7 @@ class _UploadPrescriptionScreenState
             ),
           ),
           const SizedBox(height: 12),
-          TextField(
+          CaretOnTapTextField(
             controller: _notesController,
             maxLines: 2,
             decoration: const InputDecoration(

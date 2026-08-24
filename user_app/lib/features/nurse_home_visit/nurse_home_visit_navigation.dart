@@ -4,6 +4,19 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/user_auth_guard.dart';
 import '../../data/models/nurse_model.dart';
 
+String nursePaymentRoute(String bookingId) =>
+    '${AppConstants.routeNursePayment}?bookingId=${Uri.encodeComponent(bookingId)}';
+
+String nurseMockPaymentRoute(String bookingId, {int amount = 0}) =>
+    '${AppConstants.routeNurseMockPayment}?bookingId=${Uri.encodeComponent(bookingId)}'
+    '&amount=$amount';
+
+String nurseBookingStatusRoute(String bookingId) =>
+    '${AppConstants.routeNurseBookingStatus}?bookingId=${Uri.encodeComponent(bookingId)}';
+
+String nurseLiveTrackRoute(String bookingId) =>
+    '${AppConstants.routeHomeVisitTrack}?bookingId=${Uri.encodeComponent(bookingId)}';
+
 Future<void> openNurseHomeVisitBooking(
   BuildContext context,
   NurseModel nurse,

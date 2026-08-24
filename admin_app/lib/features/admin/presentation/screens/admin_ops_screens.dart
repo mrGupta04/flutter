@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../data/models/api_response_model.dart';
 import '../../../../data/services/dio_service.dart';
 import '../../../../shared/widgets/admin_adaptive_shell.dart';
@@ -852,6 +854,7 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
       text: existing?['minOrderInr']?.toString() ?? '0',
     );
     String type = existing?['discountType']?.toString() ?? 'percentage';
+    final formKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -859,14 +862,23 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
           maxWidth: ResponsiveUtils.dialogMaxWidth,
         ),
         title: Text(existing == null ? 'New coupon' : 'Edit coupon'),
-        content: SingleChildScrollView(
+        content: Form(
+          key: formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              TextFormField(
                 controller: codeCtrl,
-                decoration: const InputDecoration(labelText: 'Code'),
                 textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                  LengthLimitingTextInputFormatter(20),
+                  UpperCaseTextFormatter(),
+                ],
+                validator: ValidationUtils.validateCouponCode,
+                decoration: const InputDecoration(labelText: 'Code *'),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -888,20 +900,51 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
                 },
               ),
               const SizedBox(height: 12),
-              TextField(
+              TextFormField(
                 controller: valueCtrl,
-                decoration: const InputDecoration(labelText: 'Value'),
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
+                validator: (value) {
+                  if (type == 'percentage') {
+                    return ValidationUtils.validatePositiveNumber(
+                      value,
+                      fieldName: 'Discount',
+                      min: 1,
+                      max: 100,
+                    );
+                  }
+                  return ValidationUtils.validatePositiveNumber(
+                    value,
+                    fieldName: 'Discount',
+                    min: 1,
+                    max: 100000,
+                  );
+                },
+                decoration: const InputDecoration(labelText: 'Value *'),
               ),
               const SizedBox(height: 12),
-              TextField(
+              TextFormField(
                 controller: minCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Min order (₹)'),
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(7),
+                ],
+                validator: (value) => ValidationUtils.validatePositiveNumber(
+                  value,
+                  fieldName: 'Min order',
+                  min: 0,
+                  max: 1000000,
+                ),
+                decoration:
+                    const InputDecoration(labelText: 'Min order (₹) *'),
               ),
             ],
           ),
+        ),
         ),
         actions: [
           TextButton(
@@ -909,7 +952,10 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              Navigator.pop(ctx, true);
+            },
             child: const Text('Save'),
           ),
         ],
@@ -1038,6 +1084,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
         TextEditingController(text: existing?['imageUrl']?.toString() ?? '');
     final linkCtrl =
         TextEditingController(text: existing?['linkUrl']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1045,31 +1092,60 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
           maxWidth: ResponsiveUtils.dialogMaxWidth,
         ),
         title: Text(existing == null ? 'New banner' : 'Edit banner'),
-        content: SingleChildScrollView(
+        content: Form(
+          key: formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              TextFormField(
                 controller: titleCtrl,
-                decoration: const InputDecoration(labelText: 'Title'),
+                validator: (value) => ValidationUtils.validateRequired(
+                  value,
+                  fieldName: 'Title',
+                  minLength: 3,
+                  maxLength: 80,
+                ),
+                decoration: const InputDecoration(labelText: 'Title *'),
               ),
               const SizedBox(height: 12),
-              TextField(
+              TextFormField(
                 controller: subtitleCtrl,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) return null;
+                  return ValidationUtils.validateRequired(
+                    value,
+                    fieldName: 'Subtitle',
+                    minLength: 3,
+                    maxLength: 160,
+                  );
+                },
                 decoration: const InputDecoration(labelText: 'Subtitle'),
               ),
               const SizedBox(height: 12),
-              TextField(
+              TextFormField(
                 controller: imageCtrl,
-                decoration: const InputDecoration(labelText: 'Image URL'),
+                keyboardType: TextInputType.url,
+                validator: (value) => ValidationUtils.validateUrl(
+                  value,
+                  fieldName: 'Image URL',
+                ),
+                decoration: const InputDecoration(labelText: 'Image URL *'),
               ),
               const SizedBox(height: 12),
-              TextField(
+              TextFormField(
                 controller: linkCtrl,
+                keyboardType: TextInputType.url,
+                validator: (value) => ValidationUtils.validateOptionalUrl(
+                  value,
+                  fieldName: 'Link URL',
+                ),
                 decoration: const InputDecoration(labelText: 'Link URL (optional)'),
               ),
             ],
           ),
+        ),
         ),
         actions: [
           TextButton(
@@ -1077,7 +1153,10 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              Navigator.pop(ctx, true);
+            },
             child: const Text('Save'),
           ),
         ],
@@ -1195,6 +1274,7 @@ class AdminRefundsScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _bookingId = TextEditingController();
   final _reason = TextEditingController();
   String _category = 'consultation';
@@ -1209,12 +1289,7 @@ class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
   }
 
   Future<void> _submit() async {
-    if (_bookingId.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Booking ID is required')),
-      );
-      return;
-    }
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
       _submitting = true;
       _result = null;
@@ -1248,7 +1323,10 @@ class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
       body: ResponsivePage(
         padding: ResponsiveUtils.pagePadding(context),
         child: ResponsiveFormWidth(
-          child: ListView(
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: ListView(
             children: [
               Text(
                 'Marks payment status as refunded for the booking. '
@@ -1278,14 +1356,24 @@ class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
                 },
               ),
               const SizedBox(height: 12),
-              TextField(
+              TextFormField(
                 controller: _bookingId,
-                decoration: const InputDecoration(labelText: 'Booking ID'),
+                validator: (value) => ValidationUtils.validateRequired(
+                  value,
+                  fieldName: 'Booking ID',
+                  minLength: 4,
+                  maxLength: 40,
+                ),
+                decoration: const InputDecoration(labelText: 'Booking ID *'),
               ),
               const SizedBox(height: 12),
-              TextField(
+              TextFormField(
                 controller: _reason,
-                decoration: const InputDecoration(labelText: 'Reason'),
+                validator: (value) => ValidationUtils.validateRemarks(
+                  value,
+                  fieldName: 'Reason',
+                ),
+                decoration: const InputDecoration(labelText: 'Reason *'),
                 maxLines: 3,
               ),
               const SizedBox(height: 20),
@@ -1304,6 +1392,7 @@ class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
                 Text(_result!),
               ],
             ],
+          ),
           ),
         ),
       ),

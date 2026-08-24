@@ -33,6 +33,7 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../data/repositories/booking_lifecycle_repository.dart';
 import '../../../../data/services/dio_service.dart';
+import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../widgets/reschedule_booking_sheet.dart';
 
 final labScanPaymentFlowProvider = Provider.autoDispose((ref) {
@@ -1056,9 +1057,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
   Future<void> _payForBooking(BuildContext context) async {
     if (booking.isNurseVisit) {
       if (!context.mounted) return;
-      context.push(
-        '${AppConstants.routeNursePayment}?bookingId=${Uri.encodeComponent(booking.id)}',
-      );
+      context.push(nursePaymentRoute(booking.id));
       return;
     }
     try {
@@ -1274,7 +1273,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                       style: AppTextStyles.bodySmall,
                     ),
                   ],
-                  if (_showDetails && booking.needsHomeVisitPayment && isUpcoming) ...[
+                  if (_showDetails && booking.needsHomeVisitPayment) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
@@ -1331,6 +1330,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                   ],
                   if (_showDetails &&
                       booking.isNurseVisit &&
+                      booking.isConfirmed &&
                       isUpcoming &&
                       booking.visitProgress != 'completed') ...[
                     const SizedBox(height: 12),

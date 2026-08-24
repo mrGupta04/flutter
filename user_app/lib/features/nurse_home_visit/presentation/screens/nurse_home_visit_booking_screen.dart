@@ -13,6 +13,8 @@ import '../../../../core/utils/media_url_utils.dart';
 import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../core/constants/india_geography.dart';
+import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
@@ -403,18 +405,26 @@ class _NurseHomeVisitBookingScreenState
                             (v ?? '').trim().length < 5 ? 'Required' : null,
                       ),
                       const SizedBox(height: 12),
-                      CustomTextField(
+                      AddressAutocompleteField(
                         controller: _cityController,
                         label: 'City',
+                        hint: 'e.g. Bengaluru',
                         prefixIcon: Icons.location_city_outlined,
+                        options: IndiaGeography.districtsFor(
+                          state: _stateController.text,
+                        ),
                         validator: (v) =>
                             (v ?? '').trim().length < 2 ? 'Required' : null,
                       ),
                       const SizedBox(height: 12),
-                      CustomTextField(
+                      AddressAutocompleteField(
                         controller: _stateController,
                         label: 'State',
+                        hint: 'e.g. Karnataka',
                         prefixIcon: Icons.map_outlined,
+                        options: IndiaGeography.states,
+                        onSelected: (_) => setState(() {}),
+                        onChanged: (_) => setState(() {}),
                       ),
                       const SizedBox(height: 12),
                       CustomTextField(

@@ -10,6 +10,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/lab_model.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
@@ -313,7 +314,7 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                TextField(
+                CaretOnTapTextField(
                   controller: _searchController,
                   onChanged: _onSearchChanged,
                   textInputAction: TextInputAction.search,

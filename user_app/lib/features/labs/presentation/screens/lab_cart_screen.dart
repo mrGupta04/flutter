@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/user_auth_guard.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/repositories/lab_repository.dart';
 import '../../../../data/repositories/scan_repository.dart';
@@ -512,7 +513,7 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
                 ),
                 const SizedBox(height: 8),
               ],
-              TextField(
+              CaretOnTapTextField(
                 controller: _addressController,
                 maxLines: 2,
                 decoration: const InputDecoration(

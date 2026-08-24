@@ -7,6 +7,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/ambulance_model.dart';
 import '../../../../data/models/blood_bank_model.dart';
@@ -93,7 +94,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: TextField(
+            child: CaretOnTapTextField(
               controller: _controller,
               autofocus: widget.initialQuery == null,
               textInputAction: TextInputAction.search,

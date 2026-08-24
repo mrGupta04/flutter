@@ -231,7 +231,7 @@ class _PostSessionFeedbackSheetState extends State<PostSessionFeedbackSheet> {
             ),
           ],
           const SizedBox(height: 16),
-          TextField(
+          CaretOnTapTextField(
             controller: _commentController,
             enabled: !_submitting,
             maxLines: 3,

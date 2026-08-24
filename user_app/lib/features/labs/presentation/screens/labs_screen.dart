@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/utils/responsive_utils.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
@@ -91,7 +92,7 @@ class _LabsScreenState extends State<LabsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
+                CaretOnTapTextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search tests, panels, or categories...',

@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../provider/admin_auth_provider.dart';
@@ -17,6 +18,7 @@ class AdminLoginScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _asApprover = false;
@@ -29,15 +31,9 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
   }
 
   Future<void> _login() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter email and password')));
-      return;
-    }
 
     final ok = await ref
         .read(adminAuthProvider.notifier)
@@ -78,7 +74,10 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
             child: SingleChildScrollView(
               padding: ResponsiveUtils.pagePadding(context),
               child: ResponsiveFormWidth(
-                child: Column(
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 24),
@@ -123,6 +122,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     hint: 'admin@1mgdoctors.com',
                     prefixIcon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
+                    validator: ValidationUtils.validateEmail,
                   ),
                   const SizedBox(height: 16),
                   CustomTextField(
@@ -131,6 +131,10 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     hint: 'Your admin password',
                     prefixIcon: Icons.lock_outline_rounded,
                     obscureText: true,
+                    validator: (value) => ValidationUtils.validateRequired(
+                      value,
+                      fieldName: 'Password',
+                    ),
                   ),
                   const SizedBox(height: 24),
                   CustomButton(
@@ -140,6 +144,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     isEnabled: !auth.isLoading,
                   ),
                 ],
+              ),
               ),
               ),
             ),

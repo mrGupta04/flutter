@@ -62,7 +62,7 @@ class _LabSearchScreenState extends ConsumerState<LabSearchScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Column(
               children: [
-                TextField(
+                CaretOnTapTextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search labs by name or city...',

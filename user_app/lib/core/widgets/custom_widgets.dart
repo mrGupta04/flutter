@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_decorations.dart';
 import '../theme/app_text_styles.dart';
+import 'accidental_selection_binder.dart';
+
+export 'accidental_selection_binder.dart' show CaretOnTapTextField;
 
 /// Modern text field with floating label and themed borders.
 class CustomTextField extends StatefulWidget {
@@ -51,25 +54,36 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   late bool _obscureText;
+  late final FocusNode _focusNode;
+  late AccidentalSelectionBinder _selectionBinder;
 
   @override
   void initState() {
     super.initState();
     _obscureText = widget.obscureText;
+    _focusNode = FocusNode(debugLabel: 'CustomTextField:${widget.label}');
+    _selectionBinder = AccidentalSelectionBinder(
+      controller: widget.controller,
+      focusNode: _focusNode,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _selectionBinder.rebind(widget.controller);
+    }
+  }
+
+  @override
+  void dispose() {
+    _selectionBinder.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   bool get _isPasswordField => widget.obscureText;
-
-  /// A single tap in a password field should place a caret, not select a range.
-  /// Long-press / drag to select still works because those gestures do not call [onTap].
-  void _onPasswordTap() {
-    final controller = widget.controller;
-    final selection = controller.selection;
-    if (!selection.isValid || selection.isCollapsed) return;
-    controller.selection = TextSelection.collapsed(
-      offset: selection.extentOffset.clamp(0, controller.text.length),
-    );
-  }
 
   void _toggleObscure() {
     final selection = widget.controller.selection;
@@ -88,6 +102,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
+      focusNode: _focusNode,
       validator: widget.validator,
       keyboardType: widget.keyboardType,
       maxLines: _isPasswordField ? 1 : widget.maxLines,
@@ -107,7 +122,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       textInputAction: widget.textInputAction,
       onChanged: (_) => widget.onChanged?.call(),
       onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
-      onTap: _isPasswordField ? _onPasswordTap : null,
+      onTap: _selectionBinder.arm,
       style: AppTextStyles.bodyLarge.copyWith(
         color: AppColors.textPrimary,
         letterSpacing: 0,

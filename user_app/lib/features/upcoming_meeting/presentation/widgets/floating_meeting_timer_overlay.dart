@@ -51,6 +51,9 @@ class _FloatingMeetingTimerOverlayState
       AppConstants.routeOnlineConsultBooking,
       AppConstants.routeHospitalVisitBooking,
       AppConstants.routeHomeVisitBooking,
+      AppConstants.routeNursePayment,
+      AppConstants.routeNurseMockPayment,
+      AppConstants.routeNurseBookingStatus,
     ];
     return hiddenPrefixes.any((prefix) => location.startsWith(prefix));
   }

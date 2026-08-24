@@ -11,6 +11,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_decorations.dart';
 import '../core/theme/app_text_styles.dart';
 import '../data/models/patient_booking_model.dart';
+import '../features/nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../features/doctor_registration/data/medical_specialities.dart';
 import '../features/labs/data/health_package_visuals.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
@@ -196,8 +197,17 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _UpcomingBookingCard(
                         booking: nextBooking,
-                        onTap: () =>
-                            context.push(AppConstants.routeUserDashboard),
+                        onTap: () {
+                          if (nextBooking.needsHomeVisitPayment) {
+                            context.push(nursePaymentRoute(nextBooking.id));
+                            return;
+                          }
+                          if (nextBooking.canTrackHomeVisitLive) {
+                            context.push(nurseLiveTrackRoute(nextBooking.id));
+                            return;
+                          }
+                          context.push(AppConstants.routeUserDashboard);
+                        },
                       ),
                     ),
                   ),
@@ -434,7 +444,11 @@ class _UpcomingBookingCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          booking.canTrackHomeVisitLive
+                          booking.needsHomeVisitPayment
+                              ? (booking.isNurseVisit
+                                  ? 'Nurse approved — pay to confirm'
+                                  : 'Approved — pay to confirm')
+                              : booking.canTrackHomeVisitLive
                               ? (booking.visitProgress == 'en_route'
                                   ? 'Nurse/doctor on the way'
                                   : 'Upcoming appointment')
@@ -472,12 +486,21 @@ class _UpcomingBookingCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (booking.canTrackHomeVisitLive) ...[
+            if (booking.needsHomeVisitPayment) ...[
               const SizedBox(height: 10),
               FilledButton.icon(
-                onPressed: () => context.push(
-                  '${AppConstants.routeHomeVisitTrack}?bookingId=${Uri.encodeComponent(booking.id)}',
+                onPressed: () => context.push(nursePaymentRoute(booking.id)),
+                icon: const Icon(Icons.payments_rounded, size: 18),
+                label: Text(
+                  booking.consultationFee != null
+                      ? 'Pay ₹${booking.consultationFee} to confirm'
+                      : 'Pay to confirm booking',
                 ),
+              ),
+            ] else if (booking.canTrackHomeVisitLive) ...[
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: () => context.push(nurseLiveTrackRoute(booking.id)),
                 icon: const Icon(Icons.my_location_rounded, size: 18),
                 label: Text(
                   booking.isNurseVisit ? 'Track nurse live' : 'Track doctor live',
@@ -625,7 +648,7 @@ const _homeServices = [
     color: Color(0xff2CB67D),
     illustrationImage:
         'assets/images/home_cards/doctor_card-removebg-preview.png',
-    route: AppConstants.routeDoctorSearch,
+    route: AppConstants.routeFindSpecialists,
   ),
   _HomeService(
     title: 'Nurse\nHome Care',

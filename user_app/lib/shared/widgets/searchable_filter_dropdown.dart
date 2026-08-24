@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/accidental_selection_binder.dart';
 import '../../core/theme/app_text_styles.dart';
 
 /// Dropdown-style field that opens a searchable picker sheet.
@@ -160,7 +161,7 @@ class _SearchablePickerSheetState extends State<_SearchablePickerSheet> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
+              CaretOnTapTextField(
                 controller: _searchController,
                 autofocus: true,
                 decoration: InputDecoration(

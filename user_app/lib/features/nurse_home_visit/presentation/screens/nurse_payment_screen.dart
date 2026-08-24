@@ -5,13 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/socket_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/repositories/nurse_home_visit_repository.dart';
 import '../../../user_dashboard/provider/patient_dashboard_provider.dart';
+import '../../nurse_home_visit_navigation.dart';
 
 class NursePaymentScreen extends ConsumerStatefulWidget {
   const NursePaymentScreen({super.key, required this.bookingId});
@@ -101,9 +101,7 @@ class _NursePaymentScreenState extends ConsumerState<NursePaymentScreen> {
     _startTicker();
 
     if (status == 'confirmed') {
-      context.go(
-        '${AppConstants.routeNurseBookingStatus}?bookingId=${Uri.encodeComponent(widget.bookingId)}',
-      );
+      context.go(nurseBookingStatusRoute(widget.bookingId));
       return;
     }
     if (status == 'payment_expired') {
@@ -119,15 +117,15 @@ class _NursePaymentScreenState extends ConsumerState<NursePaymentScreen> {
 
   Future<void> _payNow() async {
     final result = await context.push<bool>(
-      '${AppConstants.routeNurseMockPayment}?bookingId=${Uri.encodeComponent(widget.bookingId)}'
-      '&amount=${(_booking?['consultationFee'] as num?)?.toInt() ?? 0}',
+      nurseMockPaymentRoute(
+        widget.bookingId,
+        amount: (_booking?['consultationFee'] as num?)?.toInt() ?? 0,
+      ),
     );
     if (result == true && mounted) {
       await ref.read(patientDashboardProvider.notifier).loadBookings();
       if (mounted) {
-        context.go(
-          '${AppConstants.routeNurseBookingStatus}?bookingId=${Uri.encodeComponent(widget.bookingId)}',
-        );
+        context.go(nurseBookingStatusRoute(widget.bookingId));
       }
     } else {
       await _load(silent: true);
@@ -136,11 +134,10 @@ class _NursePaymentScreenState extends ConsumerState<NursePaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final expired = _remaining == Duration.zero &&
-        (_booking?['status'] == 'payment_expired' ||
-            (_booking?['paymentExpiresAt'] != null &&
-                _expiresAt != null &&
-                DateTime.now().isAfter(_expiresAt!)));
+    final status = _booking?['status']?.toString() ?? '';
+    final pendingPay =
+        status == 'payment_pending' || status == 'approved_pending_payment';
+    final expired = status == 'payment_expired';
     final start = DateTime.tryParse(_booking?['slotStart']?.toString() ?? '');
     final end = DateTime.tryParse(_booking?['slotEnd']?.toString() ?? '');
     final dateLabel = start == null
@@ -211,11 +208,22 @@ class _NursePaymentScreenState extends ConsumerState<NursePaymentScreen> {
                         'Your booking expired because payment was not completed within 10 minutes.',
                         style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
                       )
-                    else
+                    else ...[
                       FilledButton(
-                        onPressed: _payNow,
-                        child: const Text('PAY NOW'),
+                        onPressed: pendingPay || status.isEmpty ? _payNow : null,
+                        child: Text(
+                          amount == null ? 'PAY NOW' : 'PAY ₹$amount NOW',
+                        ),
                       ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'This opens a dummy checkout. No real money is charged. Tracking unlocks after payment.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ],
                 ),
     );

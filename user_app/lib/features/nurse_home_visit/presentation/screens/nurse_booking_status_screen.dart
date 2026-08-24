@@ -11,6 +11,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/repositories/nurse_home_visit_repository.dart';
+import '../../nurse_home_visit_navigation.dart';
 
 class NurseBookingStatusScreen extends ConsumerStatefulWidget {
   const NurseBookingStatusScreen({super.key, required this.bookingId});
@@ -29,7 +30,7 @@ class _NurseBookingStatusScreenState
   Map<String, dynamic>? _booking;
   String? _error;
   bool _loading = true;
-  bool _openingPayment = false;
+  bool _autoOpenedPayment = false;
 
   String get _status => _booking?['status']?.toString() ?? '';
 
@@ -84,9 +85,7 @@ class _NurseBookingStatusScreenState
         _error = null;
         _loading = false;
       });
-      if (_needsPayment) {
-        _goPayment();
-      }
+      _maybeAutoOpenPayment();
     } else {
       setState(() {
         _error = res.error ?? 'Could not load booking';
@@ -95,12 +94,18 @@ class _NurseBookingStatusScreenState
     }
   }
 
-  void _goPayment() {
-    if (!mounted || _openingPayment) return;
-    _openingPayment = true;
-    context.go(
-      '${AppConstants.routeNursePayment}?bookingId=${Uri.encodeComponent(widget.bookingId)}',
-    );
+  void _maybeAutoOpenPayment() {
+    if (!mounted || !_needsPayment || _autoOpenedPayment) return;
+    _autoOpenedPayment = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_needsPayment) return;
+      _openPayment();
+    });
+  }
+
+  Future<void> _openPayment() async {
+    await context.push(nursePaymentRoute(widget.bookingId));
+    if (mounted) await _load(silent: true);
   }
 
   String _timeLabel() {
@@ -115,6 +120,7 @@ class _NurseBookingStatusScreenState
 
   @override
   Widget build(BuildContext context) {
+    final amount = (_booking?['consultationFee'] as num?)?.toInt();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Nurse booking')),
@@ -153,9 +159,37 @@ class _NurseBookingStatusScreenState
                           ),
                           textAlign: TextAlign.center,
                         ),
+                      if (_needsPayment) ...[
+                        FilledButton.icon(
+                          onPressed: _openPayment,
+                          icon: const Icon(Icons.payments_rounded),
+                          label: Text(
+                            amount != null
+                                ? 'Pay ₹$amount to confirm'
+                                : 'Pay to confirm booking',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tracking starts after payment. Complete this dummy payment to confirm the visit.',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                       if (_confirmed) ...[
-                        FilledButton(
-                          onPressed: () => context.go(AppConstants.routeUserDashboard),
+                        FilledButton.icon(
+                          onPressed: () => context.push(
+                            nurseLiveTrackRoute(widget.bookingId),
+                          ),
+                          icon: const Icon(Icons.my_location_rounded),
+                          label: const Text('Track nurse live'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () =>
+                              context.go(AppConstants.routeUserDashboard),
                           child: const Text('View my bookings'),
                         ),
                       ],

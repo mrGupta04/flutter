@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/india_geography.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../data/models/patient_user_model.dart';
 import '../../../../data/repositories/patient_auth_repository.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
@@ -124,7 +126,7 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
                         .copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
+                  CaretOnTapTextField(
                     controller: nameCtrl,
                     decoration: const InputDecoration(labelText: 'Full name'),
                   ),
@@ -149,7 +151,7 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
                         setLocal(() => relationship = v ?? 'other'),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  CaretOnTapTextField(
                     controller: ageCtrl,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Age'),
@@ -169,7 +171,7 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
                     onChanged: (v) => setLocal(() => gender = v),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  CaretOnTapTextField(
                     controller: mobileCtrl,
                     keyboardType: TextInputType.phone,
                     decoration:
@@ -281,31 +283,37 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
                         .copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
+                  CaretOnTapTextField(
                     controller: labelCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Label (Home / Work)',
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  CaretOnTapTextField(
                     controller: lineCtrl,
                     maxLines: 2,
                     decoration:
                         const InputDecoration(labelText: 'Address line'),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  AddressAutocompleteField(
                     controller: cityCtrl,
-                    decoration: const InputDecoration(labelText: 'City'),
+                    label: 'City',
+                    hint: 'e.g. Bengaluru',
+                    options: IndiaGeography.districtsFor(state: stateCtrl.text),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  AddressAutocompleteField(
                     controller: stateCtrl,
-                    decoration: const InputDecoration(labelText: 'State'),
+                    label: 'State',
+                    hint: 'e.g. Karnataka',
+                    options: IndiaGeography.states,
+                    onSelected: (_) => setLocal(() {}),
+                    onChanged: (_) => setLocal(() {}),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  CaretOnTapTextField(
                     controller: pinCtrl,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Pincode'),
@@ -612,7 +620,7 @@ class _MedicalTabState extends State<_MedicalTab> {
           onChanged: (v) => setState(() => _bloodGroup = v),
         ),
         const SizedBox(height: 12),
-        TextField(
+        CaretOnTapTextField(
           controller: _allergies,
           decoration: const InputDecoration(
             labelText: 'Allergies',
@@ -621,7 +629,7 @@ class _MedicalTabState extends State<_MedicalTab> {
           maxLines: 2,
         ),
         const SizedBox(height: 12),
-        TextField(
+        CaretOnTapTextField(
           controller: _chronic,
           decoration: const InputDecoration(
             labelText: 'Chronic conditions',
@@ -630,7 +638,7 @@ class _MedicalTabState extends State<_MedicalTab> {
           maxLines: 2,
         ),
         const SizedBox(height: 12),
-        TextField(
+        CaretOnTapTextField(
           controller: _meds,
           decoration: const InputDecoration(
             labelText: 'Current medications',
@@ -638,7 +646,7 @@ class _MedicalTabState extends State<_MedicalTab> {
           maxLines: 2,
         ),
         const SizedBox(height: 12),
-        TextField(
+        CaretOnTapTextField(
           controller: _notes,
           decoration: const InputDecoration(labelText: 'Notes for care team'),
           maxLines: 3,
@@ -649,22 +657,22 @@ class _MedicalTabState extends State<_MedicalTab> {
           style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 8),
-        TextField(
+        CaretOnTapTextField(
           controller: _insProvider,
           decoration: const InputDecoration(labelText: 'Insurance provider'),
         ),
         const SizedBox(height: 12),
-        TextField(
+        CaretOnTapTextField(
           controller: _insPolicy,
           decoration: const InputDecoration(labelText: 'Policy number'),
         ),
         const SizedBox(height: 12),
-        TextField(
+        CaretOnTapTextField(
           controller: _insMember,
           decoration: const InputDecoration(labelText: 'Member / ID number'),
         ),
         const SizedBox(height: 12),
-        TextField(
+        CaretOnTapTextField(
           controller: _insValid,
           decoration: const InputDecoration(
             labelText: 'Valid until (optional)',

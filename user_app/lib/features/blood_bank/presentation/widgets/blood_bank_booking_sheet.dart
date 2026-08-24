@@ -6,6 +6,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../data/services/blood_order_payment_flow.dart';
@@ -271,7 +272,7 @@ class _BloodBankBookingSheetState extends ConsumerState<_BloodBankBookingSheet> 
                       ],
                     ),
                     const SizedBox(height: 12),
-                    TextField(
+                    CaretOnTapTextField(
                       controller: _patientNameController,
                       decoration: const InputDecoration(
                         labelText: 'Patient name',
@@ -279,7 +280,7 @@ class _BloodBankBookingSheetState extends ConsumerState<_BloodBankBookingSheet> 
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
+                    CaretOnTapTextField(
                       controller: _patientMobileController,
                       keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
@@ -339,7 +340,7 @@ class _BloodBankBookingSheetState extends ConsumerState<_BloodBankBookingSheet> 
                       onChanged: (v) => setState(() => _timeSlot = v),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
+                    CaretOnTapTextField(
                       controller: _couponController,
                       decoration: const InputDecoration(
                         labelText: 'Coupon code',

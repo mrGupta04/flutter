@@ -11,14 +11,14 @@ class DoctorSearchParams {
     this.city,
     this.specialization,
     this.minYearsExperience,
-    required this.consultationType,
+    this.consultationType,
   });
 
   final String? query;
   final String? city;
   final String? specialization;
   final int? minYearsExperience;
-  final ConsultationType consultationType;
+  final ConsultationType? consultationType;
 
   bool get hasTextFilters =>
       (query != null && query!.trim().isNotEmpty) ||

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
 import '../../data/medical_specialities.dart';
@@ -15,7 +16,11 @@ class MedicalSpecialitiesSection extends StatefulWidget {
     this.padding = const EdgeInsets.fromLTRB(16, 4, 16, 16),
     this.showHeader = true,
     this.showSearch = true,
+    this.showEmptyState = true,
     this.expandAll = false,
+    this.query,
+    this.searchHint = 'Search doctor name or speciality...',
+    this.onQueryChanged,
     this.title = 'Find Specialists',
     this.onViewAll,
   });
@@ -25,8 +30,13 @@ class MedicalSpecialitiesSection extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final bool showHeader;
   final bool showSearch;
+  final bool showEmptyState;
   /// When true, every speciality is visible (used on the dedicated browse page).
   final bool expandAll;
+  /// Optional external filter. When set, overrides the internal search box.
+  final String? query;
+  final String searchHint;
+  final ValueChanged<String>? onQueryChanged;
   final String title;
   /// If set, "View all" navigates instead of expanding the compact grid.
   final VoidCallback? onViewAll;
@@ -68,9 +78,10 @@ class _MedicalSpecialitiesSectionState extends State<MedicalSpecialitiesSection>
 
   @override
   Widget build(BuildContext context) {
-    final filtered = filterMedicalSpecialities(_query);
+    final activeQuery = widget.query ?? _query;
+    final filtered = filterMedicalSpecialities(activeQuery);
     final previewCount = _previewCount(context);
-    final searching = _query.trim().isNotEmpty;
+    final searching = activeQuery.trim().isNotEmpty;
     final showAll =
         widget.expandAll || _expanded || searching || previewCount >= filtered.length;
     final visible = showAll
@@ -115,19 +126,23 @@ class _MedicalSpecialitiesSectionState extends State<MedicalSpecialitiesSection>
             const SizedBox(height: 12),
           ],
           if (widget.showSearch) ...[
-            TextField(
+            CaretOnTapTextField(
               controller: _searchController,
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: (value) {
+                setState(() => _query = value);
+                widget.onQueryChanged?.call(value);
+              },
               decoration: InputDecoration(
-                hintText: 'Search speciality...',
+                hintText: widget.searchHint,
                 prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _query.isEmpty
+                suffixIcon: activeQuery.isEmpty
                     ? null
                     : IconButton(
                         icon: const Icon(Icons.clear_rounded),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _query = '');
+                          widget.onQueryChanged?.call('');
                         },
                       ),
                 filled: true,
@@ -150,16 +165,19 @@ class _MedicalSpecialitiesSectionState extends State<MedicalSpecialitiesSection>
             const SizedBox(height: 14),
           ],
           if (visible.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(
-                'No speciality matches "$_query".',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+            if (widget.showEmptyState)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  'No speciality matches "$activeQuery".',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
-            )
+              )
+            else
+              const SizedBox.shrink()
           else
             _SpecialityGrid(
               specialities: visible,

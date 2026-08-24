@@ -8,6 +8,7 @@ import '../../../../core/constants/app_lists.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
@@ -26,7 +27,6 @@ import '../../provider/care_filter_constants.dart';
 import '../../provider/doctor_search_provider.dart';
 import '../../provider/doctor_live_status_provider.dart';
 import '../widgets/doctor_search_result_tile.dart';
-import '../widgets/medical_specialities_section.dart';
 
 class DoctorSearchScreen extends ConsumerStatefulWidget {
   const DoctorSearchScreen({
@@ -58,8 +58,6 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
   double? _nearbyLongitude;
   bool _nearbyActive = false;
   bool _isFetchingNearby = false;
-  /// Location shown in the search box without applying as a keyword query.
-  String? _locationPrefill;
 
   bool get _showsNearbyFilter =>
       _consultationType == ConsultationType.visitSite ||
@@ -83,35 +81,12 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
     if (!mounted) return;
     setState(() {
       _city ??= location.city;
-      _applyLocationPrefill(location);
       if (_showsNearbyFilter && location.hasCoordinates) {
         _nearbyLatitude = location.latitude;
         _nearbyLongitude = location.longitude;
         _nearbyActive = true;
       }
     });
-  }
-
-  void _applyLocationPrefill(UserLocationState location) {
-    final hasTypedQuery =
-        widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty;
-    if (hasTypedQuery) return;
-
-    final label = location.displayPlaceCity;
-    if (label == null || label.isEmpty) return;
-
-    final current = _controller.text.trim();
-    final canReplace = current.isEmpty ||
-        (_locationPrefill != null && current == _locationPrefill);
-    if (!canReplace) return;
-
-    _locationPrefill = label;
-    if (current != label) {
-      _controller.value = TextEditingValue(
-        text: label,
-        selection: TextSelection.collapsed(offset: label.length),
-      );
-    }
   }
 
   @override
@@ -127,26 +102,15 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
       final text = _controller.text.trim();
-      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
-        setState(() => _query = null);
-        return;
-      }
       setState(() {
         _query = text.isEmpty ? null : text;
       });
     });
   }
 
-  void _clearFilters() {
+  void _clearSearch() {
     setState(() {
       _query = null;
-      _city = null;
-      _specialization = null;
-      _minYearsExperience = null;
-      _nearbyActive = false;
-      _nearbyLatitude = null;
-      _nearbyLongitude = null;
-      _locationPrefill = null;
       _controller.clear();
     });
   }
@@ -213,12 +177,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
         consultationType: _consultationType,
       );
 
-  bool get _hasActiveFilters {
-    final text = _controller.text.trim();
-    final isLocationOnly =
-        _locationPrefill != null && text == _locationPrefill!.trim();
-    return _params.hasTextFilters || (text.isNotEmpty && !isLocationOnly);
-  }
+  bool get _hasSearchText => _controller.text.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -226,7 +185,6 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
       if (!mounted) return;
       setState(() {
         _city ??= next.city;
-        _applyLocationPrefill(next);
         if (_showsNearbyFilter && next.hasCoordinates && !_nearbyActive) {
           _nearbyLatitude = next.latitude;
           _nearbyLongitude = next.longitude;
@@ -264,15 +222,15 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: TextField(
+          child: CaretOnTapTextField(
             controller: _controller,
             decoration: InputDecoration(
               hintText: 'Search doctor name, clinic or specialty...',
               prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _hasActiveFilters
+              suffixIcon: _hasSearchText
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded),
-                      onPressed: _clearFilters,
+                      onPressed: _clearSearch,
                     )
                   : null,
               filled: true,
@@ -289,14 +247,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
             textInputAction: TextInputAction.search,
             onSubmitted: (value) {
               final text = value.trim();
-              setState(() {
-                if (_locationPrefill != null &&
-                    text == _locationPrefill!.trim()) {
-                  _query = null;
-                } else {
-                  _query = text.isEmpty ? null : text;
-                }
-              });
+              setState(() => _query = text.isEmpty ? null : text);
             },
           ),
         ),
@@ -406,36 +357,20 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
             onChanged: (years) => setState(() => _minYearsExperience = years),
           ),
         ),
-        const SizedBox(height: 12),
-        if (_specialization == null)
-          MedicalSpecialitiesSection(
-            selectedSearchTerm: _specialization,
-            onSpecialitySelected: _onSpecialitySelected,
-            showSearch: false,
-            onViewAll: () => context.push(AppConstants.routeFindSpecialists),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => setState(() => _specialization = null),
-                icon: const Icon(Icons.grid_view_rounded, size: 18),
-                label: const Text('Browse all specialities'),
-              ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => context.push(AppConstants.routeFindSpecialists),
+              icon: const Icon(Icons.grid_view_rounded, size: 18),
+              label: const Text('Browse all specialities'),
             ),
           ),
+        ),
       ],
     );
-  }
-
-  void _onSpecialitySelected(MedicalSpeciality speciality) {
-    setState(() {
-      _specialization = _specialization == speciality.searchTerm
-          ? null
-          : speciality.searchTerm;
-    });
   }
 
   List<Widget> _buildResultSlivers(AsyncValue<List<DoctorModel>> asyncResults) {

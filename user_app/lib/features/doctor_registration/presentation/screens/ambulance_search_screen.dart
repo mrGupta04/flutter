@@ -7,6 +7,7 @@ import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/ambulance_model.dart';
 import '../../../../shared/widgets/ambulance_care_filter_cards.dart';
@@ -167,7 +168,7 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: TextField(
+          child: CaretOnTapTextField(
             controller: _controller,
             decoration: InputDecoration(
               hintText: 'Search service name, city, area...',

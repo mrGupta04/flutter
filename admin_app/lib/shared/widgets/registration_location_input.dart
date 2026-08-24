@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/constants/india_geography.dart';
 import '../../core/services/geocoding_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/text_controller_utils.dart';
 import '../../core/utils/validation_utils.dart';
 import '../../core/widgets/custom_widgets.dart';
+import 'address_autocomplete_field.dart';
 import 'registration_map_picker.dart';
 
 /// How the user provides their address during registration.
@@ -101,7 +103,7 @@ class RegistrationLocationModeToggle extends StatelessWidget {
 }
 
 /// Standard address / city / state / pincode fields.
-class RegistrationAddressFields extends StatelessWidget {
+class RegistrationAddressFields extends StatefulWidget {
   const RegistrationAddressFields({
     super.key,
     required this.addressController,
@@ -124,35 +126,45 @@ class RegistrationAddressFields extends StatelessWidget {
   final bool compactCityState;
 
   @override
+  State<RegistrationAddressFields> createState() =>
+      _RegistrationAddressFieldsState();
+}
+
+class _RegistrationAddressFieldsState extends State<RegistrationAddressFields> {
+  @override
   Widget build(BuildContext context) {
-    final cityField = CustomTextField(
-      controller: cityController,
+    final cityField = AddressAutocompleteField(
+      controller: widget.cityController,
       label: 'City',
       hint: 'e.g. Bengaluru',
       prefixIcon: Icons.location_city_outlined,
+      options: IndiaGeography.districtsFor(state: widget.stateController.text),
       validator: ValidationUtils.validateCity,
     );
-    final stateField = CustomTextField(
-      controller: stateController,
+    final stateField = AddressAutocompleteField(
+      controller: widget.stateController,
       label: 'State',
       hint: 'e.g. Karnataka',
       prefixIcon: Icons.map_outlined,
+      options: IndiaGeography.states,
       validator: ValidationUtils.validateState,
+      onSelected: (_) => setState(() {}),
+      onChanged: (_) => setState(() {}),
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         CustomTextField(
-          controller: addressController,
-          label: addressLabel,
-          hint: addressHint,
+          controller: widget.addressController,
+          label: widget.addressLabel,
+          hint: widget.addressHint,
           prefixIcon: Icons.home_outlined,
-          maxLines: addressMaxLines,
+          maxLines: widget.addressMaxLines,
           validator: ValidationUtils.validateAddress,
         ),
         const SizedBox(height: 12),
-        if (compactCityState)
+        if (widget.compactCityState)
           Row(
             children: [
               Expanded(child: cityField),
@@ -167,7 +179,7 @@ class RegistrationAddressFields extends StatelessWidget {
         ],
         const SizedBox(height: 12),
         CustomTextField(
-          controller: pincodeController,
+          controller: widget.pincodeController,
           label: 'Pincode',
           hint: '6-digit pincode',
           keyboardType: TextInputType.number,

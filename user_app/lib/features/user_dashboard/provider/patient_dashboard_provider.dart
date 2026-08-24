@@ -25,8 +25,16 @@ class PatientDashboardState {
   final bool isSavingProfile;
   final String? error;
 
-  List<PatientBookingModel> get upcomingBookings =>
-      bookings.where((b) => b.isActiveOrUpcoming).toList();
+  List<PatientBookingModel> get upcomingBookings {
+    final list = bookings.where((b) => b.isActiveOrUpcoming).toList();
+    list.sort((a, b) {
+      final payA = a.needsHomeVisitPayment ? 0 : 1;
+      final payB = b.needsHomeVisitPayment ? 0 : 1;
+      if (payA != payB) return payA - payB;
+      return a.slotStart.compareTo(b.slotStart);
+    });
+    return list;
+  }
 
   List<PatientBookingModel> get pastBookings =>
       bookings.where((b) => !b.isActiveOrUpcoming).toList();

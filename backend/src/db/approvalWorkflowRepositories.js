@@ -324,6 +324,65 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+function isValidEmail(email) {
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
+}
+
+function assertApproverFields(data, { requireCore = false } = {}) {
+  const firstName = data.firstName != null ? String(data.firstName).trim() : '';
+  const lastName = data.lastName != null ? String(data.lastName).trim() : '';
+  const employeeId = data.employeeId != null ? String(data.employeeId).trim() : '';
+  const email = data.email != null ? normalizeEmail(data.email) : '';
+  const phone = data.phone != null ? String(data.phone).replace(/\D/g, '') : '';
+  const password = data.password != null ? String(data.password) : '';
+
+  if (requireCore || data.firstName != null) {
+    if (!firstName) throw badRequest('First name is required');
+    if (firstName.length < 2 || !/^[a-zA-Z.\s\-']+$/.test(firstName)) {
+      throw badRequest('Enter a valid first name');
+    }
+  }
+  if (requireCore || data.lastName != null) {
+    if (!lastName) throw badRequest('Last name is required');
+    if (lastName.length < 2 || !/^[a-zA-Z.\s\-']+$/.test(lastName)) {
+      throw badRequest('Enter a valid last name');
+    }
+  }
+  if (requireCore || data.employeeId != null) {
+    if (!/^[A-Za-z0-9\-_]{3,20}$/.test(employeeId)) {
+      throw badRequest('Employee ID must be 3–20 letters or numbers');
+    }
+  }
+  if (requireCore || data.email != null) {
+    if (!isValidEmail(email)) throw badRequest('Enter a valid email address');
+  }
+  if (phone) {
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      throw badRequest('Phone must be a valid 10-digit mobile number');
+    }
+  }
+  if (requireCore && password.length < 8) {
+    throw badRequest('Password must be at least 8 characters');
+  }
+  if (!requireCore && password && password.length < 8) {
+    throw badRequest('Password must be at least 8 characters');
+  }
+  if (data.profilePicture) {
+    try {
+      const url = new URL(String(data.profilePicture).trim());
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        throw new Error('bad url');
+      }
+    } catch {
+      throw badRequest('Enter a valid profile picture URL');
+    }
+  }
+  const pincode = data.regions?.[0]?.pincode;
+  if (pincode && !/^\d{6}$/.test(String(pincode).trim())) {
+    throw badRequest('PIN code must be 6 digits');
+  }
+}
+
 function hashRefreshToken(token) {
   return crypto.createHash('sha256').update(String(token)).digest('hex');
 }
@@ -1082,19 +1141,7 @@ async function listApprovers({ page = 1, pageSize = 50, status, search } = {}) {
 
 async function createApprover(data, { req } = {}) {
   await ensureApprovalConfiguration();
-  const required = ['firstName', 'lastName', 'employeeId', 'email', 'password'];
-  for (const field of required) {
-    if (!String(data?.[field] || '').trim()) {
-      const err = new Error(`${field} is required`);
-      err.statusCode = 400;
-      throw err;
-    }
-  }
-  if (String(data.password).length < 8) {
-    const err = new Error('Password must be at least 8 characters');
-    err.statusCode = 400;
-    throw err;
-  }
+  assertApproverFields(data || {}, { requireCore: true });
   const email = normalizeEmail(data.email);
   const existing = await Approver.findOne({
     $or: [{ email }, { employeeId: String(data.employeeId).trim() }],
@@ -1111,7 +1158,7 @@ async function createApprover(data, { req } = {}) {
     lastName: data.lastName.trim(),
     employeeId: String(data.employeeId).trim(),
     email,
-    phone: data.phone,
+    phone: data.phone ? String(data.phone).replace(/\D/g, '') : data.phone,
     passwordHash: bcrypt.hashSync(String(data.password), 10),
     department: data.department,
     designation: data.designation,
@@ -1153,6 +1200,7 @@ async function updateApprover(id, data, { req } = {}) {
   }
 
   const beforePermissions = [...(existing.permissions || [])];
+  assertApproverFields(data || {});
   const update = {};
   const fields = [
     'firstName',

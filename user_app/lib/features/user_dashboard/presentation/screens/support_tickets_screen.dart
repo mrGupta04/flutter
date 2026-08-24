@@ -301,18 +301,18 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
               },
             ),
             const SizedBox(height: 12),
-            TextField(
+            CaretOnTapTextField(
               controller: _subject,
               decoration: const InputDecoration(labelText: 'Subject'),
             ),
             const SizedBox(height: 12),
-            TextField(
+            CaretOnTapTextField(
               controller: _message,
               decoration: const InputDecoration(labelText: 'Message'),
               maxLines: 4,
             ),
             const SizedBox(height: 12),
-            TextField(
+            CaretOnTapTextField(
               controller: _bookingId,
               decoration: const InputDecoration(
                 labelText: 'Booking ID (optional)',

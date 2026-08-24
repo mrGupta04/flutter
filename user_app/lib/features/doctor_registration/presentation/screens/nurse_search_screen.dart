@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../core/widgets/enable_location_services_dialog.dart';
 import '../../../../data/models/nurse_model.dart';
@@ -253,7 +254,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: TextField(
+          child: CaretOnTapTextField(
             controller: _controller,
             decoration: InputDecoration(
               hintText: 'Search by name, qualification, keyword...',

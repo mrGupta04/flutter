@@ -8,6 +8,7 @@ import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
@@ -173,7 +174,7 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: TextField(
+          child: CaretOnTapTextField(
             controller: _controller,
             decoration: InputDecoration(
               hintText: 'Name, city, area, pincode...',

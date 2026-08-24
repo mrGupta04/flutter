@@ -230,6 +230,7 @@ function formatNurseBookingResponse(booking, nurse) {
   return {
     id: booking.id,
     nurseId: booking.nurseId,
+    serviceType: 'nurse',
     providerType: 'nurse',
     consultationType: booking.consultationType,
     patientName: booking.patientName,

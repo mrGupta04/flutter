@@ -79,7 +79,7 @@ class _ScanSearchScreenState extends ConsumerState<ScanSearchScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Column(
               children: [
-                TextField(
+                CaretOnTapTextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search scan centers, city or area...',

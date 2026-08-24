@@ -5,7 +5,9 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/models/provider_type.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/constants/india_geography.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../data/models/ambulance_model.dart';
 import '../../../../data/models/blood_bank_model.dart';
@@ -410,10 +412,12 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
           prefixIcon: Icons.phone_outlined,
         ),
         const SizedBox(height: 12),
-        CustomTextField(
+        AddressAutocompleteField(
           controller: city,
           label: 'City',
+          hint: 'e.g. Bengaluru',
           prefixIcon: Icons.location_city_outlined,
+          options: IndiaGeography.districtsFor(),
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -457,10 +461,12 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
           prefixIcon: Icons.phone_outlined,
         ),
         const SizedBox(height: 12),
-        CustomTextField(
+        AddressAutocompleteField(
           controller: city,
           label: 'City',
+          hint: 'e.g. Bengaluru',
           prefixIcon: Icons.location_city_outlined,
+          options: IndiaGeography.districtsFor(),
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -505,10 +511,12 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
           prefixIcon: Icons.phone_outlined,
         ),
         const SizedBox(height: 12),
-        CustomTextField(
+        AddressAutocompleteField(
           controller: city,
           label: 'City',
+          hint: 'e.g. Bengaluru',
           prefixIcon: Icons.location_city_outlined,
+          options: IndiaGeography.districtsFor(),
         ),
         const SizedBox(height: 12),
         CustomTextField(

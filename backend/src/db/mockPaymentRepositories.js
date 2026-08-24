@@ -115,7 +115,10 @@ async function processMockPayment({ bookingId, result, amount, auth }) {
   const expectedAmount = Number(fresh.consultationFee || 0);
   if (amount != null && amount !== '') {
     const provided = Number(amount);
-    if (!Number.isFinite(provided) || Math.abs(provided - expectedAmount) > 0.009) {
+    if (
+      Number.isFinite(provided) &&
+      Math.abs(provided - expectedAmount) > 1
+    ) {
       const err = new Error('Amount does not match the booking fee');
       err.statusCode = 400;
       throw err;

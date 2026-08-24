@@ -8,10 +8,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/india_geography.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/safe_navigation.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../data/models/approval_management_models.dart';
+import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../shared/widgets/admin_adaptive_shell.dart';
 import '../../provider/admin_auth_provider.dart';
 import '../../provider/approval_management_provider.dart';
@@ -359,6 +362,7 @@ class _ApprovalManagementScreenState
     }
 
     final remarksController = TextEditingController();
+    final remarksFormKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -366,14 +370,19 @@ class _ApprovalManagementScreenState
           title: Text(_actionTitle(action)),
           content: SizedBox(
             width: 460,
-            child: TextField(
-              controller: remarksController,
-              decoration: const InputDecoration(
-                labelText: 'Mandatory remarks',
-                hintText: 'Add verification notes for audit history',
+            child: Form(
+              key: remarksFormKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: TextFormField(
+                controller: remarksController,
+                validator: (value) => ValidationUtils.validateRemarks(value),
+                decoration: const InputDecoration(
+                  labelText: 'Mandatory remarks *',
+                  hintText: 'Add verification notes for audit history',
+                ),
+                minLines: 4,
+                maxLines: 6,
               ),
-              minLines: 4,
-              maxLines: 6,
             ),
           ),
           actions: [
@@ -383,10 +392,7 @@ class _ApprovalManagementScreenState
             ),
             FilledButton(
               onPressed: () {
-                if (remarksController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Remarks are required')),
-                  );
+                if (!(remarksFormKey.currentState?.validate() ?? false)) {
                   return;
                 }
                 Navigator.pop(context, true);
@@ -428,6 +434,7 @@ class _ApprovalManagementScreenState
         .getEligibleApprovers(request);
     if (!mounted) return;
     final remarksController = TextEditingController();
+    final assignFormKey = GlobalKey<FormState>();
     String strategy = 'manual';
     String? approverId = request.currentAssigneeId;
     final ok = await showDialog<bool>(
@@ -439,7 +446,10 @@ class _ApprovalManagementScreenState
               title: const Text('Assign request'),
               content: SizedBox(
                 width: 520,
-                child: Column(
+                child: Form(
+                  key: assignFormKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<String>(
@@ -501,13 +511,25 @@ class _ApprovalManagementScreenState
                             setDialogState(() => approverId = value),
                       ),
                     const SizedBox(height: 12),
-                    TextField(
+                    TextFormField(
                       controller: remarksController,
-                      decoration: const InputDecoration(labelText: 'Remarks'),
+                      validator: (value) {
+                        if (request.currentAssigneeId != null) {
+                          return ValidationUtils.validateRemarks(value);
+                        }
+                        if (value == null || value.trim().isEmpty) return null;
+                        return ValidationUtils.validateRemarks(value);
+                      },
+                      decoration: InputDecoration(
+                        labelText: request.currentAssigneeId != null
+                            ? 'Remarks *'
+                            : 'Remarks',
+                      ),
                       minLines: 3,
                       maxLines: 4,
                     ),
                   ],
+                ),
                 ),
               ),
               actions: [
@@ -517,21 +539,13 @@ class _ApprovalManagementScreenState
                 ),
                 FilledButton(
                   onPressed: () {
+                    if (!(assignFormKey.currentState?.validate() ?? false)) {
+                      return;
+                    }
                     if (strategy == 'manual' &&
                         (approverId == null || approverId!.isEmpty)) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Choose an approver')),
-                      );
-                      return;
-                    }
-                    if (request.currentAssigneeId != null &&
-                        remarksController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Remarks are required for reassignment',
-                          ),
-                        ),
                       );
                       return;
                     }
@@ -592,6 +606,8 @@ class _ApprovalManagementScreenState
     );
     var status = approver?.status ?? 'active';
     var canReassign = approver?.canReassign ?? false;
+    final formKey = GlobalKey<FormState>();
+    var permissionsError = '';
     final permissions = <String>{...?approver?.permissions};
     var categories = ref.read(approvalManagementProvider).config.categories;
     if (categories.isEmpty) {
@@ -614,7 +630,10 @@ class _ApprovalManagementScreenState
               ),
               content: SizedBox(
                 width: 760,
-                child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -623,16 +642,95 @@ class _ApprovalManagementScreenState
                         spacing: 12,
                         runSpacing: 12,
                         children: [
-                          _dialogField(firstName, 'First name'),
-                          _dialogField(lastName, 'Last name'),
-                          _dialogField(employeeId, 'Employee ID'),
-                          _dialogField(email, 'Email'),
-                          _dialogField(phone, 'Phone'),
+                          _dialogField(
+                            firstName,
+                            'First name',
+                            required: true,
+                            textCapitalization: TextCapitalization.words,
+                            validator: (value) => ValidationUtils.validateName(
+                              value,
+                              fieldName: 'First name',
+                            ),
+                          ),
+                          _dialogField(
+                            lastName,
+                            'Last name',
+                            required: true,
+                            textCapitalization: TextCapitalization.words,
+                            validator: (value) => ValidationUtils.validateName(
+                              value,
+                              fieldName: 'Last name',
+                            ),
+                          ),
+                          _dialogField(
+                            employeeId,
+                            'Employee ID',
+                            required: true,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[A-Za-z0-9\-_]'),
+                              ),
+                              LengthLimitingTextInputFormatter(20),
+                            ],
+                            validator: ValidationUtils.validateEmployeeId,
+                          ),
+                          _dialogField(
+                            email,
+                            'Email',
+                            required: true,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: ValidationUtils.validateEmail,
+                          ),
+                          _dialogField(
+                            phone,
+                            'Phone',
+                            keyboardType: TextInputType.phone,
+                            inputFormatters:
+                                ValidationUtils.mobileInputFormatters(),
+                            validator: ValidationUtils.validateOptionalPhone,
+                          ),
                           if (approver == null)
-                            _dialogField(password, 'Password', obscure: true),
-                          _dialogField(department, 'Department'),
-                          _dialogField(designation, 'Designation'),
-                          _dialogField(profilePicture, 'Profile picture URL'),
+                            _dialogField(
+                              password,
+                              'Password',
+                              obscure: true,
+                              required: true,
+                              validator: ValidationUtils.validatePassword,
+                            )
+                          else
+                            _dialogField(
+                              password,
+                              'New password',
+                              obscure: true,
+                              validator: ValidationUtils.validateOptionalPassword,
+                            ),
+                          _dialogField(
+                            department,
+                            'Department',
+                            validator: (value) =>
+                                ValidationUtils.validateOptionalOrganizationName(
+                              value,
+                              fieldName: 'Department',
+                            ),
+                          ),
+                          _dialogField(
+                            designation,
+                            'Designation',
+                            validator: (value) =>
+                                ValidationUtils.validateOptionalOrganizationName(
+                              value,
+                              fieldName: 'Designation',
+                            ),
+                          ),
+                          _dialogField(
+                            profilePicture,
+                            'Profile picture URL',
+                            keyboardType: TextInputType.url,
+                            validator: (value) => ValidationUtils.validateOptionalUrl(
+                              value,
+                              fieldName: 'Profile picture URL',
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 18),
@@ -662,11 +760,23 @@ class _ApprovalManagementScreenState
                                 } else {
                                   permissions.remove(category.slug);
                                 }
+                                if (permissions.isNotEmpty) {
+                                  permissionsError = '';
+                                }
                               });
                             },
                           );
                         }).toList(),
                       ),
+                      if (permissionsError.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          permissionsError,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 18),
                       Text(
                         'Location access (optional — leave blank for all regions)',
@@ -677,11 +787,78 @@ class _ApprovalManagementScreenState
                         spacing: 12,
                         runSpacing: 12,
                         children: [
-                          _dialogField(country, 'Country'),
-                          _dialogField(stateController, 'State'),
-                          _dialogField(district, 'District'),
-                          _dialogField(city, 'City'),
-                          _dialogField(pincode, 'PIN code'),
+                          AddressAutocompleteField(
+                            controller: country,
+                            label: 'Country',
+                            hint: 'Type to search, e.g. India',
+                            width: 220,
+                            options: IndiaGeography.countries,
+                            validator: (value) =>
+                                ValidationUtils.validateOptionalPlaceName(
+                              value,
+                              fieldName: 'Country',
+                            ),
+                            onChanged: (_) => setDialogState(() {}),
+                            onSelected: (_) => setDialogState(() {}),
+                          ),
+                          AddressAutocompleteField(
+                            controller: stateController,
+                            label: 'State',
+                            hint: 'e.g. Karnataka',
+                            width: 220,
+                            options: IndiaGeography.statesForCountry(
+                              country.text,
+                            ),
+                            validator: (value) =>
+                                ValidationUtils.validateOptionalPlaceName(
+                              value,
+                              fieldName: 'State',
+                            ),
+                            onChanged: (_) => setDialogState(() {}),
+                            onSelected: (_) => setDialogState(() {}),
+                          ),
+                          AddressAutocompleteField(
+                            controller: district,
+                            label: 'District',
+                            hint: 'e.g. Bengaluru Urban',
+                            width: 220,
+                            options: IndiaGeography.districtsFor(
+                              state: stateController.text,
+                              country: country.text,
+                            ),
+                            validator: (value) =>
+                                ValidationUtils.validateOptionalPlaceName(
+                              value,
+                              fieldName: 'District',
+                            ),
+                            onChanged: (_) => setDialogState(() {}),
+                            onSelected: (_) => setDialogState(() {}),
+                          ),
+                          AddressAutocompleteField(
+                            controller: city,
+                            label: 'City',
+                            hint: 'e.g. Bengaluru',
+                            width: 220,
+                            options: IndiaGeography.districtsFor(
+                              state: stateController.text,
+                              country: country.text,
+                            ),
+                            validator: (value) =>
+                                ValidationUtils.validateOptionalPlaceName(
+                              value,
+                              fieldName: 'City',
+                            ),
+                          ),
+                          _dialogField(
+                            pincode,
+                            'PIN code',
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            validator: ValidationUtils.validateOptionalPincode,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -711,6 +888,7 @@ class _ApprovalManagementScreenState
                     ],
                   ),
                 ),
+                ),
               ),
               actions: [
                 TextButton(
@@ -719,21 +897,14 @@ class _ApprovalManagementScreenState
                 ),
                 FilledButton(
                   onPressed: () {
-                    if (firstName.text.trim().isEmpty ||
-                        lastName.text.trim().isEmpty ||
-                        employeeId.text.trim().isEmpty ||
-                        email.text.trim().isEmpty ||
-                        (approver == null && password.text.length < 8) ||
-                        permissions.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Name, employee ID, email, password, and at least one provider category are required',
-                          ),
-                        ),
+                    final valid = formKey.currentState?.validate() ?? false;
+                    if (permissions.isEmpty) {
+                      setDialogState(
+                        () => permissionsError =
+                            'Select at least one provider category',
                       );
-                      return;
                     }
+                    if (!valid || permissions.isEmpty) return;
                     Navigator.pop(context, true);
                   },
                   child: const Text('Save'),
@@ -801,14 +972,21 @@ class _ApprovalManagementScreenState
     TextEditingController controller,
     String label, {
     bool obscure = false,
+    bool required = false,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
-    return SizedBox(
-      width: 220,
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        decoration: InputDecoration(labelText: label),
-      ),
+    return _ApproverDialogField(
+      controller: controller,
+      label: label,
+      obscure: obscure,
+      requiredField: required,
+      validator: validator,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      textCapitalization: textCapitalization,
     );
   }
 
@@ -891,14 +1069,25 @@ class _ApprovalManagementScreenState
 
   Future<void> _saveRequestFilter() async {
     final controller = TextEditingController();
+    final filterFormKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Save filter'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Filter name'),
-          autofocus: true,
+        content: Form(
+          key: filterFormKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: TextFormField(
+            controller: controller,
+            validator: (value) => ValidationUtils.validateRequired(
+              value,
+              fieldName: 'Filter name',
+              minLength: 2,
+              maxLength: 40,
+            ),
+            decoration: const InputDecoration(labelText: 'Filter name *'),
+            autofocus: true,
+          ),
         ),
         actions: [
           TextButton(
@@ -906,7 +1095,10 @@ class _ApprovalManagementScreenState
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              if (!(filterFormKey.currentState?.validate() ?? false)) return;
+              Navigator.pop(context, true);
+            },
             child: const Text('Save'),
           ),
         ],
@@ -1164,6 +1356,7 @@ class _ApprovalManagementScreenState
         .read(approvalManagementProvider)
         .config
         .assignmentStrategies;
+    final ruleFormKey = GlobalKey<FormState>();
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1171,22 +1364,51 @@ class _ApprovalManagementScreenState
           title: Text('Configure ${category.name}'),
           content: SizedBox(
             width: 520,
-            child: SingleChildScrollView(
+            child: Form(
+              key: ruleFormKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
+                  TextFormField(
                     controller: slaController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'SLA hours'),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(4),
+                    ],
+                    validator: (value) => ValidationUtils.validateHours(
+                      value,
+                      fieldName: 'SLA hours',
+                    ),
+                    decoration: const InputDecoration(labelText: 'SLA hours *'),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
+                  TextFormField(
                     controller: escalationController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(4),
+                    ],
+                    validator: (value) {
+                      final hoursError = ValidationUtils.validateHours(
+                        value,
+                        fieldName: 'Escalation hours',
+                        min: 0,
+                      );
+                      if (hoursError != null) return hoursError;
+                      final sla = int.tryParse(slaController.text.trim());
+                      final escalation = int.tryParse(value?.trim() ?? '');
+                      if (sla != null && escalation != null && escalation >= sla) {
+                        return 'Escalation hours must be less than SLA hours';
+                      }
+                      return null;
+                    },
                     decoration: const InputDecoration(
-                      labelText: 'Escalation hours (near-deadline window)',
+                      labelText: 'Escalation hours (near-deadline window) *',
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1255,8 +1477,15 @@ class _ApprovalManagementScreenState
                           children: [
                             TextFormField(
                               initialValue: level['name']?.toString() ?? '',
+                              validator: (value) =>
+                                  ValidationUtils.validateRequired(
+                                value,
+                                fieldName: 'Level name',
+                                minLength: 2,
+                                maxLength: 40,
+                              ),
                               decoration: const InputDecoration(
-                                labelText: 'Level name',
+                                labelText: 'Level name *',
                               ),
                               onChanged: (value) => level['name'] = value,
                             ),
@@ -1324,6 +1553,7 @@ class _ApprovalManagementScreenState
                 ],
               ),
             ),
+            ),
           ),
           actions: [
             TextButton(
@@ -1332,15 +1562,7 @@ class _ApprovalManagementScreenState
             ),
             FilledButton(
               onPressed: () {
-                final sla = int.tryParse(slaController.text);
-                final escalation = int.tryParse(escalationController.text);
-                if (sla == null ||
-                    sla <= 0 ||
-                    escalation == null ||
-                    escalation < 0) {
-                  _snack(context, 'Enter valid SLA and escalation hours');
-                  return;
-                }
+                if (!(ruleFormKey.currentState?.validate() ?? false)) return;
                 Navigator.pop(context, true);
               },
               child: const Text('Save'),
@@ -4682,10 +4904,6 @@ String _compliance(int totalOpen, int breached) {
   return '${(((totalOpen - breached) / totalOpen) * 100).round()}%';
 }
 
-void _snack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-}
-
 String _formatProviderValue(dynamic value) {
   if (value == null) return '-';
   if (value is Map || value is List) {
@@ -4696,4 +4914,68 @@ String _formatProviderValue(dynamic value) {
     }
   }
   return value.toString();
+}
+
+class _ApproverDialogField extends StatefulWidget {
+  const _ApproverDialogField({
+    required this.controller,
+    required this.label,
+    this.obscure = false,
+    this.requiredField = false,
+    this.validator,
+    this.keyboardType,
+    this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final bool obscure;
+  final bool requiredField;
+  final String? Function(String?)? validator;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
+
+  @override
+  State<_ApproverDialogField> createState() => _ApproverDialogFieldState();
+}
+
+class _ApproverDialogFieldState extends State<_ApproverDialogField> {
+  late bool _hidden;
+
+  @override
+  void initState() {
+    super.initState();
+    _hidden = widget.obscure;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: TextFormField(
+        controller: widget.controller,
+        obscureText: widget.obscure && _hidden,
+        keyboardType: widget.keyboardType,
+        inputFormatters: widget.inputFormatters,
+        textCapitalization: widget.textCapitalization,
+        validator: widget.validator,
+        decoration: InputDecoration(
+          labelText: widget.requiredField ? '${widget.label} *' : widget.label,
+          suffixIcon: widget.obscure
+              ? IconButton(
+                  tooltip: _hidden ? 'Show password' : 'Hide password',
+                  icon: Icon(
+                    _hidden
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                  onPressed: () => setState(() => _hidden = !_hidden),
+                )
+              : null,
+        ),
+      ),
+    );
+  }
 }

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/repositories/blood_bank_repository.dart';
 import '../../data/blood_bank_catalog.dart';
@@ -159,6 +160,7 @@ class _EmergencyBloodRequestScreenState extends State<EmergencyBloodRequestScree
               const SizedBox(height: 12),
               TextFormField(
                 controller: _patientNameController,
+                onTap: () => AccidentalSelectionBinder.onTap(_patientNameController),
                 decoration: const InputDecoration(
                   labelText: 'Patient name',
                   border: OutlineInputBorder(),
@@ -169,6 +171,7 @@ class _EmergencyBloodRequestScreenState extends State<EmergencyBloodRequestScree
               const SizedBox(height: 12),
               TextFormField(
                 controller: _hospitalController,
+                onTap: () => AccidentalSelectionBinder.onTap(_hospitalController),
                 decoration: const InputDecoration(
                   labelText: 'Hospital name',
                   border: OutlineInputBorder(),
@@ -180,6 +183,7 @@ class _EmergencyBloodRequestScreenState extends State<EmergencyBloodRequestScree
               TextFormField(
                 controller: _contactController,
                 keyboardType: TextInputType.phone,
+                onTap: () => AccidentalSelectionBinder.onTap(_contactController),
                 decoration: const InputDecoration(
                   labelText: 'Contact number',
                   border: OutlineInputBorder(),
@@ -206,6 +210,7 @@ class _EmergencyBloodRequestScreenState extends State<EmergencyBloodRequestScree
               TextFormField(
                 controller: _notesController,
                 maxLines: 3,
+                onTap: () => AccidentalSelectionBinder.onTap(_notesController),
                 decoration: const InputDecoration(
                   labelText: 'Additional notes',
                   border: OutlineInputBorder(),

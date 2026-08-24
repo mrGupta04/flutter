@@ -368,6 +368,122 @@ class ValidationUtils {
     return validatePhoneNumber(phone, countryCode: countryCode);
   }
 
+  /// Employee / staff ID (letters, numbers, hyphen, underscore).
+  static String? validateEmployeeId(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Employee ID is required';
+    }
+    final cleaned = value.trim();
+    if (cleaned.length < 3 || cleaned.length > 20) {
+      return 'Employee ID must be 3–20 characters';
+    }
+    if (!RegExp(r'^[A-Za-z0-9\-_]+$').hasMatch(cleaned)) {
+      return 'Employee ID can only contain letters, numbers, and hyphens';
+    }
+    return null;
+  }
+
+  /// Password when editing — empty means keep the current password.
+  static String? validateOptionalPassword(String? password) {
+    if (password == null || password.isEmpty) return null;
+    return validatePassword(password);
+  }
+
+  static String? validateOptionalOrganizationName(
+    String? name, {
+    String fieldName = 'Name',
+  }) {
+    if (name == null || name.trim().isEmpty) return null;
+    return validateOrganizationName(name, fieldName: fieldName);
+  }
+
+  static String? validateOptionalPlaceName(
+    String? value, {
+    String fieldName = 'Name',
+  }) {
+    if (value == null || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    if (trimmed.length < 2) return 'Enter a valid $fieldName';
+    if (!RegExp(r"^[a-zA-Z.\s\-']{2,60}$").hasMatch(trimmed)) {
+      return '$fieldName can only contain letters and spaces';
+    }
+    return null;
+  }
+
+  static String? validateOptionalPincode(String? pincode) {
+    if (pincode == null || pincode.trim().isEmpty) return null;
+    return validatePincode(pincode);
+  }
+
+  static String? validateUrl(
+    String? value, {
+    String fieldName = 'URL',
+    bool required = true,
+  }) {
+    if (value == null || value.trim().isEmpty) {
+      return required ? '$fieldName is required' : null;
+    }
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null ||
+        !uri.hasScheme ||
+        uri.host.isEmpty ||
+        !uri.host.contains('.')) {
+      return 'Enter a valid $fieldName';
+    }
+    if (uri.scheme != 'http' && uri.scheme != 'https') {
+      return '$fieldName must start with http:// or https://';
+    }
+    return null;
+  }
+
+  static String? validateOptionalUrl(
+    String? value, {
+    String fieldName = 'URL',
+  }) {
+    return validateUrl(value, fieldName: fieldName, required: false);
+  }
+
+  static String? validateRemarks(
+    String? value, {
+    String fieldName = 'Remarks',
+    int minLength = 8,
+  }) {
+    return validateRequired(
+      value,
+      fieldName: fieldName,
+      minLength: minLength,
+      maxLength: 1000,
+    );
+  }
+
+  static String? validateHours(
+    String? value, {
+    String fieldName = 'Hours',
+    int min = 1,
+    int max = 720,
+  }) {
+    return validatePositiveNumber(
+      value,
+      fieldName: fieldName,
+      min: min,
+      max: max,
+    );
+  }
+
+  static String? validateCouponCode(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Coupon code is required';
+    }
+    final cleaned = value.trim().toUpperCase();
+    if (cleaned.length < 3 || cleaned.length > 20) {
+      return 'Coupon code must be 3–20 characters';
+    }
+    if (!RegExp(r'^[A-Z0-9]+$').hasMatch(cleaned)) {
+      return 'Use letters and numbers only';
+    }
+    return null;
+  }
+
   /// Optional UPI — validates format only when provided.
   static String? validateOptionalUpiId(String? upi) {
     if (upi == null || upi.trim().isEmpty) return null;

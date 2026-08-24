@@ -9,6 +9,7 @@ import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
@@ -316,7 +317,7 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TextField(
+                      CaretOnTapTextField(
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: 'Search scan centers or scans...',

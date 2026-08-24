@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/repositories/booking_chat_repository.dart';
@@ -204,7 +205,7 @@ class _BookingChatScreenState extends ConsumerState<BookingChatScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: CaretOnTapTextField(
                       controller: _controller,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _send(),
