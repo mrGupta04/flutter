@@ -13,6 +13,7 @@ import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/lab_model.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../data/lab_catalog_metadata.dart';
 import '../../data/lab_model_utils.dart';
@@ -210,7 +211,10 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ClipRRect(
+                    TappableProfilePhoto(
+                      imageUrl: logoUrl,
+                      title: lab.displayName,
+                      child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         width: 64,
@@ -224,6 +228,7 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                             : const Icon(Icons.biotech_rounded,
                                 color: AppColors.primary),
                       ),
+                    ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

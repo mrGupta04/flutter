@@ -12,6 +12,7 @@ import '../../../../data/models/doctor_model.dart';
 import '../utils/admin_documents_helper.dart';
 import '../widgets/admin_document_sections.dart';
 import '../../../../shared/widgets/app_widgets.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../doctor_registration/provider/verified_doctors_provider.dart';
 import '../../provider/admin_provider.dart';
@@ -366,7 +367,10 @@ class _ProfileHeader extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            CircleAvatar(
+            TappableProfilePhoto(
+              imageUrl: doctor.profilePicture,
+              title: doctor.fullName,
+              child: CircleAvatar(
               radius: 48,
               backgroundColor: AppColors.primaryLight,
               backgroundImage: doctor.profilePicture != null &&
@@ -376,6 +380,7 @@ class _ProfileHeader extends StatelessWidget {
               child: doctor.profilePicture == null
                   ? const Icon(Icons.person, size: 48, color: AppColors.primary)
                   : null,
+            ),
             ),
             const SizedBox(height: 12),
             Text(doctor.fullName, style: AppTextStyles.headlineSmall),

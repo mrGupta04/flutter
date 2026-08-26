@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/media_url_utils.dart';
+import 'full_screen_image_viewer.dart';
 
 /// Top-right profile avatar for signed-in healthcare partners.
 class ProviderHeaderAvatar extends StatelessWidget {
@@ -17,9 +19,7 @@ class ProviderHeaderAvatar extends StatelessWidget {
   final double size;
 
   bool get _hasNetworkImage =>
-      profilePictureUrl != null &&
-      profilePictureUrl!.isNotEmpty &&
-      profilePictureUrl!.startsWith('http');
+      MediaUrlUtils.resolve(profilePictureUrl).isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +30,13 @@ class ProviderHeaderAvatar extends StatelessWidget {
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: _hasNetworkImage
+            ? () => showFullScreenNetworkImage(
+                  context,
+                  imageUrl: MediaUrlUtils.resolve(profilePictureUrl),
+                  title: displayName,
+                )
+            : onTap,
         customBorder: const CircleBorder(),
         child: SizedBox(
           width: size,
@@ -44,7 +50,7 @@ class ProviderHeaderAvatar extends StatelessWidget {
                       width: 2,
                     ),
                     image: DecorationImage(
-                      image: NetworkImage(profilePictureUrl!),
+                      image: NetworkImage(MediaUrlUtils.resolve(profilePictureUrl)),
                       fit: BoxFit.cover,
                     ),
                   ),

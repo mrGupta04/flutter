@@ -10,6 +10,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
@@ -463,19 +464,21 @@ class _BloodBankRegistrationScreenState
       'Confirm details before submitting',
     ];
 
-    return PopScope(
-      canPop: _step == 0,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _back();
-      },
+    return StepBackScope(
+      step: _step,
+      onPreviousStep: _back,
       child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Blood bank registration'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: _step > 0 ? _back : () => Navigator.of(context).maybePop(),
+          onPressed: _step > 0
+              ? _back
+              : () => AppBackButtonScope.popOrGo(
+                    context,
+                    AppConstants.routeProviderLanding,
+                  ),
         ),
       ),
       body: RegistrationStepPage(
@@ -834,7 +837,7 @@ class _BloodBankRegistrationScreenState
                 ),
                 SizedBox(
                   width: 90,
-                  child: TextFormField(
+                  child: CaretOnTapTextFormField(
                     initialValue: '${c.priceInr}',
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(

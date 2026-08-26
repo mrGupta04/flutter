@@ -9,7 +9,7 @@ const Color kProviderSpecialtyGold = Color(0xFFC9922A);
 const Color kProviderStatsBarBg = Color(0xFFE6F7EE);
 
 /// Doctor listing card height estimate for home previews.
-const double kDoctorListingCardHeight = 330;
+const double kDoctorListingCardHeight = 286;
 
 class MarketplaceCardShell extends StatelessWidget {
   const MarketplaceCardShell({
@@ -373,6 +373,7 @@ class MarketplacePriceActionRow extends StatelessWidget {
           SizedBox(
             width: 138,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(

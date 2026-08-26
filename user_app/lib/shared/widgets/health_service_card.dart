@@ -49,15 +49,6 @@ class HealthServiceGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final perRow = ResponsiveUtils.gridColumns(
-      context,
-      mobile: cardsPerRow < 1 ? 1 : cardsPerRow,
-      tablet: 3,
-      laptop: 4,
-      desktop: 4,
-      largeDesktop: 4,
-    );
-
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: ResponsiveUtils.valueFor(
@@ -67,43 +58,58 @@ class HealthServiceGrid extends StatelessWidget {
           laptop: 32,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: ResponsiveUtils.valueFor(
-                context,
-                mobile: 18,
-                tablet: 20,
-                desktop: 22,
-              ),
-              fontWeight: FontWeight.w800,
-              height: 1.2,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          for (var row = 0; row < items.length; row += perRow) ...[
-            if (row > 0) const SizedBox(height: _gridGap),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var col = 0; col < perRow; col++) ...[
-                  if (col > 0) const SizedBox(width: _gridGap),
-                  Expanded(
-                    child: row + col < items.length
-                        ? _buildCard(items[row + col])
-                        : const SizedBox.shrink(),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final perRow = _columnsForWidth(
+            constraints.maxWidth,
+            fallback: cardsPerRow < 1 ? 1 : cardsPerRow,
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: ResponsiveUtils.valueFor(
+                    context,
+                    mobile: 18,
+                    tablet: 20,
+                    desktop: 22,
                   ),
-                ],
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              for (var row = 0; row < items.length; row += perRow) ...[
+                if (row > 0) const SizedBox(height: _gridGap),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var col = 0; col < perRow; col++) ...[
+                      if (col > 0) const SizedBox(width: _gridGap),
+                      Expanded(
+                        child: row + col < items.length
+                            ? _buildCard(items[row + col])
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
               ],
-            ),
-          ],
-        ],
+            ],
+          );
+        },
       ),
     );
+  }
+
+  /// Mobile: 2 columns. Tablet and up: 2–3 based on available width.
+  static int _columnsForWidth(double width, {required int fallback}) {
+    if (width >= 720) return 3;
+    return fallback < 1 ? 2 : fallback;
   }
 
   Widget _buildCard(HealthServiceItem item) {

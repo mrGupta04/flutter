@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/constants/phone_countries.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -31,18 +30,11 @@ class MobileNumberField extends StatefulWidget {
 
 class _MobileNumberFieldState extends State<MobileNumberField> {
   late PhoneCountry _selectedCountry;
-  late final FocusNode _focusNode;
-  late AccidentalSelectionBinder _selectionBinder;
 
   @override
   void initState() {
     super.initState();
     _selectedCountry = PhoneCountries.findByDialCode(widget.countryCode);
-    _focusNode = FocusNode();
-    _selectionBinder = AccidentalSelectionBinder(
-      controller: widget.mobileController,
-      focusNode: _focusNode,
-    );
   }
 
   @override
@@ -51,16 +43,6 @@ class _MobileNumberFieldState extends State<MobileNumberField> {
     if (oldWidget.countryCode != widget.countryCode) {
       _selectedCountry = PhoneCountries.findByDialCode(widget.countryCode);
     }
-    if (oldWidget.mobileController != widget.mobileController) {
-      _selectionBinder.rebind(widget.mobileController);
-    }
-  }
-
-  @override
-  void dispose() {
-    _selectionBinder.dispose();
-    _focusNode.dispose();
-    super.dispose();
   }
 
   Future<void> _pickCountry() async {
@@ -151,15 +133,13 @@ class _MobileNumberFieldState extends State<MobileNumberField> {
   }
 
   Widget _buildPhoneField() {
-    return TextFormField(
+    return CaretOnTapTextFormField(
       controller: widget.mobileController,
-      focusNode: _focusNode,
       validator: _validate,
       keyboardType: TextInputType.phone,
       inputFormatters: ValidationUtils.mobileInputFormatters(
         countryCode: _selectedCountry.dialCode,
       ),
-      onTap: _selectionBinder.arm,
       style: AppTextStyles.bodyLarge.copyWith(
         color: AppColors.textPrimary,
       ),

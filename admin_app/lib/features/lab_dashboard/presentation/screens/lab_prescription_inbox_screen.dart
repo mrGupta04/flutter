@@ -310,7 +310,7 @@ class _LabPrescriptionDetailScreenState
                         ] else ...[
                           Text('Enter Price', style: AppTextStyles.titleSmall),
                           const SizedBox(height: 8),
-                          TextField(
+                          CaretOnTapTextField(
                             controller: _priceController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
@@ -319,7 +319,7 @@ class _LabPrescriptionDetailScreenState
                             ),
                           ),
                           const SizedBox(height: 10),
-                          TextField(
+                          CaretOnTapTextField(
                             controller: _etaController,
                             decoration: const InputDecoration(
                               labelText: 'Estimated completion (optional)',
@@ -327,7 +327,7 @@ class _LabPrescriptionDetailScreenState
                             ),
                           ),
                           const SizedBox(height: 10),
-                          TextField(
+                          CaretOnTapTextField(
                             controller: _notesController,
                             maxLines: 3,
                             decoration: const InputDecoration(

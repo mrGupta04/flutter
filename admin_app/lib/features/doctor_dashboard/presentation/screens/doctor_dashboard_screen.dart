@@ -301,7 +301,7 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: controller,
                 keyboardType: TextInputType.number,
                 maxLength: 4,

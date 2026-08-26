@@ -3,6 +3,10 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_decorations.dart';
 import '../theme/app_text_styles.dart';
+import 'accidental_selection_binder.dart';
+
+export 'accidental_selection_binder.dart'
+    show CaretOnTapTextField, CaretOnTapTextFormField;
 
 /// Modern text field with floating label and themed borders.
 class CustomTextField extends StatefulWidget {
@@ -53,110 +57,30 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   late bool _obscureText;
-  late final FocusNode _focusNode;
-  DateTime? _suppressSelectionUntil;
-  VoidCallback? _controllerListener;
 
   @override
   void initState() {
     super.initState();
     _obscureText = widget.obscureText;
-    _focusNode = FocusNode(debugLabel: 'CustomTextField:${widget.label}');
-    _focusNode.addListener(_handleFocusChange);
-    _attachController(widget.controller);
-  }
-
-  @override
-  void didUpdateWidget(covariant CustomTextField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      _detachController(oldWidget.controller);
-      _attachController(widget.controller);
-    }
-  }
-
-  @override
-  void dispose() {
-    _focusNode.removeListener(_handleFocusChange);
-    _detachController(widget.controller);
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _attachController(TextEditingController controller) {
-    void listener() => _collapseAccidentalSelection();
-    _controllerListener = listener;
-    controller.addListener(listener);
-  }
-
-  void _detachController(TextEditingController controller) {
-    final listener = _controllerListener;
-    if (listener != null) {
-      controller.removeListener(listener);
-      _controllerListener = null;
-    }
-  }
-
-  void _handleFocusChange() {
-    if (!_focusNode.hasFocus) {
-      _suppressSelectionUntil = null;
-      return;
-    }
-    _suppressSelectionUntil =
-        DateTime.now().add(const Duration(milliseconds: 600));
-    _collapseAccidentalSelection();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _collapseAccidentalSelection();
-    });
-    Future<void>.delayed(const Duration(milliseconds: 50), () {
-      if (mounted) _collapseAccidentalSelection();
-    });
-  }
-
-  void _handleTap() {
-    _suppressSelectionUntil =
-        DateTime.now().add(const Duration(milliseconds: 600));
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _collapseAccidentalSelection();
-    });
-  }
-
-  void _collapseAccidentalSelection() {
-    final until = _suppressSelectionUntil;
-    if (until == null || DateTime.now().isAfter(until)) return;
-    if (!_focusNode.hasFocus) return;
-
-    final controller = widget.controller;
-    final text = controller.text;
-    if (text.isEmpty) return;
-
-    final selection = controller.selection;
-    if (!selection.isValid || selection.isCollapsed) return;
-
-    final caret = selection.extentOffset.clamp(0, text.length);
-    controller.selection = TextSelection.collapsed(offset: caret);
   }
 
   void _toggleObscure() {
-    final controller = widget.controller;
-    final selection = controller.selection;
+    final selection = widget.controller.selection;
     setState(() => _obscureText = !_obscureText);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !selection.isValid) return;
-      final text = controller.text;
-      final start = selection.start.clamp(0, text.length);
-      final end = selection.end.clamp(0, text.length);
-      controller.selection = TextSelection(baseOffset: start, extentOffset: end);
+      if (!mounted) return;
+      final text = widget.controller.text;
+      final offset = selection.isValid
+          ? selection.extentOffset.clamp(0, text.length)
+          : text.length;
+      widget.controller.selection = TextSelection.collapsed(offset: offset);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
+    return CaretOnTapTextFormField(
       controller: widget.controller,
-      focusNode: _focusNode,
       validator: widget.validator,
       keyboardType: widget.keyboardType,
       textCapitalization: widget.textCapitalization,
@@ -168,7 +92,6 @@ class _CustomTextFieldState extends State<CustomTextField> {
       textInputAction: widget.textInputAction,
       onChanged: (_) => widget.onChanged?.call(),
       onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
-      onTap: _handleTap,
       style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: widget.label,

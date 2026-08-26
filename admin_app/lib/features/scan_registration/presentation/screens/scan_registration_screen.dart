@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
@@ -12,6 +11,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/scan_center_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
@@ -409,19 +409,21 @@ class _ScanRegistrationScreenState extends ConsumerState<ScanRegistrationScreen>
       'Confirm details before submitting',
     ];
 
-    return PopScope(
-      canPop: _step == 0,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _back();
-      },
+    return StepBackScope(
+      step: _step,
+      onPreviousStep: _back,
       child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Scan center registration'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: _step > 0 ? _back : () => context.pop(),
+          onPressed: _step > 0
+              ? _back
+              : () => AppBackButtonScope.popOrGo(
+                    context,
+                    AppConstants.routeProviderLanding,
+                  ),
         ),
       ),
       body: RegistrationStepPage(
@@ -979,7 +981,7 @@ class _TestConfigFieldsState extends State<_TestConfigFields> {
         Row(
           children: [
             Expanded(
-              child: TextFormField(
+              child: CaretOnTapTextFormField(
                 controller: _priceController,
                 style: _fieldStyle,
                 decoration: const InputDecoration(
@@ -996,7 +998,7 @@ class _TestConfigFieldsState extends State<_TestConfigFields> {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: TextFormField(
+              child: CaretOnTapTextFormField(
                 controller: _discountedController,
                 style: _fieldStyle,
                 decoration: const InputDecoration(
@@ -1014,7 +1016,7 @@ class _TestConfigFieldsState extends State<_TestConfigFields> {
           ],
         ),
         const SizedBox(height: 8),
-        TextFormField(
+        CaretOnTapTextFormField(
           controller: _reportDeliveryController,
           style: _fieldStyle,
           decoration: const InputDecoration(
@@ -1026,7 +1028,7 @@ class _TestConfigFieldsState extends State<_TestConfigFields> {
           ),
         ),
         const SizedBox(height: 8),
-        TextFormField(
+        CaretOnTapTextFormField(
           controller: _preparationController,
           style: _fieldStyle,
           decoration: const InputDecoration(

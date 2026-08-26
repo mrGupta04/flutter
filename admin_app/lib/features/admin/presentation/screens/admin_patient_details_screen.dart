@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../data/services/dio_service.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 
 class AdminPatientDetailsScreen extends StatefulWidget {
   const AdminPatientDetailsScreen({
@@ -94,7 +96,7 @@ class _AdminPatientDetailsScreenState extends State<AdminPatientDetailsScreen> {
             ),
             if (!_blocked) ...[
               const SizedBox(height: 14),
-              TextField(
+              CaretOnTapTextField(
                 controller: reasonController,
                 decoration: const InputDecoration(
                   labelText: 'Reason (optional)',
@@ -312,7 +314,10 @@ class _AdminPatientDetailsScreenState extends State<AdminPatientDetailsScreen> {
                         ),
                         child: Row(
                           children: [
-                            CircleAvatar(
+                            TappableProfilePhoto(
+                              imageUrl: photo,
+                              title: _name,
+                              child: CircleAvatar(
                               radius: 36,
                               backgroundColor:
                                   AppColors.primary.withValues(alpha: 0.12),
@@ -328,6 +333,7 @@ class _AdminPatientDetailsScreenState extends State<AdminPatientDetailsScreen> {
                                       ),
                                     )
                                   : null,
+                            ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(

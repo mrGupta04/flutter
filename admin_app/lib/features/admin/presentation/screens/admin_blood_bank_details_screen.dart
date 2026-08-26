@@ -260,7 +260,7 @@ class _ActionBar extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Reject application'),
-        content: TextField(
+        content: CaretOnTapTextField(
           controller: controller,
           decoration: const InputDecoration(hintText: 'Reason for rejection'),
           maxLines: 3,

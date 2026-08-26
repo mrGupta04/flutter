@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/constants/phone_countries.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/validation_utils.dart';
+import '../../core/widgets/accidental_selection_binder.dart';
 
 /// Mobile number field with country code selector (India +91 default).
 class MobileNumberField extends StatefulWidget {
@@ -30,81 +30,11 @@ class MobileNumberField extends StatefulWidget {
 
 class _MobileNumberFieldState extends State<MobileNumberField> {
   late PhoneCountry _selectedCountry;
-  late final FocusNode _focusNode;
-  DateTime? _suppressSelectionUntil;
-  VoidCallback? _controllerListener;
 
   @override
   void initState() {
     super.initState();
     _selectedCountry = PhoneCountries.findByDialCode(widget.countryCode);
-    _focusNode = FocusNode(debugLabel: 'MobileNumberField');
-    _focusNode.addListener(_handleFocusChange);
-    _attachController(widget.mobileController);
-  }
-
-  @override
-  void dispose() {
-    _focusNode.removeListener(_handleFocusChange);
-    _detachController(widget.mobileController);
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _attachController(TextEditingController controller) {
-    void listener() => _collapseAccidentalSelection();
-    _controllerListener = listener;
-    controller.addListener(listener);
-  }
-
-  void _detachController(TextEditingController controller) {
-    final listener = _controllerListener;
-    if (listener != null) {
-      controller.removeListener(listener);
-      _controllerListener = null;
-    }
-  }
-
-  void _handleFocusChange() {
-    if (!_focusNode.hasFocus) {
-      _suppressSelectionUntil = null;
-      return;
-    }
-    _suppressSelectionUntil =
-        DateTime.now().add(const Duration(milliseconds: 600));
-    _collapseAccidentalSelection();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _collapseAccidentalSelection();
-    });
-    Future<void>.delayed(const Duration(milliseconds: 50), () {
-      if (mounted) _collapseAccidentalSelection();
-    });
-  }
-
-  void _handleTap() {
-    _suppressSelectionUntil =
-        DateTime.now().add(const Duration(milliseconds: 600));
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _collapseAccidentalSelection();
-    });
-  }
-
-  void _collapseAccidentalSelection() {
-    final until = _suppressSelectionUntil;
-    if (until == null || DateTime.now().isAfter(until)) return;
-    if (!_focusNode.hasFocus) return;
-
-    final controller = widget.mobileController;
-    final text = controller.text;
-    if (text.isEmpty) return;
-
-    final selection = controller.selection;
-    if (!selection.isValid || selection.isCollapsed) return;
-
-    final caret = selection.extentOffset.clamp(0, text.length);
-    controller.selection = TextSelection.collapsed(offset: caret);
   }
 
   @override
@@ -112,10 +42,6 @@ class _MobileNumberFieldState extends State<MobileNumberField> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.countryCode != widget.countryCode) {
       _selectedCountry = PhoneCountries.findByDialCode(widget.countryCode);
-    }
-    if (oldWidget.mobileController != widget.mobileController) {
-      _detachController(oldWidget.mobileController);
-      _attachController(widget.mobileController);
     }
   }
 
@@ -207,15 +133,13 @@ class _MobileNumberFieldState extends State<MobileNumberField> {
   }
 
   Widget _buildPhoneField() {
-    return TextFormField(
+    return CaretOnTapTextFormField(
       controller: widget.mobileController,
-      focusNode: _focusNode,
       validator: _validate,
       keyboardType: TextInputType.phone,
       inputFormatters: ValidationUtils.mobileInputFormatters(
         countryCode: _selectedCountry.dialCode,
       ),
-      onTap: _handleTap,
       style: AppTextStyles.bodyLarge.copyWith(
         color: AppColors.textPrimary,
       ),

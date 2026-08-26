@@ -20,6 +20,7 @@ import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/consultation_booking_price_summary.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
 import '../../../../shared/widgets/doctor_hospital_map_card.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/prescription_included_banner.dart';
 import '../../../../shared/widgets/previous_reports_picker.dart';
@@ -694,13 +695,17 @@ class _DoctorHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
+              TappableProfilePhoto(
+                imageUrl: imageUrl,
+                title: name,
+                child: CircleAvatar(
                 radius: 32,
                 backgroundImage:
                     imageUrl.isNotEmpty ? CachedNetworkImageProvider(imageUrl) : null,
                 child: imageUrl.isEmpty
                     ? const Icon(Icons.person_rounded, color: AppColors.primary)
                     : null,
+              ),
               ),
               const SizedBox(width: 14),
               Expanded(

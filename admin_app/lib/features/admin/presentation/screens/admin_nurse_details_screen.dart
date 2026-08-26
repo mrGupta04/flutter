@@ -11,6 +11,7 @@ import '../../../../data/models/doctor_document_model.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../widgets/admin_document_sections.dart';
 import '../../provider/admin_nurse_provider.dart';
@@ -279,7 +280,10 @@ class _ProfileHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CircleAvatar(
+              TappableProfilePhoto(
+                imageUrl: nurse.profilePicture,
+                title: nurse.displayName,
+                child: CircleAvatar(
                 radius: 48,
                 backgroundColor: AppColors.primaryLight,
                 backgroundImage:
@@ -287,6 +291,7 @@ class _ProfileHeader extends StatelessWidget {
                 child: hasNetworkPhoto
                     ? null
                     : const Icon(Icons.person, size: 48, color: AppColors.primary),
+              ),
               ),
               const SizedBox(height: 12),
               Text(

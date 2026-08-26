@@ -2422,7 +2422,7 @@ class _SearchableMultiSelectPickerState
           ),
           const SizedBox(height: 12),
         ],
-        TextField(
+        CaretOnTapTextField(
           controller: _searchController,
           style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),
           decoration: InputDecoration(

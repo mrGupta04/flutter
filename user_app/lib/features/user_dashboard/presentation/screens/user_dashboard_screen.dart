@@ -26,6 +26,7 @@ import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../../data/services/lab_scan_payment_flow.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../../core/utils/responsive_utils.dart';
@@ -733,7 +734,10 @@ class _ProfileTab extends ConsumerWidget {
           _InfoCard(
             title: 'Profile photo',
             children: [
-              ClipRRect(
+              TappableProfilePhoto(
+                imageUrl: MediaUrlUtils.resolve(u.profilePicture),
+                title: u.fullName,
+                child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
                   imageUrl: MediaUrlUtils.resolve(u.profilePicture),
@@ -741,6 +745,7 @@ class _ProfileTab extends ConsumerWidget {
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
+              ),
               ),
             ],
           ),
@@ -1140,7 +1145,9 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
           child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
+            TappableProfilePhoto(
+              imageUrl: imageUrl,
+              child: CircleAvatar(
               radius: 28,
               backgroundColor: AppColors.grey100,
               backgroundImage:
@@ -1148,6 +1155,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
               child: imageUrl.isEmpty
                   ? Icon(providerIcon, color: AppColors.primary)
                   : null,
+            ),
             ),
             const SizedBox(width: 12),
             Expanded(

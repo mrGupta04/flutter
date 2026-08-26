@@ -9,6 +9,7 @@ import '../../data/models/doctor_model.dart';
 import '../../data/models/nurse_model.dart';
 
 import 'blinking_online_badge.dart';
+import 'full_screen_image_viewer.dart';
 import 'marketplace_provider_card_ui.dart';
 import 'nurse_feedback_sheet.dart';
 
@@ -259,7 +260,10 @@ class _NurseProfileImage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ClipRRect(
+          TappableProfilePhoto(
+            imageUrl: imageUrl,
+            title: nurse.displayName,
+            child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: SizedBox(
               width: 118,
@@ -272,6 +276,7 @@ class _NurseProfileImage extends StatelessWidget {
                       errorWidget: (_, __, ___) => _placeholder(),
                     )
                   : _placeholder(),
+            ),
             ),
           ),
           if (showAvailable) ...[
@@ -724,7 +729,12 @@ class BloodBankListingCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
+                  TappableProfilePhoto(
+                    imageUrl: MediaUrlUtils.resolve(
+                      bloodBank.logoUrl ?? bloodBank.profilePicture,
+                    ),
+                    title: bloodBank.displayName,
+                    child: CircleAvatar(
                     radius: 28,
                     backgroundColor:
                         const Color(0xFFB71C1C).withValues(alpha: 0.12),
@@ -745,6 +755,7 @@ class BloodBankListingCard extends StatelessWidget {
                               color: Color(0xFFB71C1C), size: 28)
                           : null;
                     }(),
+                  ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -930,7 +941,10 @@ class _ModernCareCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
+                      TappableProfilePhoto(
+                        imageUrl: imageUrl,
+                        title: title,
+                        child: CircleAvatar(
                         radius: 28,
                         backgroundColor: iconColor.withValues(alpha: 0.12),
                         backgroundImage: imageUrl != null && imageUrl!.isNotEmpty
@@ -939,6 +953,7 @@ class _ModernCareCard extends StatelessWidget {
                         child: imageUrl == null || imageUrl!.isEmpty
                             ? Icon(icon, color: iconColor, size: 28)
                             : null,
+                      ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

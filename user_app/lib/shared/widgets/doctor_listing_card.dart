@@ -6,6 +6,7 @@ import '../../core/utils/media_url_utils.dart';
 import '../../data/models/consultation_type.dart';
 import '../../data/models/doctor_model.dart';
 import 'blinking_online_badge.dart';
+import 'full_screen_image_viewer.dart';
 import 'marketplace_provider_card_ui.dart';
 
 /// Action button layout for [DoctorListingCard].
@@ -107,84 +108,89 @@ class DoctorListingCard extends StatelessWidget {
       );
     }
 
-    return MarketplaceCardShell(
-      onTap: null,
-      borderColor: showBottomDivider
-          ? AppColors.divider
-          : const Color(0xFFE8E8EC),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                MarketplaceProviderHeader(
-                  name: displayName,
-                  specialty: specialty,
-                  metaLine: metaLine,
-                  tags: tags,
-                  languagesLine: languagesLine,
-                  trailing: headerTrailing,
-                  avatar: _DoctorAvatar(
-                    doctor: doctor,
-                    showLiveBadge: doctor.isLiveNow,
-                  ),
-                ),
-                if (footerNote != null && footerNote!.trim().isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    footerNote!.trim(),
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11,
+    return Align(
+      alignment: Alignment.topCenter,
+      child: MarketplaceCardShell(
+        onTap: null,
+        borderColor: showBottomDivider
+            ? AppColors.divider
+            : const Color(0xFFE8E8EC),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  MarketplaceProviderHeader(
+                    name: displayName,
+                    specialty: specialty,
+                    metaLine: metaLine,
+                    tags: tags,
+                    languagesLine: languagesLine,
+                    trailing: headerTrailing,
+                    avatar: _DoctorAvatar(
+                      doctor: doctor,
+                      showLiveBadge: doctor.isLiveNow,
                     ),
                   ),
+                  if (footerNote != null && footerNote!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      footerNote!.trim(),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  MarketplaceStatsBar(
+                    leftIcon: Icons.thumb_up_outlined,
+                    leftLabel: '${happyPercent ?? 96}% Happy Patients',
+                    rightIcon: Icons.chat_bubble_outline_rounded,
+                    rightLabel: consultCount > 0
+                        ? '$consultCount Consults'
+                        : 'New on platform',
+                  ),
                 ],
-                const SizedBox(height: 12),
-                MarketplaceStatsBar(
-                  leftIcon: Icons.thumb_up_outlined,
-                  leftLabel: '${happyPercent ?? 96}% Happy Patients',
-                  rightIcon: Icons.chat_bubble_outline_rounded,
-                  rightLabel: consultCount > 0
-                      ? '$consultCount Consults'
-                      : 'New on platform',
-                ),
-              ],
+              ),
             ),
-          ),
-          if (showActionButtons) ...[
-            const SizedBox(height: 14),
-            if (actionStyle == DoctorCardActionStyle.admin)
-              MarketplacePriceActionRow(
-                useAdminButton: true,
-                adminButtonLabel: adminActionLabel,
-                adminButtonSubtitle: adminActionSubtitle,
-                onAdminPressed: onAdminActionTap ?? onTap,
-              )
-            else
+            if (showActionButtons) ...[
+              const SizedBox(height: 14),
+              if (actionStyle == DoctorCardActionStyle.admin)
+                MarketplacePriceActionRow(
+                  useAdminButton: true,
+                  adminButtonLabel: adminActionLabel,
+                  adminButtonSubtitle: adminActionSubtitle,
+                  onAdminPressed: onAdminActionTap ?? onTap,
+                )
+              else
+                MarketplacePriceActionRow(
+                  price: fee,
+                  originalPrice: displayOriginalFee,
+                  availabilityLabel: availabilityText,
+                  onButtonPressed: slotAction,
+                  buttonEnabled:
+                      !fadeUnavailableConsultationButtons || slotAvailable,
+                  showButton: slotAction != null || fee != null,
+                ),
+            ] else if (fee != null && fee > 0) ...[
+              const SizedBox(height: 14),
               MarketplacePriceActionRow(
                 price: fee,
                 originalPrice: displayOriginalFee,
-                availabilityLabel: availabilityText,
-                onButtonPressed: slotAction,
-                buttonEnabled:
-                    !fadeUnavailableConsultationButtons || slotAvailable,
-                showButton: slotAction != null || fee != null,
+                showButton: false,
               ),
-          ] else if (fee != null && fee > 0) ...[
-            const SizedBox(height: 14),
-            MarketplacePriceActionRow(
-              price: fee,
-              originalPrice: displayOriginalFee,
-              showButton: false,
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -303,18 +309,22 @@ class _DoctorAvatar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          MarketplaceSquareAvatar(
-            size: 96,
-            borderRadius: 12,
-            child: hasImage
-                ? CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.topCenter,
-                    placeholder: (_, __) => _placeholder(),
-                    errorWidget: (_, __, ___) => _placeholder(),
-                  )
-                : _placeholder(),
+          TappableProfilePhoto(
+            imageUrl: imageUrl,
+            title: doctor.fullName,
+            child: MarketplaceSquareAvatar(
+              size: 96,
+              borderRadius: 12,
+              child: hasImage
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
+                      placeholder: (_, __) => _placeholder(),
+                      errorWidget: (_, __, ___) => _placeholder(),
+                    )
+                  : _placeholder(),
+            ),
           ),
           if (showLiveBadge) ...[
             const SizedBox(height: 8),

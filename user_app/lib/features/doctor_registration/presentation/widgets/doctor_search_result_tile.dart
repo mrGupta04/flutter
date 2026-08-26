@@ -13,12 +13,14 @@ class DoctorSearchResultTile extends StatelessWidget {
     this.consultationFilter,
     this.showBottomDivider = true,
     this.distanceKm,
+    this.availabilityLabel,
   });
 
   final DoctorModel doctor;
   final ConsultationType? consultationFilter;
   final bool showBottomDivider;
   final double? distanceKm;
+  final String? availabilityLabel;
 
   String? get _distanceLabel {
     final km = distanceKm;
@@ -35,6 +37,7 @@ class DoctorSearchResultTile extends StatelessWidget {
       showBottomDivider: showBottomDivider,
       consultationFilter: consultationFilter,
       footerNote: _distanceLabel,
+      availabilityLabel: availabilityLabel,
       showActionButtons: doctor.offersOnlineConsult ||
           doctor.offersVisitSite ||
           doctor.offersBookHome ||

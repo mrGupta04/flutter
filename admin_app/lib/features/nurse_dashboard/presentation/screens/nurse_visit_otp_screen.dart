@@ -109,7 +109,7 @@ class _NurseVisitOtpScreenState extends ConsumerState<NurseVisitOtpScreen> {
                     : const Text('Send OTP to patient'),
               ),
             if (_otpSent) ...[
-              TextField(
+              CaretOnTapTextField(
                 controller: _otpController,
                 keyboardType: TextInputType.number,
                 maxLength: 6,

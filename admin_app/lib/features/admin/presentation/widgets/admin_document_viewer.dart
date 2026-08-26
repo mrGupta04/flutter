@@ -289,7 +289,7 @@ class AdminDocumentPreviewCard extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Reject ${document.documentTypeDisplay}'),
-        content: TextField(
+        content: CaretOnTapTextField(
           controller: controller,
           decoration: const InputDecoration(
             labelText: 'Rejection reason',

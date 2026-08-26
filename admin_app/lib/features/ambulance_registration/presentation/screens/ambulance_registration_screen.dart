@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/constants/ambulance_constants.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/models/provider_type.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../provider/provider/provider_status_sync.dart';
@@ -241,19 +241,21 @@ class _AmbulanceRegistrationScreenState
   Widget build(BuildContext context) {
     final currentStep = ref.watch(currentAmbulanceStepProvider);
 
-    return PopScope(
-      canPop: currentStep <= 1,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _previousStep();
-      },
+    return StepBackScope(
+      step: currentStep - 1,
+      onPreviousStep: _previousStep,
       child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Ambulance onboarding'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: currentStep > 1 ? _previousStep : () => context.pop(),
+          onPressed: currentStep > 1
+              ? _previousStep
+              : () => AppBackButtonScope.popOrGo(
+                    context,
+                    AppConstants.routeProviderLanding,
+                  ),
         ),
       ),
       body: PageView(

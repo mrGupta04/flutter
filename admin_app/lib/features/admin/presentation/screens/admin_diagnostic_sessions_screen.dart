@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../data/models/api_response_model.dart';
 import '../../../../data/services/dio_service.dart';
 import '../../../../shared/widgets/admin_adaptive_shell.dart';
@@ -137,7 +138,7 @@ class _AdminDiagnosticSessionsScreenState
       padding: embedded
           ? const EdgeInsets.fromLTRB(16, 8, 16, 8)
           : const EdgeInsets.only(bottom: 8),
-      child: TextField(
+      child: CaretOnTapTextField(
         controller: _search,
         decoration: InputDecoration(
           hintText: 'Search patient, mobile, $_providerLabel…',

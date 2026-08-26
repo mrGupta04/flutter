@@ -13,6 +13,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/safe_navigation.dart';
 import '../../../../core/utils/validation_utils.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../data/models/approval_management_models.dart';
 import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../shared/widgets/admin_adaptive_shell.dart';
@@ -45,10 +47,33 @@ class _ApprovalManagementScreenState
   bool _dark = false;
   _OverviewMetric? _metricFocus;
   String? _metricCategory;
+  late final AppBackHandler _backHandler = _onSystemBack;
+
   @override
   void initState() {
     super.initState();
+    AppBackButtonScope.addHandler(_backHandler);
     Future.microtask(_reload);
+  }
+
+  /// Overview is the screen root. Back closes drill-down / other tabs first
+  /// instead of exiting the app (this route is often opened with go()).
+  bool _onSystemBack() {
+    final path = GoRouter.maybeOf(context)?.state.uri.path ?? '';
+    if (path != AppConstants.routeApprovalManagement) return false;
+    if (_metricCategory != null) {
+      setState(() => _metricCategory = null);
+      return true;
+    }
+    if (_metricFocus != null) {
+      _closeMetricDrilldown();
+      return true;
+    }
+    if (_section != _ConsoleSection.overview) {
+      _selectSection(_ConsoleSection.overview);
+      return true;
+    }
+    return false;
   }
 
   Future<void> _reload() {
@@ -115,6 +140,7 @@ class _ApprovalManagementScreenState
 
   @override
   void dispose() {
+    AppBackButtonScope.removeHandler(_backHandler);
     _searchController.dispose();
     super.dispose();
   }
@@ -145,6 +171,13 @@ class _ApprovalManagementScreenState
       backgroundColor: palette.background,
       appBar: AppBar(
         title: const Text('Approval Management'),
+        automaticallyImplyLeading: false,
+        leading: AppBackButtonScope.canNavigateBack(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                onPressed: () => AppBackButtonScope.navigateBack(context),
+              )
+            : null,
         actions: [
           Tooltip(
             message: _dark ? 'Light mode' : 'Dark mode',
@@ -373,7 +406,7 @@ class _ApprovalManagementScreenState
             child: Form(
               key: remarksFormKey,
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: TextFormField(
+              child: CaretOnTapTextFormField(
                 controller: remarksController,
                 validator: (value) => ValidationUtils.validateRemarks(value),
                 decoration: const InputDecoration(
@@ -511,7 +544,7 @@ class _ApprovalManagementScreenState
                             setDialogState(() => approverId = value),
                       ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    CaretOnTapTextFormField(
                       controller: remarksController,
                       validator: (value) {
                         if (request.currentAssigneeId != null) {
@@ -1077,7 +1110,7 @@ class _ApprovalManagementScreenState
         content: Form(
           key: filterFormKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: TextFormField(
+          child: CaretOnTapTextFormField(
             controller: controller,
             validator: (value) => ValidationUtils.validateRequired(
               value,
@@ -1372,7 +1405,7 @@ class _ApprovalManagementScreenState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextFormField(
+                  CaretOnTapTextFormField(
                     controller: slaController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [
@@ -1386,7 +1419,7 @@ class _ApprovalManagementScreenState
                     decoration: const InputDecoration(labelText: 'SLA hours *'),
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
+                  CaretOnTapTextFormField(
                     controller: escalationController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [
@@ -1475,7 +1508,7 @@ class _ApprovalManagementScreenState
                         padding: const EdgeInsets.all(12),
                         child: Column(
                           children: [
-                            TextFormField(
+                            CaretOnTapTextFormField(
                               initialValue: level['name']?.toString() ?? '',
                               validator: (value) =>
                                   ValidationUtils.validateRequired(
@@ -2429,7 +2462,7 @@ class _RequestsPane extends ConsumerWidget {
             children: [
               SizedBox(
                 width: 280,
-                child: TextField(
+                child: CaretOnTapTextField(
                   controller: searchController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.search_rounded),
@@ -4954,7 +4987,7 @@ class _ApproverDialogFieldState extends State<_ApproverDialogField> {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 220,
-      child: TextFormField(
+      child: CaretOnTapTextFormField(
         controller: widget.controller,
         obscureText: widget.obscure && _hidden,
         keyboardType: widget.keyboardType,

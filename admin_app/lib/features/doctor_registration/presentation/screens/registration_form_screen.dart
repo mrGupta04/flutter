@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/validation_utils.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/models.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
@@ -378,12 +378,9 @@ class _RegistrationFormScreenState
   Widget build(BuildContext context) {
     final currentStep = ref.watch(currentRegistrationStepProvider);
 
-    return PopScope(
-      canPop: currentStep <= 1,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _previousStep();
-      },
+    return StepBackScope(
+      step: currentStep - 1,
+      onPreviousStep: _previousStep,
       child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -392,7 +389,10 @@ class _RegistrationFormScreenState
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: currentStep > 1
               ? _previousStep
-              : () => context.pop(),
+              : () => AppBackButtonScope.popOrGo(
+                    context,
+                    AppConstants.routeProviderLanding,
+                  ),
         ),
       ),
       body: PageView(

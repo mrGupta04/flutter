@@ -46,29 +46,15 @@ class AddressAutocompleteField extends StatefulWidget {
 
 class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
   late final FocusNode _focusNode;
-  late AccidentalSelectionBinder _selectionBinder;
 
   @override
   void initState() {
     super.initState();
     _focusNode = FocusNode();
-    _selectionBinder = AccidentalSelectionBinder(
-      controller: widget.controller,
-      focusNode: _focusNode,
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant AddressAutocompleteField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      _selectionBinder.rebind(widget.controller);
-    }
   }
 
   @override
   void dispose() {
-    _selectionBinder.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -92,7 +78,7 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
         widget.onChanged?.call(value);
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        return TextFormField(
+        return CaretOnTapTextFormField(
           controller: controller,
           focusNode: focusNode,
           enabled: widget.enabled,
@@ -102,7 +88,6 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
           inputFormatters: widget.inputFormatters,
           onChanged: widget.onChanged,
           onFieldSubmitted: (_) => onFieldSubmitted(),
-          onTap: _selectionBinder.arm,
           decoration: InputDecoration(
             labelText: widget.label,
             hintText: widget.hint,

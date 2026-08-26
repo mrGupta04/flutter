@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
@@ -137,7 +138,7 @@ class _DoctorSearchScreenState extends ConsumerState<DoctorSearchScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
+            child: CaretOnTapTextField(
               controller: _controller,
               autofocus: widget.initialQuery == null &&
                   widget.initialCity == null &&

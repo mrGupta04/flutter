@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/constants/india_geography.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/accidental_selection_binder.dart';
 
 /// Suggests country / state / district values as the user types.
 class AddressAutocompleteField extends StatefulWidget {
@@ -77,7 +78,7 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
         widget.onChanged?.call(value);
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        return TextFormField(
+        return CaretOnTapTextFormField(
           controller: controller,
           focusNode: focusNode,
           enabled: widget.enabled,

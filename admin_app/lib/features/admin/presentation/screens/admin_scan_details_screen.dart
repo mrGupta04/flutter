@@ -317,7 +317,7 @@ class _ActionBar extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Reject scan center'),
-        content: TextField(
+        content: CaretOnTapTextField(
           controller: controller,
           decoration: const InputDecoration(
             labelText: 'Rejection reason',
@@ -350,7 +350,7 @@ class _ActionBar extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Suspend scan center'),
-        content: TextField(
+        content: CaretOnTapTextField(
           controller: controller,
           decoration: const InputDecoration(labelText: 'Reason (optional)'),
         ),
@@ -382,7 +382,7 @@ class _ActionBar extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Request additional documents'),
-        content: TextField(
+        content: CaretOnTapTextField(
           controller: controller,
           decoration: const InputDecoration(
             labelText: 'Message to scan center',

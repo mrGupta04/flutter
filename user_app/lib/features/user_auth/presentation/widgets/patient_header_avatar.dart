@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/patient_user_model.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 
 /// Profile avatar for the home header and user profile hero.
 class PatientHeaderAvatar extends StatelessWidget {
@@ -23,34 +24,38 @@ class PatientHeaderAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = MediaUrlUtils.resolve(user.profilePicture);
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(cornerRadius),
-        border: Border.all(
-          color: AppColors.white.withValues(alpha: 0.85),
-          width: 2,
+    return TappableProfilePhoto(
+      imageUrl: imageUrl,
+      title: user.fullName,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(cornerRadius),
+          border: Border.all(
+            color: AppColors.white.withValues(alpha: 0.85),
+            width: 2,
+          ),
         ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(cornerRadius - 2),
-        child: imageUrl.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                width: size,
-                height: size,
-                placeholder: (context, url) => _InitialsBadge(
-                  initials: user.initials,
-                  size: size,
-                ),
-                errorWidget: (context, url, error) => _InitialsBadge(
-                  initials: user.initials,
-                  size: size,
-                ),
-              )
-            : _InitialsBadge(initials: user.initials, size: size),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(cornerRadius - 2),
+          child: imageUrl.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.cover,
+                  width: size,
+                  height: size,
+                  placeholder: (context, url) => _InitialsBadge(
+                    initials: user.initials,
+                    size: size,
+                  ),
+                  errorWidget: (context, url, error) => _InitialsBadge(
+                    initials: user.initials,
+                    size: size,
+                  ),
+                )
+              : _InitialsBadge(initials: user.initials, size: size),
+        ),
       ),
     );
   }

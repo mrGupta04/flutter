@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../data/services/dio_service.dart';
 
 class ChatMessage {
@@ -277,7 +278,7 @@ class _ProviderBookingChatScreenState extends State<ProviderBookingChatScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: CaretOnTapTextField(
                       controller: _controller,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _send(),

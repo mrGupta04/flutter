@@ -5,25 +5,29 @@ import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/responsive_utils.dart';
 
-/// Tata 1mg home header — location + white search pill.
+/// Home header — location, greeting, notifications, profile, and search.
 class OneMgHeader extends StatelessWidget {
   const OneMgHeader({
     super.key,
     this.locationLabel = 'Deliver to',
     this.locationValue = 'Your clinic location',
-    this.searchHint = 'Search doctors, specialties...',
+    this.greeting,
+    this.searchHint = 'Search doctors, hospitals, nurses, labs...',
     this.trailing,
     this.onTrailingTap,
     this.onSearchTap,
+    this.onLocationTap,
     this.actions,
   });
 
   final String locationLabel;
   final String locationValue;
+  final String? greeting;
   final String searchHint;
   final Widget? trailing;
   final VoidCallback? onTrailingTap;
   final VoidCallback? onSearchTap;
+  final VoidCallback? onLocationTap;
   final Widget? actions;
 
   @override
@@ -48,7 +52,7 @@ class OneMgHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 20),
+          padding: EdgeInsets.fromLTRB(horizontal, 6, horizontal, 18),
           child: isWide ? _buildDesktop(context) : _buildMobile(context),
         ),
       ),
@@ -61,14 +65,24 @@ class OneMgHeader extends StatelessWidget {
       children: [
         Row(
           children: [
-            _OneMgLogo(),
-            const Spacer(),
-            if (actions != null) actions!,
+            Expanded(child: _locationRow()),
+            ?actions,
             if (trailing != null) _trailingButton(),
           ],
         ),
-        const SizedBox(height: 14),
-        _locationRow(),
+        if (greeting != null && greeting!.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            greeting!,
+            style: AppTextStyles.titleLarge.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
         const SizedBox(height: 14),
         _searchField(),
       ],
@@ -79,24 +93,35 @@ class OneMgHeader extends StatelessWidget {
     return ResponsivePage(
       maxWidth: ResponsiveUtils.contentMaxWidth(context),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _OneMgLogo(),
-              const SizedBox(width: 28),
-              Flexible(child: _locationRow()),
-              const SizedBox(width: 24),
-              Expanded(flex: 2, child: _searchField()),
+              Expanded(child: _locationRow()),
+              if (greeting != null && greeting!.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                Text(
+                  greeting!,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
               if (actions != null) ...[
                 const SizedBox(width: 8),
                 actions!,
               ],
               if (trailing != null) ...[
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 _trailingButton(),
               ],
             ],
           ),
+          const SizedBox(height: 14),
+          _searchField(),
         ],
       ),
     );
@@ -115,11 +140,11 @@ class OneMgHeader extends StatelessWidget {
   }
 
   Widget _locationRow() {
-    return Row(
+    final row = Row(
       children: [
         Icon(
           Icons.location_on_rounded,
-          color: AppColors.white.withValues(alpha: 0.9),
+          color: AppColors.white.withValues(alpha: 0.95),
           size: 18,
         ),
         const SizedBox(width: 6),
@@ -137,7 +162,7 @@ class OneMgHeader extends StatelessWidget {
                 locationValue,
                 style: AppTextStyles.labelLarge.copyWith(
                   color: AppColors.white,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -151,12 +176,26 @@ class OneMgHeader extends StatelessWidget {
         ),
       ],
     );
+
+    if (onLocationTap == null) return row;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onLocationTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: row,
+        ),
+      ),
+    );
   }
 
   Widget _searchField() {
     return Material(
       color: AppColors.white,
-      borderRadius: AppDecorations.borderRadiusMd,
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onSearchTap,
@@ -164,8 +203,8 @@ class OneMgHeader extends StatelessWidget {
             ? SystemMouseCursors.click
             : SystemMouseCursors.basic,
         child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          height: 54,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             boxShadow: AppDecorations.softShadow(opacity: 0.08),
           ),
@@ -173,63 +212,25 @@ class OneMgHeader extends StatelessWidget {
             children: [
               const Icon(
                 Icons.search_rounded,
-                color: AppColors.grey400,
-                size: 22,
+                color: AppColors.primary,
+                size: 24,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   searchHint,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.grey400,
+                    fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (onSearchTap != null)
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: AppColors.grey400.withValues(alpha: 0.8),
-                ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-/// 1mg logo mark — green pill with "1mg" text.
-class _OneMgLogo extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '1mg',
-            style: AppTextStyles.titleLarge.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w800,
-              height: 1,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          'Care',
-          style: AppTextStyles.titleMedium.copyWith(
-            color: AppColors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 }

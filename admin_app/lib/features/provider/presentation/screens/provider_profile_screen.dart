@@ -15,6 +15,7 @@ import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../auth/provider/provider_auth_provider.dart';
 import '../../provider/provider_profile_provider.dart';
 import '../../provider/provider_status_sync.dart';
@@ -634,7 +635,10 @@ class _ProfileHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CircleAvatar(
+              TappableProfilePhoto(
+                imageUrl: profilePicture,
+                title: name,
+                child: CircleAvatar(
                 radius: 36,
                 backgroundColor: AppColors.white,
                 backgroundImage: profilePicture != null && profilePicture!.startsWith('http')
@@ -643,6 +647,7 @@ class _ProfileHeader extends StatelessWidget {
                 child: profilePicture == null
                     ? const Icon(Icons.person_rounded, color: AppColors.primary, size: 36)
                     : null,
+              ),
               ),
               const SizedBox(width: 14),
               Expanded(

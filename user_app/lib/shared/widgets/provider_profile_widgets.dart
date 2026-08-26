@@ -211,7 +211,9 @@ class ProviderProfilePhoto extends StatelessWidget {
     final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     final radius = ProviderProfileHero.avatarCornerRadius;
 
-    return Container(
+    return TappableProfilePhoto(
+      imageUrl: hasImage ? imageUrl : null,
+      child: Container(
       width: size + borderWidth * 2 + 2,
       height: size + borderWidth * 2 + 2,
       padding: EdgeInsets.all(borderWidth > 0 ? 3 : 0),
@@ -257,6 +259,7 @@ class ProviderProfilePhoto extends StatelessWidget {
                   size: size,
                 ),
         ),
+      ),
       ),
     );
   }

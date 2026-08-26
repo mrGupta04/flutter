@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../data/models/api_response_model.dart';
 import '../../../../data/services/dio_service.dart';
 import '../../../../shared/widgets/admin_adaptive_shell.dart';
@@ -342,7 +343,7 @@ class _AdminPatientsScreenState extends ConsumerState<AdminPatientsScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
-            child: TextField(
+            child: CaretOnTapTextField(
               controller: _search,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
@@ -692,7 +693,7 @@ class _AdminSupportTicketsScreenState
                 },
               ),
               const SizedBox(height: 12),
-              TextField(
+              CaretOnTapTextField(
                 controller: replyCtrl,
                 decoration: const InputDecoration(labelText: 'Admin reply'),
                 maxLines: 3,
@@ -869,7 +870,7 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: codeCtrl,
                 textCapitalization: TextCapitalization.characters,
                 inputFormatters: [
@@ -900,7 +901,7 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
                 },
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: valueCtrl,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
@@ -926,7 +927,7 @@ class _AdminCouponsScreenState extends ConsumerState<AdminCouponsScreen> {
                 decoration: const InputDecoration(labelText: 'Value *'),
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: minCtrl,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
@@ -1099,7 +1100,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: titleCtrl,
                 validator: (value) => ValidationUtils.validateRequired(
                   value,
@@ -1110,7 +1111,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
                 decoration: const InputDecoration(labelText: 'Title *'),
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: subtitleCtrl,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) return null;
@@ -1124,7 +1125,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
                 decoration: const InputDecoration(labelText: 'Subtitle'),
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: imageCtrl,
                 keyboardType: TextInputType.url,
                 validator: (value) => ValidationUtils.validateUrl(
@@ -1134,7 +1135,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen> {
                 decoration: const InputDecoration(labelText: 'Image URL *'),
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: linkCtrl,
                 keyboardType: TextInputType.url,
                 validator: (value) => ValidationUtils.validateOptionalUrl(
@@ -1356,7 +1357,7 @@ class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
                 },
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: _bookingId,
                 validator: (value) => ValidationUtils.validateRequired(
                   value,
@@ -1367,7 +1368,7 @@ class _AdminRefundsScreenState extends ConsumerState<AdminRefundsScreen> {
                 decoration: const InputDecoration(labelText: 'Booking ID *'),
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              CaretOnTapTextFormField(
                 controller: _reason,
                 validator: (value) => ValidationUtils.validateRemarks(
                   value,

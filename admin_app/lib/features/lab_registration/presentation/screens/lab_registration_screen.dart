@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
@@ -12,6 +11,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/utils/validation_utils.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/lab_model.dart';
 import '../../../../shared/widgets/mobile_number_field.dart';
@@ -592,12 +592,12 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
             ),
             title: const Text('Add custom test'),
             content: _spacedDialogContent([
-              TextField(
+              CaretOnTapTextField(
                 controller: nameCtrl,
                 textCapitalization: TextCapitalization.words,
                 decoration: _dialogFieldDecoration('Test name'),
               ),
-              TextField(
+              CaretOnTapTextField(
                 controller: priceCtrl,
                 decoration: _dialogFieldDecoration('Price (₹)'),
                 keyboardType: TextInputType.number,
@@ -665,17 +665,17 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
           ),
           title: const Text('Create health package'),
           content: _spacedDialogContent([
-            TextField(
+            CaretOnTapTextField(
               controller: nameCtrl,
               textCapitalization: TextCapitalization.words,
               decoration: _dialogFieldDecoration('Package name'),
             ),
-            TextField(
+            CaretOnTapTextField(
               controller: originalCtrl,
               keyboardType: TextInputType.number,
               decoration: _dialogFieldDecoration('Original price'),
             ),
-            TextField(
+            CaretOnTapTextField(
               controller: discountCtrl,
               keyboardType: TextInputType.number,
               decoration: _dialogFieldDecoration('Offer price'),
@@ -737,12 +737,12 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
                 onChanged: (v) => setDialogState(() => role = v ?? role),
                 decoration: _dialogFieldDecoration('Role'),
               ),
-              TextField(
+              CaretOnTapTextField(
                 controller: nameCtrl,
                 textCapitalization: TextCapitalization.words,
                 decoration: _dialogFieldDecoration('Name'),
               ),
-              TextField(
+              CaretOnTapTextField(
                 controller: mobileCtrl,
                 keyboardType: TextInputType.phone,
                 decoration: _dialogFieldDecoration('Mobile'),
@@ -797,19 +797,21 @@ class _LabRegistrationScreenState extends ConsumerState<LabRegistrationScreen> {
       'Bank details and final review',
     ];
 
-    return PopScope(
-      canPop: _step == 0,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _back();
-      },
+    return StepBackScope(
+      step: _step,
+      onPreviousStep: _back,
       child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Lab registration'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: _step > 0 ? _back : () => context.pop(),
+          onPressed: _step > 0
+              ? _back
+              : () => AppBackButtonScope.popOrGo(
+                    context,
+                    AppConstants.routeProviderLanding,
+                  ),
         ),
       ),
       body: RegistrationStepPage(
@@ -1725,7 +1727,7 @@ class _TestConfigFields extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: TextFormField(
+              child: CaretOnTapTextFormField(
                 initialValue: '${test.priceInr}',
                 decoration: const InputDecoration(
                   labelText: 'Price (₹)',
@@ -1739,7 +1741,7 @@ class _TestConfigFields extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: TextFormField(
+              child: CaretOnTapTextFormField(
                 initialValue: test.discountedPriceInr?.toString() ?? '',
                 decoration: const InputDecoration(
                   labelText: 'Discounted (₹)',
@@ -1756,7 +1758,7 @@ class _TestConfigFields extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        TextFormField(
+        CaretOnTapTextFormField(
           initialValue: test.reportDeliveryTime ?? '',
           decoration: const InputDecoration(
             labelText: 'Report delivery time',
@@ -1766,7 +1768,7 @@ class _TestConfigFields extends StatelessWidget {
               onChanged(test.copyWith(reportDeliveryTime: v.trim())),
         ),
         const SizedBox(height: 8),
-        TextFormField(
+        CaretOnTapTextFormField(
           initialValue: test.preparationInstructions ?? '',
           decoration: const InputDecoration(
             labelText: 'Preparation instructions',

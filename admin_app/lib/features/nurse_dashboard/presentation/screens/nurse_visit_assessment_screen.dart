@@ -147,7 +147,7 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                CaretOnTapTextField(
                   controller: nameCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Medicine name *',
@@ -155,7 +155,7 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
-                TextField(
+                CaretOnTapTextField(
                   controller: dosageCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Dosage',
@@ -163,7 +163,7 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
-                TextField(
+                CaretOnTapTextField(
                   controller: qtyCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Quantity',
@@ -187,7 +187,7 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
                   onChanged: (v) => setLocal(() => route = v ?? 'Oral'),
                 ),
                 const SizedBox(height: 10),
-                TextField(
+                CaretOnTapTextField(
                   controller: timeCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Time given',
@@ -636,7 +636,7 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
       padding: const EdgeInsets.all(20),
       children: [
         _sectionTitle('Nurse notes'),
-        TextField(
+        CaretOnTapTextField(
           controller: _nurseNotes,
           maxLines: 6,
           decoration: const InputDecoration(
@@ -682,7 +682,7 @@ class _NurseVisitAssessmentScreenState extends State<NurseVisitAssessmentScreen>
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
+      child: CaretOnTapTextField(
         controller: controller,
         onChanged: onChanged,
         keyboardType: TextInputType.numberWithOptions(

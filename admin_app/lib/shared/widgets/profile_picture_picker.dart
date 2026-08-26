@@ -7,6 +7,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/custom_widgets.dart';
+import 'full_screen_image_viewer.dart';
 
 /// Profile photo picker used on registration forms.
 class ProfilePicturePicker extends StatelessWidget {
@@ -49,21 +50,25 @@ class ProfilePicturePicker extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: AppColors.grey100,
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
+            TappableProfilePhoto(
+              imageBytes: imageBytes,
+              title: 'Profile picture',
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: AppColors.grey100,
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                  ),
                 ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(15),
-                child: hasImage
-                    ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                    : Icon(Icons.person, size: 48, color: AppColors.grey400),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: hasImage
+                      ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                      : Icon(Icons.person, size: 48, color: AppColors.grey400),
+                ),
               ),
             ),
             const SizedBox(width: 16),

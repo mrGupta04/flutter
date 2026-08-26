@@ -4,6 +4,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/validation_utils.dart';
 import '../../data/models/consultation_type.dart';
 import '../../data/models/doctor_model.dart';
+import 'full_screen_image_viewer.dart';
 
 /// Action button layout for [DoctorListingCard].
 enum DoctorCardActionStyle {
@@ -450,7 +451,10 @@ class _DoctorPhoto extends StatelessWidget {
     final hasImage = doctor.profilePicture != null &&
         doctor.profilePicture!.startsWith('http');
 
-    return ClipRRect(
+    return TappableProfilePhoto(
+      imageUrl: hasImage ? doctor.profilePicture : null,
+      title: doctor.fullName,
+      child: ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: SizedBox(
         width: 72,
@@ -462,6 +466,7 @@ class _DoctorPhoto extends StatelessWidget {
                 errorBuilder: (_, __, ___) => _placeholder(),
               )
             : _placeholder(),
+      ),
       ),
     );
   }

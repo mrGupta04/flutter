@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../data/models/prescription_model.dart';
 import '../../../../data/repositories/prescription_repository.dart';
 
@@ -259,7 +260,7 @@ class _PrescriptionSheetState extends State<PrescriptionSheet> {
                                 ),
                               ],
                               const SizedBox(height: 16),
-                              TextField(
+                              CaretOnTapTextField(
                                 controller: _diagnosisController,
                                 decoration: const InputDecoration(
                                   labelText: 'Diagnosis',
@@ -336,7 +337,7 @@ class _PrescriptionSheetState extends State<PrescriptionSheet> {
                                 );
                               }),
                               const SizedBox(height: 12),
-                              TextField(
+                              CaretOnTapTextField(
                                 controller: _adviceController,
                                 decoration: const InputDecoration(
                                   labelText: 'Advice / follow-up',
@@ -527,7 +528,7 @@ class _MedicineCard extends StatelessWidget {
                   ),
               ],
             ),
-            TextField(
+            CaretOnTapTextField(
               controller: row.nameController,
               decoration: const InputDecoration(
                 labelText: 'Medicine name',
@@ -538,14 +539,14 @@ class _MedicineCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: CaretOnTapTextField(
                     controller: row.dosageController,
                     decoration: const InputDecoration(labelText: 'Dosage'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
+                  child: CaretOnTapTextField(
                     controller: row.frequencyController,
                     decoration: const InputDecoration(labelText: 'Frequency'),
                   ),
@@ -553,12 +554,12 @@ class _MedicineCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            TextField(
+            CaretOnTapTextField(
               controller: row.durationController,
               decoration: const InputDecoration(labelText: 'Duration'),
             ),
             const SizedBox(height: 8),
-            TextField(
+            CaretOnTapTextField(
               controller: row.instructionsController,
               decoration: const InputDecoration(labelText: 'Instructions'),
             ),
@@ -606,7 +607,7 @@ class _TestCard extends StatelessWidget {
                   ),
               ],
             ),
-            TextField(
+            CaretOnTapTextField(
               controller: row.nameController,
               decoration: const InputDecoration(
                 labelText: 'Test name',
@@ -614,7 +615,7 @@ class _TestCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            TextField(
+            CaretOnTapTextField(
               controller: row.notesController,
               decoration: const InputDecoration(labelText: 'Notes'),
             ),
