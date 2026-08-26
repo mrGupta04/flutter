@@ -25,9 +25,7 @@ import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
 import '../core/utils/geo_distance_utils.dart';
-import '../core/utils/media_url_utils.dart';
 import '../core/utils/responsive_utils.dart';
-import '../shared/widgets/full_screen_image_viewer.dart';
 import '../shared/widgets/health_service_card.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/marketplace_provider_card_ui.dart';
@@ -115,18 +113,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   trailing: user != null
                       ? PatientHeaderAvatar(user: user)
                       : const Icon(Icons.person_outline_rounded, size: 20),
-                  onTrailingTap: () {
-                    final url = MediaUrlUtils.resolve(user?.profilePicture);
-                    if (url.isNotEmpty) {
-                      showFullScreenNetworkImage(
-                        context,
-                        imageUrl: url,
-                        title: user?.fullName,
-                      );
-                      return;
-                    }
-                    _onProfileTap(context, ref);
-                  },
+                  onTrailingTap: () => _onProfileTap(context, ref),
                   onLocationTap: () => ref
                       .read(userLocationProvider.notifier)
                       .ensureResolved(context, forcePrompt: true),
@@ -717,7 +704,7 @@ class _DoctorCardRail extends ConsumerWidget {
         return SizedBox(
           height: kDoctorListingCardHeight,
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: doctors.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
@@ -726,17 +713,15 @@ class _DoctorCardRail extends ConsumerWidget {
               final distance = userLatitude != null && userLongitude != null
                   ? doctorDistanceKm(doctor, userLatitude!, userLongitude!)
                   : null;
-              return Align(
-                alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: cardWidth,
-                  child: DoctorSearchResultTile(
-                    doctor: doctor,
-                    showBottomDivider: false,
-                    distanceKm: distance,
-                    availabilityLabel:
-                        doctor.isLiveNow ? 'Available now' : null,
-                  ),
+              return SizedBox(
+                width: cardWidth,
+                height: kDoctorListingCardHeight,
+                child: DoctorSearchResultTile(
+                  doctor: doctor,
+                  showBottomDivider: false,
+                  distanceKm: distance,
+                  availabilityLabel:
+                      doctor.isLiveNow ? 'Available now' : null,
                 ),
               );
             },

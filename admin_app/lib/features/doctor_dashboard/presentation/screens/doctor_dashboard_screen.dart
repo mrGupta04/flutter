@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/doctor_availability_constants.dart';
-import '../../../../core/services/doctor_presence_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -23,6 +22,7 @@ import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/provider_document_status_section.dart';
 import '../../../../shared/widgets/patient_location_map_card.dart';
+import '../../../../shared/widgets/provider_online_toggle_card.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../doctor_registration/presentation/widgets/weekly_availability_picker.dart';
 import '../../../video_consult/presentation/widgets/join_video_consult_button.dart';
@@ -45,7 +45,6 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(doctorDashboardProvider.notifier).loadProfile();
-      DoctorPresenceService.instance.goOnline();
       _loadUnreadNotifications();
     });
   }
@@ -1069,6 +1068,8 @@ class _DashboardContent extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          const ProviderOnlineToggleCard(roleLabel: 'doctor'),
           const SizedBox(height: 16),
           _BookingStatsRow(stats: bookingStats),
           const SizedBox(height: 16),

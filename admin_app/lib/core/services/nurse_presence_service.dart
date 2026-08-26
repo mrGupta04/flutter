@@ -2,7 +2,7 @@ import 'dart:async';
 
 import '../../data/repositories/nurse_registration_repository.dart';
 
-/// Keeps the nurse marked as live while the admin app is open and in the foreground.
+/// Keeps the nurse marked as live only while the Online toggle is on.
 class NursePresenceService {
   NursePresenceService._();
 
@@ -38,8 +38,6 @@ class NursePresenceService {
     _offlineDebounceTimer?.cancel();
     _offlineDebounceTimer = null;
 
-    if (!_active) return;
-
     if (!immediate) {
       _offlineDebounceTimer = Timer(_offlineDebounce, () {
         unawaited(_doGoOffline());
@@ -51,7 +49,6 @@ class NursePresenceService {
   }
 
   Future<void> _doGoOffline() async {
-    if (!_active) return;
     _active = false;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;

@@ -3,9 +3,10 @@ import 'package:flutter/widgets.dart';
 import '../models/provider_type.dart';
 import 'doctor_presence_service.dart';
 import 'nurse_presence_service.dart';
+import 'provider_presence.dart';
 import 'token_storage.dart';
 
-/// Marks provider offline when the app is closed; keeps presence while in foreground.
+/// Marks provider offline when the app is closed; resumes only if Online is on.
 class DoctorPresenceLifecycleObserver extends WidgetsBindingObserver {
   DoctorPresenceLifecycleObserver._();
 
@@ -18,7 +19,7 @@ class DoctorPresenceLifecycleObserver extends WidgetsBindingObserver {
     if (_registered) return;
     WidgetsBinding.instance.addObserver(this);
     _registered = true;
-    _ensureOnlineIfProvider();
+    _syncIfProvider();
   }
 
   void unregister() {
@@ -35,13 +36,11 @@ class DoctorPresenceLifecycleObserver extends WidgetsBindingObserver {
         (type == 'bloodbank' ? ProviderType.bloodBank : null);
   }
 
-  Future<void> _ensureOnlineIfProvider() async {
+  Future<void> _syncIfProvider() async {
     final type = await _loggedInProviderType();
-    if (type == ProviderType.doctor) {
-      await DoctorPresenceService.instance.goOnline();
-    } else if (type == ProviderType.nurse) {
-      await NursePresenceService.instance.goOnline();
-    }
+    if (type != ProviderType.doctor && type != ProviderType.nurse) return;
+    final enabled = await TokenStorage.instance.getProviderOnlineEnabled();
+    await syncProviderPresence(online: enabled);
   }
 
   Future<void> _goOfflineIfProvider() async {
@@ -60,7 +59,7 @@ class DoctorPresenceLifecycleObserver extends WidgetsBindingObserver {
         _goOfflineIfProvider();
         break;
       case AppLifecycleState.resumed:
-        _ensureOnlineIfProvider();
+        _syncIfProvider();
         break;
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:

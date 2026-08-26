@@ -389,7 +389,7 @@ class _DashboardNavRow extends StatelessWidget {
                   child: Row(
                     children: [
                       _NavChip(
-                        label: 'Upcoming',
+                        label: 'Current Booking',
                         selected: tabController.index == 0,
                         onTap: () => tabController.animateTo(0),
                       ),

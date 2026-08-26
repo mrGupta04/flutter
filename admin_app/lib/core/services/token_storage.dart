@@ -23,6 +23,7 @@ class TokenStorage {
   static const String _scanCenterIdKey = 'scan_center_id';
   static const String _providerTypeKey = 'provider_type';
   static const String _mobileKey = 'mobile_number';
+  static const String _providerOnlineKey = 'provider_available_online';
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -238,6 +239,16 @@ class TokenStorage {
     await prefs.remove(_providerTypeKey);
   }
 
+  Future<bool> getProviderOnlineEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_providerOnlineKey) ?? false;
+  }
+
+  Future<void> setProviderOnlineEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_providerOnlineKey, enabled);
+  }
+
   Future<void> clearProviderSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
@@ -249,6 +260,7 @@ class TokenStorage {
     await prefs.remove(_scanCenterIdKey);
     await prefs.remove(_providerTypeKey);
     await prefs.remove(_mobileKey);
+    await prefs.remove(_providerOnlineKey);
   }
 
   Future<void> clearAdminSession() async {

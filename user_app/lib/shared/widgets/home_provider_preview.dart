@@ -42,6 +42,13 @@ class HomeProviderScrollList extends StatelessWidget {
         kHomeProviderPeekExtent;
   }
 
+  Widget _fixedHeightCard(BuildContext context, int index) {
+    return SizedBox(
+      height: cardHeight,
+      child: itemBuilder(context, index),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (itemCount == 0) return const SizedBox.shrink();
@@ -54,7 +61,7 @@ class HomeProviderScrollList extends StatelessWidget {
         children: [
           for (var i = 0; i < itemCount; i++) ...[
             if (i > 0) SizedBox(height: spacing),
-            itemBuilder(context, i),
+            _fixedHeightCard(context, i),
           ],
         ],
       );
@@ -70,7 +77,7 @@ class HomeProviderScrollList extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 12),
           itemCount: itemCount,
           separatorBuilder: (_, _) => SizedBox(height: spacing),
-          itemBuilder: itemBuilder,
+          itemBuilder: _fixedHeightCard,
         ),
       ),
     );

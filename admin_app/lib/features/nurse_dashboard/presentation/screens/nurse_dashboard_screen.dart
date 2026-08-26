@@ -12,6 +12,7 @@ import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/patient_location_map_card.dart';
+import '../../../../shared/widgets/provider_online_toggle_card.dart';
 import '../../../../data/services/dio_service.dart';
 import '../../../../core/services/socket_service.dart';
 import '../../../auth/provider/provider_auth_provider.dart';
@@ -153,6 +154,8 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                       if (nurse != null) ...[
                         const SizedBox(height: 8),
                         _ProfileCard(nurse: nurse),
+                        const SizedBox(height: 12),
+                        const ProviderOnlineToggleCard(roleLabel: 'nurse'),
                       ],
                       const SizedBox(height: 16),
                       _BookingStatsRow(

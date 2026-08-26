@@ -220,11 +220,9 @@ router.post('/login', async (req, res) => {
     }
 
     const token = signToken(result.tokenPayload, '30d');
-    await touchDoctorPresence(result.profile.id);
-    const profile = await findDoctorById(result.profile.id);
     return sendSuccess(res, {
       message: 'Login successful',
-      data: profile,
+      data: result.profile,
       token,
     });
   } catch (err) {

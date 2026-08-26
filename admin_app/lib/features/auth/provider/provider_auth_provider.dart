@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/provider_type.dart';
-import '../../../core/services/doctor_presence_service.dart';
-import '../../../core/services/nurse_presence_service.dart';
 import '../../../core/services/token_storage.dart';
 import '../../../data/repositories/provider_auth_repository.dart';
+import '../../provider/provider/provider_online_status_provider.dart';
 
 class ProviderAuthState {
   ProviderAuthState({
@@ -50,10 +49,13 @@ class ProviderAuthState {
 }
 
 class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
-  ProviderAuthNotifier(this._repository) : super(ProviderAuthState()) {
+  ProviderAuthNotifier(this._ref)
+      : _repository = _ref.read(providerAuthRepositoryProvider),
+        super(ProviderAuthState()) {
     _restoreSession();
   }
 
+  final Ref _ref;
   final ProviderAuthRepository _repository;
 
   ProviderType? _typeFromStorage(String? typeKey) {
@@ -109,19 +111,15 @@ class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
       final id = profile.data?['id'] as String?;
       if (id != null && id.isNotEmpty) {
         await TokenStorage.instance.saveDoctorId(id);
-        entityId = id;
         state = state.copyWith(entityId: id);
       }
-      await DoctorPresenceService.instance.goOnline();
     } else if (type == ProviderType.nurse) {
       final profile = await _repository.fetchProfile(type);
       final id = profile.data?['id'] as String?;
       if (id != null && id.isNotEmpty) {
         await TokenStorage.instance.saveNurseId(id);
-        entityId = id;
         state = state.copyWith(entityId: id);
       }
-      await NursePresenceService.instance.goOnline();
     }
   }
 
@@ -181,10 +179,8 @@ class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
         profilePicture: ProviderAuthRepository.profilePictureFrom(profile),
         displayName: ProviderAuthRepository.displayNameFrom(type, profile),
       );
-      if (type == ProviderType.doctor) {
-        await DoctorPresenceService.instance.goOnline();
-      } else if (type == ProviderType.nurse) {
-        await NursePresenceService.instance.goOnline();
+      if (type == ProviderType.doctor || type == ProviderType.nurse) {
+        await _ref.read(providerOnlineStatusProvider.notifier).reset();
       }
       return true;
     }
@@ -197,10 +193,9 @@ class ProviderAuthNotifier extends StateNotifier<ProviderAuthState> {
   }
 
   Future<void> logout() async {
-    if (state.providerType == ProviderType.doctor) {
-      await DoctorPresenceService.instance.goOffline(immediate: true);
-    } else if (state.providerType == ProviderType.nurse) {
-      await NursePresenceService.instance.goOffline(immediate: true);
+    if (state.providerType == ProviderType.doctor ||
+        state.providerType == ProviderType.nurse) {
+      await _ref.read(providerOnlineStatusProvider.notifier).reset();
     }
     await TokenStorage.instance.clearProviderSession();
     state = ProviderAuthState();
@@ -222,5 +217,5 @@ final providerAuthRepositoryProvider = Provider((ref) => ProviderAuthRepository(
 
 final providerAuthProvider =
     StateNotifierProvider<ProviderAuthNotifier, ProviderAuthState>((ref) {
-  return ProviderAuthNotifier(ref.watch(providerAuthRepositoryProvider));
+  return ProviderAuthNotifier(ref);
 });

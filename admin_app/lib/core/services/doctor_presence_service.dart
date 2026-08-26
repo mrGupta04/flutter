@@ -2,9 +2,7 @@ import 'dart:async';
 
 import '../../data/repositories/doctor_registration_repository.dart';
 
-/// Keeps the doctor marked as "live" while the app is open and in the foreground.
-/// If the doctor closes or backgrounds the app without logging out, heartbeats
-/// stop and [goOffline] is called from [DoctorPresenceLifecycleObserver].
+/// Keeps the doctor marked as "live" only while the Online toggle is on.
 class DoctorPresenceService {
   DoctorPresenceService._();
 
@@ -40,8 +38,6 @@ class DoctorPresenceService {
     _offlineDebounceTimer?.cancel();
     _offlineDebounceTimer = null;
 
-    if (!_active) return;
-
     if (!immediate) {
       _offlineDebounceTimer = Timer(_offlineDebounce, () {
         unawaited(_doGoOffline());
@@ -53,7 +49,6 @@ class DoctorPresenceService {
   }
 
   Future<void> _doGoOffline() async {
-    if (!_active) return;
     _active = false;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;

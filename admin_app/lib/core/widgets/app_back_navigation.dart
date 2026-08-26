@@ -39,9 +39,9 @@ class AppBackButtonScope extends StatelessWidget {
     BuildContext context, {
     GoRouter? router,
   }) {
-    return router?.navigatorKey.currentState ??
-        GoRouter.maybeOf(context)?.navigatorKey.currentState ??
-        Navigator.maybeOf(context);
+    return router?.routerDelegate.navigatorKey.currentState ??
+        GoRouter.maybeOf(context)?.routerDelegate.navigatorKey.currentState ??
+        Navigator.maybeOf(context, rootNavigator: true);
   }
 
   static bool _popDialogIfPresent(

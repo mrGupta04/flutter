@@ -8,8 +8,8 @@ const Color kProviderSpecialtyGold = Color(0xFFC9922A);
 /// Light mint stats strip behind satisfaction / consult counts.
 const Color kProviderStatsBarBg = Color(0xFFE6F7EE);
 
-/// Doctor listing card height estimate for home previews.
-const double kDoctorListingCardHeight = 286;
+/// Shared height for home doctor preview cards so the rail stays even.
+const double kDoctorListingCardHeight = 320;
 
 class MarketplaceCardShell extends StatelessWidget {
   const MarketplaceCardShell({
@@ -102,6 +102,8 @@ class MarketplaceProviderHeader extends StatelessWidget {
                   Expanded(
                     child: Text(
                       name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -118,6 +120,8 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   specialty!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
                     color: kProviderSpecialtyGold,
@@ -130,6 +134,8 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   metaLine!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11,
                     color: Color(0xFF6B7280),
@@ -145,6 +151,8 @@ class MarketplaceProviderHeader extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   languagesLine!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11,
                     color: Color(0xFF374151),
