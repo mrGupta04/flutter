@@ -50,6 +50,14 @@ class SocketService {
     if (!_connection.isClosed) _connection.add(connected);
   }
 
+  Future<void> connectIfAuthenticated() async {
+    try {
+      await connect();
+    } catch (_) {
+      // Stay offline until the provider signs in.
+    }
+  }
+
   Future<void> connect() async {
     if (_socket?.connected == true) {
       _emitConnected(true);

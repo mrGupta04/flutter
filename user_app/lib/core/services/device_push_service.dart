@@ -1,61 +1,119 @@
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../constants/app_constants.dart';
 import '../../data/services/dio_service.dart';
 
-/// Background FCM handler — must be a top-level function.
+const kCareAlertChannelId = 'medconnect_alerts';
+
+/// Background FCM handler — must be a top-level function registered before runApp.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
-    await Firebase.initializeApp();
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp();
+    }
   } catch (_) {}
 }
 
-/// Registers device tokens with the backend and shows foreground notifications.
+typedef NotificationTapCallback = void Function(Map<String, dynamic> payload);
+
+/// Registers device tokens with the backend and shows OS notification banners.
 ///
-/// Uses real FCM when Firebase is configured (`google-services.json` +
-/// `PUSH` init succeeds). Otherwise registers a stable `dev:` token so the
-/// inbox + backend push pipeline still works in local/dev builds.
-class DevicePushService {
+/// Uses real FCM when Firebase is configured (`google-services.json`).
+/// Otherwise registers a stable `dev_` token so the inbox + Socket.IO banners
+/// still work in local builds.
+class DevicePushService with WidgetsBindingObserver {
   DevicePushService._();
   static final DevicePushService instance = DevicePushService._();
 
   final _local = FlutterLocalNotificationsPlugin();
   final _dio = DioService();
-  bool _initialized = false;
+  bool _bootstrapped = false;
   bool _firebaseReady = false;
+  bool _observerAttached = false;
+  AppLifecycleState _lifecycle = AppLifecycleState.resumed;
   String? _tokenEndpoint;
+  NotificationTapCallback? _onNotificationTap;
+  Map<String, dynamic>? _pendingTap;
   final _shownIds = <String>{};
 
-  Future<void> init({required String deviceTokenEndpoint}) async {
-    _tokenEndpoint = deviceTokenEndpoint;
-    if (_initialized) {
-      await registerTokenWithBackend();
-      return;
+  set onNotificationTap(NotificationTapCallback? handler) {
+    _onNotificationTap = handler;
+    final pending = _pendingTap;
+    if (handler != null && pending != null) {
+      _pendingTap = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) => handler(pending));
     }
-    _initialized = true;
+  }
 
+  bool get firebaseReady => _firebaseReady;
+  bool get isAppForeground =>
+      _lifecycle == AppLifecycleState.resumed ||
+      _lifecycle == AppLifecycleState.inactive;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lifecycle = state;
+  }
+
+  /// Call from `main()` before `runApp` so FCM background delivery works.
+  Future<void> bootstrap() async {
+    if (_bootstrapped) return;
+    _bootstrapped = true;
+    if (!_observerAttached) {
+      WidgetsBinding.instance.addObserver(this);
+      _observerAttached = true;
+    }
     await _initLocalNotifications();
     _firebaseReady = await _tryInitFirebase();
-
     if (_firebaseReady) {
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-      await FirebaseMessaging.instance.requestPermission(
-        alert: true,
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+        alert: false,
         badge: true,
-        sound: true,
+        sound: false,
       );
       FirebaseMessaging.onMessage.listen(_showForegroundMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleRemoteTap);
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) {
+        _handleRemoteTap(initial);
+      }
       FirebaseMessaging.instance.onTokenRefresh.listen((token) {
         _persistAndRegister(token);
       });
     }
+  }
 
+  /// Call after the first frame so Android 13+ can show the system prompt.
+  Future<void> promptOsPermission() async {
+    if (_firebaseReady) {
+      try {
+        await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          announcement: true,
+        );
+      } catch (_) {}
+    }
+    await _requestOsPermission();
+  }
+
+  Future<void> init({required String deviceTokenEndpoint}) async {
+    _tokenEndpoint = deviceTokenEndpoint;
+    if (!_bootstrapped) {
+      await bootstrap();
+    }
     await registerTokenWithBackend();
   }
 
@@ -67,7 +125,7 @@ class DevicePushService {
       return true;
     } catch (e) {
       debugPrint(
-        '[Push] Firebase not configured — using dev device token. ($e)',
+        '[Push] Firebase not configured — using socket banners + dev token. ($e)',
       );
       return false;
     }
@@ -75,33 +133,113 @@ class DevicePushService {
 
   Future<void> _initLocalNotifications() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const ios = DarwinInitializationSettings();
+    const ios = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
     await _local.initialize(
       const InitializationSettings(android: android, iOS: ios),
+      onDidReceiveNotificationResponse: (response) {
+        final payload = _decodePayload(response.payload);
+        if (payload.isEmpty) return;
+        final handler = _onNotificationTap;
+        if (handler != null) {
+          handler(payload);
+        } else {
+          _pendingTap = payload;
+        }
+      },
     );
     const channel = AndroidNotificationChannel(
-      'medconnect_alerts',
+      kCareAlertChannelId,
       'Care alerts',
-      description: 'Booking and visit notifications',
-      importance: Importance.high,
+      description: 'Booking, chat, and visit notifications',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
     );
     await _local
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
-    await _local
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+  }
+
+  Future<void> _requestOsPermission() async {
+    try {
+      await _local
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    } catch (_) {}
+    try {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    } catch (_) {}
+  }
+
+  Map<String, dynamic> _decodePayload(String? raw) {
+    if (raw == null || raw.isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    return const {};
+  }
+
+  Map<String, dynamic> _payloadFromRemote(RemoteMessage message) {
+    final data = Map<String, dynamic>.from(message.data);
+    data['title'] ??= message.notification?.title;
+    data['body'] ??= message.notification?.body;
+    data['id'] ??= data['notificationId'] ?? message.messageId;
+    return data;
+  }
+
+  void _handleRemoteTap(RemoteMessage message) {
+    final payload = _payloadFromRemote(message);
+    final handler = _onNotificationTap;
+    if (handler != null) {
+      handler(payload);
+    } else {
+      _pendingTap = payload;
+    }
   }
 
   Future<void> _showForegroundMessage(RemoteMessage message) async {
+    final data = _payloadFromRemote(message);
     await showLocalAlert(
-      id: message.data['notificationId']?.toString() ??
+      id: data['notificationId']?.toString() ??
+          data['id']?.toString() ??
           message.messageId ??
           '${message.hashCode}',
-      title: message.notification?.title ?? message.data['title'] ?? 'Update',
-      body: message.notification?.body ?? message.data['body'] ?? '',
+      title: data['title']?.toString() ?? 'Update',
+      body: data['body']?.toString() ?? '',
+      type: data['type']?.toString() ?? '',
+      extra: data,
+    );
+  }
+
+  /// Socket-driven banner. Skipped in the background when FCM is live so we
+  /// don't double-notify with the system tray message.
+  Future<void> showRealtimeAlert({
+    required String title,
+    String body = '',
+    String id = '',
+    String type = '',
+    Map<String, dynamic> extra = const {},
+  }) {
+    if (_firebaseReady && !isAppForeground) {
+      return Future.value();
+    }
+    return showLocalAlert(
+      title: title,
+      body: body,
+      id: id,
+      type: type,
+      extra: extra,
     );
   }
 
@@ -109,28 +247,46 @@ class DevicePushService {
     required String title,
     String body = '',
     String id = '',
+    String type = '',
+    Map<String, dynamic> extra = const {},
   }) async {
     if (id.isNotEmpty && !_shownIds.add(id)) return;
     if (_shownIds.length > 80) {
       _shownIds.remove(_shownIds.first);
     }
+    final payload = jsonEncode({
+      'id': id,
+      'type': type,
+      'title': title,
+      'body': body,
+      ...extra,
+    });
     await _local.show(
       id.hashCode == 0 ? title.hashCode : id.hashCode,
       title,
       body,
       NotificationDetails(
         android: AndroidNotificationDetails(
-          'medconnect_alerts',
+          kCareAlertChannelId,
           'Care alerts',
-          channelDescription: 'Booking and visit notifications',
-          importance: Importance.high,
-          priority: Priority.high,
-          styleInformation: body.isNotEmpty
-              ? BigTextStyleInformation(body)
-              : null,
+          channelDescription: 'Booking, chat, and visit notifications',
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          enableVibration: true,
+          category: AndroidNotificationCategory.message,
+          visibility: NotificationVisibility.public,
+          ticker: title,
+          styleInformation:
+              body.isNotEmpty ? BigTextStyleInformation(body) : null,
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       ),
+      payload: payload,
     );
   }
 

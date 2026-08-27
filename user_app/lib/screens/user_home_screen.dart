@@ -713,15 +713,17 @@ class _DoctorCardRail extends ConsumerWidget {
               final distance = userLatitude != null && userLongitude != null
                   ? doctorDistanceKm(doctor, userLatitude!, userLongitude!)
                   : null;
-              return SizedBox(
-                width: cardWidth,
-                height: kDoctorListingCardHeight,
-                child: DoctorSearchResultTile(
-                  doctor: doctor,
-                  showBottomDivider: false,
-                  distanceKm: distance,
-                  availabilityLabel:
-                      doctor.isLiveNow ? 'Available now' : null,
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: cardWidth,
+                  child: DoctorSearchResultTile(
+                    doctor: doctor,
+                    showBottomDivider: false,
+                    distanceKm: distance,
+                    availabilityLabel:
+                        doctor.isLiveNow ? 'Available now' : null,
+                  ),
                 ),
               );
             },

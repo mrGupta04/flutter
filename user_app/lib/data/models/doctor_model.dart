@@ -9,6 +9,24 @@ enum VerificationStatus {
   underReview,
 }
 
+/// Whether a provider profile is visible to patients.
+enum ProfileStatus {
+  active,
+  disabled;
+
+  String get apiValue => switch (this) {
+        ProfileStatus.active => 'ACTIVE',
+        ProfileStatus.disabled => 'DISABLED',
+      };
+
+  static ProfileStatus fromApi(String? value) {
+    if (value != null && value.toUpperCase() == 'DISABLED') {
+      return ProfileStatus.disabled;
+    }
+    return ProfileStatus.active;
+  }
+}
+
 /// Doctor model representing a doctor's profile and registration data
 class DoctorModel {
   final String? id;
@@ -72,6 +90,7 @@ class DoctorModel {
 
   // Status
   final VerificationStatus? verificationStatus;
+  final ProfileStatus profileStatus;
   final String? rejectionReason;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -135,6 +154,7 @@ class DoctorModel {
     this.ifscCode,
     this.cancelledChequeUrl,
     this.verificationStatus,
+    this.profileStatus = ProfileStatus.active,
     this.rejectionReason,
     this.createdAt,
     this.updatedAt,
@@ -258,10 +278,13 @@ class DoctorModel {
 
   /// Minimum fields needed for a meaningful patient-facing card.
   bool get isPublicProfileDisplayable {
-    return (firstName?.trim().isNotEmpty ?? false) &&
+    return !isProfileDisabled &&
+        (firstName?.trim().isNotEmpty ?? false) &&
         (specializations?.isNotEmpty ?? false) &&
         (qualification?.trim().isNotEmpty ?? false);
   }
+
+  bool get isProfileDisabled => profileStatus == ProfileStatus.disabled;
 
   /// Check if all required fields are filled (aligned with backend approval gate).
   bool get isProfileComplete {
@@ -354,6 +377,7 @@ class DoctorModel {
       verificationStatus: _isApprovedTruthy(json['isApproved'])
           ? VerificationStatus.verified
           : _parseVerificationStatus(json['verificationStatus'] as String?),
+      profileStatus: ProfileStatus.fromApi(json['profileStatus'] as String?),
       rejectionReason: json['rejectionReason'] as String?,
       createdAt: _parseDateTime(json['createdAt']),
       updatedAt: _parseDateTime(json['updatedAt']),
@@ -483,6 +507,7 @@ class DoctorModel {
     String? ifscCode,
     String? cancelledChequeUrl,
     VerificationStatus? verificationStatus,
+    ProfileStatus? profileStatus,
     String? rejectionReason,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -544,6 +569,7 @@ class DoctorModel {
       ifscCode: ifscCode ?? this.ifscCode,
       cancelledChequeUrl: cancelledChequeUrl ?? this.cancelledChequeUrl,
       verificationStatus: verificationStatus ?? this.verificationStatus,
+      profileStatus: profileStatus ?? this.profileStatus,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

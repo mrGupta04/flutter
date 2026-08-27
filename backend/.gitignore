@@ -3,3 +3,4 @@ data/*.db
 uploads/*
 !.gitkeep
 .env
+firebase-service-account.json

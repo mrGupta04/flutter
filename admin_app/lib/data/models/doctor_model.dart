@@ -8,6 +8,24 @@ enum VerificationStatus {
   underReview,
 }
 
+/// Whether a provider profile is visible to patients.
+enum ProfileStatus {
+  active,
+  disabled;
+
+  String get apiValue => switch (this) {
+        ProfileStatus.active => 'ACTIVE',
+        ProfileStatus.disabled => 'DISABLED',
+      };
+
+  static ProfileStatus fromApi(String? value) {
+    if (value != null && value.toUpperCase() == 'DISABLED') {
+      return ProfileStatus.disabled;
+    }
+    return ProfileStatus.active;
+  }
+}
+
 /// How consultation payouts are received.
 enum PayoutMethod {
   bank,
@@ -97,6 +115,7 @@ class DoctorModel {
 
   // Status
   final VerificationStatus? verificationStatus;
+  final ProfileStatus profileStatus;
   final String? rejectionReason;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -161,6 +180,7 @@ class DoctorModel {
     this.cancelledChequeUrl,
     this.upiId,
     this.verificationStatus,
+    this.profileStatus = ProfileStatus.active,
     this.rejectionReason,
     this.createdAt,
     this.updatedAt,
@@ -283,6 +303,10 @@ class DoctorModel {
         (pincode?.trim().isNotEmpty ?? false);
   }
 
+  bool get isProfileDisabled => profileStatus == ProfileStatus.disabled;
+
+  bool get isProfileActive => !isProfileDisabled;
+
   /// Get verification badge color
   String get verificationBadgeColor {
     switch (verificationStatus) {
@@ -358,6 +382,7 @@ class DoctorModel {
       verificationStatus: _isApprovedTruthy(json['isApproved'])
           ? VerificationStatus.verified
           : _parseVerificationStatus(json['verificationStatus'] as String?),
+      profileStatus: ProfileStatus.fromApi(json['profileStatus'] as String?),
       rejectionReason: json['rejectionReason'] as String?,
       createdAt: _parseDateTime(json['createdAt']),
       updatedAt: _parseDateTime(json['updatedAt']),
@@ -491,6 +516,7 @@ class DoctorModel {
     String? cancelledChequeUrl,
     String? upiId,
     VerificationStatus? verificationStatus,
+    ProfileStatus? profileStatus,
     String? rejectionReason,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -555,6 +581,7 @@ class DoctorModel {
       cancelledChequeUrl: cancelledChequeUrl ?? this.cancelledChequeUrl,
       upiId: upiId ?? this.upiId,
       verificationStatus: verificationStatus ?? this.verificationStatus,
+      profileStatus: profileStatus ?? this.profileStatus,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

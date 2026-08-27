@@ -9,6 +9,11 @@ class DoctorAvailabilityConstants {
   static const int hourlySlotMinutes = 60;
   static const List<int> onlineStartMinutes = [0, 20, 40];
 
+  static const String statusAvailable = 'AVAILABLE';
+  static const String statusSelfBusy = 'SELF_BUSY';
+  static const String statusDiscarded = 'DISCARDED';
+  static const String statusBooked = 'BOOKED';
+
   static const List<String> dayNames = [
     'Sunday',
     'Monday',
@@ -89,6 +94,7 @@ class DoctorAvailabilityConstants {
   static List<Map<String, dynamic>> buildSlotPayload(
     Set<String> selectedKeys, {
     String consultationType = 'visit_site',
+    Set<String> selfBusyKeys = const {},
   }) {
     final online = isOnlineConsult(consultationType);
     final slots = <Map<String, dynamic>>[];
@@ -96,30 +102,53 @@ class DoctorAvailabilityConstants {
       for (final hour in hourSlots) {
         if (online) {
           for (final minute in onlineStartMinutes) {
-            slots.add({
-              'dayOfWeek': day,
-              'startHour': hour,
-              'startMinute': minute,
-              'available': selectedKeys.contains(
-                slotKey(
-                  day,
-                  hour,
-                  startMinute: minute,
-                  consultationType: consultationType,
-                ),
-              ),
-            });
+            final key = slotKey(
+              day,
+              hour,
+              startMinute: minute,
+              consultationType: consultationType,
+            );
+            slots.add(_slotPayload(
+              dayOfWeek: day,
+              startHour: hour,
+              startMinute: minute,
+              selected: selectedKeys.contains(key),
+              selfBusy: selfBusyKeys.contains(key),
+            ));
           }
         } else {
-          slots.add({
-            'dayOfWeek': day,
-            'startHour': hour,
-            'startMinute': 0,
-            'available': selectedKeys.contains(slotKey(day, hour)),
-          });
+          final key = slotKey(day, hour);
+          slots.add(_slotPayload(
+            dayOfWeek: day,
+            startHour: hour,
+            startMinute: 0,
+            selected: selectedKeys.contains(key),
+            selfBusy: selfBusyKeys.contains(key),
+          ));
         }
       }
     }
     return slots;
+  }
+
+  static Map<String, dynamic> _slotPayload({
+    required int dayOfWeek,
+    required int startHour,
+    required int startMinute,
+    required bool selected,
+    required bool selfBusy,
+  }) {
+    final status = selfBusy
+        ? statusSelfBusy
+        : selected
+            ? statusAvailable
+            : statusDiscarded;
+    return {
+      'dayOfWeek': dayOfWeek,
+      'startHour': startHour,
+      'startMinute': startMinute,
+      'available': status == statusAvailable,
+      'status': status,
+    };
   }
 }

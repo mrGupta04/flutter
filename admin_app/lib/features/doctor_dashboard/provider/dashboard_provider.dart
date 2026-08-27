@@ -219,6 +219,35 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
     }
   }
 
+  /// Hide or show this doctor on the patient marketplace without logging out.
+  Future<bool> setProfileStatus(ProfileStatus profileStatus) async {
+    final doctor = state.doctor;
+    if (doctor == null) return false;
+
+    try {
+      final response = await repository.updateProfileStatus(
+        profileStatus: profileStatus,
+      );
+      if (response.success && response.data != null) {
+        final fresh = response.data!;
+        _ref.read(doctorRegistrationProvider.notifier).updateDoctorData(fresh);
+        _ref.read(providerProfileProvider.notifier).applyDoctor(fresh);
+        state = state.copyWith(
+          doctor: fresh,
+          error: null,
+        );
+        return true;
+      }
+      state = state.copyWith(
+        error: response.error ?? 'Failed to update profile visibility',
+      );
+      return false;
+    } catch (e) {
+      state = state.copyWith(error: 'An error occurred');
+      return false;
+    }
+  }
+
   Future<void> loadDocuments() async {
     final doctorId = await _resolveDoctorId();
     if (doctorId == null) return;
@@ -400,6 +429,7 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
   Future<bool> saveAvailability(
     Set<String> selectedSlotKeys, {
     String consultationType = 'online_consult',
+    Set<String> selfBusySlotKeys = const {},
   }) async {
     final doctorId = await _resolveDoctorId();
     if (doctorId == null || doctorId.isEmpty) return false;
@@ -415,6 +445,7 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
             ? state.availabilityReminder?.suggestedWeekStart
             : null,
         consultationType: consultationType,
+        selfBusySlotKeys: selfBusySlotKeys,
       );
       if (response.success && response.data != null) {
         state = state.copyWith(isSavingAvailability: false);
@@ -432,6 +463,49 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
         isSavingAvailability: false,
         error: 'An error occurred',
       );
+      return false;
+    }
+  }
+
+  Future<bool> updateSlotStatus({
+    required String consultationType,
+    required int dayOfWeek,
+    required int startHour,
+    int startMinute = 0,
+    required String status,
+  }) async {
+    final doctorId = await _resolveDoctorId();
+    if (doctorId == null || doctorId.isEmpty) return false;
+
+    try {
+      final response = await repository.updateSlotStatus(
+        doctorId: doctorId,
+        consultationType: consultationType,
+        dayOfWeek: dayOfWeek,
+        startHour: startHour,
+        startMinute: startMinute,
+        status: status,
+        weekStartDate: state.availabilityReminder?.needsUpdate == true
+            ? state.availabilityReminder?.suggestedWeekStart
+            : null,
+      );
+      if (response.success && response.data != null) {
+        final updated = response.data!;
+        state = switch (consultationType) {
+          'visit_site' =>
+            state.copyWith(clinicAvailability: updated, error: null),
+          'book_home' =>
+            state.copyWith(homeAvailability: updated, error: null),
+          _ => state.copyWith(availability: updated, error: null),
+        };
+        return true;
+      }
+      state = state.copyWith(
+        error: response.error ?? 'Failed to update slot',
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to update slot');
       return false;
     }
   }

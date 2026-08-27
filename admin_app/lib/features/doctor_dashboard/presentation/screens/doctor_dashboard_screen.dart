@@ -23,11 +23,13 @@ import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/provider_document_status_section.dart';
 import '../../../../shared/widgets/patient_location_map_card.dart';
 import '../../../../shared/widgets/provider_online_toggle_card.dart';
+import '../../../../shared/widgets/provider_profile_visibility_card.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../doctor_registration/presentation/widgets/weekly_availability_picker.dart';
 import '../../../video_consult/presentation/widgets/join_video_consult_button.dart';
 import '../../../video_consult/presentation/widgets/prescription_sheet.dart';
 import '../../provider/dashboard_provider.dart';
+import '../../../../core/services/socket_service.dart';
 
 class DoctorDashboardScreen extends ConsumerStatefulWidget {
   const DoctorDashboardScreen({super.key});
@@ -46,7 +48,28 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(doctorDashboardProvider.notifier).loadProfile();
       _loadUnreadNotifications();
+      _listenRealtime();
     });
+  }
+
+  void _listenRealtime() {
+    SocketService.instance.connect().catchError((_) {});
+    SocketService.instance.on('booking-notification', _onRealtime);
+    SocketService.instance.on('app_notification', _onRealtime);
+    SocketService.instance.on('booking-status-update', _onRealtime);
+  }
+
+  void _onRealtime(dynamic _) {
+    ref.read(doctorDashboardProvider.notifier).loadBookings();
+    _loadUnreadNotifications();
+  }
+
+  @override
+  void dispose() {
+    SocketService.instance.off('booking-notification', _onRealtime);
+    SocketService.instance.off('app_notification', _onRealtime);
+    SocketService.instance.off('booking-status-update', _onRealtime);
+    super.dispose();
   }
 
   Future<void> _loadUnreadNotifications() async {
@@ -474,9 +497,19 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
     final homeSelected = Set<String>.from(
       dashboard.homeAvailability?.selectedSlotKeys ?? const {},
     );
+    final onlineSelfBusy = Set<String>.from(
+      dashboard.availability?.selfBusySlotKeys ?? const {},
+    );
+    final clinicSelfBusy = Set<String>.from(
+      dashboard.clinicAvailability?.selfBusySlotKeys ?? const {},
+    );
+    final homeSelfBusy = Set<String>.from(
+      dashboard.homeAvailability?.selfBusySlotKeys ?? const {},
+    );
     var activeType = showOnline
         ? 'online_consult'
         : (showClinic ? 'visit_site' : 'book_home');
+    var isUpdatingSlot = false;
 
     showModalBottomSheet<void>(
       context: context,
@@ -493,6 +526,18 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
               case 'online_consult':
               default:
                 return onlineSelected;
+            }
+          }
+
+          Set<String> activeSelfBusy() {
+            switch (activeType) {
+              case 'visit_site':
+                return clinicSelfBusy;
+              case 'book_home':
+                return homeSelfBusy;
+              case 'online_consult':
+              default:
+                return onlineSelfBusy;
             }
           }
 
@@ -591,14 +636,14 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                   const SizedBox(height: 16),
                   WeeklyAvailabilityPicker(
                     selectedSlots: activeSelected(),
+                    selfBusySlots: activeSelfBusy(),
                     blockedSlots: blockedForActive(),
                     selectedColor: activeColor(),
+                    enableSlotActions: true,
+                    isUpdating: isUpdatingSlot,
                     slotMinutes: activeType == 'online_consult'
                         ? DoctorAvailabilityConstants.onlineSlotMinutes
                         : DoctorAvailabilityConstants.hourlySlotMinutes,
-                    helperText: activeType == 'online_consult'
-                        ? 'Tap 20-minute slots when you are available for video consults.'
-                        : null,
                     onToggle: (day, hour, isSelected, {startMinute = 0}) {
                       setModalState(() {
                         final hourKey =
@@ -617,34 +662,141 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                                     DoctorAvailabilityConstants.hourKey(key) ==
                                     hourKey,
                               );
+                              onlineSelfBusy.removeWhere(
+                                (key) =>
+                                    DoctorAvailabilityConstants.hourKey(key) ==
+                                    hourKey,
+                              );
                               homeSelected.remove(hourKey);
+                              homeSelfBusy.remove(hourKey);
                               clinicSelected.add(hourKey);
+                              clinicSelfBusy.remove(hourKey);
                             case 'book_home':
                               onlineSelected.removeWhere(
                                 (key) =>
                                     DoctorAvailabilityConstants.hourKey(key) ==
                                     hourKey,
                               );
+                              onlineSelfBusy.removeWhere(
+                                (key) =>
+                                    DoctorAvailabilityConstants.hourKey(key) ==
+                                    hourKey,
+                              );
                               clinicSelected.remove(hourKey);
+                              clinicSelfBusy.remove(hourKey);
                               homeSelected.add(hourKey);
+                              homeSelfBusy.remove(hourKey);
                             case 'online_consult':
                             default:
                               clinicSelected.remove(hourKey);
+                              clinicSelfBusy.remove(hourKey);
                               homeSelected.remove(hourKey);
+                              homeSelfBusy.remove(hourKey);
                               onlineSelected.add(onlineKey);
+                              onlineSelfBusy.remove(onlineKey);
                           }
                         } else {
                           switch (activeType) {
                             case 'visit_site':
                               clinicSelected.remove(hourKey);
+                              clinicSelfBusy.remove(hourKey);
                             case 'book_home':
                               homeSelected.remove(hourKey);
+                              homeSelfBusy.remove(hourKey);
                             case 'online_consult':
                             default:
                               onlineSelected.remove(onlineKey);
+                              onlineSelfBusy.remove(onlineKey);
                           }
                         }
                       });
+                    },
+                    onSlotAction: (day, hour, action, {startMinute = 0}) async {
+                      final hourKey =
+                          DoctorAvailabilityConstants.slotKey(day, hour);
+                      final slotKey = activeType == 'online_consult'
+                          ? DoctorAvailabilityConstants.slotKey(
+                              day,
+                              hour,
+                              startMinute: startMinute,
+                              consultationType: 'online_consult',
+                            )
+                          : hourKey;
+                      final wasSelected = activeSelected().contains(slotKey);
+                      final wasSelfBusy = activeSelfBusy().contains(slotKey);
+                      final status = action == SlotScheduleAction.selfBusy
+                          ? DoctorAvailabilityConstants.statusSelfBusy
+                          : DoctorAvailabilityConstants.statusDiscarded;
+
+                      setModalState(() {
+                        isUpdatingSlot = true;
+                        final selected = activeSelected();
+                        final selfBusy = activeSelfBusy();
+                        if (action == SlotScheduleAction.selfBusy) {
+                          selected.add(slotKey);
+                          selfBusy.add(slotKey);
+                          if (activeType != 'online_consult') {
+                            onlineSelected.removeWhere(
+                              (key) =>
+                                  DoctorAvailabilityConstants.hourKey(key) ==
+                                  hourKey,
+                            );
+                            onlineSelfBusy.removeWhere(
+                              (key) =>
+                                  DoctorAvailabilityConstants.hourKey(key) ==
+                                  hourKey,
+                            );
+                            if (activeType == 'visit_site') {
+                              homeSelected.remove(hourKey);
+                              homeSelfBusy.remove(hourKey);
+                            } else {
+                              clinicSelected.remove(hourKey);
+                              clinicSelfBusy.remove(hourKey);
+                            }
+                          } else {
+                            clinicSelected.remove(hourKey);
+                            clinicSelfBusy.remove(hourKey);
+                            homeSelected.remove(hourKey);
+                            homeSelfBusy.remove(hourKey);
+                          }
+                        } else {
+                          selected.remove(slotKey);
+                          selfBusy.remove(slotKey);
+                        }
+                      });
+
+                      final ok = await ref
+                          .read(doctorDashboardProvider.notifier)
+                          .updateSlotStatus(
+                            consultationType: activeType,
+                            dayOfWeek: day,
+                            startHour: hour,
+                            startMinute: startMinute,
+                            status: status,
+                          );
+
+                      if (!ctx.mounted) return;
+                      setModalState(() {
+                        isUpdatingSlot = false;
+                        if (!ok) {
+                          final selected = activeSelected();
+                          final selfBusy = activeSelfBusy();
+                          if (action == SlotScheduleAction.selfBusy) {
+                            if (!wasSelected) selected.remove(slotKey);
+                            if (!wasSelfBusy) selfBusy.remove(slotKey);
+                          } else {
+                            if (wasSelected) selected.add(slotKey);
+                            if (wasSelfBusy) selfBusy.add(slotKey);
+                          }
+                        }
+                      });
+                      if (!ok) {
+                        SnackBarHelper.showError(
+                          ctx,
+                          ref.read(doctorDashboardProvider).error ??
+                              'Could not update slot',
+                        );
+                      }
                     },
                   ),
                   const SizedBox(height: 16),
@@ -663,17 +815,18 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                           .saveAvailability(
                             activeSelected(),
                             consultationType: activeType,
+                            selfBusySlotKeys: activeSelfBusy(),
                           );
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx);
-                        SnackBarHelper.showSuccess(
-                          context,
-                          ok
-                              ? 'Availability saved — patients can book these slots now'
-                              : ref.read(doctorDashboardProvider).error ??
-                                  'Failed to save availability',
-                        );
-                      }
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                      if (!mounted) return;
+                      SnackBarHelper.showSuccess(
+                        context,
+                        ok
+                            ? 'Availability saved — patients can book these slots now'
+                            : ref.read(doctorDashboardProvider).error ??
+                                'Failed to save availability',
+                      );
                     },
                   ),
                 ],
@@ -1070,6 +1223,10 @@ class _DashboardContent extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const ProviderOnlineToggleCard(roleLabel: 'doctor'),
+          const SizedBox(height: 12),
+          const ProviderProfileVisibilityCard(
+            role: ProviderVisibilityRole.doctor,
+          ),
           const SizedBox(height: 16),
           _BookingStatsRow(stats: bookingStats),
           const SizedBox(height: 16),

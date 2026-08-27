@@ -5,6 +5,8 @@ class BookableSlot {
   final DateTime slotStart;
   final DateTime slotEnd;
   final String label;
+  final String status;
+  final bool bookable;
 
   const BookableSlot({
     required this.dayOfWeek,
@@ -13,9 +15,17 @@ class BookableSlot {
     required this.slotStart,
     required this.slotEnd,
     required this.label,
+    this.status = 'AVAILABLE',
+    this.bookable = true,
   });
 
+  bool get isSelfBusy => status.toUpperCase() == 'SELF_BUSY';
+
+  bool get isBookable => bookable && !isSelfBusy && status.toUpperCase() == 'AVAILABLE';
+
   factory BookableSlot.fromJson(Map<String, dynamic> json) {
+    final rawStatus = (json['status'] as String?)?.toUpperCase() ?? 'AVAILABLE';
+    final bookable = json['bookable'] as bool? ?? rawStatus == 'AVAILABLE';
     return BookableSlot(
       dayOfWeek: (json['dayOfWeek'] as num?)?.toInt() ?? 0,
       startHour: (json['startHour'] as num?)?.toInt() ?? 8,
@@ -23,6 +33,8 @@ class BookableSlot {
       slotStart: DateTime.parse(json['slotStart'] as String),
       slotEnd: DateTime.parse(json['slotEnd'] as String),
       label: json['label'] as String? ?? '',
+      status: rawStatus,
+      bookable: bookable,
     );
   }
 

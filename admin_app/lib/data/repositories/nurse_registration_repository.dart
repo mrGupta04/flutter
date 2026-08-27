@@ -9,6 +9,7 @@ import '../models/doctor_availability_model.dart';
 import '../models/doctor_booking_model.dart';
 import '../../core/constants/doctor_availability_constants.dart';
 import '../models/nurse_model.dart';
+import '../models/doctor_model.dart';
 import '../services/dio_service.dart';
 
 class NurseRegistrationRepository {
@@ -61,6 +62,7 @@ class NurseRegistrationRepository {
     required String nurseId,
     required Set<String> selectedSlotKeys,
     DateTime? weekStartDate,
+    Set<String> selfBusySlotKeys = const {},
   }) async {
     try {
       final response = await _dioService.put(
@@ -68,7 +70,10 @@ class NurseRegistrationRepository {
         data: {
           'nurseId': nurseId,
           'weekStartDate': weekStartDate?.toIso8601String(),
-          'slots': DoctorAvailabilityConstants.buildSlotPayload(selectedSlotKeys),
+          'slots': DoctorAvailabilityConstants.buildSlotPayload(
+            selectedSlotKeys,
+            selfBusyKeys: selfBusySlotKeys,
+          ),
         },
       );
 
@@ -83,6 +88,49 @@ class NurseRegistrationRepository {
         message: body['message'] as String?,
         statusCode: body['statusCode'] as int? ?? 200,
         data: DoctorAvailabilityModel.fromJson(data),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
+    }
+  }
+
+  Future<ApiResponse<DoctorAvailabilityModel>> updateSlotStatus({
+    required String nurseId,
+    required int dayOfWeek,
+    required int startHour,
+    required String status,
+    DateTime? weekStartDate,
+  }) async {
+    try {
+      final response = await _dioService.patch(
+        AppConstants.endpointNurseAvailabilitySlot,
+        data: {
+          'nurseId': nurseId,
+          'dayOfWeek': dayOfWeek,
+          'startHour': startHour,
+          'status': status,
+          'weekStartDate': weekStartDate?.toIso8601String(),
+        },
+      );
+
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      if (data['nurseId'] != null && data['doctorId'] == null) {
+        data['doctorId'] = data['nurseId'];
+      }
+
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: DoctorAvailabilityModel.fromJson(data),
+        error: body['error'] as String?,
       );
     } on DioException catch (e) {
       return _handleError(e);
@@ -314,6 +362,29 @@ class NurseRegistrationRepository {
       final response = await _dioService.put(
         AppConstants.endpointUpdateNurseProfile,
         data: nurse.toJson(),
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => NurseModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
+    }
+  }
+
+  Future<ApiResponse<NurseModel>> updateProfileStatus({
+    required ProfileStatus profileStatus,
+  }) async {
+    try {
+      final response = await _dioService.patch(
+        AppConstants.endpointNurseProfileStatus,
+        data: {'profileStatus': profileStatus.apiValue},
       );
       return ApiResponse.fromJson(
         response.data as Map<String, dynamic>,

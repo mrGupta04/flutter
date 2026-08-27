@@ -13,10 +13,11 @@ const {
   formatSlotLabel,
   normalizeStartMinute,
   isOnlineConsultType,
-  isAvailabilityWindowOpen,
-  listAvailabilityWindows,
+  listPatientVisibleWindows,
+  getSlotStatusAt,
   slotDurationMinutes,
 } = require('../utils/slotDateTime');
+const { SLOT_STATUS, bookingRejectionForStatus } = require('../utils/slotStatus');
 const { videoJoinFields } = require('../utils/videoJoinWindow');
 const { findFeedbackByBookingIds, feedbackFieldsForBooking } = require('./feedbackRepositories');
 const {
@@ -26,6 +27,7 @@ const {
 const { buildRoomId } = require('../services/videoConsultService');
 const { notifyBookingConfirmed } = require('../services/bookingNotificationService');
 const { distanceKm } = require('../utils/geoDistance');
+const { assertProfileActive } = require('../utils/profileStatus');
 
 const HOME_VISIT_APPROVAL_HOURS = parseInt(
   process.env.HOME_VISIT_APPROVAL_HOURS || '48',
@@ -294,6 +296,11 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
   if (!doctor) {
     return { error: 'Doctor not found', status: 404 };
   }
+  try {
+    assertProfileActive(doctor, 'doctor');
+  } catch (err) {
+    return { error: err.message, status: err.statusCode || 403 };
+  }
   const typeCheck = consultationTypeChecks(doctor, consultationType);
   if (typeCheck) {
     return typeCheck;
@@ -340,10 +347,10 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
     });
   }
 
-  const windows = listAvailabilityWindows(availability.slots, consultationType);
+  const windows = listPatientVisibleWindows(availability.slots, consultationType);
   const bookable = [];
   for (const window of windows) {
-    const { dayOfWeek: day, startHour: hour, startMinute: minute } = window;
+    const { dayOfWeek: day, startHour: hour, startMinute: minute, status } = window;
     const key = `${day}_${hour}`;
     if (!isOnlineConsultType(consultationType) && bookedKeys.has(key)) continue;
 
@@ -365,6 +372,8 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
       slotStart: slotStart.toISOString(),
       slotEnd: slotEnd.toISOString(),
       label: formatSlotLabel(slotStart, slotEnd),
+      status: status || SLOT_STATUS.AVAILABLE,
+      bookable: status === SLOT_STATUS.AVAILABLE,
     });
   }
 
@@ -383,7 +392,7 @@ async function getBookableSlots(doctorId, consultationType = 'online_consult') {
       consultationType,
     ),
     slots: bookable,
-    totalBookable: bookable.length,
+    totalBookable: bookable.filter((slot) => slot.bookable).length,
     totalAvailableInWeek: (availability.slots || []).filter((s) => s.available).length,
     message:
       bookable.length === 0
@@ -470,6 +479,7 @@ async function validateBookingPayload(payload, consultationType) {
     err.statusCode = 404;
     throw err;
   }
+  assertProfileActive(doctor, 'doctor');
   const typeCheck = consultationTypeChecks(doctor, consultationType);
   if (typeCheck) {
     const err = new Error(typeCheck.error);
@@ -510,16 +520,15 @@ async function validateBookingPayload(payload, consultationType) {
   const slotStart = slotDateTime(weekStart, d, h, m);
   const slotEnd = slotEndFromStart(slotStart, consultationType);
 
-  if (
-    !isAvailabilityWindowOpen(
-      availability.slots,
-      d,
-      h,
-      m,
-      consultationType,
-    )
-  ) {
-    const err = new Error('Selected time slot is not available');
+  const slotStatus = getSlotStatusAt(
+    availability.slots,
+    d,
+    h,
+    m,
+    consultationType,
+  );
+  if (slotStatus !== SLOT_STATUS.AVAILABLE) {
+    const err = new Error(bookingRejectionForStatus(slotStatus));
     err.statusCode = 409;
     throw err;
   }
@@ -634,6 +643,27 @@ async function validateBookingPayload(payload, consultationType) {
   };
 }
 
+async function assertCurrentSlotIsAvailable(doctorId, consultationType, day, hour, minute) {
+  const latest = await getActiveAvailabilityForBooking(doctorId, consultationType);
+  if (latest.error) {
+    const err = new Error(latest.error);
+    err.statusCode = latest.status;
+    throw err;
+  }
+  const status = getSlotStatusAt(
+    latest.availability.slots,
+    day,
+    hour,
+    minute,
+    consultationType,
+  );
+  if (status !== SLOT_STATUS.AVAILABLE) {
+    const err = new Error(bookingRejectionForStatus(status));
+    err.statusCode = 409;
+    throw err;
+  }
+}
+
 async function createPendingBookingForPayment(payload, holdMinutes = 15) {
   const consultationType = payload.consultationType || 'online_consult';
   const validated = await validateBookingPayload(payload, consultationType);
@@ -673,6 +703,8 @@ async function createPendingBookingForPayment(payload, holdMinutes = 15) {
     consultationFee = couponResult.finalAmount;
     couponCode = couponResult.coupon.code;
   }
+
+  await assertCurrentSlotIsAvailable(payload.doctorId, consultationType, d, h, m);
 
   const existingHold = await ConsultationBooking.findOne({
     doctorId: payload.doctorId,
@@ -938,6 +970,7 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
     err.statusCode = 404;
     throw err;
   }
+  assertProfileActive(doctor, 'doctor');
   const typeCheck = consultationTypeChecks(doctor, consultationType);
   if (typeCheck) {
     const err = new Error(typeCheck.error);
@@ -968,16 +1001,15 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
   const slotStart = slotDateTime(weekStart, d, h, m);
   const slotEnd = slotEndFromStart(slotStart, consultationType);
 
-  if (
-    !isAvailabilityWindowOpen(
-      availability.slots,
-      d,
-      h,
-      m,
-      consultationType,
-    )
-  ) {
-    const err = new Error('Selected time slot is not available');
+  const holdSlotStatus = getSlotStatusAt(
+    availability.slots,
+    d,
+    h,
+    m,
+    consultationType,
+  );
+  if (holdSlotStatus !== SLOT_STATUS.AVAILABLE) {
+    const err = new Error(bookingRejectionForStatus(holdSlotStatus));
     err.statusCode = 409;
     throw err;
   }
@@ -1060,6 +1092,8 @@ async function holdConsultationSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
       },
     );
   }
+
+  await assertCurrentSlotIsAvailable(doctorId, consultationType, d, h, m);
 
   const paymentExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000);
   const booking = await ConsultationBooking.create({
@@ -1239,6 +1273,8 @@ async function createHomeVisitRequest(payload) {
   const approvalExpiresAt = new Date(
     Date.now() + HOME_VISIT_APPROVAL_HOURS * 60 * 60 * 1000,
   );
+
+  await assertCurrentSlotIsAvailable(payload.doctorId, consultationType, d, h, m);
 
   const existingHold = await ConsultationBooking.findOne({
     doctorId: payload.doctorId,

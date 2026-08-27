@@ -203,6 +203,12 @@ async function start() {
   startVisitReminderScheduler();
   startApprovalSlaEscalationScheduler();
   startNursePaymentExpirationScheduler();
+  try {
+    const { initFirebaseAdmin } = require('./services/pushNotificationService');
+    initFirebaseAdmin();
+  } catch (err) {
+    console.warn('[Push] Firebase init skipped:', err.message);
+  }
 }
 
 async function verifySmtpAtStartup() {

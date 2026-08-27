@@ -241,7 +241,7 @@ class _HospitalVisitBookingScreenState
       }
       next.whenData((slotsData) {
         final stillAvailable = slotsData.slots.any(
-          (slot) => slot.slotKey == selected.slotKey,
+          (slot) => slot.slotKey == selected.slotKey && slot.isBookable,
         );
         if (!stillAvailable && mounted) {
           ref

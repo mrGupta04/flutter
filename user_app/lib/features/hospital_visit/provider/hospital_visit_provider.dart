@@ -72,6 +72,10 @@ class HospitalVisitBookingNotifier
       state = state.copyWith(clearSlot: true, clearHold: true, error: null);
       return;
     }
+    if (!slot.isBookable) {
+      state = state.copyWith(error: 'This slot is unavailable.');
+      return;
+    }
 
     state = state.copyWith(isReservingSlot: true, error: null);
     final response = await _repository.holdSlot(

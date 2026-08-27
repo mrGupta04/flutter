@@ -13,6 +13,11 @@ const {
   isDoctorProfileCompleteForApproval,
   isDoctorProfilePublicDisplayable,
 } = require('../utils/doctorProfileCompleteness');
+const {
+  PROFILE_STATUS,
+  normalizeProfileStatus,
+  activeProfileFilter,
+} = require('../utils/profileStatus');
 
 const DOC_URL_FIELDS = {
   medical_license: 'medicalLicenseUrl',
@@ -266,6 +271,7 @@ function buildDoctorListFilter({
     if (!specializationQuery) {
       filter.specializations = { $exists: true, $not: { $size: 0 } };
     }
+    Object.assign(filter, activeProfileFilter());
   }
 
   if (search?.trim()) {
@@ -464,6 +470,28 @@ async function clearDoctorPresence(doctorId) {
   return findDoctorById(doctorId);
 }
 
+async function setDoctorProfileStatus(doctorId, profileStatus) {
+  const nextStatus = normalizeProfileStatus(profileStatus);
+  if (
+    nextStatus !== PROFILE_STATUS.ACTIVE &&
+    nextStatus !== PROFILE_STATUS.DISABLED
+  ) {
+    const err = new Error('profileStatus must be ACTIVE or DISABLED');
+    err.statusCode = 400;
+    throw err;
+  }
+  const result = await Doctor.updateOne(
+    { id: doctorId },
+    { $set: { profileStatus: nextStatus } },
+  );
+  if (result.matchedCount === 0) {
+    const err = new Error('Doctor not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  return findDoctorById(doctorId);
+}
+
 module.exports = {
   toDoctor,
   findDoctorById,
@@ -483,6 +511,7 @@ module.exports = {
   countDoctors,
   touchDoctorPresence,
   clearDoctorPresence,
+  setDoctorProfileStatus,
   getConsultationFeeForType,
   getRegularConsultationFeeForType,
   getDoctorProfileMissingFields,

@@ -280,7 +280,14 @@ class _DoctorListTile extends StatelessWidget {
       showActionButtons: _canVerify,
       adminActionLabel: 'Verify doctor',
       adminActionSubtitle: 'Review & publish on user app',
-      trailing: _StatusChip(label: status, color: statusColor),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (doctor.isProfileDisabled)
+            const _StatusChip(label: 'Disabled', color: AppColors.grey600),
+          _StatusChip(label: status, color: statusColor),
+        ],
+      ),
     );
   }
 

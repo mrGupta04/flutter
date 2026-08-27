@@ -33,6 +33,7 @@ class NurseModel {
   final int? homeVisitOfferFee;
   final String? shiftAvailability;
   final VerificationStatus? verificationStatus;
+  final ProfileStatus profileStatus;
   final double? averageRating;
   final int? ratingCount;
   final DateTime? lastActiveAt;
@@ -40,6 +41,8 @@ class NurseModel {
 
   bool get hasRating =>
       (ratingCount ?? 0) > 0 && averageRating != null && averageRating! > 0;
+
+  bool get isProfileDisabled => profileStatus == ProfileStatus.disabled;
 
   /// Rating shown on listing cards (real average when available).
   double get cardDisplayRating => hasRating ? averageRating! : 4.5;
@@ -123,6 +126,7 @@ class NurseModel {
     this.homeVisitOfferFee,
     this.shiftAvailability,
     this.verificationStatus,
+    this.profileStatus = ProfileStatus.active,
     this.averageRating,
     this.ratingCount,
     this.lastActiveAt,
@@ -167,6 +171,7 @@ class NurseModel {
       verificationStatus: _isApprovedTruthy(json['isApproved'])
           ? VerificationStatus.verified
           : _parseStatus(json['verificationStatus'] as String?),
+      profileStatus: ProfileStatus.fromApi(json['profileStatus'] as String?),
       averageRating: _parseDouble(json['averageRating']),
       ratingCount: (json['ratingCount'] as num?)?.toInt(),
       lastActiveAt: _parseDateTime(json['lastActiveAt']),
@@ -235,6 +240,7 @@ class NurseModel {
     int? homeVisitOfferFee,
     String? shiftAvailability,
     VerificationStatus? verificationStatus,
+    ProfileStatus? profileStatus,
     double? averageRating,
     int? ratingCount,
     DateTime? lastActiveAt,
@@ -270,6 +276,7 @@ class NurseModel {
       homeVisitOfferFee: homeVisitOfferFee ?? this.homeVisitOfferFee,
       shiftAvailability: shiftAvailability ?? this.shiftAvailability,
       verificationStatus: verificationStatus ?? this.verificationStatus,
+      profileStatus: profileStatus ?? this.profileStatus,
       averageRating: averageRating ?? this.averageRating,
       ratingCount: ratingCount ?? this.ratingCount,
       lastActiveAt: lastActiveAt ?? this.lastActiveAt,

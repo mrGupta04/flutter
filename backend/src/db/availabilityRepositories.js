@@ -8,6 +8,15 @@ const {
   sameWeekStart,
   buildAllSlots,
 } = require('../utils/availabilityWeek');
+const {
+  SLOT_STATUS,
+  PROVIDER_SETTABLE_STATUSES,
+  isSlotBookable,
+  isSlotOnSchedule,
+  withSlotStatus,
+} = require('../utils/slotStatus');
+const { isOnlineConsultType } = require('../utils/slotDateTime');
+const { cancelOpenReservationsForSlot } = require('../utils/slotReservationCleanup');
 
 const VALID_CONSULTATION_TYPES = ['online_consult', 'visit_site', 'book_home'];
 
@@ -27,7 +36,7 @@ function requiredAvailabilityTypes(doctor) {
 function toAvailabilityPayload(doc, extras = {}) {
   if (!doc) return null;
   const d = doc.toObject ? doc.toObject() : doc;
-  const availableCount = (d.slots || []).filter((s) => s.available).length;
+  const availableCount = (d.slots || []).filter((s) => isSlotBookable(s)).length;
   return {
     doctorId: d.doctorId,
     consultationType: d.consultationType || 'online_consult',
@@ -220,17 +229,17 @@ function slotKey(dayOfWeek, startHour) {
   return `${dayOfWeek}_${startHour}`;
 }
 
-function availableSlotKeys(slots) {
+function scheduledSlotKeys(slots) {
   return new Set(
     (slots || [])
-      .filter((s) => s.available)
+      .filter((s) => isSlotOnSchedule(s))
       .map((s) => slotKey(s.dayOfWeek, s.startHour)),
   );
 }
 
 /** Remove slots from other consultation types so the same hour is not bookable twice. */
 async function clearConflictingSlotsFromOtherType(doctorId, weekStart, savedType, savedSlots) {
-  const savedKeys = availableSlotKeys(savedSlots);
+  const savedKeys = scheduledSlotKeys(savedSlots);
   if (savedKeys.size === 0) return;
 
   const otherTypes = VALID_CONSULTATION_TYPES.filter((t) => t !== savedType);
@@ -247,9 +256,9 @@ async function clearConflictingSlotsFromOtherType(doctorId, weekStart, savedType
     const updatedSlots = otherDoc.slots.map((slot) => {
       const plain = slot.toObject ? slot.toObject() : slot;
       const key = slotKey(plain.dayOfWeek, plain.startHour);
-      if (plain.available && savedKeys.has(key)) {
+      if (isSlotOnSchedule(plain) && savedKeys.has(key)) {
         changed = true;
-        return { ...plain, available: false };
+        return withSlotStatus(plain, SLOT_STATUS.DISCARDED);
       }
       return plain;
     });
@@ -286,8 +295,8 @@ async function saveDoctorAvailability(
 ) {
   const type = normalizeConsultationType(consultationType);
   const normalized = normalizeSlots(slots, type);
-  const availableCount = normalized.filter((s) => s.available).length;
-  if (availableCount === 0) {
+  const scheduledCount = normalized.filter((s) => isSlotOnSchedule(s)).length;
+  if (scheduledCount === 0) {
     const err = new Error('Select at least one available time slot');
     err.statusCode = 400;
     throw err;
@@ -340,10 +349,120 @@ async function saveDoctorAvailability(
   return toAvailabilityPayload(doc, { needsUpdate: false, reminderMessage: null });
 }
 
+function slotMatches(slot, dayOfWeek, startHour, startMinute, consultationType) {
+  if (Number(slot.dayOfWeek) !== dayOfWeek || Number(slot.startHour) !== startHour) {
+    return false;
+  }
+  if (!isOnlineConsultType(consultationType)) return true;
+  return Number(slot.startMinute || 0) === startMinute;
+}
+
+async function updateDoctorSlotStatus(
+  doctorId,
+  {
+    consultationType,
+    dayOfWeek,
+    startHour,
+    startMinute = 0,
+    status,
+    weekStartDate,
+  } = {},
+) {
+  const type = normalizeConsultationType(consultationType);
+  const nextStatus = String(status || '').trim().toUpperCase();
+  if (!PROVIDER_SETTABLE_STATUSES.includes(nextStatus)) {
+    const err = new Error('Invalid slot status');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const d = Number(dayOfWeek);
+  const h = Number(startHour);
+  const m = Number(startMinute || 0);
+  if (
+    !Number.isInteger(d) ||
+    d < 0 ||
+    d > 6 ||
+    !Number.isInteger(h) ||
+    h < 0 ||
+    h > 23
+  ) {
+    const err = new Error('A valid day and hour are required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const { weekStart, weekEnd } = weekStartDate
+    ? getWeekBounds(new Date(weekStartDate))
+    : getActiveWeekBounds();
+
+  let doc = await findAvailabilityDocForSave(doctorId, weekStart, type);
+  const applyStatus = (slots) => {
+    let found = false;
+    const updated = (slots || []).map((slot) => {
+      const plain = slot.toObject ? slot.toObject() : slot;
+      if (!slotMatches(plain, d, h, m, type)) return plain;
+      found = true;
+      return withSlotStatus(plain, nextStatus);
+    });
+    if (!found) {
+      updated.push(
+        withSlotStatus(
+          { dayOfWeek: d, startHour: h, startMinute: m },
+          nextStatus,
+        ),
+      );
+    }
+    return updated;
+  };
+
+  if (!doc) {
+    if (nextStatus === SLOT_STATUS.DISCARDED) {
+      return getDoctorAvailability(doctorId, {
+        forWeekStart: weekStart,
+        consultationType: type,
+      });
+    }
+    const slots = applyStatus(normalizeSlots([], type));
+    doc = await DoctorAvailability.create({
+      doctorId,
+      consultationType: type,
+      weekStartDate: weekStart,
+      weekEndDate: weekEnd,
+      slots,
+    });
+  } else {
+    const slots = applyStatus(doc.slots);
+    doc = await DoctorAvailability.findOneAndUpdate(
+      { _id: doc._id },
+      { $set: { slots } },
+      { new: true },
+    );
+  }
+
+  if (nextStatus === SLOT_STATUS.SELF_BUSY || nextStatus === SLOT_STATUS.DISCARDED) {
+    await cancelOpenReservationsForSlot({
+      doctorId,
+      consultationType: type,
+      weekStartDate: weekStart,
+      dayOfWeek: d,
+      startHour: h,
+      startMinute: m,
+    });
+  }
+
+  if (isSlotOnSchedule({ status: nextStatus })) {
+    await clearConflictingSlotsFromOtherType(doctorId, weekStart, type, doc.slots);
+  }
+
+  return toAvailabilityPayload(doc, { needsUpdate: false, reminderMessage: null });
+}
+
 module.exports = {
   getDoctorAvailability,
   getDoctorAvailabilityStatus,
   saveDoctorAvailability,
+  updateDoctorSlotStatus,
   findLatestAvailability,
   findAvailabilityForActiveWeek,
   normalizeConsultationType,

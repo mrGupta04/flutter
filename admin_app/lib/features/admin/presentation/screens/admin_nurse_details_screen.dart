@@ -300,11 +300,43 @@ class _ProfileHeader extends StatelessWidget {
                 style: AppTextStyles.headlineSmall,
               ),
               const SizedBox(height: 8),
-              VerificationBadge(
-                status: statusLabel,
-                backgroundColor: statusColor,
-                textColor: statusColor,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  VerificationBadge(
+                    status: statusLabel,
+                    backgroundColor: statusColor,
+                    textColor: statusColor,
+                  ),
+                  if (nurse.isProfileDisabled)
+                    const VerificationBadge(
+                      status: 'Disabled',
+                      backgroundColor: AppColors.grey600,
+                      textColor: AppColors.grey600,
+                    ),
+                ],
               ),
+              if (nurse.isProfileDisabled) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Status: DISABLED',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.grey600,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This provider has hidden their profile from users. They remain fully visible and manageable here.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

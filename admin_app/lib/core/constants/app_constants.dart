@@ -72,7 +72,10 @@ class AppConstants {
       '/doctor/upload-hospital-photo';
   static const String endpointGetProfile = '/doctor/profile';
   static const String endpointUpdateProfile = '/doctor/profile';
+  static const String endpointDoctorProfileStatus = '/doctor/profile-status';
   static const String endpointDoctorAvailability = '/doctor/availability';
+  static const String endpointDoctorAvailabilitySlot =
+      '/doctor/availability/slot';
   static const String endpointDoctorPresenceHeartbeat =
       '/doctor/presence/heartbeat';
   static const String endpointDoctorPresenceOffline =
@@ -91,8 +94,10 @@ class AppConstants {
   static const String endpointNurseUploadDocument = '/nurse/upload-document';
   static const String endpointGetNurseProfile = '/nurse/profile';
   static const String endpointUpdateNurseProfile = '/nurse/profile';
+  static const String endpointNurseProfileStatus = '/nurse/profile-status';
   static const String endpointVerifiedNurses = '/nurse/verified';
   static const String endpointNurseAvailability = '/nurse/availability';
+  static const String endpointNurseAvailabilitySlot = '/nurse/availability/slot';
   static const String endpointNurseBookableSlots = '/nurse/bookable-slots';
   static const String endpointNurseSlotHold = '/nurse/slot-hold';
   static String endpointNurseSlotHoldRelease(String holdId) =>

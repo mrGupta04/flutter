@@ -161,18 +161,27 @@ async function createAndPushNotification({
     deviceTokens = nurse?.fcmTokens || [];
   }
 
-  await sendPushNotification({
-    userId,
-    title,
-    body,
-    data: {
-      ...data,
-      type: notification.type,
-      notificationId: notification.id,
-      deviceTokens,
-      deviceToken: deviceTokens[0],
-    },
-  });
+  try {
+    const pushResult = await sendPushNotification({
+      userId,
+      title,
+      body,
+      data: {
+        ...data,
+        type: notification.type,
+        notificationId: notification.id,
+        userType,
+        deviceTokens,
+        deviceToken: deviceTokens[0],
+      },
+    });
+
+    if (pushResult?.invalidTokens?.length) {
+      await removeDeviceTokens(userId, userType, pushResult.invalidTokens);
+    }
+  } catch (err) {
+    console.error('[Notify] FCM send failed:', err.message);
+  }
 
   return notification.toObject();
 }
@@ -243,6 +252,13 @@ async function markAllNotificationsRead(userId, userType) {
   return { success: true };
 }
 
+function modelForUserType(userType) {
+  if (userType === 'patient') return Patient;
+  if (userType === 'doctor') return Doctor;
+  if (userType === 'nurse') return Nurse;
+  return null;
+}
+
 async function registerDeviceToken(userId, userType, token) {
   const clean = String(token || '').trim();
   if (!clean) {
@@ -251,14 +267,25 @@ async function registerDeviceToken(userId, userType, token) {
     throw err;
   }
 
-  const Model =
-    userType === 'patient' ? Patient : userType === 'doctor' ? Doctor : Nurse;
+  const Model = modelForUserType(userType);
+  if (!Model) {
+    const err = new Error('Unsupported user type for device token');
+    err.statusCode = 400;
+    throw err;
+  }
 
   await Model.updateOne(
     { id: userId },
     { $addToSet: { fcmTokens: clean } },
   );
   return { success: true };
+}
+
+async function removeDeviceTokens(userId, userType, tokens) {
+  const Model = modelForUserType(userType);
+  const list = (tokens || []).map(String).filter(Boolean);
+  if (!Model || !userId || list.length === 0) return;
+  await Model.updateOne({ id: userId }, { $pull: { fcmTokens: { $in: list } } });
 }
 
 module.exports = {
@@ -270,4 +297,5 @@ module.exports = {
   markNotificationRead,
   markAllNotificationsRead,
   registerDeviceToken,
+  removeDeviceTokens,
 };

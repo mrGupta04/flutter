@@ -421,6 +421,9 @@ function attachProviderFeatureRoutes(router, providerType) {
         if (!nurseId) return sendError(res, 'nurseId is required', 400);
         const nurse = await Nurse.findOne({ id: nurseId }).lean();
         if (!nurse) return sendError(res, 'Nurse not found', 404);
+        if (nurse.profileStatus === 'DISABLED') {
+          return sendError(res, 'Nurse not found', 404);
+        }
         const reviews = await listPublicNurseFeedback(nurseId, {
           limit: req.query.limit,
         });

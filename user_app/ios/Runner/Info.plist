@@ -71,6 +71,13 @@
 	<string>We use your location to find nearby doctors and nurses, pin your home-visit address, and show you on the live tracking map.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We use your location to find nearby doctors and nurses, pin your home-visit address, and show you on the live tracking map.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
 </dict>
 </plist>
 

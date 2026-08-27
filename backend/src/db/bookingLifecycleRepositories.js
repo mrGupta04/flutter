@@ -4,7 +4,9 @@ const {
   buildVisitTimeline,
 } = require('./bookingLifecycleHelpers');
 const { createAndPushNotification, notifyPatient } = require('./notificationRepositories');
-const { formatSlotLabel, slotEndFromStart } = require('../utils/slotDateTime');
+const { formatSlotLabel, slotEndFromStart, getSlotStatusAt } = require('../utils/slotDateTime');
+const { SLOT_STATUS, bookingRejectionForStatus } = require('../utils/slotStatus');
+const { isWeekExpired } = require('../utils/availabilityWeek');
 
 const CANCEL_FREE_HOURS = Number(process.env.CANCEL_FREE_HOURS || 2);
 const NO_SHOW_FEE_PERCENT = Number(process.env.NO_SHOW_FEE_PERCENT || 50);
@@ -253,6 +255,56 @@ async function rescheduleBooking(bookingId, auth, { slotStart, slotEnd, dayOfWee
     const err = new Error('New slot must be in the future');
     err.statusCode = 400;
     throw err;
+  }
+
+  const d = dayOfWeek != null ? Number(dayOfWeek) : booking.dayOfWeek;
+  const h = startHour != null ? Number(startHour) : booking.startHour;
+  const m = startMinute != null ? Number(startMinute) : booking.startMinute || 0;
+  if (booking.doctorId) {
+    const { findAvailabilityForActiveWeek } = require('./availabilityRepositories');
+    const weekDoc = await findAvailabilityForActiveWeek(
+      booking.doctorId,
+      booking.consultationType,
+    );
+    if (!weekDoc || isWeekExpired(weekDoc.weekEndDate)) {
+      const err = new Error('That slot is no longer available');
+      err.statusCode = 409;
+      throw err;
+    }
+    const slotStatus = getSlotStatusAt(
+      weekDoc.slots,
+      d,
+      h,
+      m,
+      booking.consultationType,
+    );
+    if (slotStatus !== SLOT_STATUS.AVAILABLE) {
+      const err = new Error(bookingRejectionForStatus(slotStatus));
+      err.statusCode = 409;
+      throw err;
+    }
+  } else if (booking.nurseId) {
+    const {
+      findAvailabilityForActiveWeek,
+    } = require('./nurseAvailabilityRepositories');
+    const weekDoc = await findAvailabilityForActiveWeek(booking.nurseId);
+    if (!weekDoc || isWeekExpired(weekDoc.weekEndDate)) {
+      const err = new Error('That slot is no longer available');
+      err.statusCode = 409;
+      throw err;
+    }
+    const slotStatus = getSlotStatusAt(
+      weekDoc.slots,
+      d,
+      h,
+      0,
+      booking.consultationType,
+    );
+    if (slotStatus !== SLOT_STATUS.AVAILABLE) {
+      const err = new Error(bookingRejectionForStatus(slotStatus));
+      err.statusCode = 409;
+      throw err;
+    }
   }
 
   // Conflict check

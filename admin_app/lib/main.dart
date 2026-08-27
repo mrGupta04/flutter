@@ -3,14 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/models/provider_type.dart';
 import 'core/services/device_push_service.dart';
 import 'core/services/doctor_presence_lifecycle.dart';
+import 'core/services/socket_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_back_navigation.dart';
 import 'features/auth/provider/provider_auth_provider.dart';
+import 'features/doctor_dashboard/provider/dashboard_provider.dart';
+import 'features/notifications/presentation/notification_routes.dart';
+import 'features/nurse_dashboard/provider/nurse_dashboard_provider.dart';
 import 'router/admin_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   DoctorPresenceLifecycleObserver.instance.register();
+  await DevicePushService.instance.bootstrap();
   runApp(const ProviderScope(child: AdminApp()));
 }
 
@@ -21,23 +26,93 @@ class AdminApp extends ConsumerStatefulWidget {
   ConsumerState<AdminApp> createState() => _AdminAppState();
 }
 
-class _AdminAppState extends ConsumerState<AdminApp> {
+class _AdminAppState extends ConsumerState<AdminApp> with WidgetsBindingObserver {
+  bool _inboxBound = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _registerPushIfNeeded());
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await DevicePushService.instance.promptOsPermission();
+      await _registerPushIfNeeded();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      SocketService.instance.connectIfAuthenticated();
+    }
+  }
+
+  String? _roleFor(ProviderType? type) {
+    if (type == ProviderType.nurse) return 'nurse';
+    if (type == ProviderType.doctor) return 'doctor';
+    return null;
   }
 
   Future<void> _registerPushIfNeeded() async {
     final auth = ref.read(providerAuthProvider);
     if (!auth.isAuthenticated) return;
-    if (auth.providerType == ProviderType.doctor ||
-        auth.providerType == ProviderType.nurse) {
-      final role = auth.providerType == ProviderType.nurse ? 'nurse' : 'doctor';
-      await DevicePushService.instance.init(
-        deviceTokenEndpoint: DevicePushService.endpointForRole(role),
-      );
+    final role = _roleFor(auth.providerType);
+    if (role == null) return;
+    await DevicePushService.instance.init(
+      deviceTokenEndpoint: DevicePushService.endpointForRole(role),
+    );
+    await _bindRealtimeInbox(role);
+  }
+
+  Future<void> _bindRealtimeInbox(String role) async {
+    if (!_inboxBound) {
+      _inboxBound = true;
+      SocketService.instance.on('app_notification', _onAppNotification);
+      DevicePushService.instance.onNotificationTap = (payload) {
+        final currentRole = _roleFor(ref.read(providerAuthProvider).providerType) ??
+            role;
+        openProviderNotificationFromPayload(
+          ref.read(adminRouterProvider),
+          currentRole,
+          payload,
+        );
+      };
     }
+    try {
+      await SocketService.instance.connectIfAuthenticated();
+    } catch (_) {}
+  }
+
+  void _onAppNotification(dynamic data) {
+    final map = data is Map
+        ? Map<String, dynamic>.from(data)
+        : const <String, dynamic>{};
+    final nested = map['data'] is Map
+        ? Map<String, dynamic>.from(map['data'] as Map)
+        : const <String, dynamic>{};
+    DevicePushService.instance.showRealtimeAlert(
+      id: map['id']?.toString() ?? nested['notificationId']?.toString() ?? '',
+      title: map['title']?.toString() ?? 'Update',
+      body: map['body']?.toString() ?? '',
+      type: map['type']?.toString() ?? nested['type']?.toString() ?? '',
+      extra: {
+        ...nested,
+        if (map['id'] != null) 'notificationId': map['id'],
+      },
+    );
+    final type = ref.read(providerAuthProvider).providerType;
+    try {
+      if (type == ProviderType.nurse) {
+        ref.read(nurseDashboardProvider.notifier).loadBookings();
+      } else if (type == ProviderType.doctor) {
+        ref.read(doctorDashboardProvider.notifier).loadBookings();
+      }
+    } catch (_) {}
   }
 
   @override
@@ -53,6 +128,7 @@ class _AdminAppState extends ConsumerState<AdminApp> {
         DevicePushService.instance.init(
           deviceTokenEndpoint: DevicePushService.endpointForRole(role),
         );
+        _bindRealtimeInbox(role);
       }
     });
 

@@ -21,15 +21,21 @@ const {
   findDocumentsByNurseId,
   touchNursePresence,
   clearNursePresence,
+  setNurseProfileStatus,
 } = require('../db/nurseRepositories');
 
 const Nurse = require('../db/models/Nurse');
 const { isDoctorLiveNow } = require('../utils/doctorPresence');
+const {
+  shouldHideDisabledProvider,
+  PROFILE_STATUS,
+} = require('../utils/profileStatus');
 
 const {
   getNurseAvailability,
   getNurseAvailabilityStatus,
   saveNurseAvailability,
+  updateNurseSlotStatus,
 } = require('../db/nurseAvailabilityRepositories');
 
 const {
@@ -111,6 +117,8 @@ router.get('/verified', async (req, res) => {
 
       gender,
 
+      publicListing: true,
+
     });
 
 
@@ -151,6 +159,12 @@ router.get('/profile', authOptional, async (req, res) => {
 
     }
 
+    if (shouldHideDisabledProvider(nurse, req.auth, nurseId, 'nurse')) {
+
+      return sendError(res, 'Nurse not found', 404);
+
+    }
+
     return sendSuccess(res, { data: nurse });
 
   } catch (err) {
@@ -183,7 +197,10 @@ router.get('/live-status', async (req, res) => {
 
 
 
-    const docs = await Nurse.find({ id: { $in: ids.slice(0, 50) } })
+    const docs = await Nurse.find({
+      id: { $in: ids.slice(0, 50) },
+      profileStatus: { $ne: 'DISABLED' },
+    })
 
       .select('id lastActiveAt')
 
@@ -393,6 +410,20 @@ router.get('/availability', authOptional, async (req, res) => {
 
     }
 
+    const nurse = await findNurseById(nurseId);
+
+    if (!nurse) {
+
+      return sendError(res, 'Nurse not found', 404);
+
+    }
+
+    if (shouldHideDisabledProvider(nurse, req.auth, nurseId, 'nurse')) {
+
+      return sendError(res, 'Nurse not found', 404);
+
+    }
+
     const data = await getNurseAvailability(nurseId, {
 
       forWeekStart: req.query.weekStart,
@@ -485,6 +516,32 @@ router.put('/availability', authOptional, async (req, res) => {
 
   }
 
+});
+
+// PATCH /nurse/availability/slot
+router.patch('/availability/slot', authOptional, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const nurseId = body.nurseId || req.auth?.nurseId;
+    if (!nurseId) {
+      return sendError(res, 'nurseId is required', 400);
+    }
+
+    const data = await updateNurseSlotStatus(nurseId, {
+      dayOfWeek: body.dayOfWeek,
+      startHour: body.startHour,
+      status: body.status,
+      weekStartDate: body.weekStartDate,
+    });
+    return sendSuccess(res, {
+      message: 'Slot status updated',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to update slot status', status);
+  }
 });
 
 
@@ -893,6 +950,64 @@ router.get('/bookings/:bookingId/location', authRequired, async (req, res) => {
     const status = err.statusCode || 500;
     return sendError(res, err.message || 'Failed to load location', status);
   }
+});
+
+
+
+// PATCH /nurse/profile-status — provider self-service hide/show
+
+router.patch('/profile-status', authRequired, async (req, res) => {
+
+  try {
+
+    const nurseId = req.auth?.nurseId;
+
+    if (!nurseId || req.auth?.type !== 'nurse') {
+
+      return sendError(res, 'Nurse authentication required', 403);
+
+    }
+
+    const profileStatus = String(req.body?.profileStatus || '').toUpperCase();
+
+    if (
+
+      profileStatus !== PROFILE_STATUS.ACTIVE &&
+
+      profileStatus !== PROFILE_STATUS.DISABLED
+
+    ) {
+
+      return sendError(res, 'profileStatus must be ACTIVE or DISABLED', 400);
+
+    }
+
+    const nurse = await setNurseProfileStatus(nurseId, profileStatus);
+
+    return sendSuccess(res, {
+
+      message:
+
+        profileStatus === PROFILE_STATUS.DISABLED
+
+          ? 'Profile disabled. You are hidden from users.'
+
+          : 'Profile enabled. You are visible to users.',
+
+      data: nurse,
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    const status = err.statusCode || 500;
+
+    return sendError(res, err.message || 'Failed to update profile status', status);
+
+  }
+
 });
 
 

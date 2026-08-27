@@ -5,6 +5,10 @@ const slotSchema = new mongoose.Schema(
     dayOfWeek: { type: Number, required: true, min: 0, max: 6 },
     startHour: { type: Number, required: true, min: 0, max: 23 },
     startMinute: { type: Number, min: 0, max: 59, default: 0 },
+    status: {
+      type: String,
+      enum: ['AVAILABLE', 'SELF_BUSY', 'DISCARDED', 'BOOKED'],
+    },
     available: { type: Boolean, default: false },
   },
   { _id: false },

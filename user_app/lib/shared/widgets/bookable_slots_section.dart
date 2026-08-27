@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/custom_widgets.dart';
 import '../../data/models/bookable_slot_model.dart';
 
 enum _SlotPeriod { morning, afternoon, evening, night }
@@ -176,6 +177,10 @@ class _BookableSlotsSectionState extends State<BookableSlotsSection> {
             color: AppColors.textPrimary,
           ),
         ),
+        if (widget.slotsData.slots.any((slot) => slot.isSelfBusy)) ...[
+          const SizedBox(height: 10),
+          const _SlotStatusLegend(),
+        ],
         const SizedBox(height: 14),
         _DateStrip(
           dateKeys: dateKeys,
@@ -223,6 +228,13 @@ class _BookableSlotsSectionState extends State<BookableSlotsSection> {
               });
             },
             onSlotTap: (slot) {
+              if (!slot.isBookable) {
+                SnackBarHelper.showError(
+                  context,
+                  'This slot is unavailable.',
+                );
+                return;
+              }
               widget.onDateSelected(activeDateKey);
               final isSelected = widget.selectedSlot?.slotKey == slot.slotKey &&
                   widget.selectedSlot?.dateKey == slot.dateKey;
@@ -449,6 +461,7 @@ class _PeriodSection extends StatelessWidget {
                 label: timeLabelBuilder(slot),
                 selected: isSelected,
                 enabled: !isBusy,
+                selfBusy: slot.isSelfBusy,
                 onTap: () => onSlotTap(slot),
               );
             },
@@ -490,34 +503,84 @@ class _PeriodSection extends StatelessWidget {
   }
 }
 
+class _SlotStatusLegend extends StatelessWidget {
+  const _SlotStatusLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _legendItem(AppColors.primary, 'Available'),
+        const SizedBox(width: 16),
+        _legendItem(AppColors.grey400, 'Self Busy'),
+      ],
+    );
+  }
+
+  Widget _legendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _TimeSlotChip extends StatelessWidget {
   const _TimeSlotChip({
     required this.label,
     required this.selected,
     required this.enabled,
     required this.onTap,
+    this.selfBusy = false,
   });
 
   final String label;
   final bool selected;
   final bool enabled;
+  final bool selfBusy;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final muted = selfBusy && !selected;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: enabled ? onTap : null,
+        onTap: enabled || selfBusy ? onTap : null,
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppColors.primary : AppColors.white,
+            color: selected
+                ? AppColors.primary
+                : muted
+                    ? AppColors.grey100
+                    : AppColors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? AppColors.primary : AppColors.grey200,
+              color: selected
+                  ? AppColors.primary
+                  : muted
+                      ? AppColors.grey300
+                      : AppColors.grey200,
               width: 1.2,
             ),
             boxShadow: selected
@@ -534,7 +597,11 @@ class _TimeSlotChip extends StatelessWidget {
             label,
             style: AppTextStyles.labelMedium.copyWith(
               fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : AppColors.textPrimary,
+              color: selected
+                  ? Colors.white
+                  : muted
+                      ? AppColors.grey500
+                      : AppColors.textPrimary,
               fontSize: 12.5,
             ),
           ),

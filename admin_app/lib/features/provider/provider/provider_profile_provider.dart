@@ -116,6 +116,14 @@ class ProviderProfileNotifier extends StateNotifier<ProviderProfileState> {
   final BloodBankRegistrationRepository _bloodBankRepo;
   final DioService _dio;
 
+  void applyDoctor(DoctorModel doctor) {
+    state = state.copyWith(doctor: doctor);
+  }
+
+  void applyNurse(NurseModel nurse) {
+    state = state.copyWith(nurse: nurse);
+  }
+
   Future<ProviderType?> _resolveType() async {
     final key = await TokenStorage.instance.getProviderType();
     return ProviderType.fromRouteParam(key) ??

@@ -8,8 +8,8 @@ const Color kProviderSpecialtyGold = Color(0xFFC9922A);
 /// Light mint stats strip behind satisfaction / consult counts.
 const Color kProviderStatsBarBg = Color(0xFFE6F7EE);
 
-/// Shared height for home doctor preview cards so the rail stays even.
-const double kDoctorListingCardHeight = 320;
+/// Approximate height for home doctor preview rails.
+const double kDoctorListingCardHeight = 286;
 
 class MarketplaceCardShell extends StatelessWidget {
   const MarketplaceCardShell({

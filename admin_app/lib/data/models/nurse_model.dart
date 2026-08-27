@@ -44,6 +44,7 @@ class NurseModel {
   final DateTime? updatedAt;
   final bool? isApproved;
   final String? approvalNotes;
+  final ProfileStatus profileStatus;
 
   NurseModel({
     this.id,
@@ -86,12 +87,17 @@ class NurseModel {
     this.updatedAt,
     this.isApproved,
     this.approvalNotes,
+    this.profileStatus = ProfileStatus.active,
   });
 
   String get displayName {
     final parts = [firstName, lastName].where((s) => s != null && s.isNotEmpty);
     return parts.join(' ').trim().isEmpty ? 'Nurse' : parts.join(' ');
   }
+
+  bool get isProfileDisabled => profileStatus == ProfileStatus.disabled;
+
+  bool get isProfileActive => !isProfileDisabled;
 
   factory NurseModel.fromJson(Map<String, dynamic> json) {
     return NurseModel(
@@ -144,6 +150,7 @@ class NurseModel {
           : null,
       isApproved: json['isApproved'] as bool?,
       approvalNotes: json['approvalNotes'] as String?,
+      profileStatus: ProfileStatus.fromApi(json['profileStatus'] as String?),
     );
   }
 
@@ -250,6 +257,7 @@ class NurseModel {
     DateTime? updatedAt,
     bool? isApproved,
     String? approvalNotes,
+    ProfileStatus? profileStatus,
   }) {
     return NurseModel(
       id: id ?? this.id,
@@ -295,6 +303,7 @@ class NurseModel {
       updatedAt: updatedAt ?? this.updatedAt,
       isApproved: isApproved ?? this.isApproved,
       approvalNotes: approvalNotes ?? this.approvalNotes,
+      profileStatus: profileStatus ?? this.profileStatus,
     );
   }
 }

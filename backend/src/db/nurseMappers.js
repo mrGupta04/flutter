@@ -45,6 +45,7 @@ function toNurse(doc) {
     ifscCode: d.ifscCode,
     bankName: d.bankName,
     verificationStatus: normalizeVerificationStatus(d.verificationStatus),
+    profileStatus: d.profileStatus === 'DISABLED' ? 'DISABLED' : 'ACTIVE',
     rejectionReason: d.rejectionReason,
     isApproved: Boolean(d.isApproved),
     approvalNotes: d.approvalNotes,

@@ -297,7 +297,7 @@ class _OnlineConsultBookingScreenState
       if (holdId != null && holdId.isNotEmpty) return;
       next.whenData((slotsData) {
         final stillAvailable = slotsData.slots.any(
-          (slot) => slot.slotKey == selected.slotKey,
+          (slot) => slot.slotKey == selected.slotKey && slot.isBookable,
         );
         if (!stillAvailable && mounted) {
           if (_isHospitalVisit) {

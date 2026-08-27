@@ -7,7 +7,7 @@ final verifiedNursesProvider =
   final repository = NurseRegistrationRepository();
   final response = await repository.getVerifiedNurses();
   if (response.success && response.data != null) {
-    return response.data!;
+    return response.data!.where((nurse) => !nurse.isProfileDisabled).toList();
   }
   throw Exception(response.error ?? 'Failed to load nurses');
 });

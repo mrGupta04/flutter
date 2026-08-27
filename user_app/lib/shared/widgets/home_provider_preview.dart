@@ -42,18 +42,10 @@ class HomeProviderScrollList extends StatelessWidget {
         kHomeProviderPeekExtent;
   }
 
-  Widget _fixedHeightCard(BuildContext context, int index) {
-    return SizedBox(
-      height: cardHeight,
-      child: itemBuilder(context, index),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (itemCount == 0) return const SizedBox.shrink();
 
-    // ≤3 items: plain Column (ListView needs bounded height inside home scroll).
     if (!_hasMore) {
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -61,7 +53,7 @@ class HomeProviderScrollList extends StatelessWidget {
         children: [
           for (var i = 0; i < itemCount; i++) ...[
             if (i > 0) SizedBox(height: spacing),
-            _fixedHeightCard(context, i),
+            itemBuilder(context, i),
           ],
         ],
       );
@@ -77,7 +69,7 @@ class HomeProviderScrollList extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 12),
           itemCount: itemCount,
           separatorBuilder: (_, _) => SizedBox(height: spacing),
-          itemBuilder: _fixedHeightCard,
+          itemBuilder: itemBuilder,
         ),
       ),
     );

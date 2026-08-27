@@ -5,20 +5,44 @@ class DoctorAvailabilitySlot {
   final int startHour;
   final int startMinute;
   final bool available;
+  final String status;
 
   const DoctorAvailabilitySlot({
     required this.dayOfWeek,
     required this.startHour,
     this.startMinute = 0,
     required this.available,
+    this.status = DoctorAvailabilityConstants.statusDiscarded,
   });
 
+  bool get isSelfBusy =>
+      status.toUpperCase() == DoctorAvailabilityConstants.statusSelfBusy;
+
+  bool get isOnSchedule {
+    switch (status.toUpperCase()) {
+      case DoctorAvailabilityConstants.statusAvailable:
+      case DoctorAvailabilityConstants.statusSelfBusy:
+      case DoctorAvailabilityConstants.statusBooked:
+        return true;
+      case DoctorAvailabilityConstants.statusDiscarded:
+        return false;
+      default:
+        return available;
+    }
+  }
+
   factory DoctorAvailabilitySlot.fromJson(Map<String, dynamic> json) {
+    final available = json['available'] as bool? ?? false;
+    final rawStatus = (json['status'] as String?)?.toUpperCase();
     return DoctorAvailabilitySlot(
       dayOfWeek: (json['dayOfWeek'] as num?)?.toInt() ?? 0,
       startHour: (json['startHour'] as num?)?.toInt() ?? 8,
       startMinute: (json['startMinute'] as num?)?.toInt() ?? 0,
-      available: json['available'] as bool? ?? false,
+      available: available,
+      status: rawStatus ??
+          (available
+              ? DoctorAvailabilityConstants.statusAvailable
+              : DoctorAvailabilityConstants.statusDiscarded),
     );
   }
 
@@ -27,6 +51,7 @@ class DoctorAvailabilitySlot {
         'startHour': startHour,
         'startMinute': startMinute,
         'available': available,
+        'status': status,
       };
 }
 
@@ -53,14 +78,18 @@ class DoctorAvailabilityModel {
     this.isExpired = false,
   });
 
-  Set<String> get selectedSlotKeys {
+  Set<String> get selectedSlotKeys => _keysWhere((slot) => slot.isOnSchedule);
+
+  Set<String> get selfBusySlotKeys => _keysWhere((slot) => slot.isSelfBusy);
+
+  Set<String> _keysWhere(bool Function(DoctorAvailabilitySlot slot) include) {
     final keys = <String>{};
     final online = consultationType == 'online_consult';
     final usesMinutes =
         slots.any((slot) => slot.startMinute == 20 || slot.startMinute == 40);
 
     for (final slot in slots) {
-      if (!slot.available) continue;
+      if (!include(slot)) continue;
       if (online && !usesMinutes) {
         for (final minute in DoctorAvailabilityConstants.onlineStartMinutes) {
           keys.add(

@@ -8,6 +8,7 @@ const {
   isOnlineConsultType,
   ONLINE_START_MINUTES,
 } = require('./slotDateTime');
+const { withSlotStatus, normalizeSlotStatus } = require('./slotStatus');
 
 const SLOT_START_HOUR = 0;
 const SLOT_END_HOUR = 23;
@@ -22,6 +23,13 @@ function getActiveWeekBounds(referenceDate = new Date()) {
   return getClinicActiveWeekBounds(referenceDate);
 }
 
+function slotRecord(dayOfWeek, startHour, startMinute, available = false, status) {
+  return withSlotStatus(
+    { dayOfWeek, startHour, startMinute, available },
+    normalizeSlotStatus(status, available),
+  );
+}
+
 function buildAllSlots(available = false, consultationType) {
   if (isOnlineConsultType(consultationType)) {
     return buildAllOnlineSlots(available);
@@ -29,7 +37,7 @@ function buildAllSlots(available = false, consultationType) {
   const slots = [];
   for (let dayOfWeek = 0; dayOfWeek <= 6; dayOfWeek += 1) {
     for (let startHour = SLOT_START_HOUR; startHour <= SLOT_END_HOUR; startHour += 1) {
-      slots.push({ dayOfWeek, startHour, startMinute: 0, available });
+      slots.push(slotRecord(dayOfWeek, startHour, 0, available));
     }
   }
   return slots;
@@ -40,7 +48,7 @@ function buildAllOnlineSlots(available = false) {
   for (let dayOfWeek = 0; dayOfWeek <= 6; dayOfWeek += 1) {
     for (let startHour = SLOT_START_HOUR; startHour <= SLOT_END_HOUR; startHour += 1) {
       for (const startMinute of ONLINE_START_MINUTES) {
-        slots.push({ dayOfWeek, startHour, startMinute, available });
+        slots.push(slotRecord(dayOfWeek, startHour, startMinute, available));
       }
     }
   }
@@ -73,12 +81,16 @@ function normalizeSlots(incoming, consultationType) {
       const dayOfWeek = Number(raw.dayOfWeek);
       const startHour = Number(raw.startHour);
       if (isValidDayHour(dayOfWeek, startHour)) {
-        map.set(`${dayOfWeek}_${startHour}`, {
-          dayOfWeek,
-          startHour,
-          startMinute: 0,
-          available: Boolean(raw.available),
-        });
+        map.set(
+          `${dayOfWeek}_${startHour}`,
+          slotRecord(
+            dayOfWeek,
+            startHour,
+            0,
+            Boolean(raw.available),
+            raw.status,
+          ),
+        );
       }
     });
   }
@@ -114,24 +126,33 @@ function normalizeOnlineSlots(incoming) {
       group.forEach((raw) => {
         const startMinute = Number(raw.startMinute || 0);
         if (!ONLINE_START_MINUTES.includes(startMinute)) return;
-        map.set(`${dayOfWeek}_${startHour}_${startMinute}`, {
-          dayOfWeek,
-          startHour,
-          startMinute,
-          available: Boolean(raw.available),
-        });
+        map.set(
+          `${dayOfWeek}_${startHour}_${startMinute}`,
+          slotRecord(
+            dayOfWeek,
+            startHour,
+            startMinute,
+            Boolean(raw.available),
+            raw.status,
+          ),
+        );
       });
       return;
     }
 
-    if (group.some((raw) => raw.available)) {
+    if (group.some((raw) => raw.available || raw.status)) {
+      const source = group.find((raw) => raw.available || raw.status) || group[0];
       ONLINE_START_MINUTES.forEach((startMinute) => {
-        map.set(`${dayOfWeek}_${startHour}_${startMinute}`, {
-          dayOfWeek,
-          startHour,
-          startMinute,
-          available: true,
-        });
+        map.set(
+          `${dayOfWeek}_${startHour}_${startMinute}`,
+          slotRecord(
+            dayOfWeek,
+            startHour,
+            startMinute,
+            Boolean(source.available),
+            source.status,
+          ),
+        );
       });
     }
   });

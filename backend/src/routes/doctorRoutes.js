@@ -13,6 +13,7 @@ const {
   touchDoctorPresence,
   clearDoctorPresence,
   updateDoctorEmailVerified,
+  setDoctorProfileStatus,
 } = require('../db/repositories');
 const { isVerificationSkipped } = require('../config/verification');
 const { ensureDoctorDocumentsFromProfile } = require('../db/documentVerification');
@@ -20,6 +21,10 @@ const { sendSuccess, sendError } = require('../utils/response');
 const { validateMobile } = require('../utils/mobile');
 const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { loginProvider } = require('../utils/providerAuth');
+const {
+  shouldHideDisabledProvider,
+  PROFILE_STATUS,
+} = require('../utils/profileStatus');
 const {
   mountProviderPasswordResetRoutes,
 } = require('./helpers/mountProviderPasswordReset');
@@ -31,6 +36,7 @@ const {
   getDoctorAvailability,
   getDoctorAvailabilityStatus,
   saveDoctorAvailability,
+  updateDoctorSlotStatus,
 } = require('../db/availabilityRepositories');
 const {
   getBookableSlots,
@@ -153,7 +159,10 @@ router.get('/live-status', async (req, res) => {
       return sendSuccess(res, { data: [] });
     }
 
-    const docs = await Doctor.find({ id: { $in: ids.slice(0, 50) } })
+    const docs = await Doctor.find({
+      id: { $in: ids.slice(0, 50) },
+      profileStatus: { $ne: 'DISABLED' },
+    })
       .select('id lastActiveAt')
       .lean();
 
@@ -180,6 +189,9 @@ router.get('/feedback', async (req, res) => {
 
     const doctor = await findDoctorById(doctorId);
     if (!doctor) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+    if (shouldHideDisabledProvider(doctor, req.auth, doctorId, 'doctor')) {
       return sendError(res, 'Doctor not found', 404);
     }
 
@@ -740,6 +752,9 @@ router.get('/profile', authOptional, async (req, res) => {
     if (!doctor) {
       return sendError(res, 'Doctor not found', 404);
     }
+    if (shouldHideDisabledProvider(doctor, req.auth, doctorId, 'doctor')) {
+      return sendError(res, 'Doctor not found', 404);
+    }
 
     const availabilityStatus = await getDoctorAvailabilityStatus(doctorId, doctor);
 
@@ -773,6 +788,14 @@ router.get('/availability', authOptional, async (req, res) => {
       return sendError(res, 'doctorId is required', 400);
     }
 
+    const doctor = await findDoctorById(doctorId);
+    if (!doctor) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+    if (shouldHideDisabledProvider(doctor, req.auth, doctorId, 'doctor')) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+
     const data = await getDoctorAvailability(doctorId, {
       forWeekStart: req.query.weekStart,
       consultationType: req.query.type || req.query.consultationType,
@@ -782,6 +805,37 @@ router.get('/availability', authOptional, async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to fetch availability', 500);
+  }
+});
+
+// PATCH /doctor/profile-status — provider self-service hide/show
+router.patch('/profile-status', authRequired, async (req, res) => {
+  try {
+    const doctorId = req.auth?.doctorId;
+    if (!doctorId || req.auth?.type !== 'doctor') {
+      return sendError(res, 'Doctor authentication required', 403);
+    }
+
+    const profileStatus = String(req.body?.profileStatus || '').toUpperCase();
+    if (
+      profileStatus !== PROFILE_STATUS.ACTIVE &&
+      profileStatus !== PROFILE_STATUS.DISABLED
+    ) {
+      return sendError(res, 'profileStatus must be ACTIVE or DISABLED', 400);
+    }
+
+    const doctor = await setDoctorProfileStatus(doctorId, profileStatus);
+    return sendSuccess(res, {
+      message:
+        profileStatus === PROFILE_STATUS.DISABLED
+          ? 'Profile disabled. You are hidden from users.'
+          : 'Profile enabled. You are visible to users.',
+      data: doctor,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to update profile status', status);
   }
 });
 
@@ -818,6 +872,39 @@ router.put('/availability', authOptional, async (req, res) => {
     console.error(err);
     const status = err.statusCode || 500;
     return sendError(res, err.message || 'Failed to save availability', status);
+  }
+});
+
+// PATCH /doctor/availability/slot
+router.patch('/availability/slot', authOptional, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const doctorId = body.doctorId || req.auth?.doctorId;
+    if (!doctorId) {
+      return sendError(res, 'doctorId is required', 400);
+    }
+
+    const doctor = await findDoctorById(doctorId);
+    if (!doctor) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+
+    const data = await updateDoctorSlotStatus(doctorId, {
+      consultationType: body.consultationType || body.type,
+      dayOfWeek: body.dayOfWeek,
+      startHour: body.startHour,
+      startMinute: body.startMinute,
+      status: body.status,
+      weekStartDate: body.weekStartDate,
+    });
+    return sendSuccess(res, {
+      message: 'Slot status updated',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.statusCode || 500;
+    return sendError(res, err.message || 'Failed to update slot status', status);
   }
 });
 

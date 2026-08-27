@@ -10,6 +10,9 @@ final nurseProfileProvider =
   final repository = NurseRegistrationRepository();
   final response = await repository.getPublicProfile(nurseId: nurseId);
   if (response.success && response.data != null) {
+    if (response.data!.isProfileDisabled) {
+      throw Exception('Nurse not found');
+    }
     return response.data!;
   }
   throw Exception(response.error ?? 'Failed to load nurse profile');

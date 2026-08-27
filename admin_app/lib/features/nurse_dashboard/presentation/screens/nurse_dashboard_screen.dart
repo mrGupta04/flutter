@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/doctor_availability_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/validation_utils.dart';
@@ -13,6 +14,7 @@ import '../../../../shared/widgets/app_widgets.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/patient_location_map_card.dart';
 import '../../../../shared/widgets/provider_online_toggle_card.dart';
+import '../../../../shared/widgets/provider_profile_visibility_card.dart';
 import '../../../../data/services/dio_service.dart';
 import '../../../../core/services/socket_service.dart';
 import '../../../auth/provider/provider_auth_provider.dart';
@@ -156,6 +158,10 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                         _ProfileCard(nurse: nurse),
                         const SizedBox(height: 12),
                         const ProviderOnlineToggleCard(roleLabel: 'nurse'),
+                        const SizedBox(height: 12),
+                        const ProviderProfileVisibilityCard(
+                          role: ProviderVisibilityRole.nurse,
+                        ),
                       ],
                       const SizedBox(height: 16),
                       _BookingStatsRow(
@@ -284,6 +290,10 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
     var selected = Set<String>.from(
       dashboard.homeAvailability?.selectedSlotKeys ?? {},
     );
+    var selfBusy = Set<String>.from(
+      dashboard.homeAvailability?.selfBusySlotKeys ?? {},
+    );
+    var isUpdatingSlot = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -310,15 +320,67 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                     const SizedBox(height: 12),
                     WeeklyAvailabilityPicker(
                       selectedSlots: selected,
+                      selfBusySlots: selfBusy,
+                      enableSlotActions: true,
+                      isUpdating: isUpdatingSlot,
                       onToggle: (day, hour, isSelected, {startMinute = 0}) {
                         setModalState(() {
                           final key = '${day}_$hour';
                           if (isSelected) {
                             selected.add(key);
+                            selfBusy.remove(key);
                           } else {
                             selected.remove(key);
+                            selfBusy.remove(key);
                           }
                         });
+                      },
+                      onSlotAction: (day, hour, action, {startMinute = 0}) async {
+                        final key = '${day}_$hour';
+                        final wasSelected = selected.contains(key);
+                        final wasSelfBusy = selfBusy.contains(key);
+                        final status = action == SlotScheduleAction.selfBusy
+                            ? DoctorAvailabilityConstants.statusSelfBusy
+                            : DoctorAvailabilityConstants.statusDiscarded;
+
+                        setModalState(() {
+                          isUpdatingSlot = true;
+                          if (action == SlotScheduleAction.selfBusy) {
+                            selected.add(key);
+                            selfBusy.add(key);
+                          } else {
+                            selected.remove(key);
+                            selfBusy.remove(key);
+                          }
+                        });
+
+                        final ok = await ref
+                            .read(nurseDashboardProvider.notifier)
+                            .updateSlotStatus(
+                              dayOfWeek: day,
+                              startHour: hour,
+                              status: status,
+                            );
+
+                        if (!context.mounted) return;
+                        setModalState(() {
+                          isUpdatingSlot = false;
+                          if (!ok) {
+                            if (action == SlotScheduleAction.selfBusy) {
+                              if (!wasSelected) selected.remove(key);
+                              if (!wasSelfBusy) selfBusy.remove(key);
+                            } else {
+                              if (wasSelected) selected.add(key);
+                              if (wasSelfBusy) selfBusy.add(key);
+                            }
+                          }
+                        });
+                        if (!ok) {
+                          SnackBarHelper.showError(
+                            context,
+                            'Could not update slot',
+                          );
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
@@ -330,7 +392,10 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                       onPressed: () async {
                         final ok = await ref
                             .read(nurseDashboardProvider.notifier)
-                            .saveAvailability(selected);
+                            .saveAvailability(
+                              selected,
+                              selfBusySlotKeys: selfBusy,
+                            );
                         if (!context.mounted) return;
                         if (ok) {
                           Navigator.pop(ctx);

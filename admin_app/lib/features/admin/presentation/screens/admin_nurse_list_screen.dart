@@ -163,15 +163,25 @@ class _NurseTile extends StatelessWidget {
         ),
         title: Text(nurse.displayName),
         subtitle: Text(
-          '${nurse.qualification ?? ''} · ${nurse.city ?? ''}\n$_statusLabel',
+          [
+            if ((nurse.qualification ?? '').isNotEmpty) nurse.qualification,
+            if ((nurse.city ?? '').isNotEmpty) nurse.city,
+            _statusLabel,
+            if (nurse.isProfileDisabled) 'Disabled',
+          ].join(' · '),
         ),
         isThreeLine: true,
-        trailing: _canVerify
+        trailing: nurse.isProfileDisabled
             ? const Chip(
-                label: Text('Verify'),
+                label: Text('Disabled'),
                 visualDensity: VisualDensity.compact,
               )
-            : const Icon(Icons.chevron_right_rounded),
+            : _canVerify
+                ? const Chip(
+                    label: Text('Verify'),
+                    visualDensity: VisualDensity.compact,
+                  )
+                : const Icon(Icons.chevron_right_rounded),
         onTap: () => SafeNavigation.push(
           context,
           '${AppConstants.routeAdminNurseDetails}/${nurse.id}',

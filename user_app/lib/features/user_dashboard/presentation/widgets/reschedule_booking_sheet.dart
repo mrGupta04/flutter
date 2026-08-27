@@ -87,7 +87,7 @@ class _RescheduleSheetState extends ConsumerState<_RescheduleSheet> {
 
   Future<void> _confirm() async {
     final slot = _selected;
-    if (slot == null || _saving) return;
+    if (slot == null || !slot.isBookable || _saving) return;
     setState(() => _saving = true);
     try {
       await BookingLifecycleRepository().reschedule(
@@ -177,7 +177,11 @@ class _RescheduleSheetState extends ConsumerState<_RescheduleSheet> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: FilledButton(
-                onPressed: _selected == null || _saving ? null : _confirm,
+                onPressed: (_selected == null ||
+                        !(_selected!.isBookable) ||
+                        _saving)
+                    ? null
+                    : _confirm,
                 child: _saving
                     ? const SizedBox(
                         width: 20,

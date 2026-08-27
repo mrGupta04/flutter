@@ -504,6 +504,7 @@ class DoctorRegistrationRepository {
     required Set<String> selectedSlotKeys,
     DateTime? weekStartDate,
     String consultationType = 'online_consult',
+    Set<String> selfBusySlotKeys = const {},
   }) async {
     try {
       final response = await _dioService.put(
@@ -515,6 +516,7 @@ class DoctorRegistrationRepository {
           'slots': DoctorAvailabilityConstants.buildSlotPayload(
             selectedSlotKeys,
             consultationType: consultationType,
+            selfBusyKeys: selfBusySlotKeys,
           ),
         },
       );
@@ -527,6 +529,50 @@ class DoctorRegistrationRepository {
         message: body['message'] as String?,
         statusCode: body['statusCode'] as int? ?? 200,
         data: DoctorAvailabilityModel.fromJson(data),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
+    }
+  }
+
+  Future<ApiResponse<DoctorAvailabilityModel>> updateSlotStatus({
+    required String doctorId,
+    required String consultationType,
+    required int dayOfWeek,
+    required int startHour,
+    int startMinute = 0,
+    required String status,
+    DateTime? weekStartDate,
+  }) async {
+    try {
+      final response = await _dioService.patch(
+        AppConstants.endpointDoctorAvailabilitySlot,
+        data: {
+          'doctorId': doctorId,
+          'consultationType': consultationType,
+          'dayOfWeek': dayOfWeek,
+          'startHour': startHour,
+          'startMinute': startMinute,
+          'status': status,
+          'weekStartDate': weekStartDate?.toIso8601String(),
+        },
+      );
+
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 200,
+        data: DoctorAvailabilityModel.fromJson(data),
+        error: body['error'] as String?,
       );
     } on DioException catch (e) {
       return _handleError(e);
@@ -601,6 +647,30 @@ class DoctorRegistrationRepository {
         data: doctor.toJson(),
       );
 
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => DoctorModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'An unexpected error occurred',
+        statusCode: 500,
+      );
+    }
+  }
+
+  /// Hide or show this doctor on the patient marketplace.
+  Future<ApiResponse<DoctorModel>> updateProfileStatus({
+    required ProfileStatus profileStatus,
+  }) async {
+    try {
+      final response = await _dioService.patch(
+        AppConstants.endpointDoctorProfileStatus,
+        data: {'profileStatus': profileStatus.apiValue},
+      );
       return ApiResponse.fromJson(
         response.data as Map<String, dynamic>,
         (json) => DoctorModel.fromJson(json as Map<String, dynamic>),

@@ -3,27 +3,42 @@ import '../../../../core/constants/doctor_availability_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
+enum SlotScheduleAction { selfBusy, discard }
+
 /// Sunday–Saturday grid. Online consults use 20-minute chips; other types use 1 hour.
 class WeeklyAvailabilityPicker extends StatelessWidget {
   const WeeklyAvailabilityPicker({
     super.key,
     required this.selectedSlots,
     required this.onToggle,
+    this.selfBusySlots = const {},
     this.blockedSlots = const {},
     this.weekLabel,
     this.helperText,
     this.selectedColor = AppColors.primary,
     this.slotMinutes = DoctorAvailabilityConstants.hourlySlotMinutes,
+    this.enableSlotActions = false,
+    this.isUpdating = false,
+    this.onSlotAction,
   });
 
   final Set<String> selectedSlots;
+  final Set<String> selfBusySlots;
   final Set<String> blockedSlots;
   final void Function(int dayOfWeek, int startHour, bool selected, {int startMinute})
       onToggle;
+  final Future<void> Function(
+    int dayOfWeek,
+    int startHour,
+    SlotScheduleAction action, {
+    int startMinute,
+  })? onSlotAction;
   final String? weekLabel;
   final String? helperText;
   final Color selectedColor;
   final int slotMinutes;
+  final bool enableSlotActions;
+  final bool isUpdating;
 
   bool get _isOnline =>
       slotMinutes == DoctorAvailabilityConstants.onlineSlotMinutes;
@@ -49,6 +64,32 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
         );
   }
 
+  Future<void> _onChipTap({
+    required BuildContext context,
+    required int day,
+    required int hour,
+    required int minute,
+    required bool selected,
+  }) async {
+    if (isUpdating) return;
+    if (!selected) {
+      onToggle(day, hour, true, startMinute: minute);
+      return;
+    }
+    if (!enableSlotActions || onSlotAction == null) {
+      onToggle(day, hour, false, startMinute: minute);
+      return;
+    }
+
+    final action = await _showSlotActionsMenu(context);
+    if (!context.mounted || action == null) return;
+    if (action == SlotScheduleAction.discard) {
+      final confirmed = await _confirmDiscard(context);
+      if (!context.mounted || confirmed != true) return;
+    }
+    await onSlotAction!(day, hour, action, startMinute: minute);
+  }
+
   @override
   Widget build(BuildContext context) {
     final hours = DoctorAvailabilityConstants.hourSlots;
@@ -70,11 +111,19 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
           blockedSlots.isEmpty
               ? (helperText ??
                   (_isOnline
-                      ? 'Tap 20-minute slots when you are available for video consults.'
-                      : 'Tap slots when you are available. Each slot is 1 hour (12:00 AM – 12:00 AM, full day).'))
+                      ? (enableSlotActions
+                          ? 'Tap 20-minute slots to add them. Tap a selected slot to mark Self Busy or discard it.'
+                          : 'Tap 20-minute slots when you are available for video consults.')
+                      : (enableSlotActions
+                          ? 'Tap slots to add them. Tap a selected slot to mark Self Busy or discard it.'
+                          : 'Tap slots when you are available. Each slot is 1 hour (12:00 AM – 12:00 AM, full day).')))
               : 'Slots already chosen for the other consultation type are hidden here.',
           style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
         ),
+        if (enableSlotActions) ...[
+          const SizedBox(height: 12),
+          _SlotStatusLegend(selectedColor: selectedColor),
+        ],
         const SizedBox(height: 16),
         ...List.generate(7, (day) {
           return Padding(
@@ -93,19 +142,23 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
                   _OnlineDaySlots(
                     hours: hours,
                     selectedColor: selectedColor,
+                    isUpdating: isUpdating,
                     isSelected: (hour, minute) =>
                         selectedSlots.contains(_key(day, hour, minute)),
+                    isSelfBusy: (hour, minute) =>
+                        selfBusySlots.contains(_key(day, hour, minute)),
                     isHourBlocked: (hour) {
                       final anySelected = _startMinutes.any(
                         (minute) => selectedSlots.contains(_key(day, hour, minute)),
                       );
                       return !anySelected && _hourBlocked(day, hour);
                     },
-                    onToggle: (hour, minute, selected) => onToggle(
-                      day,
-                      hour,
-                      selected,
-                      startMinute: minute,
+                    onTap: (hour, minute, selected, chipContext) => _onChipTap(
+                      context: chipContext,
+                      day: day,
+                      hour: hour,
+                      minute: minute,
+                      selected: selected,
                     ),
                   )
                 else
@@ -127,16 +180,30 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
                             .map((hour) {
                               final selected =
                                   selectedSlots.contains(_key(day, hour, 0));
-                              return _AvailabilitySlotChip(
-                                label: DoctorAvailabilityConstants.formatSlotRange(
-                                  hour,
-                                  durationMinutes: slotMinutes,
-                                ),
-                                selected: selected,
-                                selectedColor: selectedColor,
-                                width: slotWidth,
-                                height: slotHeight,
-                                onTap: () => onToggle(day, hour, !selected),
+                              final selfBusy =
+                                  selfBusySlots.contains(_key(day, hour, 0));
+                              return Builder(
+                                builder: (chipContext) {
+                                  return _AvailabilitySlotChip(
+                                    label: DoctorAvailabilityConstants.formatSlotRange(
+                                      hour,
+                                      durationMinutes: slotMinutes,
+                                    ),
+                                    selected: selected,
+                                    selfBusy: selfBusy,
+                                    selectedColor: selectedColor,
+                                    width: slotWidth,
+                                    height: slotHeight,
+                                    enabled: !isUpdating,
+                                    onTap: () => _onChipTap(
+                                      context: chipContext,
+                                      day: day,
+                                      hour: hour,
+                                      minute: 0,
+                                      selected: selected,
+                                    ),
+                                  );
+                                },
                               );
                             })
                             .toList(),
@@ -159,20 +226,171 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
   }
 }
 
+Future<SlotScheduleAction?> _showSlotActionsMenu(BuildContext context) {
+  final box = context.findRenderObject() as RenderBox?;
+  final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+  final origin = box?.localToGlobal(Offset.zero, ancestor: overlay) ?? Offset.zero;
+  final size = box?.size ?? Size.zero;
+  final overlaySize = overlay?.size ?? MediaQuery.sizeOf(context);
+
+  return showMenu<SlotScheduleAction>(
+    context: context,
+    position: RelativeRect.fromRect(
+      origin & size,
+      Offset.zero & overlaySize,
+    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    color: AppColors.white,
+    elevation: 8,
+    items: const [
+      PopupMenuItem(
+        value: SlotScheduleAction.selfBusy,
+        child: _SlotActionRow(
+          icon: Icons.event_busy_rounded,
+          label: 'Self Busy',
+        ),
+      ),
+      PopupMenuItem(
+        value: SlotScheduleAction.discard,
+        child: _SlotActionRow(
+          icon: Icons.delete_outline_rounded,
+          label: 'Discard Slot',
+          destructive: true,
+        ),
+      ),
+    ],
+  );
+}
+
+Future<bool?> _confirmDiscard(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Discard slot'),
+      content: Text(
+        'Are you sure you want to discard this slot?',
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.textSecondary,
+          height: 1.4,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          style: TextButton.styleFrom(foregroundColor: AppColors.error),
+          child: const Text('Discard'),
+        ),
+      ],
+    ),
+  );
+}
+
+class _SlotActionRow extends StatelessWidget {
+  const _SlotActionRow({
+    required this.icon,
+    required this.label,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? AppColors.error : AppColors.textPrimary;
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: AppTextStyles.labelLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SlotStatusLegend extends StatelessWidget {
+  const _SlotStatusLegend({required this.selectedColor});
+
+  final Color selectedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _LegendSwatch(color: selectedColor, label: 'Available'),
+        const SizedBox(width: 16),
+        const _LegendSwatch(color: AppColors.grey500, label: 'Self Busy'),
+      ],
+    );
+  }
+}
+
+class _LegendSwatch extends StatelessWidget {
+  const _LegendSwatch({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _OnlineDaySlots extends StatelessWidget {
   const _OnlineDaySlots({
     required this.hours,
     required this.selectedColor,
     required this.isSelected,
+    required this.isSelfBusy,
     required this.isHourBlocked,
-    required this.onToggle,
+    required this.onTap,
+    required this.isUpdating,
   });
 
   final List<int> hours;
   final Color selectedColor;
   final bool Function(int hour, int minute) isSelected;
+  final bool Function(int hour, int minute) isSelfBusy;
   final bool Function(int hour) isHourBlocked;
-  final void Function(int hour, int minute, bool selected) onToggle;
+  final void Function(
+    int hour,
+    int minute,
+    bool selected,
+    BuildContext chipContext,
+  ) onTap;
+  final bool isUpdating;
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +409,7 @@ class _OnlineDaySlots extends StatelessWidget {
                 if (i > 0) const SizedBox(width: 6),
                 Expanded(
                   child: Builder(
-                    builder: (context) {
+                    builder: (chipContext) {
                       final minute =
                           DoctorAvailabilityConstants.onlineStartMinutes[i];
                       final selected = isSelected(hour, minute);
@@ -203,9 +421,11 @@ class _OnlineDaySlots extends StatelessWidget {
                               DoctorAvailabilityConstants.onlineSlotMinutes,
                         ),
                         selected: selected,
+                        selfBusy: isSelfBusy(hour, minute),
                         selectedColor: selectedColor,
                         height: 40,
-                        onTap: () => onToggle(hour, minute, !selected),
+                        enabled: !isUpdating,
+                        onTap: () => onTap(hour, minute, selected, chipContext),
                       );
                     },
                   ),
@@ -227,31 +447,45 @@ class _AvailabilitySlotChip extends StatelessWidget {
     required this.selectedColor,
     required this.height,
     required this.onTap,
+    this.selfBusy = false,
     this.width,
+    this.enabled = true,
   });
 
   final String label;
   final bool selected;
+  final bool selfBusy;
   final Color selectedColor;
   final double? width;
   final double height;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final fill = !selected
+        ? AppColors.white
+        : selfBusy
+            ? AppColors.grey500
+            : selectedColor;
+    final border = !selected
+        ? AppColors.divider
+        : selfBusy
+            ? AppColors.grey500
+            : selectedColor;
+    final textColor = selected ? AppColors.white : AppColors.textPrimary;
+
     return SizedBox(
       width: width,
       height: height,
       child: Material(
-        color: selected ? selectedColor : AppColors.white,
+        color: fill,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
-          side: BorderSide(
-            color: selected ? selectedColor : AppColors.divider,
-          ),
+          side: BorderSide(color: border),
         ),
         child: InkWell(
-          onTap: onTap,
+          onTap: enabled ? onTap : null,
           borderRadius: BorderRadius.circular(22),
           child: Center(
             child: Text(
@@ -262,7 +496,7 @@ class _AvailabilitySlotChip extends StatelessWidget {
               style: AppTextStyles.labelSmall.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 11,
-                color: selected ? AppColors.white : AppColors.textPrimary,
+                color: textColor,
               ),
             ),
           ),

@@ -38,6 +38,12 @@ const nurseSchema = new mongoose.Schema(
     ifscCode: String,
     bankName: String,
     verificationStatus: { type: String, default: 'pending', index: true },
+    profileStatus: {
+      type: String,
+      enum: ['ACTIVE', 'DISABLED'],
+      default: 'ACTIVE',
+      index: true,
+    },
     rejectionReason: String,
     isApproved: { type: Boolean, default: false },
     approvalNotes: String,

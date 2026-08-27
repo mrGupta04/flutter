@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/repositories/notifications_repository.dart';
+import '../notification_routes.dart';
 
 final notificationsProvider =
     FutureProvider<({List<AppNotification> notifications, int unreadCount})>(
@@ -36,74 +37,6 @@ class NotificationBellButton extends ConsumerWidget {
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
-
-  void _openNotification(BuildContext context, AppNotification n) {
-    final bookingId = n.data['bookingId']?.toString() ?? '';
-    switch (n.type) {
-      case 'chat_message':
-        if (bookingId.isEmpty) return;
-        context.push(
-          '${AppConstants.routeBookingChat}?bookingId=$bookingId&title=${Uri.encodeComponent('Chat')}',
-        );
-        return;
-      case 'en_route':
-      case 'arrived':
-        if (bookingId.isNotEmpty) {
-          context.push(
-            '${AppConstants.routeHomeVisitTrack}?bookingId=$bookingId',
-          );
-        } else {
-          context.push(AppConstants.routeUserDashboard);
-        }
-        return;
-      case 'payment_due':
-      case 'booking_approved':
-      case 'booking_confirmed':
-      case 'payment_expired':
-      case 'payment_failed':
-      case 'home_visit_request':
-      case 'visit_reminder':
-        if (bookingId.isNotEmpty &&
-            (n.type == 'payment_due' || n.type == 'booking_approved')) {
-          context.push(
-            '${AppConstants.routeNursePayment}?bookingId=$bookingId',
-          );
-          return;
-        }
-        if (bookingId.isNotEmpty && n.type == 'booking_confirmed') {
-          context.push(AppConstants.routeUserDashboard);
-          return;
-        }
-        context.push(AppConstants.routeUserDashboard);
-        return;
-      case 'prescription_ready':
-      case 'visit_note_ready':
-      case 'nursing_report_ready':
-        if (bookingId.isNotEmpty) {
-          context.push(AppConstants.routeNursingReports);
-        } else {
-          context.push(AppConstants.routeUserDashboard);
-        }
-        return;
-      case 'visit_completion_otp':
-      case 'visit_started':
-        if (bookingId.isNotEmpty) {
-          context.push(
-            '${AppConstants.routeBookingTimeline}?bookingId=$bookingId',
-          );
-        } else {
-          context.push(AppConstants.routeUserDashboard);
-        }
-        return;
-      case 'visit_completed':
-        context.push(AppConstants.routeUserDashboard);
-        return;
-      default:
-        if (bookingId.isNotEmpty) {
-          context.push(AppConstants.routeUserDashboard);
-        }
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -179,7 +112,9 @@ class NotificationsScreen extends ConsumerWidget {
                         ref.invalidate(notificationsProvider);
                       } catch (_) {}
                     }
-                    if (context.mounted) _openNotification(context, n);
+                    if (context.mounted) {
+                      openPatientNotificationModel(GoRouter.of(context), n);
+                    }
                   },
                 ),
               );

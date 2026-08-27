@@ -4,6 +4,7 @@ const Doctor = require('./models/Doctor');
 const Nurse = require('./models/Nurse');
 const { toDoctor } = require('./mappers');
 const { toNurse } = require('./nurseMappers');
+const { isProfileDisabled } = require('../utils/profileStatus');
 
 async function addFavorite(patientId, providerType, providerId) {
   if (!['doctor', 'nurse'].includes(providerType)) {
@@ -19,11 +20,21 @@ async function addFavorite(patientId, providerType, providerId) {
       err.statusCode = 404;
       throw err;
     }
+    if (isProfileDisabled(doctor)) {
+      const err = new Error('This doctor is currently not accepting new bookings');
+      err.statusCode = 403;
+      throw err;
+    }
   } else {
     const nurse = await Nurse.findOne({ id: providerId }).lean();
     if (!nurse) {
       const err = new Error('Nurse not found');
       err.statusCode = 404;
+      throw err;
+    }
+    if (isProfileDisabled(nurse)) {
+      const err = new Error('This nurse is currently not accepting new bookings');
+      err.statusCode = 403;
       throw err;
     }
   }
@@ -76,7 +87,7 @@ async function listFavorites(patientId) {
         row.providerType === 'doctor'
           ? doctorMap.get(row.providerId)
           : nurseMap.get(row.providerId);
-      if (!provider) return null;
+      if (!provider || isProfileDisabled(provider)) return null;
       return {
         id: row.id,
         providerType: row.providerType,

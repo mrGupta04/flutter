@@ -6,6 +6,11 @@ const {
   findDocumentsByNurseId,
   assertNurseDocumentsVerified,
 } = require('./documentVerification');
+const {
+  PROFILE_STATUS,
+  normalizeProfileStatus,
+  activeProfileFilter,
+} = require('../utils/profileStatus');
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -123,6 +128,7 @@ async function listNurses({
   specialization,
   homeVisit,
   gender,
+  publicListing = false,
 }) {
   const filter = {};
   if (status === 'awaiting_review') {
@@ -167,6 +173,9 @@ async function listNurses({
       { registrationNumber: regex },
       { shiftAvailability: regex },
     ];
+  }
+  if (publicListing) {
+    Object.assign(filter, activeProfileFilter());
   }
 
   const totalCount = await Nurse.countDocuments(filter);
@@ -263,6 +272,28 @@ async function clearNursePresence(nurseId) {
   return findNurseById(nurseId);
 }
 
+async function setNurseProfileStatus(nurseId, profileStatus) {
+  const nextStatus = normalizeProfileStatus(profileStatus);
+  if (
+    nextStatus !== PROFILE_STATUS.ACTIVE &&
+    nextStatus !== PROFILE_STATUS.DISABLED
+  ) {
+    const err = new Error('profileStatus must be ACTIVE or DISABLED');
+    err.statusCode = 400;
+    throw err;
+  }
+  const result = await Nurse.updateOne(
+    { id: nurseId },
+    { $set: { profileStatus: nextStatus } },
+  );
+  if (result.matchedCount === 0) {
+    const err = new Error('Nurse not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  return findNurseById(nurseId);
+}
+
 module.exports = {
   toNurse,
   findNurseById,
@@ -277,4 +308,5 @@ module.exports = {
   findDocumentsByNurseId,
   touchNursePresence,
   clearNursePresence,
+  setNurseProfileStatus,
 };

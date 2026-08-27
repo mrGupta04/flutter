@@ -59,7 +59,9 @@ final nurseSearchProvider =
     );
 
     if (response.success && response.data != null) {
-      var nurses = response.data!;
+      var nurses = response.data!
+          .where((nurse) => !nurse.isProfileDisabled)
+          .toList();
       final minYears = params.minYearsExperience;
       if (minYears != null) {
         nurses = nurses

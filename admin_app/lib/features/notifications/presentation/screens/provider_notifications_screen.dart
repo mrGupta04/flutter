@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/services/dio_service.dart';
+import '../notification_routes.dart';
 
 class _ProviderNotification {
   final String id;
@@ -206,7 +208,16 @@ class _ProviderNotificationsScreenState
                                   ),
                                 ),
                                 subtitle: Text(n.body),
-                                onTap: () => _markRead(n),
+                                onTap: () async {
+                                  await _markRead(n);
+                                  if (!context.mounted) return;
+                                  openProviderNotification(
+                                    GoRouter.of(context),
+                                    role: widget.role,
+                                    type: n.type,
+                                    data: n.data,
+                                  );
+                                },
                               ),
                             );
                           },

@@ -72,6 +72,7 @@ function toDoctor(doc) {
     aadhaarVerified: Boolean(d.aadhaarVerified),
     aadhaarVerifiedAt: d.aadhaarVerifiedAt,
     verificationStatus: normalizeVerificationStatus(d.verificationStatus),
+    profileStatus: d.profileStatus === 'DISABLED' ? 'DISABLED' : 'ACTIVE',
     rejectionReason: d.rejectionReason,
     isApproved: Boolean(d.isApproved),
     approvalNotes: d.approvalNotes,

@@ -3,6 +3,7 @@ import '../../../core/services/token_storage.dart';
 import '../../../data/models/doctor_availability_model.dart';
 import '../../../data/models/doctor_booking_model.dart';
 import '../../../data/models/nurse_model.dart';
+import '../../../data/models/doctor_model.dart';
 import '../../../data/repositories/nurse_registration_repository.dart';
 import '../../auth/provider/provider_auth_provider.dart';
 import '../../provider/provider/provider_profile_provider.dart';
@@ -168,7 +169,30 @@ class NurseDashboardNotifier extends StateNotifier<NurseDashboardState> {
     await loadBookings();
   }
 
-  Future<bool> saveAvailability(Set<String> selectedSlotKeys) async {
+  /// Hide or show this nurse on the patient marketplace without logging out.
+  Future<bool> setProfileStatus(ProfileStatus profileStatus) async {
+    final nurseId = await _resolveNurseId();
+    if (nurseId == null) return false;
+
+    final response = await _repository.updateProfileStatus(
+      profileStatus: profileStatus,
+    );
+    if (response.success && response.data != null) {
+      final fresh = response.data!;
+      _ref.read(providerProfileProvider.notifier).applyNurse(fresh);
+      state = state.copyWith(nurse: fresh, error: null);
+      return true;
+    }
+    state = state.copyWith(
+      error: response.error ?? 'Failed to update profile visibility',
+    );
+    return false;
+  }
+
+  Future<bool> saveAvailability(
+    Set<String> selectedSlotKeys, {
+    Set<String> selfBusySlotKeys = const {},
+  }) async {
     final nurseId = await _resolveNurseId();
     if (nurseId == null) return false;
 
@@ -176,6 +200,7 @@ class NurseDashboardNotifier extends StateNotifier<NurseDashboardState> {
     final response = await _repository.saveAvailability(
       nurseId: nurseId,
       selectedSlotKeys: selectedSlotKeys,
+      selfBusySlotKeys: selfBusySlotKeys,
     );
     if (response.success && response.data != null) {
       state = state.copyWith(
@@ -185,6 +210,27 @@ class NurseDashboardNotifier extends StateNotifier<NurseDashboardState> {
       return true;
     }
     state = state.copyWith(isSavingAvailability: false);
+    return false;
+  }
+
+  Future<bool> updateSlotStatus({
+    required int dayOfWeek,
+    required int startHour,
+    required String status,
+  }) async {
+    final nurseId = await _resolveNurseId();
+    if (nurseId == null) return false;
+
+    final response = await _repository.updateSlotStatus(
+      nurseId: nurseId,
+      dayOfWeek: dayOfWeek,
+      startHour: startHour,
+      status: status,
+    );
+    if (response.success && response.data != null) {
+      state = state.copyWith(homeAvailability: response.data);
+      return true;
+    }
     return false;
   }
 

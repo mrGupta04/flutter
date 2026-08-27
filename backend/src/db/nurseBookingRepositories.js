@@ -12,8 +12,11 @@ const {
   slotDateTime,
   slotEndDateTime,
   formatSlotLabel,
+  getSlotStatusAt,
 } = require('../utils/slotDateTime');
+const { SLOT_STATUS, isSlotVisibleToPatients, resolveSlotStatus, bookingRejectionForStatus } = require('../utils/slotStatus');
 const { distanceKm } = require('../utils/geoDistance');
+const { assertProfileActive } = require('../utils/profileStatus');
 const {
   NURSE_PAYMENT_MINUTES,
   CONSULTATION_TYPE,
@@ -197,6 +200,27 @@ async function getActiveAvailabilityForBooking(nurseId) {
   return { availability: weekDoc };
 }
 
+async function assertCurrentNurseSlotIsAvailable(nurseId, day, hour) {
+  const latest = await getActiveAvailabilityForBooking(nurseId);
+  if (latest.error) {
+    const err = new Error(latest.error);
+    err.statusCode = latest.status;
+    throw err;
+  }
+  const status = getSlotStatusAt(
+    latest.availability.slots,
+    day,
+    hour,
+    0,
+    CONSULTATION_TYPE,
+  );
+  if (status !== SLOT_STATUS.AVAILABLE) {
+    const err = new Error(bookingRejectionForStatus(status));
+    err.statusCode = 409;
+    throw err;
+  }
+}
+
 function getNurseHomeVisitFee(nurse) {
   const regular = Number(nurse?.homeVisitFee);
   const offer = Number(nurse?.homeVisitOfferFee);
@@ -280,6 +304,11 @@ async function getNurseBookableSlots(nurseId) {
   if (!nurse) {
     return { error: 'Nurse not found', status: 404 };
   }
+  try {
+    assertProfileActive(nurse, 'nurse');
+  } catch (err) {
+    return { error: err.message, status: err.statusCode || 403 };
+  }
   if (!nurse.availableForHomeVisit) {
     return { error: 'This nurse does not offer home visits', status: 400 };
   }
@@ -326,19 +355,22 @@ async function getNurseBookableSlots(nurseId) {
         startHour: hour,
         available: false,
       };
-      if (!slot.available || bookedKeys.has(key)) continue;
+      if (!isSlotVisibleToPatients(slot) || bookedKeys.has(key)) continue;
 
       const slotStart = slotDateTime(weekStart, day, hour);
       const slotEnd = slotEndDateTime(weekStart, day, hour);
       if (slotStart <= now) continue;
       if (bookedSlotStarts.has(slotStart.getTime())) continue;
 
+      const status = resolveSlotStatus(slot);
       bookable.push({
         dayOfWeek: day,
         startHour: hour,
         slotStart: slotStart.toISOString(),
         slotEnd: slotEnd.toISOString(),
         label: formatSlotLabel(slotStart, slotEnd),
+        status,
+        bookable: status === SLOT_STATUS.AVAILABLE,
       });
     }
   }
@@ -355,7 +387,7 @@ async function getNurseBookableSlots(nurseId) {
       weekEndDate: weekEnd.toISOString(),
       consultationFee: getNurseHomeVisitFee(nurse),
       slots: bookable,
-      totalBookable: bookable.length,
+      totalBookable: bookable.filter((slot) => slot.bookable).length,
       totalAvailableInWeek: (availability.slots || []).filter((s) => s.available)
         .length,
       message:
@@ -390,6 +422,7 @@ async function validateNurseBookingPayload(payload) {
     err.statusCode = 404;
     throw err;
   }
+  assertProfileActive(nurse, 'nurse');
   if (!nurse.availableForHomeVisit) {
     const err = new Error('This nurse does not offer home visits');
     err.statusCode = 400;
@@ -421,11 +454,15 @@ async function validateNurseBookingPayload(payload) {
     : slotDateTime(weekStart, d, h);
   const slotEnd = slotEndDateTime(weekStart, d, h);
 
-  const slotDef = (availability.slots || []).find(
-    (s) => s.dayOfWeek === d && s.startHour === h,
+  const slotStatus = getSlotStatusAt(
+    availability.slots,
+    d,
+    h,
+    0,
+    CONSULTATION_TYPE,
   );
-  if (!slotDef?.available) {
-    const err = new Error('Selected time slot is not available');
+  if (slotStatus !== SLOT_STATUS.AVAILABLE) {
+    const err = new Error(bookingRejectionForStatus(slotStatus));
     err.statusCode = 409;
     throw err;
   }
@@ -528,6 +565,7 @@ async function holdNurseSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
     err.statusCode = 404;
     throw err;
   }
+  assertProfileActive(nurse, 'nurse');
 
   const availResult = await getActiveAvailabilityForBooking(nurseId);
   if (availResult.error) {
@@ -545,11 +583,15 @@ async function holdNurseSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
     : slotDateTime(weekStart, d, h);
   const slotEnd = slotEndDateTime(weekStart, d, h);
 
-  const slotDef = (availability.slots || []).find(
-    (s) => s.dayOfWeek === d && s.startHour === h,
+  const holdSlotStatus = getSlotStatusAt(
+    availability.slots,
+    d,
+    h,
+    0,
+    CONSULTATION_TYPE,
   );
-  if (!slotDef?.available) {
-    const err = new Error('Selected time slot is not available');
+  if (holdSlotStatus !== SLOT_STATUS.AVAILABLE) {
+    const err = new Error(bookingRejectionForStatus(holdSlotStatus));
     err.statusCode = 409;
     throw err;
   }
@@ -600,6 +642,8 @@ async function holdNurseSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
 
   const paymentExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000);
   const fee = getNurseHomeVisitFee(nurse);
+
+  await assertCurrentNurseSlotIsAvailable(nurseId, d, h);
 
   try {
     const booking = await withMongoTransaction(async (session) => {
@@ -711,6 +755,8 @@ async function createNurseHomeVisitRequest(payload) {
   const approvalExpiresAt = new Date(
     Date.now() + HOME_VISIT_APPROVAL_HOURS * 60 * 60 * 1000,
   );
+
+  await assertCurrentNurseSlotIsAvailable(payload.nurseId, d, h);
 
   const existingHold = await ConsultationBooking.findOne({
     nurseId: payload.nurseId,

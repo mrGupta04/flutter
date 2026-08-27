@@ -26,6 +26,9 @@ final doctorForBookingProvider =
   if (!res.success || res.data == null) {
     throw Exception(res.error ?? 'Doctor not found');
   }
+  if (res.data!.isProfileDisabled) {
+    throw Exception('Doctor not found');
+  }
   return res.data!;
 });
 
@@ -119,6 +122,10 @@ class OnlineConsultBookingNotifier extends StateNotifier<OnlineConsultBookingSta
     if (slot == null) {
       await releaseHold();
       state = state.copyWith(clearSlot: true, clearHold: true, error: null);
+      return;
+    }
+    if (!slot.isBookable) {
+      state = state.copyWith(error: 'This slot is unavailable.');
       return;
     }
 

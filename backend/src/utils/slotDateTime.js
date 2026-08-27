@@ -1,4 +1,10 @@
 const { clinicSlotDateTime, clinicTimeParts } = require('./clinicTime');
+const {
+  SLOT_STATUS,
+  resolveSlotStatus,
+  isSlotBookable,
+  isSlotVisibleToPatients,
+} = require('./slotStatus');
 
 const ONLINE_CONSULT_TYPE = 'online_consult';
 const ONLINE_SLOT_MINUTES = 20;
@@ -99,43 +105,71 @@ function usesMinuteWindows(slots, consultationType) {
   );
 }
 
-function isAvailabilityWindowOpen(slots, day, hour, minute, consultationType) {
+function findAvailabilitySlot(slots, day, hour, minute, consultationType) {
   const list = slots || [];
   if (usesMinuteWindows(list, consultationType)) {
-    const match = list.find(
-      (slot) =>
-        Number(slot.dayOfWeek) === day &&
-        Number(slot.startHour) === hour &&
-        Number(slot.startMinute || 0) === minute,
+    return (
+      list.find(
+        (slot) =>
+          Number(slot.dayOfWeek) === day &&
+          Number(slot.startHour) === hour &&
+          Number(slot.startMinute || 0) === minute,
+      ) || null
     );
-    return Boolean(match?.available);
   }
-  const hourSlot = list.find(
-    (slot) => Number(slot.dayOfWeek) === day && Number(slot.startHour) === hour,
+  return (
+    list.find(
+      (slot) => Number(slot.dayOfWeek) === day && Number(slot.startHour) === hour,
+    ) || null
   );
-  return Boolean(hourSlot?.available);
+}
+
+function getSlotStatusAt(slots, day, hour, minute, consultationType) {
+  return resolveSlotStatus(
+    findAvailabilitySlot(slots, day, hour, minute, consultationType),
+  );
+}
+
+function isAvailabilityWindowOpen(slots, day, hour, minute, consultationType) {
+  return isSlotBookable(
+    findAvailabilitySlot(slots, day, hour, minute, consultationType),
+  );
 }
 
 function listAvailabilityWindows(slots, consultationType) {
+  return listSlotWindows(slots, consultationType, isSlotBookable);
+}
+
+function listPatientVisibleWindows(slots, consultationType) {
+  return listSlotWindows(slots, consultationType, isSlotVisibleToPatients).map(
+    (window) => ({
+      ...window,
+      status: window.status || SLOT_STATUS.AVAILABLE,
+    }),
+  );
+}
+
+function listSlotWindows(slots, consultationType, includeSlot) {
   const list = slots || [];
   if (usesMinuteWindows(list, consultationType)) {
-    return list
-      .filter((slot) => slot.available)
-      .map((slot) => ({
-        dayOfWeek: Number(slot.dayOfWeek),
-        startHour: Number(slot.startHour),
-        startMinute: Number(slot.startMinute || 0),
-      }));
+    return list.filter(includeSlot).map((slot) => ({
+      dayOfWeek: Number(slot.dayOfWeek),
+      startHour: Number(slot.startHour),
+      startMinute: Number(slot.startMinute || 0),
+      status: resolveSlotStatus(slot),
+    }));
   }
   const minutes = startMinuteOffsets(consultationType);
   const windows = [];
   for (const slot of list) {
-    if (!slot.available) continue;
+    if (!includeSlot(slot)) continue;
+    const status = resolveSlotStatus(slot);
     for (const minute of minutes) {
       windows.push({
         dayOfWeek: Number(slot.dayOfWeek),
         startHour: Number(slot.startHour),
         startMinute: minute,
+        status,
       });
     }
   }
@@ -157,6 +191,9 @@ module.exports = {
   consultEndFromStart,
   formatSlotLabel,
   usesMinuteWindows,
+  findAvailabilitySlot,
+  getSlotStatusAt,
   isAvailabilityWindowOpen,
   listAvailabilityWindows,
+  listPatientVisibleWindows,
 };
