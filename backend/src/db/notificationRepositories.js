@@ -274,10 +274,23 @@ async function registerDeviceToken(userId, userType, token) {
     throw err;
   }
 
-  await Model.updateOne(
-    { id: userId },
-    { $addToSet: { fcmTokens: clean } },
-  );
+  if (clean.startsWith('dev_') || clean.startsWith('dev:')) {
+    return { success: true, placeholder: true };
+  }
+
+  const existing = await Model.findOne({ id: userId }).select('fcmTokens').lean();
+  const next = [
+    ...new Set(
+      (existing?.fcmTokens || []).filter(
+        (item) =>
+          item &&
+          !String(item).startsWith('dev_') &&
+          !String(item).startsWith('dev:'),
+      ),
+    ),
+    clean,
+  ];
+  await Model.updateOne({ id: userId }, { $set: { fcmTokens: next } });
   return { success: true };
 }
 

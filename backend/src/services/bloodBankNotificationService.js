@@ -108,11 +108,21 @@ async function notifyPatientChannels({ order, bloodBank, event, message }) {
   }
 
   if (order.patientId) {
+    const Patient = require('../db/models/Patient');
+    const patient = await Patient.findOne({ id: order.patientId })
+      .select('fcmTokens')
+      .lean();
     results.push = await sendPushNotification({
       userId: order.patientId,
       title: subject,
       body: message,
-      data: { orderId: order.id, event, type: 'blood_order' },
+      data: {
+        orderId: order.id,
+        event,
+        type: 'blood_order',
+        deviceTokens: patient?.fcmTokens || [],
+        deviceToken: patient?.fcmTokens?.[0],
+      },
     });
   }
 
@@ -251,11 +261,20 @@ async function notifyEmergencyRequestAccepted(request, bloodBank) {
     results.whatsapp = await sendWhatsApp(contact, `${APP_NAME}: ${message}`);
   }
   if (request.patientId) {
+    const Patient = require('../db/models/Patient');
+    const patient = await Patient.findOne({ id: request.patientId })
+      .select('fcmTokens')
+      .lean();
     results.push = await sendPushNotification({
       userId: request.patientId,
       title: `${APP_NAME} — Emergency request accepted`,
       body: message,
-      data: { requestId: request.id, bloodBankId: bloodBank?.id },
+      data: {
+        requestId: request.id,
+        bloodBankId: bloodBank?.id,
+        deviceTokens: patient?.fcmTokens || [],
+        deviceToken: patient?.fcmTokens?.[0],
+      },
     });
   }
   return results;

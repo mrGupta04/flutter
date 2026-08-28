@@ -14,8 +14,11 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { initializeApp, getApps, cert } = require('firebase-admin/app');
+const { getMessaging } = require('firebase-admin/messaging');
 
-let admin = null;
+const BACKEND_ROOT = path.join(__dirname, '../..');
+
 let firebaseReady = false;
 let firebaseInitAttempted = false;
 
@@ -32,6 +35,20 @@ function stringifyData(data = {}) {
   );
 }
 
+function resolveFileCandidates(filePath) {
+  const candidates = [];
+  if (filePath) {
+    if (path.isAbsolute(filePath)) {
+      candidates.push(filePath);
+    } else {
+      candidates.push(path.resolve(process.cwd(), filePath));
+      candidates.push(path.resolve(BACKEND_ROOT, filePath));
+    }
+  }
+  candidates.push(path.join(BACKEND_ROOT, 'firebase-service-account.json'));
+  return [...new Set(candidates)];
+}
+
 function loadServiceAccount() {
   const jsonEnv = String(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '').trim();
   if (jsonEnv.startsWith('{')) {
@@ -46,12 +63,7 @@ function loadServiceAccount() {
   const filePath =
     process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
     process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  const candidates = [
-    filePath,
-    path.join(__dirname, '../../firebase-service-account.json'),
-  ].filter(Boolean);
-
-  for (const candidate of candidates) {
+  for (const candidate of resolveFileCandidates(filePath)) {
     if (fs.existsSync(candidate)) {
       return JSON.parse(fs.readFileSync(candidate, 'utf8'));
     }
@@ -63,8 +75,7 @@ function initFirebaseAdmin() {
   if (firebaseInitAttempted) return firebaseReady;
   firebaseInitAttempted = true;
   try {
-    admin = require('firebase-admin');
-    if (admin.apps.length) {
+    if (getApps().length) {
       firebaseReady = true;
       return true;
     }
@@ -75,8 +86,8 @@ function initFirebaseAdmin() {
       );
       return false;
     }
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+    initializeApp({
+      credential: cert(serviceAccount),
     });
     firebaseReady = true;
     console.log('[Push] Firebase Admin initialized');
@@ -120,12 +131,13 @@ async function sendWithAdminSdk(title, body, data, tokens) {
           alert: { title, body },
           sound: 'default',
           badge: 1,
+          contentAvailable: true,
         },
       },
     },
   };
 
-  const response = await admin.messaging().sendEachForMulticast(message);
+  const response = await getMessaging().sendEachForMulticast(message);
   const results = [];
   const invalidTokens = [];
   response.responses.forEach((item, index) => {
@@ -136,6 +148,7 @@ async function sendWithAdminSdk(title, body, data, tokens) {
     }
     const code = item.error?.code || '';
     const error = item.error?.message || 'FCM send failed';
+    console.warn(`[Push] FCM token failed: ${error}${code ? ` (${code})` : ''}`);
     results.push({ token, success: false, error, code });
     if (
       code === 'messaging/registration-token-not-registered' ||
@@ -144,7 +157,11 @@ async function sendWithAdminSdk(title, body, data, tokens) {
       invalidTokens.push(token);
     }
   });
-  return { success: results.some((r) => r.success), provider: 'fcm', results, invalidTokens };
+  const success = results.some((r) => r.success);
+  console.log(
+    `[Push] FCM sent ${response.successCount}/${tokens.length} messages`,
+  );
+  return { success, provider: 'fcm', results, invalidTokens };
 }
 
 async function sendWithLegacyServerKey(title, body, data, tokens, serverKey) {
@@ -208,30 +225,58 @@ async function sendPushNotification({ userId, title, body, data = {} }) {
     `[Push] user=${userId || 'anonymous'} title="${title}" body="${body}" tokens=${tokens.length} fcm=${realTokens.length} admin=${adminReady}`,
   );
 
-  if (skipFcm || realTokens.length === 0) {
+  if (skipFcm) {
     return {
       success: true,
-      provider: skipFcm ? provider : 'console',
+      provider,
       tokenCount: tokens.length,
       fcmTokenCount: realTokens.length,
       invalidTokens: [],
     };
   }
 
+  if (realTokens.length === 0) {
+    console.warn(
+      `[Push] skipped FCM for ${userId || 'anonymous'} — no real device token (login again on a Firebase-enabled build)`,
+    );
+    return {
+      success: false,
+      provider: 'skipped',
+      tokenCount: tokens.length,
+      fcmTokenCount: 0,
+      invalidTokens: [],
+    };
+  }
+
   if (adminReady) {
-    return sendWithAdminSdk(title, body, data, realTokens);
+    try {
+      return await sendWithAdminSdk(title, body, data, realTokens);
+    } catch (err) {
+      console.error('[Push] FCM Admin send failed:', err.message);
+      return {
+        success: false,
+        provider: 'fcm',
+        tokenCount: tokens.length,
+        fcmTokenCount: realTokens.length,
+        invalidTokens: [],
+        error: err.message,
+      };
+    }
   }
   if (serverKey) {
     return sendWithLegacyServerKey(title, body, data, realTokens, serverKey);
   }
 
+  console.warn(
+    '[Push] FCM not sent — Firebase Admin is not initialized and FIREBASE_SERVER_KEY is unset',
+  );
   return {
-    success: true,
-    provider: 'console',
+    success: false,
+    provider: 'unconfigured',
     tokenCount: tokens.length,
     fcmTokenCount: realTokens.length,
     invalidTokens: [],
   };
 }
 
-module.exports = { sendPushNotification, initFirebaseAdmin };
+module.exports = { sendPushNotification, initFirebaseAdmin, isPlaceholderToken };

@@ -44,6 +44,7 @@ class DevicePushService with WidgetsBindingObserver {
   NotificationTapCallback? _onNotificationTap;
   Map<String, dynamic>? _pendingTap;
   final _shownIds = <String>{};
+  int _tokenRetries = 0;
 
   set onNotificationTap(NotificationTapCallback? handler) {
     _onNotificationTap = handler;
@@ -82,6 +83,14 @@ class DevicePushService with WidgetsBindingObserver {
         badge: true,
         sound: false,
       );
+      try {
+        await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          announcement: true,
+        );
+      } catch (_) {}
       FirebaseMessaging.onMessage.listen(_showForegroundMessage);
       FirebaseMessaging.onMessageOpenedApp.listen(_handleRemoteTap);
       final initial = await FirebaseMessaging.instance.getInitialMessage();
@@ -297,12 +306,35 @@ class DevicePushService with WidgetsBindingObserver {
     String? token;
     if (_firebaseReady) {
       try {
+        await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
         token = await FirebaseMessaging.instance.getToken();
       } catch (e) {
         debugPrint('[Push] getToken failed: $e');
       }
+      if (token == null || token.isEmpty || token.startsWith('dev_')) {
+        if (_tokenRetries >= 5) {
+          debugPrint('[Push] Gave up waiting for a real FCM token');
+          return;
+        }
+        _tokenRetries += 1;
+        debugPrint(
+          '[Push] Real FCM token not ready yet — retrying (not using a dev token)',
+        );
+        Future<void>.delayed(const Duration(seconds: 4), () {
+          if (_tokenEndpoint == endpoint) {
+            registerTokenWithBackend();
+          }
+        });
+        return;
+      }
+      _tokenRetries = 0;
+    } else {
+      token = await _ensureDevToken();
     }
-    token ??= await _ensureDevToken();
     await _persistAndRegister(token);
   }
 
