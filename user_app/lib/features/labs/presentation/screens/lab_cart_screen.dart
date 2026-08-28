@@ -17,6 +17,8 @@ import '../../../scans/data/scans_catalog.dart';
 import '../../../scans/data/models/scan_procedure_model.dart';
 import '../../../scans/provider/scan_cart_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../../select_location/location_selector_field.dart';
+import '../../../select_location/selected_location.dart';
 import '../../data/lab_test_icons.dart';
 import '../../data/lab_tests_catalog.dart';
 import '../../data/models/lab_test_model.dart';
@@ -34,6 +36,9 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
   DateTime? _selectedDate;
   bool _isSubmitting = false;
   final _addressController = TextEditingController();
+  SelectedLocationResult? _selectedLocation;
+  String? _collectionCity;
+  String? _collectionPincode;
 
   static const _timeSlots = [
     '07:00 AM - 09:00 AM',
@@ -151,6 +156,12 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
             : 'lab_visit',
         collectionAddress: _collectionOption == SampleCollectionOption.homeVisit
             ? _addressController.text.trim()
+            : null,
+        collectionCity: _collectionOption == SampleCollectionOption.homeVisit
+            ? _collectionCity
+            : null,
+        collectionPincode: _collectionOption == SampleCollectionOption.homeVisit
+            ? _collectionPincode
             : null,
         scheduledDate: _selectedDate!,
         timeSlot: _selectedSlot!,
@@ -491,28 +502,20 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
               ),
             if (_collectionOption == SampleCollectionOption.homeVisit) ...[
               const SizedBox(height: 12),
-              if ((ref.watch(patientAuthProvider).user?.savedAddresses ??
-                      const [])
-                  .isNotEmpty) ...[
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final a in ref
-                            .watch(patientAuthProvider)
-                            .user
-                            ?.savedAddresses ??
-                        const [])
-                      ActionChip(
-                        label: Text(a.label),
-                        onPressed: () {
-                          _addressController.text = a.displayLine;
-                        },
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
+              LocationSelectorField(
+                value: _selectedLocation,
+                hint: 'Select collection address',
+                label: 'Collection address',
+                onChanged: (result) {
+                  setState(() {
+                    _selectedLocation = result;
+                    _addressController.text = result.displayLine;
+                    _collectionCity = result.city;
+                    _collectionPincode = result.pincode;
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
               CaretOnTapTextField(
                 controller: _addressController,
                 maxLines: 2,

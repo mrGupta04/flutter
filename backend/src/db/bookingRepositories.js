@@ -28,6 +28,10 @@ const { buildRoomId } = require('../services/videoConsultService');
 const { notifyBookingConfirmed } = require('../services/bookingNotificationService');
 const { distanceKm } = require('../utils/geoDistance');
 const { assertProfileActive } = require('../utils/profileStatus');
+const {
+  buildIncomingBookingAlertData,
+  expireAndNotifyApprovalTimeouts,
+} = require('../utils/incomingBookingAlert');
 
 const HOME_VISIT_APPROVAL_HOURS = parseInt(
   process.env.HOME_VISIT_APPROVAL_HOURS || '48',
@@ -212,18 +216,8 @@ async function expirePendingBookings(doctorId) {
       },
     },
   );
-  await ConsultationBooking.updateMany(
-    {
-      ...(doctorId ? { doctorId } : {}),
-      status: 'awaiting_doctor_approval',
-      approvalExpiresAt: { $lte: now },
-    },
-    {
-      $set: {
-        status: 'cancelled',
-        paymentStatus: 'failed',
-      },
-    },
+  await expireAndNotifyApprovalTimeouts(
+    doctorId ? { doctorId } : { doctorId: { $exists: true, $nin: [null, ''] } },
   );
   await ConsultationBooking.updateMany(
     {
@@ -446,6 +440,7 @@ function formatBookingResponse(booking, doctor) {
     clinicName: doctor.clinicName,
     clinicAddress: buildClinicAddress(doctor),
     createdAt: booking.createdAt,
+    approvalExpiresAt: booking.approvalExpiresAt || null,
     ...bookingAppointmentFields(booking),
     ...bookingPaymentFields(booking),
     ...videoJoinFields(booking),
@@ -1315,6 +1310,7 @@ async function createHomeVisitRequest(payload) {
     }
     await existingHold.save();
     await notifyProviderOfHomeVisitRequest(existingHold, 'doctor');
+    emitDoctorBookingStatus(existingHold);
     return formatBookingResponse(existingHold, doctor);
   }
 
@@ -1356,14 +1352,23 @@ async function createHomeVisitRequest(payload) {
   });
 
   await notifyProviderOfHomeVisitRequest(booking, 'doctor');
+  emitDoctorBookingStatus(booking);
   return formatBookingResponse(booking, doctor);
+}
+
+function emitDoctorBookingStatus(booking) {
+  try {
+    const { emitBookingStatusUpdate } = require('../services/trackingSocket');
+    emitBookingStatusUpdate(booking);
+  } catch (err) {
+    console.warn('[DoctorBooking] status emit failed:', err.message);
+  }
 }
 
 async function notifyProviderOfHomeVisitRequest(booking, userType) {
   try {
     const { createAndPushNotification } = require('./notificationRepositories');
     const { appendStatusHistory } = require('./bookingLifecycleHelpers');
-    const { formatSlotLabel } = require('../utils/slotDateTime');
     if (booking.statusHistory == null || !Array.isArray(booking.statusHistory)) {
       // Document from create may be plain; skip mutate if lean
     } else {
@@ -1373,14 +1378,17 @@ async function notifyProviderOfHomeVisitRequest(booking, userType) {
     const providerId =
       userType === 'nurse' ? booking.nurseId : booking.doctorId;
     if (!providerId) return;
-    const slotLabel = formatSlotLabel(booking.slotStart, booking.slotEnd);
+    const alertData = buildIncomingBookingAlertData(booking, {
+      providerRole: userType,
+      service: userType === 'nurse' ? 'Home Nurse Visit' : 'Home Doctor Visit',
+    });
     await createAndPushNotification({
       userId: providerId,
       userType,
-      title: 'New home visit request',
-      body: `${booking.patientName} requested a visit (${slotLabel}). Approve or decline.`,
+      title: 'New Booking Request',
+      body: `${alertData.patientName} requested a ${alertData.service} (${alertData.time}). Accept or reject.`,
       type: 'home_visit_request',
-      data: { bookingId: booking.id, action: 'home_visit_request' },
+      data: alertData,
     });
   } catch (err) {
     console.error('[HomeVisitRequest] notify failed:', err.message);
@@ -1409,6 +1417,21 @@ async function approveHomeVisitRequest(bookingId, doctorId) {
     err.statusCode = 409;
     throw err;
   }
+  if (
+    booking.approvalExpiresAt &&
+    new Date(booking.approvalExpiresAt) <= new Date()
+  ) {
+    booking.status = 'cancelled';
+    booking.paymentStatus = 'failed';
+    booking.cancelledAt = new Date();
+    booking.cancelledBy = 'system';
+    booking.cancellationReason = 'Doctor approval window expired';
+    await booking.save();
+    emitDoctorBookingStatus(booking);
+    const err = new Error('This request has expired');
+    err.statusCode = 410;
+    throw err;
+  }
 
   booking.status = 'approved_pending_payment';
   booking.doctorApprovedAt = new Date();
@@ -1435,6 +1458,7 @@ async function approveHomeVisitRequest(bookingId, doctorId) {
     console.error('[Approve] notify failed:', err.message);
   }
 
+  emitDoctorBookingStatus(booking);
   const doctor = await findDoctorById(doctorId);
   return formatBookingResponse(booking, doctor);
 }
@@ -1482,6 +1506,7 @@ async function rejectHomeVisitRequest(bookingId, doctorId) {
     console.error('[Reject] notify failed:', err.message);
   }
 
+  emitDoctorBookingStatus(booking);
   const doctor = await findDoctorById(doctorId);
   return formatBookingResponse(booking, doctor);
 }
@@ -1847,6 +1872,7 @@ async function getPatientBookingById(bookingId, auth) {
 }
 
 async function listDoctorBookings(doctorId) {
+  await expirePendingBookings(doctorId);
   const bookings = await ConsultationBooking.find({
     doctorId,
     status: {
@@ -1911,6 +1937,7 @@ async function listDoctorBookings(doctorId) {
       patientLongitude: b.patientLongitude ?? null,
       distanceKm: b.distanceKm ?? null,
       doctorApprovedAt: b.doctorApprovedAt ?? null,
+      approvalExpiresAt: b.approvalExpiresAt ?? null,
       createdAt: b.createdAt,
       ...bookingAppointmentFields(b),
       ...videoJoinFields(b, now),

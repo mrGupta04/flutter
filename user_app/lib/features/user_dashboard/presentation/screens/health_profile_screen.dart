@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/constants/india_geography.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
-import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../data/models/patient_user_model.dart';
 import '../../../../data/repositories/patient_auth_repository.dart';
+import '../../../select_location/add_address_screen.dart';
+import '../../../select_location/selected_location.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
 
 /// Family members, saved addresses, allergies & medical history.
@@ -252,110 +252,14 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
   }
 
   Future<void> _editAddress(SavedAddressModel? existing) async {
-    final labelCtrl = TextEditingController(text: existing?.label ?? 'Home');
-    final lineCtrl =
-        TextEditingController(text: existing?.addressLine ?? '');
-    final cityCtrl = TextEditingController(text: existing?.city ?? '');
-    final stateCtrl = TextEditingController(text: existing?.state ?? '');
-    final pinCtrl = TextEditingController(text: existing?.pincode ?? '');
-    var isDefault = existing?.isDefault ?? false;
-
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.viewInsetsOf(ctx).bottom + 20,
-          ),
-          child: StatefulBuilder(
-            builder: (ctx, setLocal) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    existing == null ? 'Add address' : 'Edit address',
-                    style: AppTextStyles.titleMedium
-                        .copyWith(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 12),
-                  CaretOnTapTextField(
-                    controller: labelCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Label (Home / Work)',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  CaretOnTapTextField(
-                    controller: lineCtrl,
-                    maxLines: 2,
-                    decoration:
-                        const InputDecoration(labelText: 'Address line'),
-                  ),
-                  const SizedBox(height: 8),
-                  AddressAutocompleteField(
-                    controller: cityCtrl,
-                    label: 'City',
-                    hint: 'e.g. Bengaluru',
-                    options: IndiaGeography.districtsFor(state: stateCtrl.text),
-                  ),
-                  const SizedBox(height: 8),
-                  AddressAutocompleteField(
-                    controller: stateCtrl,
-                    label: 'State',
-                    hint: 'e.g. Karnataka',
-                    options: IndiaGeography.states,
-                    onSelected: (_) => setLocal(() {}),
-                    onChanged: (_) => setLocal(() {}),
-                  ),
-                  const SizedBox(height: 8),
-                  CaretOnTapTextField(
-                    controller: pinCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Pincode'),
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Default address'),
-                    value: isDefault,
-                    onChanged: (v) => setLocal(() => isDefault = v),
-                  ),
-                  CustomButton(
-                    label: 'Save',
-                    onPressed: () => Navigator.pop(ctx, true),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-
-    if (saved != true || !mounted) return;
-    setState(() => _loading = true);
-    final res = await _repo.saveAddress(
-      SavedAddressModel(
-        id: existing?.id ?? '',
-        label: labelCtrl.text.trim().isEmpty ? 'Home' : labelCtrl.text.trim(),
-        addressLine: lineCtrl.text.trim(),
-        city: cityCtrl.text.trim().isEmpty ? null : cityCtrl.text.trim(),
-        state: stateCtrl.text.trim().isEmpty ? null : stateCtrl.text.trim(),
-        pincode: pinCtrl.text.trim().isEmpty ? null : pinCtrl.text.trim(),
-        isDefault: isDefault,
+    final result = await Navigator.of(context).push<SelectedLocationResult>(
+      MaterialPageRoute(
+        builder: (_) => AddAddressScreen(existing: existing),
       ),
     );
-    if (!mounted) return;
-    setState(() => _loading = false);
-    if (res.success) {
-      await _applyUser(res.data);
+    if (result != null && mounted) {
+      await ref.read(patientAuthProvider.notifier).refreshProfile();
       SnackBarHelper.showSuccess(context, 'Address saved');
-    } else {
-      SnackBarHelper.showError(context, res.error ?? 'Could not save');
     }
   }
 

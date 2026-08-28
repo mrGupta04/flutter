@@ -36,6 +36,7 @@ class DevicePushService with WidgetsBindingObserver {
   AppLifecycleState _lifecycle = AppLifecycleState.resumed;
   String? _tokenEndpoint;
   NotificationTapCallback? _onNotificationTap;
+  NotificationTapCallback? onIncomingBooking;
   Map<String, dynamic>? _pendingTap;
   final _shownIds = <String>{};
   int _tokenRetries = 0;
@@ -207,8 +208,21 @@ class DevicePushService with WidgetsBindingObserver {
     }
   }
 
+  bool _isIncomingBooking(String type, Map<String, dynamic> extra) {
+    final action = extra['action']?.toString().toLowerCase() ?? '';
+    final value = type.toLowerCase();
+    return value == 'home_visit_request' ||
+        action == 'home_visit_request' ||
+        action == 'incoming_booking_request';
+  }
+
   Future<void> _showForegroundMessage(RemoteMessage message) async {
     final data = _payloadFromRemote(message);
+    final type = data['type']?.toString() ?? '';
+    if (_isIncomingBooking(type, data) && isAppForeground) {
+      onIncomingBooking?.call(data);
+      return;
+    }
     await showLocalAlert(
       id: data['notificationId']?.toString() ??
           data['id']?.toString() ??
@@ -228,6 +242,16 @@ class DevicePushService with WidgetsBindingObserver {
     String type = '',
     Map<String, dynamic> extra = const {},
   }) {
+    if (_isIncomingBooking(type, extra) && isAppForeground) {
+      onIncomingBooking?.call({
+        'id': id,
+        'type': type,
+        'title': title,
+        'body': body,
+        ...extra,
+      });
+      return Future.value();
+    }
     if (_firebaseReady && !isAppForeground) {
       return Future.value();
     }

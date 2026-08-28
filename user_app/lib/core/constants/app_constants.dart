@@ -205,6 +205,7 @@ class AppConstants {
   static const String routeOnlineConsultBooking = '/online-consult';
   static const String routeHospitalVisitBooking = '/hospital-visit';
   static const String routeHomeVisitBooking = '/home-visit';
+  static const String routeSelectLocation = '/select-location';
   static const String routeNurseHomeVisitBooking = '/nurse-home-visit';
   static const String routeNurseBookingStatus = '/nurse-booking-status';
   static const String routeNursePayment = '/nurse-payment';

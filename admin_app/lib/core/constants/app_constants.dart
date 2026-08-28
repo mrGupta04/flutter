@@ -489,6 +489,7 @@ class AppConstants {
   static const String routeLabDashboard = '/lab-dashboard';
   static const String routeBloodBankDashboard = '/blood-bank-dashboard';
   static const String routeDoctorDashboard = '/doctor-dashboard';
+  static const String routeSelectLocation = '/select-location';
   static const String routeNurseDashboard = '/nurse-dashboard';
   static const String routeNurseVisitAssessment = '/nurse-visit-assessment';
   static const String routeNurseVisitOtp = '/nurse-visit-otp';

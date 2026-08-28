@@ -25,6 +25,8 @@ import '../../../online_consult/provider/online_consult_provider.dart';
 import '../../../user_dashboard/provider/patient_dashboard_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../../select_location/location_selector_field.dart';
+import '../../../select_location/selected_location.dart';
 import '../../../../core/services/live_address_service.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/utils/user_auth_guard.dart';
@@ -54,7 +56,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
   String? _selectedDateKey;
   double? _patientLatitude;
   double? _patientLongitude;
-  bool _isFetchingLocation = false;
+  SelectedLocationResult? _selectedLocation;
 
   BookableSlotsQuery get _slotsQuery => BookableSlotsQuery(
         doctorId: widget.doctorId,
@@ -101,6 +103,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
         }
         _patientLatitude ??= address.latitude;
         _patientLongitude ??= address.longitude;
+        _selectedLocation ??= SelectedLocationResult.fromSaved(address);
       }
     }
     if (mounted && _addressController.text.trim().isEmpty) {
@@ -123,7 +126,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
   }
 
   Future<void> _fillFromLiveLocation({bool promptIfNeeded = true}) async {
-    setState(() => _isFetchingLocation = true);
     try {
       final captured = await LiveAddressService.capture(
         context,
@@ -151,8 +153,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
       }
     } on LocationFailure catch (e) {
       if (mounted && promptIfNeeded) SnackBarHelper.showError(context, e.message);
-    } finally {
-      if (mounted) setState(() => _isFetchingLocation = false);
     }
   }
 
@@ -181,10 +181,33 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
         _pincodeController.text = resolved.pincode;
       }
     }
+    _selectedLocation = SelectedLocationResult(
+      addressLine: _addressController.text.trim(),
+      city: _cityController.text.trim(),
+      state: _stateController.text.trim(),
+      pincode: _pincodeController.text.trim(),
+      latitude: captured.latitude,
+      longitude: captured.longitude,
+    );
     setState(() {});
   }
 
-  Future<void> _useMyLocation() => _fillFromLiveLocation(promptIfNeeded: true);
+  void _applySelectedLocation(SelectedLocationResult result) {
+    _selectedLocation = result;
+    _addressController.text = result.addressLine;
+    if (result.city != null && result.city!.trim().isNotEmpty) {
+      _cityController.text = result.city!;
+    }
+    if (result.state != null && result.state!.trim().isNotEmpty) {
+      _stateController.text = result.state!;
+    }
+    if (result.pincode != null && result.pincode!.trim().isNotEmpty) {
+      _pincodeController.text = result.pincode!;
+    }
+    _patientLatitude = result.latitude;
+    _patientLongitude = result.longitude;
+    setState(() {});
+  }
 
   Future<void> _submit(DoctorModel doctor) async {
     if (!await ensureUserLoggedIn(context)) return;
@@ -470,31 +493,17 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'The doctor will visit you at this address. Tap below to pin GPS and auto-fill the form.',
+                          'The doctor will visit you at this address. Choose a saved address, current location, or add a new one.',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed:
-                              _isFetchingLocation ? null : _useMyLocation,
-                          icon: _isFetchingLocation
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.my_location_rounded),
-                          label: Text(
-                            _isFetchingLocation
-                                ? 'Getting live location…'
-                                : _patientLatitude != null
-                                    ? 'Update from live location'
-                                    : 'Use my live location',
-                          ),
+                        LocationSelectorField(
+                          value: _selectedLocation,
+                          onChanged: _applySelectedLocation,
+                          label: 'Visit location',
+                          hint: 'Select a location',
                         ),
                         const SizedBox(height: 12),
                         CustomTextField(
@@ -530,48 +539,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                           },
                         ),
                         const SizedBox(height: 12),
-                        if ((ref.watch(patientAuthProvider).user?.savedAddresses ??
-                                const [])
-                            .isNotEmpty) ...[
-                          Text(
-                            'Saved addresses',
-                            style: AppTextStyles.labelMedium.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final a in ref
-                                      .watch(patientAuthProvider)
-                                      .user
-                                      ?.savedAddresses ??
-                                  const [])
-                                ActionChip(
-                                  avatar: Icon(
-                                    a.isDefault
-                                        ? Icons.home_rounded
-                                        : Icons.place_outlined,
-                                    size: 16,
-                                  ),
-                                  label: Text(a.label),
-                                  onPressed: () {
-                                    setState(() {
-                                      _addressController.text = a.addressLine;
-                                      _cityController.text = a.city ?? '';
-                                      _stateController.text = a.state ?? '';
-                                      _pincodeController.text = a.pincode ?? '';
-                                      _patientLatitude = a.latitude;
-                                      _patientLongitude = a.longitude;
-                                    });
-                                  },
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                        ],
                         CustomTextField(
                           controller: _addressController,
                           label: 'House / flat / street address',

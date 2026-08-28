@@ -23,6 +23,8 @@ import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/nurse_feedback_sheet.dart';
 import '../../../doctor_registration/provider/nurse_profile_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../../select_location/location_selector_field.dart';
+import '../../../select_location/selected_location.dart';
 import '../../../user_dashboard/provider/patient_dashboard_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 import '../../provider/nurse_home_visit_provider.dart';
@@ -52,7 +54,7 @@ class _NurseHomeVisitBookingScreenState
   String? _selectedDateKey;
   double? _patientLatitude;
   double? _patientLongitude;
-  bool _isFetchingLocation = false;
+  SelectedLocationResult? _selectedLocation;
 
   @override
   void initState() {
@@ -71,6 +73,16 @@ class _NurseHomeVisitBookingScreenState
       if (_emailController.text.isEmpty) _emailController.text = user.email;
       if (_mobileController.text.isEmpty && user.mobileNumber.isNotEmpty) {
         _mobileController.text = user.mobileNumber;
+      }
+      final address = user.defaultAddress;
+      if (address != null && _addressController.text.isEmpty) {
+        _addressController.text = address.addressLine;
+        _cityController.text = address.city ?? '';
+        _stateController.text = address.state ?? '';
+        _pincodeController.text = address.pincode ?? '';
+        _patientLatitude = address.latitude;
+        _patientLongitude = address.longitude;
+        _selectedLocation = SelectedLocationResult.fromSaved(address);
       }
     }
     if (mounted && _addressController.text.trim().isEmpty) {
@@ -93,7 +105,6 @@ class _NurseHomeVisitBookingScreenState
   }
 
   Future<void> _fillFromLiveLocation({bool promptIfNeeded = true}) async {
-    setState(() => _isFetchingLocation = true);
     try {
       final captured = await LiveAddressService.capture(
         context,
@@ -121,8 +132,6 @@ class _NurseHomeVisitBookingScreenState
       }
     } on LocationFailure catch (e) {
       if (mounted && promptIfNeeded) SnackBarHelper.showError(context, e.message);
-    } finally {
-      if (mounted) setState(() => _isFetchingLocation = false);
     }
   }
 
@@ -154,7 +163,22 @@ class _NurseHomeVisitBookingScreenState
     setState(() {});
   }
 
-  Future<void> _useMyLocation() => _fillFromLiveLocation(promptIfNeeded: true);
+  void _applySelectedLocation(SelectedLocationResult result) {
+    _selectedLocation = result;
+    _addressController.text = result.addressLine;
+    if (result.city != null && result.city!.trim().isNotEmpty) {
+      _cityController.text = result.city!;
+    }
+    if (result.state != null && result.state!.trim().isNotEmpty) {
+      _stateController.text = result.state!;
+    }
+    if (result.pincode != null && result.pincode!.trim().isNotEmpty) {
+      _pincodeController.text = result.pincode!;
+    }
+    _patientLatitude = result.latitude;
+    _patientLongitude = result.longitude;
+    setState(() {});
+  }
 
   Future<void> _submit(NurseModel nurse) async {
     if (!await ensureUserLoggedIn(context)) return;
@@ -346,31 +370,16 @@ class _NurseHomeVisitBookingScreenState
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Share your contact and address for the home visit. Tap below to pin GPS and auto-fill the form.',
+                        'Share your contact and address for the home visit. Choose a saved address, current location, or add a new one.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed:
-                            _isFetchingLocation ? null : _useMyLocation,
-                        icon: _isFetchingLocation
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.my_location_rounded),
-                        label: Text(
-                          _isFetchingLocation
-                              ? 'Getting live location…'
-                              : _patientLatitude != null
-                                  ? 'Update from live location'
-                                  : 'Use my live location',
-                        ),
+                      LocationSelectorField(
+                        value: _selectedLocation,
+                        onChanged: _applySelectedLocation,
+                        label: 'Visit location',
                       ),
                       const SizedBox(height: 12),
                       CustomTextField(

@@ -7,12 +7,14 @@ class ResolvedAddress {
     required this.city,
     required this.state,
     required this.pincode,
+    this.place = '',
   });
 
   final String address;
   final String city;
   final String state;
   final String pincode;
+  final String place;
 }
 
 /// Reverse geocoding (coordinates → address). Uses OpenStreetMap Nominatim (works on web).
@@ -106,6 +108,60 @@ class GeocodingService {
       rethrow;
     } catch (_) {
       throw GeocodingFailure('Could not look up that address.');
+    }
+  }
+
+  static Future<List<PlaceSuggestion>> searchPlaces(
+    String query, {
+    int limit = 6,
+  }) async {
+    final trimmed = query.trim();
+    if (trimmed.length < 2) return const [];
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        'https://nominatim.openstreetmap.org/search',
+        queryParameters: {
+          'q': '$trimmed, India',
+          'format': 'json',
+          'addressdetails': 1,
+          'limit': limit.clamp(1, 8),
+          'countrycodes': 'in',
+          'accept-language': 'en',
+        },
+      );
+      final list = response.data;
+      if (list == null || list.isEmpty) return const [];
+      final results = <PlaceSuggestion>[];
+      for (final item in list) {
+        if (item is! Map<String, dynamic>) continue;
+        final lat = double.tryParse('${item['lat']}');
+        final lon = double.tryParse('${item['lon']}');
+        if (lat == null || lon == null) continue;
+        final addr = item['address'];
+        final display = (item['display_name'] as String?)?.trim() ?? '';
+        final resolved = addr is Map<String, dynamic>
+            ? _fromNominatimAddress(addr, display)
+            : _fromDisplayName(display.isEmpty ? trimmed : display);
+        results.add(
+          PlaceSuggestion(
+            displayName: display.isEmpty ? resolved.address : display,
+            latitude: lat,
+            longitude: lon,
+            address: resolved,
+          ),
+        );
+      }
+      return results;
+    } on DioException catch (e) {
+      throw GeocodingFailure(
+        e.response?.statusCode == 429
+            ? 'Too many address lookups. Wait a moment and try again.'
+            : 'Could not search locations. Check your internet connection.',
+      );
+    } on GeocodingFailure {
+      rethrow;
+    } catch (_) {
+      throw GeocodingFailure('Could not search locations.');
     }
   }
 
@@ -236,6 +292,20 @@ class GeocodedPlace {
     required this.address,
   });
 
+  final double latitude;
+  final double longitude;
+  final ResolvedAddress address;
+}
+
+class PlaceSuggestion {
+  const PlaceSuggestion({
+    required this.displayName,
+    required this.latitude,
+    required this.longitude,
+    required this.address,
+  });
+
+  final String displayName;
   final double latitude;
   final double longitude;
   final ResolvedAddress address;

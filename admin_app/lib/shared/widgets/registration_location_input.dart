@@ -7,6 +7,8 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/text_controller_utils.dart';
 import '../../core/utils/validation_utils.dart';
 import '../../core/widgets/custom_widgets.dart';
+import '../../features/select_location/select_location_navigation.dart';
+import '../../features/select_location/selected_location.dart';
 import 'address_autocomplete_field.dart';
 import 'registration_map_picker.dart';
 
@@ -366,6 +368,46 @@ class RegistrationLocationBlock extends StatelessWidget {
         RegistrationLocationModeToggle(
           mode: mode,
           onChanged: onModeChanged,
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () async {
+            final result = await openSelectLocation(
+              context,
+              args: SelectLocationArgs(
+                initial: SelectedLocationResult(
+                  addressLine: addressController.text.trim(),
+                  city: cityController.text.trim(),
+                  state: stateController.text.trim(),
+                  pincode: pincodeController.text.trim(),
+                  latitude: latitude,
+                  longitude: longitude,
+                ),
+              ),
+            );
+            if (result == null) return;
+            addressController.text = result.addressLine;
+            if (result.city != null && result.city!.trim().isNotEmpty) {
+              cityController.text = result.city!;
+            }
+            if (result.state != null && result.state!.trim().isNotEmpty) {
+              stateController.text = result.state!;
+            }
+            if (result.pincode != null && result.pincode!.trim().isNotEmpty) {
+              pincodeController.text = result.pincode!;
+            }
+            if (result.hasCoordinates) {
+              onLocationChanged(result.latitude!, result.longitude!);
+            }
+            onAddressResolved?.call(
+              address: result.addressLine,
+              city: result.city ?? cityController.text,
+              state: result.state ?? stateController.text,
+              pincode: result.pincode ?? pincodeController.text,
+            );
+          },
+          icon: const Icon(Icons.bookmark_border_rounded),
+          label: const Text('Select a location'),
         ),
         const SizedBox(height: 16),
         if (mode == RegistrationLocationInputMode.manual) ...[

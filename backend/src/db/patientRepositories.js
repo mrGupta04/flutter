@@ -450,6 +450,11 @@ async function upsertSavedAddress(patientId, address) {
     city: address.city ? String(address.city).trim() : undefined,
     state: address.state ? String(address.state).trim() : undefined,
     pincode: address.pincode ? String(address.pincode).trim() : undefined,
+    landmark: address.landmark ? String(address.landmark).trim() : undefined,
+    contactName: address.contactName
+      ? String(address.contactName).trim()
+      : undefined,
+    phone: address.phone ? String(address.phone).trim() : undefined,
     latitude: address.latitude != null ? Number(address.latitude) : undefined,
     longitude: address.longitude != null ? Number(address.longitude) : undefined,
     isDefault: isDefault || addresses.length === 0,

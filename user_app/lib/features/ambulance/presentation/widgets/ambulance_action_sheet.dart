@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/phone_countries.dart';
-import '../../../../core/services/live_address_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/user_auth_guard.dart';
@@ -11,6 +10,8 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/ambulance_model.dart';
 import '../../../../data/repositories/ambulance_repository.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../../select_location/location_selector_field.dart';
+import '../../../select_location/selected_location.dart';
 
 Future<void> showAmbulanceActionSheet(
   BuildContext context, {
@@ -44,6 +45,7 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
   bool _showRequestForm = false;
   double? _pickupLat;
   double? _pickupLng;
+  SelectedLocationResult? _selectedLocation;
 
   @override
   void initState() {
@@ -85,33 +87,6 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
     if (!await launchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-
-  Future<void> _useCurrentLocation() async {
-    final captured = await LiveAddressService.capture(context);
-    if (!mounted) return;
-    if (captured == null) {
-      SnackBarHelper.showError(
-        context,
-        'Could not get your location. Please type the pickup address.',
-      );
-      return;
-    }
-    setState(() {
-      _pickupLat = captured.latitude;
-      _pickupLng = captured.longitude;
-      final address = captured.resolved?.address.trim() ?? '';
-      _pickupController.text = address.isNotEmpty
-          ? address
-          : 'Near GPS ${captured.latitude.toStringAsFixed(5)}, '
-              '${captured.longitude.toStringAsFixed(5)} — add landmark';
-    });
-    SnackBarHelper.showSuccess(
-      context,
-      captured.hasAddress
-          ? 'Pickup address filled from live location'
-          : 'Location attached to request',
-    );
   }
 
   Future<void> _submitRequest() async {
@@ -293,13 +268,18 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
                           },
                         ),
                         const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            onPressed: _useCurrentLocation,
-                            icon: const Icon(Icons.my_location_rounded, size: 18),
-                            label: const Text('Use current location'),
-                          ),
+                        LocationSelectorField(
+                          value: _selectedLocation,
+                          label: 'Choose pickup location',
+                          hint: 'Select a location',
+                          onChanged: (result) {
+                            setState(() {
+                              _selectedLocation = result;
+                              _pickupController.text = result.displayLine;
+                              _pickupLat = result.latitude;
+                              _pickupLng = result.longitude;
+                            });
+                          },
                         ),
                         const SizedBox(height: 8),
                         CustomTextField(

@@ -61,6 +61,8 @@ import '../features/video_consult/presentation/screens/video_consult_screen.dart
 import '../features/provider/presentation/screens/provider_profile_screen.dart';
 import '../features/auth/provider/provider_auth_provider.dart';
 import '../features/admin/provider/admin_auth_provider.dart';
+import '../features/select_location/select_location_screen.dart';
+import '../features/select_location/selected_location.dart';
 
 bool _isAdminProtectedRoute(String location) {
   return location.startsWith(AppConstants.routeAdminDashboard) ||
@@ -188,6 +190,18 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadePage(
           state,
           const ProviderLandingScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeSelectLocation,
+        name: 'selectLocation',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          SelectLocationScreen(
+            args: state.extra is SelectLocationArgs
+                ? state.extra as SelectLocationArgs
+                : null,
+          ),
         ),
       ),
       GoRoute(

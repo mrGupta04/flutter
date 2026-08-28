@@ -53,6 +53,9 @@ class SavedAddressModel {
     this.city,
     this.state,
     this.pincode,
+    this.landmark,
+    this.contactName,
+    this.phone,
     this.latitude,
     this.longitude,
     this.isDefault = false,
@@ -64,6 +67,9 @@ class SavedAddressModel {
   final String? city;
   final String? state;
   final String? pincode;
+  final String? landmark;
+  final String? contactName;
+  final String? phone;
   final double? latitude;
   final double? longitude;
   final bool isDefault;
@@ -71,7 +77,9 @@ class SavedAddressModel {
   String get displayLine {
     final parts = [
       addressLine,
+      if (landmark != null && landmark!.trim().isNotEmpty) landmark!.trim(),
       if (city != null && city!.isNotEmpty) city!,
+      if (state != null && state!.isNotEmpty) state!,
       if (pincode != null && pincode!.isNotEmpty) pincode!,
     ];
     return parts.join(', ');
@@ -85,6 +93,9 @@ class SavedAddressModel {
       city: json['city'] as String?,
       state: json['state'] as String?,
       pincode: json['pincode'] as String?,
+      landmark: json['landmark'] as String?,
+      contactName: json['contactName'] as String?,
+      phone: json['phone'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       isDefault: json['isDefault'] as bool? ?? false,
@@ -98,6 +109,9 @@ class SavedAddressModel {
         if (city != null) 'city': city,
         if (state != null) 'state': state,
         if (pincode != null) 'pincode': pincode,
+        if (landmark != null) 'landmark': landmark,
+        if (contactName != null) 'contactName': contactName,
+        if (phone != null) 'phone': phone,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
         'isDefault': isDefault,

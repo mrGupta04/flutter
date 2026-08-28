@@ -55,6 +55,8 @@ import '../features/scans/presentation/screens/scan_explore_screen.dart';
 import '../features/scans/presentation/screens/scan_search_screen.dart';
 import '../features/scans/presentation/screens/scan_center_detail_screen.dart';
 import '../features/scans/data/models/scan_procedure_model.dart';
+import '../features/select_location/select_location_screen.dart';
+import '../features/select_location/selected_location.dart';
 import '../screens/user_home_screen.dart';
 
 /// Patient marketplace - browse verified providers only.
@@ -155,6 +157,18 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => slidePage(
           state,
           const HealthProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeSelectLocation,
+        name: 'selectLocation',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          SelectLocationScreen(
+            args: state.extra is SelectLocationArgs
+                ? state.extra as SelectLocationArgs
+                : null,
+          ),
         ),
       ),
       GoRoute(

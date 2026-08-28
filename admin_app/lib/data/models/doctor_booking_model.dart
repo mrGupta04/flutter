@@ -35,6 +35,7 @@ class DoctorBookingModel {
     this.distanceKm,
     this.paymentStatus,
     this.visitProgress,
+    this.approvalExpiresAt,
   });
 
   final double? patientLatitude;
@@ -43,6 +44,7 @@ class DoctorBookingModel {
   final double? distanceKm;
   final String? paymentStatus;
   final String? visitProgress;
+  final DateTime? approvalExpiresAt;
 
   final String id;
   final String title;
@@ -166,6 +168,7 @@ class DoctorBookingModel {
           .toList(),
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       visitProgress: json['visitProgress'] as String?,
+      approvalExpiresAt: _parseDate(json['approvalExpiresAt']),
     );
   }
 }
@@ -179,6 +182,12 @@ int? _parseInt(dynamic value) {
 
 DateTime? _parseDate(dynamic value) {
   if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(
+      value > 9999999999 ? value : value * 1000,
+    );
+  }
   if (value is String) return DateTime.tryParse(value);
   return null;
 }

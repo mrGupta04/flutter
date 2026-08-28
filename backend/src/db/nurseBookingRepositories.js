@@ -18,6 +18,10 @@ const { SLOT_STATUS, isSlotVisibleToPatients, resolveSlotStatus, bookingRejectio
 const { distanceKm } = require('../utils/geoDistance');
 const { assertProfileActive } = require('../utils/profileStatus');
 const {
+  buildIncomingBookingAlertData,
+  expireAndNotifyApprovalTimeouts,
+} = require('../utils/incomingBookingAlert');
+const {
   NURSE_PAYMENT_MINUTES,
   CONSULTATION_TYPE,
   STATUS,
@@ -112,22 +116,7 @@ async function expirePendingNurseBookings(nurseId) {
     },
     { $set: { status: STATUS.CANCELLED, paymentStatus: 'failed' } },
   );
-  await ConsultationBooking.updateMany(
-    {
-      nurseId,
-      status: { $in: APPROVAL_PENDING_STATUSES },
-      approvalExpiresAt: { $lte: now },
-    },
-    {
-      $set: {
-        status: STATUS.CANCELLED,
-        paymentStatus: 'failed',
-        cancelledAt: now,
-        cancelledBy: 'system',
-        cancellationReason: 'Nurse approval window expired',
-      },
-    },
-  );
+  await expireAndNotifyApprovalTimeouts({ nurseId });
   await expireDuePaymentBookings({ nurseId });
 }
 
@@ -295,6 +284,7 @@ function formatNurseBookingResponse(booking, nurse) {
     label: formatSlotLabel(booking.slotStart, booking.slotEnd),
     nurseName,
     createdAt: booking.createdAt,
+    approvalExpiresAt: booking.approvalExpiresAt || null,
     timeline: require('./bookingLifecycleHelpers').buildVisitTimeline(booking),
   };
 }
@@ -921,30 +911,24 @@ async function notifyNurseOfHomeVisitRequest(booking, nurse) {
   try {
     const { createAndPushNotification } = require('./notificationRepositories');
     if (!booking.nurseId) return;
-    const slotLabel = formatSlotLabel(booking.slotStart, booking.slotEnd);
-    const location = [booking.patientAddress, booking.patientCity]
-      .filter(Boolean)
-      .join(', ');
     const nurseName = nurse
       ? `${nurse.firstName || ''} ${nurse.lastName || ''}`.trim()
       : 'Nurse';
+    const alertData = buildIncomingBookingAlertData(booking, {
+      providerRole: 'nurse',
+      service: 'Home Nurse Visit',
+    });
     await createAndPushNotification({
       userId: booking.nurseId,
       userType: 'nurse',
       title: 'New Booking Request',
       body:
-        `New booking request from ${booking.patientName}. ` +
-        `${slotLabel}${location ? ` · ${location}` : ''}. ` +
-        'A new user has requested your nursing service.',
+        `New booking request from ${alertData.patientName}. ` +
+        `${alertData.time}${alertData.location ? ` · ${alertData.location}` : ''}. ` +
+        'Accept or reject this nursing visit.',
       type: 'home_visit_request',
       data: {
-        bookingId: booking.id,
-        action: 'home_visit_request',
-        patientName: booking.patientName,
-        date: booking.slotStart,
-        time: slotLabel,
-        location,
-        service: 'Nurse home visit',
+        ...alertData,
         nurseName,
       },
     });
@@ -1112,6 +1096,7 @@ function mapNurseBookingListItem(b, now = new Date()) {
     patientLongitude: b.patientLongitude ?? null,
     distanceKm: b.distanceKm ?? null,
     doctorApprovedAt: b.doctorApprovedAt ?? null,
+    approvalExpiresAt: b.approvalExpiresAt ?? null,
     createdAt: b.createdAt,
   };
 }
