@@ -558,6 +558,40 @@ class DoctorDashboardNotifier extends StateNotifier<DoctorDashboardState> {
     }
   }
 
+  Future<bool> startClinicConsultation(String bookingId) async {
+    try {
+      final response = await repository.startClinicConsultation(bookingId);
+      if (response.success) {
+        await loadBookings();
+        return true;
+      }
+      state = state.copyWith(
+        error: response.error ?? 'Could not start consultation',
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Could not start consultation');
+      return false;
+    }
+  }
+
+  Future<bool> completeClinicConsultation(String bookingId) async {
+    try {
+      final response = await repository.completeClinicConsultation(bookingId);
+      if (response.success) {
+        await loadBookings();
+        return true;
+      }
+      state = state.copyWith(
+        error: response.error ?? 'Could not complete consultation',
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Could not complete consultation');
+      return false;
+    }
+  }
+
   Future<bool> verifyClinicAppointment(String appointmentCode) async {
     state = state.copyWith(isUpdating: true, error: null);
     try {

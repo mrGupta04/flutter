@@ -283,10 +283,15 @@ router.post('/verify-appointment', authRequired, async (req, res) => {
     if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
       return sendError(res, 'Doctor authentication required', 403);
     }
-    const { appointmentCode, code } = req.body || {};
+    const { appointmentCode, code, otp, bookingId } = req.body || {};
     const data = await verifyClinicAppointment(
       req.auth.doctorId,
-      appointmentCode || code,
+      appointmentCode || code || otp,
+      {
+        bookingId,
+        otp: appointmentCode || code || otp,
+        actorType: 'doctor',
+      },
     );
     return sendSuccess(res, {
       message: 'Appointment verified successfully',
@@ -295,7 +300,7 @@ router.post('/verify-appointment', authRequired, async (req, res) => {
   } catch (err) {
     console.error(err);
     const status = err.statusCode || 500;
-    return sendError(res, err.message || 'Verification failed', status);
+    return sendError(res, err.message || 'Verification failed', status, err.code);
   }
 });
 
@@ -1066,6 +1071,172 @@ router.post('/upload-hospital-photo', upload.single('file'), async (req, res) =>
 });
 
 const { attachProviderFeatureRoutes } = require('./providerFeatureRoutes');
+const {
+  createReceptionist,
+  listReceptionistsForDoctor,
+  updateReceptionist,
+  setReceptionistStatus,
+  deleteReceptionist,
+  resetReceptionistPassword,
+} = require('../db/receptionistRepositories');
+const {
+  startClinicConsultation,
+  completeClinicConsultation,
+  listClinicVisitsForDoctor,
+} = require('../db/clinicVisitVerificationRepositories');
+
+router.get('/receptionists', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 403);
+    }
+    const data = await listReceptionistsForDoctor(req.auth.doctorId);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to load receptionists', 500);
+  }
+});
+
+router.post('/receptionists', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 403);
+    }
+    const data = await createReceptionist(req.auth.doctorId, req.body || {});
+    return sendSuccess(res, {
+      statusCode: 201,
+      message: 'Receptionist created',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Could not create receptionist', err.statusCode || 500);
+  }
+});
+
+router.patch('/receptionists/:receptionistId', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 403);
+    }
+    const data = await updateReceptionist(
+      req.auth.doctorId,
+      req.params.receptionistId,
+      req.body || {},
+    );
+    return sendSuccess(res, { message: 'Receptionist updated', data });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Could not update receptionist', err.statusCode || 500);
+  }
+});
+
+router.patch(
+  '/receptionists/:receptionistId/status',
+  authRequired,
+  async (req, res) => {
+    try {
+      if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+        return sendError(res, 'Doctor authentication required', 403);
+      }
+      const data = await setReceptionistStatus(
+        req.auth.doctorId,
+        req.params.receptionistId,
+        req.body?.status,
+      );
+      return sendSuccess(res, { message: 'Receptionist status updated', data });
+    } catch (err) {
+      console.error(err);
+      return sendError(res, err.message || 'Could not update status', err.statusCode || 500);
+    }
+  },
+);
+
+router.post(
+  '/receptionists/:receptionistId/reset-password',
+  authRequired,
+  async (req, res) => {
+    try {
+      if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+        return sendError(res, 'Doctor authentication required', 403);
+      }
+      const data = await resetReceptionistPassword(
+        req.auth.doctorId,
+        req.params.receptionistId,
+        req.body?.password,
+      );
+      return sendSuccess(res, { message: 'Password updated', data });
+    } catch (err) {
+      console.error(err);
+      return sendError(res, err.message || 'Could not reset password', err.statusCode || 500);
+    }
+  },
+);
+
+router.delete('/receptionists/:receptionistId', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 403);
+    }
+    const data = await deleteReceptionist(
+      req.auth.doctorId,
+      req.params.receptionistId,
+    );
+    return sendSuccess(res, { message: 'Receptionist deleted', data });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Could not delete receptionist', err.statusCode || 500);
+  }
+});
+
+router.get('/clinic-visits', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 403);
+    }
+    const data = await listClinicVisitsForDoctor(req.auth.doctorId, {
+      filter: req.query.filter || 'today',
+    });
+    return sendSuccess(res, { data });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to load clinic visits', 500);
+  }
+});
+
+router.post('/clinic-visits/:bookingId/start', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 403);
+    }
+    const data = await startClinicConsultation({
+      bookingId: req.params.bookingId,
+      doctorId: req.auth.doctorId,
+    });
+    return sendSuccess(res, { message: 'Consultation started', data });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Could not start consultation', err.statusCode || 500);
+  }
+});
+
+router.post('/clinic-visits/:bookingId/complete', authRequired, async (req, res) => {
+  try {
+    if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+      return sendError(res, 'Doctor authentication required', 403);
+    }
+    const data = await completeClinicConsultation({
+      bookingId: req.params.bookingId,
+      doctorId: req.auth.doctorId,
+    });
+    return sendSuccess(res, { message: 'Consultation completed', data });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Could not complete consultation', err.statusCode || 500);
+  }
+});
+
 attachProviderFeatureRoutes(router, 'doctor');
 
 module.exports = router;

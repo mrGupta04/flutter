@@ -22,6 +22,9 @@ class DoctorBookingModel {
     this.consultationFee,
     this.appointmentCode,
     this.appointmentVerifiedAt,
+    this.verificationStatus,
+    this.verifiedByName,
+    this.patientArrivedAt,
     this.slotStart,
     this.slotEnd,
     this.isUpcoming = false,
@@ -64,6 +67,9 @@ class DoctorBookingModel {
   final int? consultationFee;
   final String? appointmentCode;
   final DateTime? appointmentVerifiedAt;
+  final String? verificationStatus;
+  final String? verifiedByName;
+  final DateTime? patientArrivedAt;
   final DateTime? slotStart;
   final DateTime? slotEnd;
   final bool isUpcoming;
@@ -77,7 +83,10 @@ class DoctorBookingModel {
 
   bool get isOnlineConsult => consultationType == 'online_consult';
   bool get isClinicVisit => consultationType == 'visit_site';
-  bool get isAppointmentVerified => appointmentVerifiedAt != null;
+  bool get isAppointmentVerified =>
+      appointmentVerifiedAt != null ||
+      verificationStatus == 'VERIFIED' ||
+      patientArrivedAt != null;
   bool get isHomeVisit =>
       consultationType == 'book_home' ||
       typeLabel == 'Home visit' ||
@@ -102,6 +111,12 @@ class DoctorBookingModel {
     if (isApprovedPendingPayment) return 'Awaiting patient payment';
     if (status == 'nurse_rejected') return 'Rejected';
     if (status == 'payment_expired') return 'Payment expired';
+    if (isClinicVisit && visitProgress == 'completed') return 'Completed';
+    if (isClinicVisit && visitProgress == 'visit_started') {
+      return 'Consultation started';
+    }
+    if (isClinicVisit && isAppointmentVerified) return 'Patient arrived / Verified';
+    if (isClinicVisit && status == 'confirmed') return 'Pending verification';
     if (visitProgress == 'completed') return 'Completed';
     if (visitProgress == 'en_route') return 'On the way';
     if (visitProgress == 'arrived') return 'Arrived';
@@ -154,6 +169,9 @@ class DoctorBookingModel {
       consultationFee: _parseInt(json['consultationFee']),
       appointmentCode: json['appointmentCode'] as String?,
       appointmentVerifiedAt: _parseDate(json['appointmentVerifiedAt']),
+      verificationStatus: json['verificationStatus'] as String?,
+      verifiedByName: json['verifiedByName'] as String?,
+      patientArrivedAt: _parseDate(json['patientArrivedAt']),
       slotStart: _parseDate(json['slotStart']),
       slotEnd: _parseDate(json['slotEnd']),
       isUpcoming: json['isUpcoming'] as bool? ?? false,

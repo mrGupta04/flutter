@@ -160,6 +160,7 @@ class PatientBookingModel {
   final DateTime? createdAt;
   final String? appointmentCode;
   final DateTime? appointmentVerifiedAt;
+  final String? verificationStatus;
   final bool canJoinVideo;
   final int? videoStartsInMinutes;
   final bool hasFeedback;
@@ -210,6 +211,7 @@ class PatientBookingModel {
     this.createdAt,
     this.appointmentCode,
     this.appointmentVerifiedAt,
+    this.verificationStatus,
     this.canJoinVideo = false,
     this.videoStartsInMinutes,
     this.hasFeedback = false,
@@ -365,6 +367,14 @@ class PatientBookingModel {
     if (status == 'nurse_rejected') {
       return 'Nurse declined';
     }
+    if (isClinicVisit && visitProgress == 'completed') return 'Completed';
+    if (isClinicVisit && visitProgress == 'visit_started') {
+      return 'Consultation started';
+    }
+    if (isClinicVisit && isAppointmentVerified) return 'Patient Verified ✓';
+    if (isClinicVisit && status == 'confirmed') {
+      return 'Waiting for Clinic Verification';
+    }
     if (visitProgress == 'en_route') {
       return isNurseVisit ? 'Nurse on the way' : 'Doctor on the way';
     }
@@ -378,7 +388,8 @@ class PatientBookingModel {
     return status;
   }
 
-  bool get isAppointmentVerified => appointmentVerifiedAt != null;
+  bool get isAppointmentVerified =>
+      appointmentVerifiedAt != null || verificationStatus == 'VERIFIED';
 
   /// True while the appointment is upcoming or an active home/nurse visit is in progress.
   bool get isActiveOrUpcoming {
@@ -454,6 +465,7 @@ class PatientBookingModel {
       appointmentVerifiedAt: json['appointmentVerifiedAt'] != null
           ? DateTime.tryParse(json['appointmentVerifiedAt'] as String)
           : null,
+      verificationStatus: json['verificationStatus'] as String?,
       canJoinVideo: json['canJoinVideo'] as bool? ?? false,
       videoStartsInMinutes: (json['videoStartsInMinutes'] as num?)?.toInt(),
       hasFeedback: json['hasFeedback'] as bool? ?? false,

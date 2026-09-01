@@ -27,12 +27,14 @@ function sendSuccess(
   return res.status(statusCode).json(body);
 }
 
-function sendError(res, message, statusCode = 400) {
-  return res.status(statusCode).json({
+function sendError(res, message, statusCode = 400, code) {
+  const body = {
     success: false,
     error: message,
     statusCode,
-  });
+  };
+  if (code) body.code = code;
+  return res.status(statusCode).json(body);
 }
 
 module.exports = { sendSuccess, sendError };

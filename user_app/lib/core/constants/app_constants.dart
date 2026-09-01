@@ -95,6 +95,10 @@ class AppConstants {
   static const String endpointNurseHomeVisitRequest = '/nurse/home-visit/request';
   static String endpointPatientBooking(String bookingId) =>
       '/patient/bookings/$bookingId';
+  static String endpointPatientBookingVerification(String bookingId) =>
+      '/patient/bookings/$bookingId/verification';
+  static String endpointPatientBookingVerificationRegen(String bookingId) =>
+      '/patient/bookings/$bookingId/verification-otp/regenerate';
   static const String endpointNurseFeedback = '/nurse/feedback';
 
   // Ambulance API Endpoints (patient discovery & booking)

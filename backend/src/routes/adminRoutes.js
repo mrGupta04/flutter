@@ -1585,4 +1585,136 @@ router.post(
   },
 );
 
+const {
+  createReceptionist,
+  listReceptionistsForDoctor,
+  updateReceptionist,
+  setReceptionistStatus,
+  deleteReceptionist,
+  resetReceptionistPassword,
+  getReceptionistById,
+} = require('../db/receptionistRepositories');
+
+async function adminOwnedReceptionist(receptionistId) {
+  const receptionist = await getReceptionistById(receptionistId);
+  if (!receptionist) {
+    const err = new Error('Receptionist not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  return receptionist;
+}
+
+router.get('/doctors/:id/receptionists', adminRequired, async (req, res) => {
+  try {
+    const doctor = await findDoctorById(req.params.id);
+    if (!doctor) {
+      return sendError(res, 'Doctor not found', 404);
+    }
+    const data = await listReceptionistsForDoctor(req.params.id);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to load receptionists', 500);
+  }
+});
+
+router.post('/doctors/:id/receptionists', adminRequired, async (req, res) => {
+  try {
+    const data = await createReceptionist(req.params.id, req.body || {});
+    return sendSuccess(res, {
+      statusCode: 201,
+      message: 'Receptionist created',
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Could not create receptionist',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.patch('/receptionists/:receptionistId', adminRequired, async (req, res) => {
+  try {
+    const current = await adminOwnedReceptionist(req.params.receptionistId);
+    const data = await updateReceptionist(
+      current.doctorId,
+      current.id,
+      req.body || {},
+    );
+    return sendSuccess(res, { message: 'Receptionist updated', data });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Could not update receptionist',
+      err.statusCode || 500,
+    );
+  }
+});
+
+router.patch(
+  '/receptionists/:receptionistId/status',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const current = await adminOwnedReceptionist(req.params.receptionistId);
+      const data = await setReceptionistStatus(
+        current.doctorId,
+        current.id,
+        req.body?.status,
+      );
+      return sendSuccess(res, { message: 'Receptionist status updated', data });
+    } catch (err) {
+      console.error(err);
+      return sendError(
+        res,
+        err.message || 'Could not update status',
+        err.statusCode || 500,
+      );
+    }
+  },
+);
+
+router.post(
+  '/receptionists/:receptionistId/reset-password',
+  adminRequired,
+  async (req, res) => {
+    try {
+      const current = await adminOwnedReceptionist(req.params.receptionistId);
+      const data = await resetReceptionistPassword(
+        current.doctorId,
+        current.id,
+        req.body?.password,
+      );
+      return sendSuccess(res, { message: 'Password updated', data });
+    } catch (err) {
+      console.error(err);
+      return sendError(
+        res,
+        err.message || 'Could not reset password',
+        err.statusCode || 500,
+      );
+    }
+  },
+);
+
+router.delete('/receptionists/:receptionistId', adminRequired, async (req, res) => {
+  try {
+    const current = await adminOwnedReceptionist(req.params.receptionistId);
+    const data = await deleteReceptionist(current.doctorId, current.id);
+    return sendSuccess(res, { message: 'Receptionist deleted', data });
+  } catch (err) {
+    console.error(err);
+    return sendError(
+      res,
+      err.message || 'Could not delete receptionist',
+      err.statusCode || 500,
+    );
+  }
+});
+
 module.exports = router;

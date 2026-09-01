@@ -585,7 +585,45 @@ class DoctorRegistrationRepository {
     }
   }
 
-  /// Verify a clinic visit using the patient's 4-digit appointment code.
+  Future<ApiResponse<Map<String, dynamic>>> startClinicConsultation(
+    String bookingId,
+  ) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointDoctorClinicVisitStart(bookingId),
+        data: const {},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        message: body['message'] as String?,
+        data: body['data'] as Map<String, dynamic>?,
+        error: body['error'] as String?,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> completeClinicConsultation(
+    String bookingId,
+  ) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointDoctorClinicVisitComplete(bookingId),
+        data: const {},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? false,
+        message: body['message'] as String?,
+        data: body['data'] as Map<String, dynamic>?,
+        error: body['error'] as String?,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
   Future<ApiResponse<Map<String, dynamic>>> verifyClinicAppointment({
     required String appointmentCode,
   }) async {

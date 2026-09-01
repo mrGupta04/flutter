@@ -339,18 +339,27 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                         final key = '${day}_$hour';
                         final wasSelected = selected.contains(key);
                         final wasSelfBusy = selfBusy.contains(key);
-                        final status = action == SlotScheduleAction.selfBusy
-                            ? DoctorAvailabilityConstants.statusSelfBusy
-                            : DoctorAvailabilityConstants.statusDiscarded;
+                        final status = switch (action) {
+                          SlotScheduleAction.selfBusy =>
+                            DoctorAvailabilityConstants.statusSelfBusy,
+                          SlotScheduleAction.available =>
+                            DoctorAvailabilityConstants.statusAvailable,
+                          SlotScheduleAction.discard =>
+                            DoctorAvailabilityConstants.statusDiscarded,
+                        };
 
                         setModalState(() {
                           isUpdatingSlot = true;
-                          if (action == SlotScheduleAction.selfBusy) {
-                            selected.add(key);
-                            selfBusy.add(key);
-                          } else {
+                          if (action == SlotScheduleAction.discard) {
                             selected.remove(key);
                             selfBusy.remove(key);
+                          } else {
+                            selected.add(key);
+                            if (action == SlotScheduleAction.selfBusy) {
+                              selfBusy.add(key);
+                            } else {
+                              selfBusy.remove(key);
+                            }
                           }
                         });
 
@@ -366,12 +375,15 @@ class _NurseDashboardScreenState extends ConsumerState<NurseDashboardScreen> {
                         setModalState(() {
                           isUpdatingSlot = false;
                           if (!ok) {
-                            if (action == SlotScheduleAction.selfBusy) {
-                              if (!wasSelected) selected.remove(key);
-                              if (!wasSelfBusy) selfBusy.remove(key);
+                            if (wasSelected) {
+                              selected.add(key);
                             } else {
-                              if (wasSelected) selected.add(key);
-                              if (wasSelfBusy) selfBusy.add(key);
+                              selected.remove(key);
+                            }
+                            if (wasSelfBusy) {
+                              selfBusy.add(key);
+                            } else {
+                              selfBusy.remove(key);
                             }
                           }
                         });

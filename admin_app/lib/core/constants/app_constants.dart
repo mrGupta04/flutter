@@ -41,6 +41,26 @@ class AppConstants {
       '/nurse/bookings/$bookingId/reject-home-visit';
   static const String endpointDoctorVerifyAppointment =
       '/doctor/verify-appointment';
+  static const String endpointDoctorReceptionists = '/doctor/receptionists';
+  static String endpointDoctorReceptionist(String id) =>
+      '/doctor/receptionists/$id';
+  static String endpointDoctorReceptionistStatus(String id) =>
+      '/doctor/receptionists/$id/status';
+  static String endpointDoctorReceptionistPassword(String id) =>
+      '/doctor/receptionists/$id/reset-password';
+  static String endpointDoctorClinicVisitStart(String bookingId) =>
+      '/doctor/clinic-visits/$bookingId/start';
+  static String endpointDoctorClinicVisitComplete(String bookingId) =>
+      '/doctor/clinic-visits/$bookingId/complete';
+  static const String endpointReceptionistLogin = '/receptionist/login';
+  static const String endpointReceptionistMe = '/receptionist/me';
+  static const String endpointReceptionistBookings = '/receptionist/bookings';
+  static String endpointReceptionistBooking(String id) =>
+      '/receptionist/bookings/$id';
+  static String endpointReceptionistVerify(String id) =>
+      '/receptionist/bookings/$id/verify';
+  static String endpointReceptionistRegenOtp(String id) =>
+      '/receptionist/bookings/$id/otp/regenerate';
   static String endpointConsultationVideoSession(String bookingId) =>
       '/consultations/$bookingId/video-session';
   static String endpointConsultationVideoJoin(String bookingId) =>
@@ -489,6 +509,9 @@ class AppConstants {
   static const String routeLabDashboard = '/lab-dashboard';
   static const String routeBloodBankDashboard = '/blood-bank-dashboard';
   static const String routeDoctorDashboard = '/doctor-dashboard';
+  static const String routeDoctorReceptionists = '/doctor-receptionists';
+  static const String routeReceptionistLogin = '/receptionist-login';
+  static const String routeReceptionistDashboard = '/receptionist-dashboard';
   static const String routeSelectLocation = '/select-location';
   static const String routeNurseDashboard = '/nurse-dashboard';
   static const String routeNurseVisitAssessment = '/nurse-visit-assessment';

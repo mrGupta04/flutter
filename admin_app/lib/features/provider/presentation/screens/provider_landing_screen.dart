@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/models/provider_type.dart';
 import '../../../auth/presentation/screens/provider_auth_gate_screen.dart';
 import '../../../auth/provider/provider_auth_provider.dart';
+import '../../../receptionist/provider/receptionist_providers.dart';
 import '../../provider/provider_status_sync.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -216,6 +217,21 @@ class _ProviderLandingScreenState extends ConsumerState<ProviderLandingScreen> {
                       ),
                     ),
                   ],
+              ),
+              const SizedBox(height: 20),
+              const MarketplaceSectionTitle(title: 'Clinic staff'),
+              _RegistrationCard(
+                title: 'Receptionist',
+                subtitle: 'Login · verify clinic visit arrivals with OTP',
+                icon: Icons.badge_rounded,
+                color: AppColors.accent,
+                onTap: () {
+                  if (ref.read(receptionistAuthProvider).isAuthenticated) {
+                    context.go(AppConstants.routeReceptionistDashboard);
+                  } else {
+                    context.push(AppConstants.routeReceptionistLogin);
+                  }
+                },
               ),
               const SizedBox(height: 20),
               const MarketplaceSectionTitle(title: 'How verification works'),

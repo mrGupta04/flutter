@@ -3,7 +3,7 @@ import '../../../../core/constants/doctor_availability_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
-enum SlotScheduleAction { selfBusy, discard }
+enum SlotScheduleAction { available, selfBusy, discard }
 
 /// Sunday–Saturday grid. Online consults use 20-minute chips; other types use 1 hour.
 class WeeklyAvailabilityPicker extends StatelessWidget {
@@ -70,6 +70,7 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
     required int hour,
     required int minute,
     required bool selected,
+    required bool selfBusy,
   }) async {
     if (isUpdating) return;
     if (!selected) {
@@ -81,7 +82,7 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
       return;
     }
 
-    final action = await _showSlotActionsMenu(context);
+    final action = await _showSlotActionsMenu(context, selfBusy: selfBusy);
     if (!context.mounted || action == null) return;
     if (action == SlotScheduleAction.discard) {
       final confirmed = await _confirmDiscard(context);
@@ -112,10 +113,10 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
               ? (helperText ??
                   (_isOnline
                       ? (enableSlotActions
-                          ? 'Tap 20-minute slots to add them. Tap a selected slot to mark Self Busy or discard it.'
+                          ? 'Tap 20-minute slots to add them. Tap a selected slot to mark Self Busy, make it available again, or discard it.'
                           : 'Tap 20-minute slots when you are available for video consults.')
                       : (enableSlotActions
-                          ? 'Tap slots to add them. Tap a selected slot to mark Self Busy or discard it.'
+                          ? 'Tap slots to add them. Tap a selected slot to mark Self Busy, make it available again, or discard it.'
                           : 'Tap slots when you are available. Each slot is 1 hour (12:00 AM – 12:00 AM, full day).')))
               : 'Slots already chosen for the other consultation type are hidden here.',
           style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
@@ -153,12 +154,14 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
                       );
                       return !anySelected && _hourBlocked(day, hour);
                     },
-                    onTap: (hour, minute, selected, chipContext) => _onChipTap(
+                    onTap: (hour, minute, selected, selfBusy, chipContext) =>
+                        _onChipTap(
                       context: chipContext,
                       day: day,
                       hour: hour,
                       minute: minute,
                       selected: selected,
+                      selfBusy: selfBusy,
                     ),
                   )
                 else
@@ -201,6 +204,7 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
                                       hour: hour,
                                       minute: 0,
                                       selected: selected,
+                                      selfBusy: selfBusy,
                                     ),
                                   );
                                 },
@@ -226,7 +230,10 @@ class WeeklyAvailabilityPicker extends StatelessWidget {
   }
 }
 
-Future<SlotScheduleAction?> _showSlotActionsMenu(BuildContext context) {
+Future<SlotScheduleAction?> _showSlotActionsMenu(
+  BuildContext context, {
+  required bool selfBusy,
+}) {
   final box = context.findRenderObject() as RenderBox?;
   final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
   final origin = box?.localToGlobal(Offset.zero, ancestor: overlay) ?? Offset.zero;
@@ -242,15 +249,24 @@ Future<SlotScheduleAction?> _showSlotActionsMenu(BuildContext context) {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     color: AppColors.white,
     elevation: 8,
-    items: const [
-      PopupMenuItem(
-        value: SlotScheduleAction.selfBusy,
-        child: _SlotActionRow(
-          icon: Icons.event_busy_rounded,
-          label: 'Self Busy',
+    items: [
+      if (selfBusy)
+        const PopupMenuItem(
+          value: SlotScheduleAction.available,
+          child: _SlotActionRow(
+            icon: Icons.event_available_rounded,
+            label: 'Make Available',
+          ),
+        )
+      else
+        const PopupMenuItem(
+          value: SlotScheduleAction.selfBusy,
+          child: _SlotActionRow(
+            icon: Icons.event_busy_rounded,
+            label: 'Self Busy',
+          ),
         ),
-      ),
-      PopupMenuItem(
+      const PopupMenuItem(
         value: SlotScheduleAction.discard,
         child: _SlotActionRow(
           icon: Icons.delete_outline_rounded,
@@ -388,6 +404,7 @@ class _OnlineDaySlots extends StatelessWidget {
     int hour,
     int minute,
     bool selected,
+    bool selfBusy,
     BuildContext chipContext,
   ) onTap;
   final bool isUpdating;
@@ -413,6 +430,7 @@ class _OnlineDaySlots extends StatelessWidget {
                       final minute =
                           DoctorAvailabilityConstants.onlineStartMinutes[i];
                       final selected = isSelected(hour, minute);
+                      final selfBusy = isSelfBusy(hour, minute);
                       return _AvailabilitySlotChip(
                         label: DoctorAvailabilityConstants.formatSlotRange(
                           hour,
@@ -421,11 +439,17 @@ class _OnlineDaySlots extends StatelessWidget {
                               DoctorAvailabilityConstants.onlineSlotMinutes,
                         ),
                         selected: selected,
-                        selfBusy: isSelfBusy(hour, minute),
+                        selfBusy: selfBusy,
                         selectedColor: selectedColor,
                         height: 40,
                         enabled: !isUpdating,
-                        onTap: () => onTap(hour, minute, selected, chipContext),
+                        onTap: () => onTap(
+                          hour,
+                          minute,
+                          selected,
+                          selfBusy,
+                          chipContext,
+                        ),
                       );
                     },
                   ),

@@ -91,6 +91,38 @@ async function authRequired(req, res, next) {
 
 
 
+function doctorRequired(req, res, next) {
+  if (req.auth?.type !== 'doctor' || !req.auth?.doctorId) {
+    return sendError(res, 'Doctor authentication required', 403);
+  }
+  next();
+}
+
+async function receptionistRequired(req, res, next) {
+  if (req.auth?.type !== 'receptionist' || !req.auth?.receptionistId) {
+    return sendError(res, 'Receptionist authentication required', 403);
+  }
+  try {
+    const Receptionist = require('../db/models/Receptionist');
+    const receptionist = await Receptionist.findOne({
+      id: req.auth.receptionistId,
+    }).lean();
+    if (!receptionist) {
+      return sendError(res, 'Receptionist not found', 404);
+    }
+    if (receptionist.status === 'disabled') {
+      return sendError(res, 'This receptionist account is disabled', 403);
+    }
+    req.auth.doctorId = receptionist.doctorId;
+    req.auth.clinicId = receptionist.clinicId || receptionist.doctorId;
+    req.auth.receptionistName = receptionist.name;
+    req.receptionist = receptionist;
+    next();
+  } catch (err) {
+    return sendError(res, err.message || 'Receptionist authentication failed', 500);
+  }
+}
+
 function tryBearerAuth(req) {
 
   const header = req.headers.authorization;
@@ -324,6 +356,10 @@ module.exports = {
   authOptional,
 
   authRequired,
+
+  doctorRequired,
+
+  receptionistRequired,
 
   adminRequired,
 

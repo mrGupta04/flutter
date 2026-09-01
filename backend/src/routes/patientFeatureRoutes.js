@@ -190,6 +190,63 @@ router.get('/bookings/:bookingId', authRequired, async (req, res) => {
   }
 });
 
+router.get(
+  '/bookings/:bookingId/verification',
+  authRequired,
+  async (req, res) => {
+    try {
+      const patientId = requirePatientAuth(req, res);
+      if (!patientId) return;
+      const {
+        getPatientClinicOtp,
+      } = require('../db/clinicVisitVerificationRepositories');
+      const data = await getPatientClinicOtp({
+        bookingId: req.params.bookingId,
+        patientId,
+        mobileNumber: req.auth.mobileNumber,
+      });
+      return sendSuccess(res, { data });
+    } catch (err) {
+      return sendError(
+        res,
+        err.message || 'Failed to load verification status',
+        err.statusCode || 500,
+        err.code,
+      );
+    }
+  },
+);
+
+router.post(
+  '/bookings/:bookingId/verification-otp/regenerate',
+  authRequired,
+  async (req, res) => {
+    try {
+      const patientId = requirePatientAuth(req, res);
+      if (!patientId) return;
+      const {
+        regeneratePatientClinicOtp,
+      } = require('../db/clinicVisitVerificationRepositories');
+      const data = await regeneratePatientClinicOtp({
+        bookingId: req.params.bookingId,
+        patientId,
+        mobileNumber: req.auth.mobileNumber,
+      });
+      return sendSuccess(res, {
+        message: data.message,
+        data,
+      });
+    } catch (err) {
+      return sendError(
+        res,
+        err.message || 'Could not generate a new verification code',
+        err.statusCode || 500,
+        err.code,
+      );
+    }
+  },
+);
+
 router.get('/bookings/:bookingId/timeline', authRequired, async (req, res) => {
   try {
     const patientId = requirePatientAuth(req, res);

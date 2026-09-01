@@ -30,6 +30,21 @@ Widget registrationStepScroll({required Widget child}) {
   );
 }
 
+String _statusForSlotAction(SlotScheduleAction action) {
+  return switch (action) {
+    SlotScheduleAction.selfBusy => DoctorAvailabilityConstants.statusSelfBusy,
+    SlotScheduleAction.available => DoctorAvailabilityConstants.statusAvailable,
+    SlotScheduleAction.discard => DoctorAvailabilityConstants.statusDiscarded,
+  };
+}
+
+String _availabilityReviewLabel(int selectedCount, int selfBusyCount) {
+  if (selfBusyCount <= 0) {
+    return '$selectedCount slot(s) this week';
+  }
+  return '$selectedCount slot(s) this week ($selfBusyCount self busy)';
+}
+
 class Step1PersonalInfo extends ConsumerStatefulWidget {
   const Step1PersonalInfo({super.key, required this.formKey});
 
@@ -1488,6 +1503,15 @@ class Step6WeeklyAvailability extends ConsumerWidget {
     final selectedHomeAvailabilitySlots = ref.watch(
       registrationFormProvider.select((s) => s.selectedHomeAvailabilitySlots),
     );
+    final onlineSelfBusySlots = ref.watch(
+      registrationFormProvider.select((s) => s.onlineSelfBusySlots),
+    );
+    final clinicSelfBusySlots = ref.watch(
+      registrationFormProvider.select((s) => s.clinicSelfBusySlots),
+    );
+    final homeSelfBusySlots = ref.watch(
+      registrationFormProvider.select((s) => s.homeSelfBusySlots),
+    );
     final weekStart = _currentWeekSunday();
     final weekLabel =
         'Week of ${_formatShortDate(weekStart)} – ${_formatShortDate(weekStart.add(const Duration(days: 6)))}';
@@ -1515,7 +1539,7 @@ class Step6WeeklyAvailability extends ConsumerWidget {
           const SectionHeader(
             title: 'Weekly availability',
             subtitle:
-                'Set separate schedules for online consult, clinic visits, and home visits (Sunday–Saturday, 12 AM–12 AM). Online consults are 20 minutes. The same hour cannot be used for more than one type.',
+                'Set separate schedules for online consult, clinic visits, and home visits (Sunday–Saturday, 12 AM–12 AM). Online consults are 20 minutes. The same hour cannot be used for more than one type. Tap a selected slot to mark Self Busy, make it available again, or discard it.',
           ),
           if (!showAnyPicker)
             Container(
@@ -1546,10 +1570,12 @@ class Step6WeeklyAvailability extends ConsumerWidget {
             WeeklyAvailabilityPicker(
               weekLabel: weekLabel,
               selectedSlots: selectedOnlineAvailabilitySlots,
+              selfBusySlots: onlineSelfBusySlots,
               blockedSlots: blockedForOnline,
               slotMinutes: DoctorAvailabilityConstants.onlineSlotMinutes,
+              enableSlotActions: true,
               helperText:
-                  'Tap 20-minute slots when you are available for video consults (12:00 AM – 12:00 AM).',
+                  'Tap 20-minute slots when you are available for video consults (12:00 AM – 12:00 AM). Tap a selected slot to mark Self Busy, make it available again, or discard it.',
               onToggle: (day, hour, selected, {startMinute = 0}) => ref
                   .read(registrationFormProvider.notifier)
                   .toggleOnlineAvailabilitySlot(
@@ -1558,6 +1584,14 @@ class Step6WeeklyAvailability extends ConsumerWidget {
                     selected,
                     startMinute: startMinute,
                   ),
+              onSlotAction: (day, hour, action, {startMinute = 0}) async {
+                ref.read(registrationFormProvider.notifier).applyOnlineSlotStatus(
+                      day,
+                      hour,
+                      _statusForSlotAction(action),
+                      startMinute: startMinute,
+                    );
+              },
             ),
           ],
           if (showOnline && (showClinic || showHome)) const SizedBox(height: 28),
@@ -1573,11 +1607,20 @@ class Step6WeeklyAvailability extends ConsumerWidget {
             WeeklyAvailabilityPicker(
               weekLabel: weekLabel,
               selectedSlots: selectedClinicAvailabilitySlots,
+              selfBusySlots: clinicSelfBusySlots,
               blockedSlots: blockedForClinic,
               selectedColor: AppColors.accent,
+              enableSlotActions: true,
               onToggle: (day, hour, selected, {startMinute = 0}) => ref
                   .read(registrationFormProvider.notifier)
                   .toggleClinicAvailabilitySlot(day, hour, selected),
+              onSlotAction: (day, hour, action, {startMinute = 0}) async {
+                ref.read(registrationFormProvider.notifier).applyClinicSlotStatus(
+                      day,
+                      hour,
+                      _statusForSlotAction(action),
+                    );
+              },
             ),
           ],
           if (showClinic && showHome) const SizedBox(height: 28),
@@ -1593,11 +1636,20 @@ class Step6WeeklyAvailability extends ConsumerWidget {
             WeeklyAvailabilityPicker(
               weekLabel: weekLabel,
               selectedSlots: selectedHomeAvailabilitySlots,
+              selfBusySlots: homeSelfBusySlots,
               blockedSlots: blockedForHome,
               selectedColor: AppColors.secondary,
+              enableSlotActions: true,
               onToggle: (day, hour, selected, {startMinute = 0}) => ref
                   .read(registrationFormProvider.notifier)
                   .toggleHomeAvailabilitySlot(day, hour, selected),
+              onSlotAction: (day, hour, action, {startMinute = 0}) async {
+                ref.read(registrationFormProvider.notifier).applyHomeSlotStatus(
+                      day,
+                      hour,
+                      _statusForSlotAction(action),
+                    );
+              },
             ),
           ],
         ],
@@ -1838,17 +1890,26 @@ class _Step7ReviewSubmitState extends ConsumerState<Step7ReviewSubmit> {
               if (formState.offersOnlineConsult)
                 _ReviewItem(
                   'Online consult slots',
-                  '${formState.selectedOnlineAvailabilityCount} hour(s) this week',
+                  _availabilityReviewLabel(
+                    formState.selectedOnlineAvailabilityCount,
+                    formState.onlineSelfBusySlots.length,
+                  ),
                 ),
               if (formState.offersVisitSite)
                 _ReviewItem(
                   'Clinic visit slots',
-                  '${formState.selectedClinicAvailabilityCount} hour(s) this week',
+                  _availabilityReviewLabel(
+                    formState.selectedClinicAvailabilityCount,
+                    formState.clinicSelfBusySlots.length,
+                  ),
                 ),
               if (formState.offersBookHome)
                 _ReviewItem(
                   'Home visit slots',
-                  '${formState.selectedHomeAvailabilityCount} hour(s) this week',
+                  _availabilityReviewLabel(
+                    formState.selectedHomeAvailabilityCount,
+                    formState.homeSelfBusySlots.length,
+                  ),
                 ),
             ],
           ),

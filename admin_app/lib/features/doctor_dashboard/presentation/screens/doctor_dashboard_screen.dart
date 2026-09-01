@@ -724,17 +724,29 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                           : hourKey;
                       final wasSelected = activeSelected().contains(slotKey);
                       final wasSelfBusy = activeSelfBusy().contains(slotKey);
-                      final status = action == SlotScheduleAction.selfBusy
-                          ? DoctorAvailabilityConstants.statusSelfBusy
-                          : DoctorAvailabilityConstants.statusDiscarded;
+                      final status = switch (action) {
+                        SlotScheduleAction.selfBusy =>
+                          DoctorAvailabilityConstants.statusSelfBusy,
+                        SlotScheduleAction.available =>
+                          DoctorAvailabilityConstants.statusAvailable,
+                        SlotScheduleAction.discard =>
+                          DoctorAvailabilityConstants.statusDiscarded,
+                      };
 
                       setModalState(() {
                         isUpdatingSlot = true;
                         final selected = activeSelected();
                         final selfBusy = activeSelfBusy();
-                        if (action == SlotScheduleAction.selfBusy) {
+                        if (action == SlotScheduleAction.discard) {
+                          selected.remove(slotKey);
+                          selfBusy.remove(slotKey);
+                        } else {
                           selected.add(slotKey);
-                          selfBusy.add(slotKey);
+                          if (action == SlotScheduleAction.selfBusy) {
+                            selfBusy.add(slotKey);
+                          } else {
+                            selfBusy.remove(slotKey);
+                          }
                           if (activeType != 'online_consult') {
                             onlineSelected.removeWhere(
                               (key) =>
@@ -759,9 +771,6 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                             homeSelected.remove(hourKey);
                             homeSelfBusy.remove(hourKey);
                           }
-                        } else {
-                          selected.remove(slotKey);
-                          selfBusy.remove(slotKey);
                         }
                       });
 
@@ -781,12 +790,15 @@ class _DoctorDashboardScreenState extends ConsumerState<DoctorDashboardScreen> {
                         if (!ok) {
                           final selected = activeSelected();
                           final selfBusy = activeSelfBusy();
-                          if (action == SlotScheduleAction.selfBusy) {
-                            if (!wasSelected) selected.remove(slotKey);
-                            if (!wasSelfBusy) selfBusy.remove(slotKey);
+                          if (wasSelected) {
+                            selected.add(slotKey);
                           } else {
-                            if (wasSelected) selected.add(slotKey);
-                            if (wasSelfBusy) selfBusy.add(slotKey);
+                            selected.remove(slotKey);
+                          }
+                          if (wasSelfBusy) {
+                            selfBusy.add(slotKey);
+                          } else {
+                            selfBusy.remove(slotKey);
                           }
                         }
                       });
@@ -1251,6 +1263,16 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
+          if (offersVisitSite)
+            _PracticeUpdateItem(
+              icon: Icons.badge_outlined,
+              title: 'Receptionist management',
+              subtitle:
+                  'Create clinic desk accounts to verify patient arrival with OTP.',
+              color: AppColors.primary,
+              onTap: () => context.push(AppConstants.routeDoctorReceptionists),
+            ),
+          if (offersVisitSite) const SizedBox(height: 16),
           _AppointmentsSection(
             bookings: bookings,
             upcomingOnlineBookings: upcomingOnlineBookings,
@@ -2741,7 +2763,7 @@ class _BookingTypeSection extends StatelessWidget {
   }
 }
 
-class _BookingCard extends StatelessWidget {
+class _BookingCard extends ConsumerWidget {
   const _BookingCard({
     required this.booking,
     this.isPast = false,
@@ -2767,7 +2789,7 @@ class _BookingCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = _color;
     final slot = booking.slotStart;
     final slotText = slot != null
@@ -2983,7 +3005,7 @@ class _BookingCard extends StatelessWidget {
             children: [
               _StatusPill(
                 label: booking.displayStatusLabel,
-                color: isPast ? AppColors.grey600 : AppColors.success,
+                color: _bookingStatusColor(booking, isPast),
               ),
               if (booking.isClinicVisit && booking.isAppointmentVerified) ...[
                 const SizedBox(width: 8),
@@ -3012,6 +3034,49 @@ class _BookingCard extends StatelessWidget {
                 ),
             ],
           ),
+          if (booking.isClinicVisit &&
+              !isPast &&
+              booking.isAppointmentVerified &&
+              booking.visitProgress != 'completed') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () async {
+                  final notifier = ref.read(doctorDashboardProvider.notifier);
+                  final ok = booking.visitProgress == 'visit_started'
+                      ? await notifier.completeClinicConsultation(booking.id)
+                      : await notifier.startClinicConsultation(booking.id);
+                  if (!context.mounted) return;
+                  if (ok) {
+                    SnackBarHelper.showSuccess(
+                      context,
+                      booking.visitProgress == 'visit_started'
+                          ? 'Consultation completed'
+                          : 'Consultation started',
+                    );
+                  } else {
+                    SnackBarHelper.showError(
+                      context,
+                      ref.read(doctorDashboardProvider).error ??
+                          'Could not update consultation',
+                    );
+                  }
+                },
+                icon: Icon(
+                  booking.visitProgress == 'visit_started'
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.play_circle_outline_rounded,
+                  size: 18,
+                ),
+                label: Text(
+                  booking.visitProgress == 'visit_started'
+                      ? 'Complete consultation'
+                      : 'Start consultation',
+                ),
+              ),
+            ),
+          ],
           if (booking.isClinicVisit &&
               !isPast &&
               !booking.isAppointmentVerified &&
@@ -3172,6 +3237,18 @@ class _PreviousReportsSection extends StatelessWidget {
       ],
     );
   }
+}
+
+Color _bookingStatusColor(DoctorBookingModel booking, bool isPast) {
+  if (booking.status == 'cancelled') return AppColors.error;
+  if (isPast) return AppColors.grey600;
+  if (booking.isClinicVisit) {
+    if (booking.visitProgress == 'completed') return AppColors.success;
+    if (booking.visitProgress == 'visit_started') return AppColors.primary;
+    if (booking.isAppointmentVerified) return AppColors.success;
+    return AppColors.warning;
+  }
+  return AppColors.success;
 }
 
 class _StatusPill extends StatelessWidget {

@@ -194,4 +194,28 @@ class PatientDashboardRepository {
       return null;
     }
   }
+
+  Future<String> regenerateClinicOtp(String bookingId) async {
+    try {
+      final response = await _dio.post(
+        AppConstants.endpointPatientBookingVerificationRegen(bookingId),
+        data: const {},
+      );
+      final body = response.data as Map<String, dynamic>;
+      if (body['success'] == false) {
+        throw Exception(
+          (body['error'] ?? body['message'] ?? 'Could not generate a new code')
+              as String,
+        );
+      }
+      final data = body['data'];
+      if (data is Map<String, dynamic>) {
+        final code = data['appointmentCode'] as String?;
+        if (code != null && code.isNotEmpty) return code;
+      }
+      throw Exception('Could not generate a new code');
+    } on DioException catch (e) {
+      throw _messageFromDio(e);
+    }
+  }
 }

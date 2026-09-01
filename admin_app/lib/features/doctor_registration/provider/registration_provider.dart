@@ -186,6 +186,9 @@ class RegistrationFormState {
   final Set<String> selectedOnlineAvailabilitySlots;
   final Set<String> selectedClinicAvailabilitySlots;
   final Set<String> selectedHomeAvailabilitySlots;
+  final Set<String> onlineSelfBusySlots;
+  final Set<String> clinicSelfBusySlots;
+  final Set<String> homeSelfBusySlots;
 
   RegistrationFormState({
     required this.draftId,
@@ -248,6 +251,9 @@ class RegistrationFormState {
     this.selectedOnlineAvailabilitySlots = const {},
     this.selectedClinicAvailabilitySlots = const {},
     this.selectedHomeAvailabilitySlots = const {},
+    this.onlineSelfBusySlots = const {},
+    this.clinicSelfBusySlots = const {},
+    this.homeSelfBusySlots = const {},
   });
 
   int get selectedOnlineAvailabilityCount =>
@@ -350,6 +356,9 @@ class RegistrationFormState {
     Set<String>? selectedOnlineAvailabilitySlots,
     Set<String>? selectedClinicAvailabilitySlots,
     Set<String>? selectedHomeAvailabilitySlots,
+    Set<String>? onlineSelfBusySlots,
+    Set<String>? clinicSelfBusySlots,
+    Set<String>? homeSelfBusySlots,
   }) {
     return RegistrationFormState(
       draftId: draftId ?? this.draftId,
@@ -419,6 +428,9 @@ class RegistrationFormState {
           this.selectedClinicAvailabilitySlots,
       selectedHomeAvailabilitySlots: selectedHomeAvailabilitySlots ??
           this.selectedHomeAvailabilitySlots,
+      onlineSelfBusySlots: onlineSelfBusySlots ?? this.onlineSelfBusySlots,
+      clinicSelfBusySlots: clinicSelfBusySlots ?? this.clinicSelfBusySlots,
+      homeSelfBusySlots: homeSelfBusySlots ?? this.homeSelfBusySlots,
     );
   }
 }
@@ -820,7 +832,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     bool selected, {
     int startMinute = 0,
   }) {
-    _toggleAvailabilitySlot(
+    _mutateAvailabilitySlot(
       slotType: _AvailabilitySlotType.online,
       dayOfWeek: dayOfWeek,
       startHour: startHour,
@@ -835,7 +847,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     bool selected, {
     int startMinute = 0,
   }) {
-    _toggleAvailabilitySlot(
+    _mutateAvailabilitySlot(
       slotType: _AvailabilitySlotType.clinic,
       dayOfWeek: dayOfWeek,
       startHour: startHour,
@@ -849,7 +861,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     bool selected, {
     int startMinute = 0,
   }) {
-    _toggleAvailabilitySlot(
+    _mutateAvailabilitySlot(
       slotType: _AvailabilitySlotType.home,
       dayOfWeek: dayOfWeek,
       startHour: startHour,
@@ -857,12 +869,84 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     );
   }
 
-  void _toggleAvailabilitySlot({
+  void applyOnlineSlotStatus(
+    int dayOfWeek,
+    int startHour,
+    String status, {
+    int startMinute = 0,
+  }) {
+    _applySlotStatus(
+      slotType: _AvailabilitySlotType.online,
+      dayOfWeek: dayOfWeek,
+      startHour: startHour,
+      startMinute: startMinute,
+      status: status,
+    );
+  }
+
+  void applyClinicSlotStatus(
+    int dayOfWeek,
+    int startHour,
+    String status, {
+    int startMinute = 0,
+  }) {
+    _applySlotStatus(
+      slotType: _AvailabilitySlotType.clinic,
+      dayOfWeek: dayOfWeek,
+      startHour: startHour,
+      status: status,
+    );
+  }
+
+  void applyHomeSlotStatus(
+    int dayOfWeek,
+    int startHour,
+    String status, {
+    int startMinute = 0,
+  }) {
+    _applySlotStatus(
+      slotType: _AvailabilitySlotType.home,
+      dayOfWeek: dayOfWeek,
+      startHour: startHour,
+      status: status,
+    );
+  }
+
+  void _applySlotStatus({
+    required _AvailabilitySlotType slotType,
+    required int dayOfWeek,
+    required int startHour,
+    required String status,
+    int startMinute = 0,
+  }) {
+    final normalized = status.toUpperCase();
+    if (normalized == DoctorAvailabilityConstants.statusDiscarded) {
+      _mutateAvailabilitySlot(
+        slotType: slotType,
+        dayOfWeek: dayOfWeek,
+        startHour: startHour,
+        startMinute: startMinute,
+        selected: false,
+      );
+      return;
+    }
+    _mutateAvailabilitySlot(
+      slotType: slotType,
+      dayOfWeek: dayOfWeek,
+      startHour: startHour,
+      startMinute: startMinute,
+      selected: true,
+      selfBusy: normalized == DoctorAvailabilityConstants.statusSelfBusy,
+    );
+  }
+
+  void _mutateAvailabilitySlot({
     required _AvailabilitySlotType slotType,
     required int dayOfWeek,
     required int startHour,
     required bool selected,
     int startMinute = 0,
+    bool selfBusy = false,
   }) {
     final hourKey = DoctorAvailabilityConstants.slotKey(dayOfWeek, startHour);
     final onlineKey = DoctorAvailabilityConstants.slotKey(
@@ -874,9 +958,15 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
     var online = Set<String>.from(state.selectedOnlineAvailabilitySlots);
     var clinic = Set<String>.from(state.selectedClinicAvailabilitySlots);
     var home = Set<String>.from(state.selectedHomeAvailabilitySlots);
+    var onlineSelfBusy = Set<String>.from(state.onlineSelfBusySlots);
+    var clinicSelfBusy = Set<String>.from(state.clinicSelfBusySlots);
+    var homeSelfBusy = Set<String>.from(state.homeSelfBusySlots);
 
     void removeOnlineHour() {
       online.removeWhere(
+        (key) => DoctorAvailabilityConstants.hourKey(key) == hourKey,
+      );
+      onlineSelfBusy.removeWhere(
         (key) => DoctorAvailabilityConstants.hourKey(key) == hourKey,
       );
     }
@@ -885,25 +975,47 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
       switch (slotType) {
         case _AvailabilitySlotType.online:
           online.add(onlineKey);
+          if (selfBusy) {
+            onlineSelfBusy.add(onlineKey);
+          } else {
+            onlineSelfBusy.remove(onlineKey);
+          }
           clinic.remove(hourKey);
+          clinicSelfBusy.remove(hourKey);
           home.remove(hourKey);
+          homeSelfBusy.remove(hourKey);
         case _AvailabilitySlotType.clinic:
           clinic.add(hourKey);
+          if (selfBusy) {
+            clinicSelfBusy.add(hourKey);
+          } else {
+            clinicSelfBusy.remove(hourKey);
+          }
           removeOnlineHour();
           home.remove(hourKey);
+          homeSelfBusy.remove(hourKey);
         case _AvailabilitySlotType.home:
           home.add(hourKey);
+          if (selfBusy) {
+            homeSelfBusy.add(hourKey);
+          } else {
+            homeSelfBusy.remove(hourKey);
+          }
           removeOnlineHour();
           clinic.remove(hourKey);
+          clinicSelfBusy.remove(hourKey);
       }
     } else {
       switch (slotType) {
         case _AvailabilitySlotType.online:
           online.remove(onlineKey);
+          onlineSelfBusy.remove(onlineKey);
         case _AvailabilitySlotType.clinic:
           clinic.remove(hourKey);
+          clinicSelfBusy.remove(hourKey);
         case _AvailabilitySlotType.home:
           home.remove(hourKey);
+          homeSelfBusy.remove(hourKey);
       }
     }
 
@@ -911,6 +1023,9 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
       selectedOnlineAvailabilitySlots: online,
       selectedClinicAvailabilitySlots: clinic,
       selectedHomeAvailabilitySlots: home,
+      onlineSelfBusySlots: onlineSelfBusy,
+      clinicSelfBusySlots: clinicSelfBusy,
+      homeSelfBusySlots: homeSelfBusy,
       submitError: null,
     );
   }
@@ -1047,6 +1162,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
         doctorId: doctorId,
         selectedSlotKeys: state.selectedOnlineAvailabilitySlots,
         consultationType: 'online_consult',
+        selfBusySlotKeys: state.onlineSelfBusySlots,
       );
       if (!availRes.success) {
         state = state.copyWith(
@@ -1063,6 +1179,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
         doctorId: doctorId,
         selectedSlotKeys: state.selectedClinicAvailabilitySlots,
         consultationType: 'visit_site',
+        selfBusySlotKeys: state.clinicSelfBusySlots,
       );
       if (!availRes.success) {
         state = state.copyWith(
@@ -1079,6 +1196,7 @@ class RegistrationFormNotifier extends StateNotifier<RegistrationFormState> {
         doctorId: doctorId,
         selectedSlotKeys: state.selectedHomeAvailabilitySlots,
         consultationType: 'book_home',
+        selfBusySlotKeys: state.homeSelfBusySlots,
       );
       if (!availRes.success) {
         state = state.copyWith(

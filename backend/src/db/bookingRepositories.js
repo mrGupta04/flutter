@@ -18,6 +18,10 @@ const {
   slotDurationMinutes,
 } = require('../utils/slotDateTime');
 const { SLOT_STATUS, bookingRejectionForStatus } = require('../utils/slotStatus');
+const {
+  ensureClinicVisitOtp,
+  verifyClinicVisitOtp: verifyClinicVisitOtpForBooking,
+} = require('./clinicVisitVerificationRepositories');
 const { videoJoinFields } = require('../utils/videoJoinWindow');
 const { findFeedbackByBookingIds, feedbackFieldsForBooking } = require('./feedbackRepositories');
 const {
@@ -75,34 +79,10 @@ function consultationTypeChecks(doctor, consultationType) {
   return null;
 }
 
-function generateAppointmentCode() {
-  return String(Math.floor(1000 + Math.random() * 9000));
-}
-
-async function generateUniqueAppointmentCode(doctorId) {
-  for (let attempt = 0; attempt < 15; attempt += 1) {
-    const code = generateAppointmentCode();
-    const existing = await ConsultationBooking.findOne({
-      doctorId,
-      appointmentCode: code,
-      consultationType: 'visit_site',
-      status: 'confirmed',
-      slotStart: { $gte: new Date() },
-    }).lean();
-    if (!existing) return code;
-  }
-  const err = new Error('Could not generate appointment code. Please try again.');
-  err.statusCode = 503;
-  throw err;
-}
-
-function bookingAppointmentFields(booking) {
-  if (!booking?.appointmentCode) return {};
-  return {
-    appointmentCode: booking.appointmentCode,
-    appointmentVerifiedAt: booking.appointmentVerifiedAt ?? null,
-    isAppointmentVerified: Boolean(booking.appointmentVerifiedAt),
-  };
+function bookingAppointmentFields(booking, { includeOtp = true } = {}) {
+  const clinic = clinicVerificationFields(booking, { includeOtp });
+  if (!clinic.verificationStatus && !booking?.appointmentCode) return {};
+  return clinic;
 }
 
 function bookingPreviousReportsFields(booking) {
@@ -840,8 +820,8 @@ async function confirmBookingAfterPayment({
     }
   }
 
-  if (booking.consultationType === 'visit_site' && !booking.appointmentCode) {
-    booking.appointmentCode = await generateUniqueAppointmentCode(booking.doctorId);
+  if (booking.consultationType === 'visit_site') {
+    await ensureClinicVisitOtp(booking);
   }
 
   if (booking.consultationType === 'online_consult' && !booking.videoRoomId) {
@@ -1138,66 +1118,41 @@ async function releaseConsultationSlotHold(holdId, patientId) {
   return { released: true };
 }
 
-async function verifyClinicAppointment(doctorId, appointmentCode) {
-  const code = String(appointmentCode || '').trim();
-  if (!/^\d{4}$/.test(code)) {
-    const err = new Error('Enter a valid 4-digit appointment code');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const booking = await ConsultationBooking.findOne({
-    doctorId,
-    appointmentCode: code,
-    consultationType: 'visit_site',
-    status: 'confirmed',
-  });
-
-  if (!booking) {
-    const err = new Error('Invalid appointment code');
-    err.statusCode = 404;
-    throw err;
-  }
-
-  if (booking.appointmentVerifiedAt) {
-    const err = new Error('This appointment was already verified');
-    err.statusCode = 409;
-    throw err;
-  }
-
-  const slotStart = new Date(booking.slotStart);
-  const windowStart = new Date(slotStart.getTime() - 2 * 60 * 60 * 1000);
-  const windowEnd = new Date(booking.slotEnd.getTime() + 2 * 60 * 60 * 1000);
-  const now = new Date();
-  if (now < windowStart || now > windowEnd) {
-    const err = new Error(
-      'Appointment code can only be verified around the scheduled visit time',
-    );
-    err.statusCode = 400;
-    throw err;
-  }
-
-  booking.appointmentVerifiedAt = now;
-  await booking.save();
-
+async function verifyClinicAppointment(doctorId, appointmentCode, extras = {}) {
+  const code = String(appointmentCode || extras.otp || '').trim();
+  const bookingId = String(extras.bookingId || '').trim();
   const doctor = await findDoctorById(doctorId);
-  const slotLabel = formatSlotLabel(
-    new Date(booking.slotStart),
-    new Date(booking.slotEnd),
-  );
 
-  return {
-    id: booking.id,
-    patientName: booking.patientName,
-    patientMobile: booking.patientMobile,
-    slotStart: booking.slotStart,
-    slotEnd: booking.slotEnd,
-    label: slotLabel,
-    appointmentCode: booking.appointmentCode,
-    appointmentVerifiedAt: booking.appointmentVerifiedAt,
-    isAppointmentVerified: true,
-    clinicName: doctor?.clinicName,
-  };
+  let targetId = bookingId;
+  if (!targetId) {
+    if (!/^\d{4}$/.test(code)) {
+      const err = new Error('Enter a valid 4-digit verification code');
+      err.statusCode = 400;
+      throw err;
+    }
+    const booking = await ConsultationBooking.findOne({
+      doctorId,
+      appointmentCode: code,
+      consultationType: 'visit_site',
+      status: 'confirmed',
+    });
+    if (!booking) {
+      const err = new Error('Invalid appointment code');
+      err.statusCode = 404;
+      throw err;
+    }
+    targetId = booking.id;
+  }
+
+  return verifyClinicVisitOtpForBooking({
+    bookingId: targetId,
+    otp: code,
+    doctorId,
+    actorType: extras.actorType || 'doctor',
+    actorId: extras.actorId || doctorId,
+    actorName: extras.actorName ||
+      `${doctor?.firstName || ''} ${doctor?.lastName || ''}`.trim(),
+  });
 }
 
 async function createOnlineConsultBooking(payload) {
@@ -1939,7 +1894,7 @@ async function listDoctorBookings(doctorId) {
       doctorApprovedAt: b.doctorApprovedAt ?? null,
       approvalExpiresAt: b.approvalExpiresAt ?? null,
       createdAt: b.createdAt,
-      ...bookingAppointmentFields(b),
+      ...bookingAppointmentFields(b, { includeOtp: false }),
       ...videoJoinFields(b, now),
       ...bookingPreviousReportsFields(b),
       ...prescriptionFieldsForBooking(b, prescriptionMap.get(b.id), now),
@@ -1965,5 +1920,6 @@ module.exports = {
   listPatientBookings,
   getPatientBookingById,
   addPreviousReportToBooking,
+  assertPatientCanAccessBooking,
   MAX_PREVIOUS_REPORTS,
 };

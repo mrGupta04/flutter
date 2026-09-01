@@ -41,6 +41,9 @@ import '../features/lab_dashboard/presentation/screens/lab_dashboard_screen.dart
 import '../features/lab_dashboard/presentation/screens/lab_prescription_inbox_screen.dart';
 import '../features/blood_bank_dashboard/presentation/screens/blood_bank_dashboard_screen.dart';
 import '../features/doctor_dashboard/presentation/screens/doctor_dashboard_screen.dart';
+import '../features/receptionist/presentation/screens/receptionist_dashboard_screen.dart';
+import '../features/receptionist/presentation/screens/receptionist_login_screen.dart';
+import '../features/receptionist/presentation/screens/receptionist_management_screen.dart';
 import '../features/doctor_registration/presentation/screens/application_submitted_screen.dart';
 import '../features/doctor_registration/presentation/screens/registration_form_screen.dart';
 import '../features/nurse_registration/presentation/screens/nurse_application_submitted_screen.dart';
@@ -60,6 +63,7 @@ import '../features/provider/presentation/screens/provider_landing_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
 import '../features/provider/presentation/screens/provider_profile_screen.dart';
 import '../features/auth/provider/provider_auth_provider.dart';
+import '../features/receptionist/provider/receptionist_providers.dart';
 import '../features/admin/provider/admin_auth_provider.dart';
 import '../features/select_location/select_location_screen.dart';
 import '../features/select_location/selected_location.dart';
@@ -134,7 +138,33 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final loc = state.matchedLocation;
 
+      final storedProviderType = await TokenStorage.instance.getProviderType();
+      final receptionistToken = await TokenStorage.instance.getToken();
+      final hasReceptionistToken =
+          receptionistToken != null && receptionistToken.isNotEmpty;
+      final isReceptionistSession =
+          (storedProviderType == 'receptionist' && hasReceptionistToken) ||
+          ref.read(receptionistAuthProvider).isAuthenticated;
+      if (isReceptionistSession) {
+        if (loc == AppConstants.routeProviderLanding) {
+          return null;
+        }
+        if (loc == AppConstants.routeReceptionistLogin ||
+            loc == AppConstants.routeReceptionistDashboard) {
+          if (loc == AppConstants.routeReceptionistLogin) {
+            return AppConstants.routeReceptionistDashboard;
+          }
+          return null;
+        }
+        return AppConstants.routeReceptionistDashboard;
+      }
+
+      if (loc == AppConstants.routeReceptionistDashboard) {
+        return AppConstants.routeProviderLanding;
+      }
+
       if (loc == AppConstants.routeDoctorDashboard ||
+          loc == AppConstants.routeDoctorReceptionists ||
           loc == AppConstants.routeNurseDashboard ||
           loc == AppConstants.routeProviderHomeVisitTrip ||
           loc == AppConstants.routeScanDashboard ||
@@ -370,6 +400,30 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadePage(
           state,
           const DoctorDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeDoctorReceptionists,
+        name: 'doctorReceptionists',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ReceptionistManagementScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeReceptionistLogin,
+        name: 'receptionistLogin',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          const ReceptionistLoginScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeReceptionistDashboard,
+        name: 'receptionistDashboard',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          const ReceptionistDashboardScreen(),
         ),
       ),
       GoRoute(

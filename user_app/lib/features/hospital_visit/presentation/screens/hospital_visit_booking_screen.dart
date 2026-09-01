@@ -176,7 +176,7 @@ class _HospitalVisitBookingScreenState
                 ],
                 const SizedBox(height: 12),
                 Text(
-                  'Arrive 10 minutes early with a valid ID. Share your appointment code when the doctor asks.',
+                  'Arrive 10 minutes early with a valid ID. Show the OTP in this booking to the clinic receptionist when you arrive.',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                     height: 1.35,

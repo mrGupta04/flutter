@@ -2,6 +2,7 @@ export 'consultation_type.dart';
 export 'doctor_model.dart';
 export 'doctor_availability_model.dart';
 export 'doctor_booking_model.dart';
+export 'receptionist_model.dart';
 export 'nurse_model.dart';
 export 'ambulance_model.dart';
 export 'ambulance_vehicle_model.dart';

@@ -79,9 +79,22 @@ const consultationBookingSchema = new mongoose.Schema(
     currency: { type: String, default: 'INR' },
     paidAt: Date,
     paymentExpiresAt: { type: Date, index: true },
-    /** 4-digit code for clinic visits — patient shows, doctor verifies. */
+    /** 4-digit display code for clinic visits — hashed copy lives on BookingVerificationOtp. */
     appointmentCode: { type: String, index: true },
     appointmentVerifiedAt: Date,
+    verificationStatus: {
+      type: String,
+      enum: ['PENDING', 'VERIFIED'],
+      index: true,
+    },
+    verifiedBy: String,
+    verifiedByType: {
+      type: String,
+      enum: ['receptionist', 'doctor'],
+    },
+    verifiedByName: String,
+    verifiedAt: Date,
+    patientArrivedAt: Date,
     /** Stable room id for online consult video (Jitsi / Agora). */
     videoRoomId: String,
     videoCallStartedAt: Date,

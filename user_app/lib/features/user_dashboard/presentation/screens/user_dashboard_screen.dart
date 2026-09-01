@@ -1313,13 +1313,33 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                   ],
                   if (_showDetails &&
                       booking.isClinicVisit &&
-                      booking.appointmentCode != null &&
-                      isUpcoming) ...[
+                      isUpcoming &&
+                      booking.status == 'confirmed') ...[
                     const SizedBox(height: 12),
                     AppointmentCodeDisplay(
-                      code: booking.appointmentCode!,
+                      code: booking.appointmentCode ?? '0000',
                       verified: booking.isAppointmentVerified,
                       compact: true,
+                      bookingId: booking.id,
+                      onRegenerate: booking.isAppointmentVerified
+                          ? null
+                          : () async {
+                              try {
+                                final code = await ref
+                                    .read(patientDashboardRepositoryProvider)
+                                    .regenerateClinicOtp(booking.id);
+                                if (onRefresh != null) await onRefresh!();
+                                return code;
+                              } catch (e) {
+                                if (context.mounted) {
+                                  SnackBarHelper.showError(
+                                    context,
+                                    e.toString().replaceFirst('Exception: ', ''),
+                                  );
+                                }
+                                return null;
+                              }
+                            },
                     ),
                   ],
                   if (_showDetails && booking.isOnlineConsult && isUpcoming) ...[

@@ -93,6 +93,7 @@ function emitBookingStatusUpdate(booking) {
       workflowStatus: workflowStatus(booking),
       paymentStatus: booking.paymentStatus,
       visitProgress: booking.visitProgress || null,
+      verificationStatus: booking.verificationStatus || null,
       paymentExpiresAt: booking.paymentExpiresAt || null,
       remainingPaymentSeconds: isPaymentPendingStatus(booking.status)
         ? remainingPaymentSeconds(booking)
@@ -109,6 +110,7 @@ function emitBookingStatusUpdate(booking) {
       status: booking.status,
       paymentStatus: booking.paymentStatus,
       visitProgress: booking.visitProgress || null,
+      verificationStatus: booking.verificationStatus || null,
       timestamp: Date.now(),
     };
   }

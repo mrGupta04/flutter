@@ -21,6 +21,7 @@ class TokenStorage {
   static const String _bloodBankIdKey = 'blood_bank_id';
   static const String _labIdKey = 'lab_id';
   static const String _scanCenterIdKey = 'scan_center_id';
+  static const String _receptionistIdKey = 'receptionist_id';
   static const String _providerTypeKey = 'provider_type';
   static const String _mobileKey = 'mobile_number';
   static const String _providerOnlineKey = 'provider_available_online';
@@ -174,6 +175,16 @@ class TokenStorage {
     await prefs.setString(_scanCenterIdKey, scanCenterId);
   }
 
+  Future<String?> getReceptionistId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_receptionistIdKey);
+  }
+
+  Future<void> saveReceptionistId(String receptionistId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_receptionistIdKey, receptionistId);
+  }
+
   Future<String?> getProviderType() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_providerTypeKey);
@@ -206,6 +217,8 @@ class TokenStorage {
       case 'scan-center':
       case 'scan_center':
         if (entityId != null) await saveScanCenterId(entityId);
+      case 'receptionist':
+        if (entityId != null) await saveReceptionistId(entityId);
     }
   }
 
@@ -258,6 +271,7 @@ class TokenStorage {
     await prefs.remove(_bloodBankIdKey);
     await prefs.remove(_labIdKey);
     await prefs.remove(_scanCenterIdKey);
+    await prefs.remove(_receptionistIdKey);
     await prefs.remove(_providerTypeKey);
     await prefs.remove(_mobileKey);
     await prefs.remove(_providerOnlineKey);
