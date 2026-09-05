@@ -12,7 +12,7 @@ const ambulanceLocationSchema = new mongoose.Schema(
     accuracy: Number,
     heading: Number,
     speed: Number,
-    recordedAt: { type: Date, default: Date.now, index: true },
+    recordedAt: { type: Date, default: Date.now },
   },
   { timestamps: true },
 );

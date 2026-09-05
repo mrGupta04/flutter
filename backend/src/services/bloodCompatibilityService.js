@@ -25,7 +25,7 @@ const DEFAULT_COMPONENTS = [
 
 async function ensureDefaultCompatibility() {
   const count = await BloodCompatibility.countDocuments();
-  if (count > 0) return listCompatibilityRules();
+  if (count > 0) return;
 
   await BloodCompatibility.insertMany(
     DEFAULT_RULES.map((rule) => ({
@@ -38,7 +38,6 @@ async function ensureDefaultCompatibility() {
       active: true,
     })),
   );
-  return listCompatibilityRules();
 }
 
 async function listCompatibilityRules() {

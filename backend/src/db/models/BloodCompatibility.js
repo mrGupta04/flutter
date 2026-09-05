@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const bloodCompatibilitySchema = new mongoose.Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
-    recipientGroup: { type: String, required: true, index: true },
+    recipientGroup: { type: String, required: true },
     compatibleDonorGroups: { type: [String], default: [] },
     compatibleComponents: { type: [String], default: [] },
     notes: String,

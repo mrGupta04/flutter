@@ -488,7 +488,10 @@ class AmbulanceRegistrationRepository {
 
   Future<ApiResponse<Map<String, dynamic>>> reassign(String id) async {
     try {
-      final response = await _dioService.post(AppConstants.endpointAdminAmbulanceReassign(id));
+      final response = await _dioService.post(
+        AppConstants.endpointAdminAmbulanceReassign(id),
+        data: const {},
+      );
       final body = response.data as Map<String, dynamic>;
       return ApiResponse(
         success: body['success'] as bool? ?? true,

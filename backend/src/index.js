@@ -171,6 +171,21 @@ async function start() {
     );
   }
 
+  // Bind PORT before Mongo migrations so Render's port scanner does not time out.
+  attachTrackingSocket(httpServer);
+  await new Promise((resolve, reject) => {
+    const onError = (err) => reject(err);
+    httpServer.once('error', onError);
+    httpServer.listen(PORT, '0.0.0.0', () => {
+      httpServer.removeListener('error', onError);
+      console.log(`1mg Doctors API [${NODE_ENV}] http://0.0.0.0:${PORT}`);
+      console.log(`  Health: http://localhost:${PORT}/health`);
+      console.log(`  API:    http://localhost:${PORT}/api/v1`);
+      console.log(`  Socket: ws://localhost:${PORT}/socket.io`);
+      resolve();
+    });
+  });
+
   await connectDB();
 
   const paymentInfo = getRazorpayInfo();
@@ -197,18 +212,6 @@ async function start() {
     await seed();
     console.log('Database seeded with sample data (SEED_DATABASE=true)');
   }
-
-  attachTrackingSocket(httpServer);
-
-  await new Promise((resolve) => {
-    httpServer.listen(PORT, '0.0.0.0', () => {
-      console.log(`1mg Doctors API [${NODE_ENV}] http://0.0.0.0:${PORT}`);
-      console.log(`  Health: http://localhost:${PORT}/health`);
-      console.log(`  API:    http://localhost:${PORT}/api/v1`);
-      console.log(`  Socket: ws://localhost:${PORT}/socket.io`);
-      resolve();
-    });
-  });
 
   void verifySmtpAtStartup();
   startPrescriptionAutoSendScheduler();

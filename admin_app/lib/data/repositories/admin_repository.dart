@@ -1143,6 +1143,7 @@ class AdminRepository {
     try {
       final response = await _dioService.post(
         AppConstants.endpointAdminBloodBankEnable(bloodBankId),
+        data: const {},
       );
       return ApiResponse.fromJson(
         response.data as Map<String, dynamic>,

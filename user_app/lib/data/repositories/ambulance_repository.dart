@@ -280,8 +280,10 @@ class AmbulanceRepository {
 
   Future<ApiResponse<AmbulanceBookingModel>> retryDispatch(String id) async {
     try {
-      final response =
-          await _dioService.post(AppConstants.endpointAmbulanceRetryDispatch(id));
+      final response = await _dioService.post(
+        AppConstants.endpointAmbulanceRetryDispatch(id),
+        data: const {},
+      );
       final body = response.data as Map<String, dynamic>;
       final data = body['data'];
       final raw = data is Map && data['booking'] is Map

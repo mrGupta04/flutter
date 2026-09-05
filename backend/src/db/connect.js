@@ -33,6 +33,14 @@ function connectionHelp(err) {
   return msg;
 }
 
+async function runStartupTask(label, fn) {
+  try {
+    await fn();
+  } catch (err) {
+    console.warn(`[startup] ${label} failed:`, err.message);
+  }
+}
+
 async function connectDB() {
   if (isConnected) return mongoose.connection;
 
@@ -56,18 +64,28 @@ async function connectDB() {
       if (i > 0) {
         console.log('MongoDB fallback URI used after primary URI failed.');
       }
-      const { syncDoctorAvailabilityIndexes } = require('./migrations/doctorAvailabilityIndexes');
-      await syncDoctorAvailabilityIndexes();
-      const {
-        syncConsultationBookingIndexes,
-      } = require('./migrations/consultationBookingIndexes');
-      await syncConsultationBookingIndexes();
-      const { applyBloodBankIndexes } = require('./migrations/bloodBankIndexes');
-      await applyBloodBankIndexes(mongoose);
-      const { applyAmbulanceIndexes } = require('./migrations/ambulanceIndexes');
-      await applyAmbulanceIndexes(mongoose);
-      const { ensureDefaultCompatibility } = require('../services/bloodCompatibilityService');
-      await ensureDefaultCompatibility();
+      await runStartupTask('doctor availability indexes', async () => {
+        const { syncDoctorAvailabilityIndexes } = require('./migrations/doctorAvailabilityIndexes');
+        await syncDoctorAvailabilityIndexes();
+      });
+      await runStartupTask('consultation booking indexes', async () => {
+        const {
+          syncConsultationBookingIndexes,
+        } = require('./migrations/consultationBookingIndexes');
+        await syncConsultationBookingIndexes();
+      });
+      await runStartupTask('blood bank indexes', async () => {
+        const { applyBloodBankIndexes } = require('./migrations/bloodBankIndexes');
+        await applyBloodBankIndexes(mongoose);
+      });
+      await runStartupTask('ambulance indexes', async () => {
+        const { applyAmbulanceIndexes } = require('./migrations/ambulanceIndexes');
+        await applyAmbulanceIndexes(mongoose);
+      });
+      await runStartupTask('blood compatibility defaults', async () => {
+        const { ensureDefaultCompatibility } = require('../services/bloodCompatibilityService');
+        await ensureDefaultCompatibility();
+      });
       return mongoose.connection;
     } catch (err) {
       lastErr = err;
