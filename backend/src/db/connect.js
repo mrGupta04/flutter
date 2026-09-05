@@ -62,6 +62,12 @@ async function connectDB() {
         syncConsultationBookingIndexes,
       } = require('./migrations/consultationBookingIndexes');
       await syncConsultationBookingIndexes();
+      const { applyBloodBankIndexes } = require('./migrations/bloodBankIndexes');
+      await applyBloodBankIndexes(mongoose);
+      const { applyAmbulanceIndexes } = require('./migrations/ambulanceIndexes');
+      await applyAmbulanceIndexes(mongoose);
+      const { ensureDefaultCompatibility } = require('../services/bloodCompatibilityService');
+      await ensureDefaultCompatibility();
       return mongoose.connection;
     } catch (err) {
       lastErr = err;

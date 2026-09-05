@@ -131,6 +131,22 @@ async function upsertBloodBank(data) {
     hospitalDeliveryAvailable:
       data.hospitalDeliveryAvailable ?? existing?.hospitalDeliveryAvailable ?? false,
     cashPaymentEnabled: data.cashPaymentEnabled ?? existing?.cashPaymentEnabled ?? true,
+    coverImage: data.coverImage ?? existing?.coverImage,
+    serviceRadiusKm: data.serviceRadiusKm ?? existing?.serviceRadiusKm ?? 25,
+    deliveryRadiusKm: data.deliveryRadiusKm ?? existing?.deliveryRadiusKm ?? 15,
+    publicInventoryVisibility:
+      data.publicInventoryVisibility ?? existing?.publicInventoryVisibility ?? 'states',
+    lowStockThreshold: data.lowStockThreshold ?? existing?.lowStockThreshold ?? 5,
+    criticalStockThreshold: data.criticalStockThreshold ?? existing?.criticalStockThreshold ?? 2,
+    nearExpiryDays: data.nearExpiryDays ?? existing?.nearExpiryDays ?? 7,
+    reservationHoldMinutes: data.reservationHoldMinutes ?? existing?.reservationHoldMinutes ?? 120,
+    autoAcceptEnabled: data.autoAcceptEnabled ?? existing?.autoAcceptEnabled ?? false,
+    autoAcceptMaxUnits: data.autoAcceptMaxUnits ?? existing?.autoAcceptMaxUnits ?? 1,
+    emergencyRequestEnabled: data.emergencyRequestEnabled ?? existing?.emergencyRequestEnabled ?? true,
+    notifyDonorsWhenUnfulfilled:
+      data.notifyDonorsWhenUnfulfilled ?? existing?.notifyDonorsWhenUnfulfilled ?? true,
+    deliveryEnabled: data.deliveryEnabled ?? existing?.deliveryEnabled ?? false,
+    notificationPreferences: data.notificationPreferences ?? existing?.notificationPreferences,
     bloodComponents: data.bloodComponents ?? existing?.bloodComponents ?? [],
     offers: data.offers ?? existing?.offers ?? [],
     galleryImages: data.galleryImages ?? existing?.galleryImages ?? [],
@@ -191,6 +207,7 @@ async function listBloodBanks({
   }
   if (status === 'verified') {
     filter.isSuspended = { $ne: true };
+    filter.isDisabled = { $ne: true };
   }
   if (city?.trim()) {
     filter.city = new RegExp(escapeRegex(city.trim()), 'i');
@@ -406,23 +423,84 @@ async function rejectBloodBankDocument(bloodBankId, documentId, rejectionReason)
   );
 }
 
+async function disableBloodBank(id, reason) {
+  await BloodBank.updateOne(
+    { id },
+    {
+      $set: {
+        isDisabled: true,
+        disabledReason: reason || null,
+      },
+    },
+  );
+  return findBloodBankById(id);
+}
+
+async function enableBloodBank(id) {
+  await BloodBank.updateOne(
+    { id },
+    {
+      $set: {
+        isDisabled: false,
+        disabledReason: null,
+        isSuspended: false,
+        suspensionReason: null,
+        verificationStatus: 'verified',
+        isApproved: true,
+      },
+    },
+  );
+  return findBloodBankById(id);
+}
+
 async function getBloodBankDashboardStats(bloodBankId) {
   const BloodOrder = require('./models/BloodOrder');
   const EmergencyBloodRequest = require('./models/EmergencyBloodRequest');
+  const BloodInventory = require('./models/BloodInventory');
+  const BloodDonation = require('./models/BloodDonation');
 
-  const [total, pending, completed, emergency, todayOrders, revenueAgg] = await Promise.all([
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const [
+    total,
+    pending,
+    completed,
+    emergency,
+    todayOrders,
+    revenueAgg,
+    inventoryAgg,
+    lowStock,
+    criticalStock,
+    pendingDonations,
+    openEmergencies,
+  ] = await Promise.all([
     BloodOrder.countDocuments({ bloodBankId }),
-    BloodOrder.countDocuments({ bloodBankId, status: 'pending' }),
-    BloodOrder.countDocuments({ bloodBankId, status: 'delivered' }),
-    BloodOrder.countDocuments({ bloodBankId, isEmergency: true }),
     BloodOrder.countDocuments({
       bloodBankId,
-      createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+      status: { $in: ['pending', 'blood_bank_notified', 'under_review'] },
     }),
+    BloodOrder.countDocuments({
+      bloodBankId,
+      status: { $in: ['delivered', 'completed', 'collected'] },
+    }),
+    BloodOrder.countDocuments({ bloodBankId, isEmergency: true }),
+    BloodOrder.countDocuments({ bloodBankId, createdAt: { $gte: startOfDay } }),
     BloodOrder.aggregate([
-      { $match: { bloodBankId, status: 'delivered' } },
+      { $match: { bloodBankId, status: { $in: ['delivered', 'completed'] } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } },
     ]),
+    BloodInventory.aggregate([
+      { $match: { bloodBankId } },
+      { $group: { _id: null, total: { $sum: '$availableUnits' } } },
+    ]),
+    BloodInventory.countDocuments({ bloodBankId, availableUnits: { $gt: 0, $lte: 5 } }),
+    BloodInventory.countDocuments({ bloodBankId, availableUnits: { $gt: 0, $lte: 2 } }),
+    BloodDonation.countDocuments({ bloodBankId, status: 'scheduled' }),
+    EmergencyBloodRequest.countDocuments({
+      status: { $in: ['open', 'emergency_requested', 'blood_bank_alerted', 'response_received'] },
+      $or: [{ assignedBloodBankId: bloodBankId }, { notifiedBloodBankIds: bloodBankId }],
+    }),
   ]);
 
   const bank = await findBloodBankById(bloodBankId);
@@ -436,10 +514,16 @@ async function getBloodBankDashboardStats(bloodBankId) {
     completedOrders: completed,
     emergencyRequests: emergency,
     todayOrders,
+    todayRequests: todayOrders,
     revenue: revenueAgg[0]?.total ?? 0,
     activeOffers,
     averageRating: bank?.averageRating ?? 4.5,
     reviewCount: bank?.reviewCount ?? 0,
+    totalAvailableUnits: inventoryAgg[0]?.total ?? 0,
+    lowStockGroups: lowStock,
+    criticalStockGroups: criticalStock,
+    pendingDonations,
+    activeEmergencyRequests: openEmergencies,
   };
 }
 
@@ -461,6 +545,8 @@ module.exports = {
   requestBloodBankDocuments,
   verifyBloodBankDocument,
   rejectBloodBankDocument,
+  disableBloodBank,
+  enableBloodBank,
   getBloodBankDashboardStats,
   DEFAULT_BLOOD_GROUPS,
   DEFAULT_BLOOD_COMPONENTS,

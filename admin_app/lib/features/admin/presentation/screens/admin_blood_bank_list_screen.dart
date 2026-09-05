@@ -158,6 +158,13 @@ class _AdminBloodBankListScreenState
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Analytics',
+            icon: const Icon(Icons.insights_outlined),
+            onPressed: () => context.push(AppConstants.routeAdminBloodAnalytics),
+          ),
+        ],
       ),
       body: ResponsivePage(
         padding: ResponsiveUtils.pagePadding(context),

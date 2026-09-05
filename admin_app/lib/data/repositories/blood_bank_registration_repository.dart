@@ -204,6 +204,132 @@ class BloodBankRegistrationRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> requestAction(
+    String orderId,
+    String action, {
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointBloodBankRequestAction(orderId, action),
+        data: data ?? {},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] as Map<String, dynamic>?,
+        message: body['message'] as String?,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> getInventory() async {
+    try {
+      final id = await TokenStorage.instance.getBloodBankId();
+      final response = await _dioService.get(
+        AppConstants.endpointBloodBankInventory,
+        queryParameters: {if (id != null) 'bloodBankId': id},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: extractApiList(body['data'])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> addInventoryUnits(Map<String, dynamic> payload) async {
+    try {
+      await _dioService.post(AppConstants.endpointBloodBankInventoryUnits, data: payload);
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> getDonors() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointBloodBankDonors);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: extractApiList(body['data'])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> recordDonation(Map<String, dynamic> payload) async {
+    try {
+      await _dioService.post(AppConstants.endpointBloodBankDonations, data: payload);
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> getStaff() async {
+    try {
+      final id = await TokenStorage.instance.getBloodBankId();
+      final response = await _dioService.get(
+        AppConstants.endpointBloodBankStaff,
+        queryParameters: {if (id != null) 'bloodBankId': id},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: extractApiList(body['data'])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> saveStaff(Map<String, dynamic> payload) async {
+    try {
+      final id = await TokenStorage.instance.getBloodBankId();
+      await _dioService.post(
+        AppConstants.endpointBloodBankStaff,
+        data: {...payload, if (id != null) 'bloodBankId': id},
+      );
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> respondEmergency(
+    String requestId, {
+    required String action,
+    int? availableUnits,
+    String? notes,
+  }) async {
+    try {
+      await _dioService.post(
+        AppConstants.endpointEmergencyRespond(requestId),
+        data: {
+          'action': action,
+          if (availableUnits != null) 'availableUnits': availableUnits,
+          if (notes != null) 'notes': notes,
+        },
+      );
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   Future<ApiResponse<void>> acceptEmergencyRequest(String requestId) async {
     try {
       final id = await TokenStorage.instance.getBloodBankId();

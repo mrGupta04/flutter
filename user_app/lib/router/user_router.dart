@@ -13,6 +13,11 @@ import '../features/blood_bank/presentation/screens/blood_banks_screen.dart';
 import '../features/blood_bank/presentation/screens/blood_bank_detail_screen.dart';
 import '../features/blood_bank/presentation/screens/emergency_blood_request_screen.dart';
 import '../features/blood_bank/presentation/screens/blood_order_confirmation_screen.dart';
+import '../features/blood_bank/presentation/screens/my_blood_requests_screen.dart';
+import '../features/blood_bank/presentation/screens/blood_request_detail_screen.dart';
+import '../features/blood_bank/presentation/screens/donor_profile_screen.dart';
+import '../features/blood_bank/presentation/screens/donor_history_screen.dart';
+import '../features/blood_bank/presentation/screens/donor_requests_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_search_screen.dart';
 import '../features/doctor_registration/presentation/screens/find_specialists_screen.dart';
 import '../features/hospital_visit/presentation/screens/hospital_visit_booking_screen.dart';
@@ -35,6 +40,11 @@ import '../features/user_dashboard/presentation/screens/user_dashboard_screen.da
 import '../features/user_dashboard/presentation/screens/nursing_reports_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_rewards_screen.dart';
 import '../features/ambulance/presentation/screens/ambulance_tracking_screen.dart';
+import '../features/ambulance/presentation/screens/ambulance_hub_screen.dart';
+import '../features/ambulance/presentation/screens/ambulance_emergency_screen.dart';
+import '../features/ambulance/presentation/screens/ambulance_scheduled_screen.dart';
+import '../features/ambulance/presentation/screens/my_ambulance_bookings_screen.dart';
+import '../features/ambulance/presentation/screens/ambulance_trip_detail_screen.dart';
 import '../features/home_visit_tracking/presentation/screens/patient_tracking_screen.dart';
 import '../features/video_consult/presentation/screens/video_consult_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
@@ -193,6 +203,48 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => slidePage(
           state,
           const UserRewardsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAmbulanceHub,
+        name: 'ambulanceHub',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AmbulanceHubScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAmbulanceEmergency,
+        name: 'ambulanceEmergency',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AmbulanceEmergencyScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAmbulanceScheduled,
+        name: 'ambulanceScheduled',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AmbulanceScheduledScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeMyAmbulanceBookings,
+        name: 'myAmbulanceBookings',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const MyAmbulanceBookingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAmbulanceTripDetail,
+        name: 'ambulanceTripDetail',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          AmbulanceTripDetailScreen(
+            bookingId: state.uri.queryParameters['id'] ?? '',
+          ),
         ),
       ),
       GoRoute(
@@ -667,6 +719,48 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           BloodOrderConfirmationScreen(
             orderId: state.pathParameters['orderId']!,
           ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeMyBloodRequests,
+        name: 'myBloodRequests',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const MyBloodRequestsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '${AppConstants.routeBloodRequestDetail}/:requestId',
+        name: 'bloodRequestDetail',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          BloodRequestDetailScreen(
+            requestId: state.pathParameters['requestId']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBloodDonorProfile,
+        name: 'bloodDonorProfile',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const DonorProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBloodDonorHistory,
+        name: 'bloodDonorHistory',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const DonorHistoryScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBloodDonorRequests,
+        name: 'bloodDonorRequests',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const DonorRequestsScreen(),
         ),
       ),
     ],

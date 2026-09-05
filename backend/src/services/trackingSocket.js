@@ -187,7 +187,7 @@ function attachTrackingSocket(httpServer) {
     }
     try {
       const auth = verifyToken(token);
-      if (!['patient', 'doctor', 'nurse'].includes(auth?.type)) {
+      if (!['patient', 'doctor', 'nurse', 'bloodbank', 'blood_bank_staff', 'ambulance', 'ambulance_driver', 'admin'].includes(auth?.type)) {
         return next(new Error('Invalid tracking identity'));
       }
       socket.data.auth = auth;
@@ -207,6 +207,13 @@ function attachTrackingSocket(httpServer) {
       socket.join(userRoom('doctor', auth.doctorId));
     } else if (auth.type === 'nurse' && auth.nurseId) {
       socket.join(userRoom('nurse', auth.nurseId));
+    } else if ((auth.type === 'bloodbank' || auth.type === 'blood_bank_staff') && auth.bloodBankId) {
+      socket.join(userRoom('bloodbank', auth.bloodBankId));
+    } else if ((auth.type === 'ambulance' || auth.type === 'ambulance_driver') && auth.ambulanceId) {
+      socket.join(userRoom('ambulance', auth.ambulanceId));
+      if (auth.driverId) socket.join(userRoom('ambulance_driver', auth.driverId));
+    } else if (auth.type === 'admin') {
+      socket.join(userRoom('admin', 'ops'));
     }
 
     socket.on('join_booking_room', onJoin);

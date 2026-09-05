@@ -5,7 +5,14 @@ const LabBooking = require('./models/LabBooking');
 const ScanBooking = require('./models/ScanBooking');
 const PrescriptionRequest = require('./models/PrescriptionRequest');
 const PrescriptionQuotation = require('./models/PrescriptionQuotation');
+const BloodOrder = require('./models/BloodOrder');
+const AmbulanceBooking = require('./models/AmbulanceBooking');
 const { createAndPushNotification } = require('./notificationRepositories');
+const { isActiveTrip } = require('../services/ambulanceStatus');
+
+function bloodOrderChatAllowed(booking, allowed) {
+  return Boolean(booking.chatEnabled) || allowed.has(booking.status);
+}
 
 const LAB_CHAT_STATUSES = new Set([
   'confirmed',
@@ -41,6 +48,16 @@ async function resolveBooking(bookingId) {
     return { kind: 'prescription_request', booking: prescription };
   }
 
+  const bloodOrder = await BloodOrder.findOne({ id: bookingId }).lean();
+  if (bloodOrder) {
+    return { kind: 'blood', booking: bloodOrder };
+  }
+
+  const ambulance = await AmbulanceBooking.findOne({ id: bookingId }).lean();
+  if (ambulance) {
+    return { kind: 'ambulance', booking: ambulance };
+  }
+
   return null;
 }
 
@@ -68,6 +85,35 @@ function assertChatAllowed(kind, booking) {
       const err = new Error(
         'Chat is available after the scan center confirms your booking',
       );
+      err.statusCode = 403;
+      throw err;
+    }
+    return;
+  }
+  if (kind === 'blood') {
+    const allowed = new Set([
+      'accepted',
+      'blood_reserved',
+      'payment_pickup',
+      'ready_for_collection',
+      'blood_ready',
+      'out_for_delivery',
+      'collected',
+      'completed',
+    ]);
+    if (!bloodOrderChatAllowed(booking, allowed)) {
+      const err = new Error('Chat is available after the blood bank accepts your request');
+      err.statusCode = 403;
+      throw err;
+    }
+    return;
+  }
+  if (kind === 'ambulance') {
+    if (
+      !isActiveTrip(booking.status) &&
+      !['accepted', 'trip_completed', 'completed'].includes(booking.status)
+    ) {
+      const err = new Error('Chat is available after an ambulance is assigned');
       err.statusCode = 403;
       throw err;
     }
@@ -129,6 +175,12 @@ async function assertChatParticipant(bookingId, auth) {
       booking.selectedLabId &&
       auth.labId === booking.selectedLabId);
 
+  const isBloodBank =
+    kind === 'blood' &&
+    (auth?.type === 'bloodbank' || auth?.type === 'blood_bank_staff') &&
+    booking.bloodBankId &&
+    auth.bloodBankId === booking.bloodBankId;
+
   const isScanCenter =
     (kind === 'scan' &&
       auth?.type === 'scan_center' &&
@@ -139,7 +191,13 @@ async function assertChatParticipant(bookingId, auth) {
       booking.selectedLabId &&
       auth.scanCenterId === booking.selectedLabId);
 
-  if (!isPatient && !isDoctor && !isNurse && !isLab && !isScanCenter) {
+  const isAmbulance =
+    kind === 'ambulance' &&
+    (auth?.type === 'ambulance' || auth?.type === 'ambulance_driver') &&
+    booking.ambulanceId &&
+    auth.ambulanceId === booking.ambulanceId;
+
+  if (!isPatient && !isDoctor && !isNurse && !isLab && !isScanCenter && !isBloodBank && !isAmbulance) {
     const err = new Error('You are not allowed to access this chat');
     err.statusCode = 403;
     throw err;
@@ -153,6 +211,8 @@ async function assertChatParticipant(bookingId, auth) {
     isNurse,
     isLab,
     isScanCenter,
+    isBloodBank,
+    isAmbulance,
   };
 }
 
@@ -192,6 +252,8 @@ async function sendChatMessage(bookingId, auth, body) {
     isNurse,
     isLab,
     isScanCenter,
+    isBloodBank,
+    isAmbulance,
   } = await assertChatParticipant(bookingId, auth);
 
   let senderType = 'patient';
@@ -208,6 +270,12 @@ async function sendChatMessage(bookingId, auth, body) {
   } else if (isScanCenter) {
     senderType = 'scan_center';
     senderId = auth.scanCenterId;
+  } else if (isBloodBank) {
+    senderType = 'blood_bank';
+    senderId = auth.bloodBankId;
+  } else if (isAmbulance) {
+    senderType = auth.type === 'ambulance_driver' ? 'ambulance_driver' : 'ambulance';
+    senderId = auth.driverId || auth.ambulanceId;
   }
 
   const message = await BookingChatMessage.create({
@@ -259,6 +327,24 @@ async function sendChatMessage(bookingId, auth, body) {
         await createAndPushNotification({
           userId: booking.scanCenterId,
           userType: 'scan_center',
+          title: 'New message',
+          body: text.slice(0, 120),
+          type: 'chat_message',
+          data: { bookingId },
+        });
+      } else if (booking.bloodBankId) {
+        await createAndPushNotification({
+          userId: booking.bloodBankId,
+          userType: 'bloodbank',
+          title: 'New message',
+          body: text.slice(0, 120),
+          type: 'chat_message',
+          data: { bookingId },
+        });
+      } else if (booking.ambulanceId) {
+        await createAndPushNotification({
+          userId: booking.ambulanceId,
+          userType: 'ambulance',
           title: 'New message',
           body: text.slice(0, 120),
           type: 'chat_message',

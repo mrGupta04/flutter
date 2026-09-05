@@ -6,6 +6,8 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../provider/blood_bank_dashboard_provider.dart';
 
 class BloodBankDashboardScreen extends ConsumerStatefulWidget {
@@ -98,12 +100,14 @@ class _BloodBankDashboardScreenState extends ConsumerState<BloodBankDashboardScr
                         crossAxisSpacing: 10,
                         childAspectRatio: 1.35,
                         children: [
-                          _StatCard('Total orders', '${dashboard.totalOrders}'),
-                          _StatCard('Pending', '${dashboard.pendingOrders}'),
-                          _StatCard('Completed', '${dashboard.completedOrders}'),
-                          _StatCard('Revenue', '₹${dashboard.revenue}'),
-                          _StatCard('Today', '${dashboard.todayOrders}'),
+                          _StatCard('Today\'s requests', '${dashboard.todayOrders}'),
                           _StatCard('Emergency', '${dashboard.emergencyCount}'),
+                          _StatCard('Inventory', '${dashboard.stats?['totalAvailableUnits'] ?? 0}'),
+                          _StatCard('Low stock', '${dashboard.stats?['lowStockGroups'] ?? 0}'),
+                          _StatCard('Critical', '${dashboard.stats?['criticalStockGroups'] ?? 0}'),
+                          _StatCard('Pending donations', '${dashboard.stats?['pendingDonations'] ?? 0}'),
+                          _StatCard('Completed', '${dashboard.completedOrders}'),
+                          _StatCard('Pending', '${dashboard.pendingOrders}'),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -112,10 +116,11 @@ class _BloodBankDashboardScreenState extends ConsumerState<BloodBankDashboardScr
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          _ActionChip('Manage inventory', Icons.inventory_2_outlined),
-                          _ActionChip('Manage pricing', Icons.payments_outlined),
-                          _ActionChip('Manage offers', Icons.local_offer_outlined),
-                          _ActionChip('Upload documents', Icons.upload_file_outlined),
+                          _ActionChip('Manage inventory', Icons.inventory_2_outlined, 0),
+                          _ActionChip('Blood requests', Icons.assignment_outlined, 1),
+                          _ActionChip('Emergency inbox', Icons.emergency_rounded, 2),
+                          _ActionChip('Donors', Icons.volunteer_activism_outlined, 3),
+                          _ActionChip('Staff', Icons.groups_outlined, 4),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -225,17 +230,20 @@ class _StatCard extends StatelessWidget {
 }
 
 class _ActionChip extends StatelessWidget {
-  const _ActionChip(this.label, this.icon);
+  const _ActionChip(this.label, this.icon, this.tab);
 
   final String label;
   final IconData icon;
+  final int tab;
 
   @override
   Widget build(BuildContext context) {
     return ActionChip(
       avatar: Icon(icon, size: 18),
       label: Text(label),
-      onPressed: () {},
+      onPressed: () => context.push(
+        '${AppConstants.routeBloodBankOperations}?tab=$tab',
+      ),
     );
   }
 }

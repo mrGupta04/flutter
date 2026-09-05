@@ -108,6 +108,27 @@ class AppConstants {
       '/ambulance/bookings/$bookingId';
   static String endpointAmbulanceBookingLocation(String bookingId) =>
       '/ambulance/bookings/$bookingId/location';
+  static const String endpointAmbulanceCatalog = '/ambulance/catalog';
+  static const String endpointAmbulanceProviders = '/ambulance/providers';
+  static String endpointAmbulanceProvider(String id) => '/ambulance/providers/$id';
+  static const String endpointAmbulanceHospitals = '/ambulance/hospitals';
+  static const String endpointAmbulanceNearby = '/ambulance/nearby';
+  static const String endpointAmbulanceFareEstimate = '/ambulance/fare/estimate';
+  static const String endpointAmbulanceEmergency = '/ambulance/emergency';
+  static const String endpointAmbulanceScheduled = '/ambulance/scheduled';
+  static const String endpointAmbulanceMyBookings = '/ambulance/my-bookings';
+  static String endpointAmbulanceMyBooking(String id) => '/ambulance/my-bookings/$id';
+  static String endpointAmbulanceMyBookingLocation(String id) =>
+      '/ambulance/my-bookings/$id/location';
+  static String endpointAmbulanceCancelMine(String id) =>
+      '/ambulance/my-bookings/$id/cancel';
+  static String endpointAmbulanceRetryDispatch(String id) =>
+      '/ambulance/my-bookings/$id/retry-dispatch';
+  static String endpointAmbulanceReview(String id) =>
+      '/ambulance/my-bookings/$id/review';
+  static const String endpointAmbulancePaymentCreate =
+      '/ambulance/payments/create-order';
+  static const String endpointAmbulancePaymentVerify = '/ambulance/payments/verify';
 
   // Rewards / referrals
   static const String endpointPatientRewards = '/patient/rewards';
@@ -124,6 +145,12 @@ class AppConstants {
   static const String endpointBloodBankCatalog = '/blood-bank/catalog';
   static const String endpointBloodBankPaymentCreateOrder = '/blood-bank/payments/create-order';
   static const String endpointBloodBankPaymentVerify = '/blood-bank/payments/verify';
+  static const String endpointBloodCompatibility = '/blood-bank/compatibility';
+  static const String endpointBloodDonorProfile = '/blood-bank/donor/profile';
+  static const String endpointBloodDonorHistory = '/blood-bank/donor/history';
+  static const String endpointBloodDonorRequests = '/blood-bank/donor/requests';
+  static const String endpointBloodRequests = '/blood-bank/requests';
+  static const String endpointBloodEmergencyMine = '/blood-bank/emergency/mine';
 
   // Validation
   static const int minPasswordLength = 8;
@@ -186,12 +213,23 @@ class AppConstants {
   static const String routeNurseProfile = '/nurse-profile';
   static const String routeAmbulanceSearch = '/ambulance-search';
   static const String routeAmbulanceTrack = '/ambulance-track';
+  static const String routeAmbulanceHub = '/ambulance';
+  static const String routeAmbulanceEmergency = '/ambulance-emergency';
+  static const String routeAmbulanceScheduled = '/ambulance-scheduled';
+  static const String routeMyAmbulanceBookings = '/my-ambulance-bookings';
+  static const String routeAmbulanceTripDetail = '/ambulance-trip';
   static const String routeHomeVisitTrack = '/home-visit-track';
   static const String routeBloodBankSearch = '/blood-bank-search';
   static const String routeBloodBanks = '/blood-banks';
   static const String routeBloodBankDetail = '/blood-bank';
   static const String routeEmergencyBloodRequest = '/emergency-blood-request';
   static const String routeBloodOrderConfirmation = '/blood-order';
+  static const String routeBloodRequest = '/blood-request';
+  static const String routeMyBloodRequests = '/my-blood-requests';
+  static const String routeBloodRequestDetail = '/blood-request-detail';
+  static const String routeBloodDonorProfile = '/blood-donor-profile';
+  static const String routeBloodDonorHistory = '/blood-donor-history';
+  static const String routeBloodDonorRequests = '/blood-donor-requests';
   static const String routeCareListing = '/care-listing';
   static const String routeLabs = '/labs';
   static const String routeLabDetail = '/lab';

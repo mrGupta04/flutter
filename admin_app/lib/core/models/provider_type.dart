@@ -71,7 +71,7 @@ enum ProviderType {
       case ProviderType.lab:
         return '/lab-dashboard';
       case ProviderType.ambulance:
-        return '/provider-profile';
+        return '/ambulance-dashboard';
     }
   }
 

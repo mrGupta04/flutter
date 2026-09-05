@@ -82,7 +82,13 @@ async function upsertAmbulance(data) {
     latitude: data.latitude ?? existing?.latitude,
     longitude: data.longitude ?? existing?.longitude,
     serviceArea: data.serviceArea ?? existing?.serviceArea,
+    serviceRadiusKm: data.serviceRadiusKm ?? existing?.serviceRadiusKm ?? 15,
+    supportedCities: data.supportedCities ?? existing?.supportedCities ?? [],
     available24x7: data.available24x7 ?? existing?.available24x7 ?? false,
+    emergencyAvailable: data.emergencyAvailable ?? existing?.emergencyAvailable ?? true,
+    operatingHoursStart: data.operatingHoursStart ?? existing?.operatingHoursStart,
+    operatingHoursEnd: data.operatingHoursEnd ?? existing?.operatingHoursEnd,
+    cashPaymentEnabled: data.cashPaymentEnabled ?? existing?.cashPaymentEnabled ?? true,
     serviceLicenseUrl: data.serviceLicenseUrl ?? existing?.serviceLicenseUrl,
     companyRegistrationUrl:
       data.companyRegistrationUrl ?? existing?.companyRegistrationUrl,

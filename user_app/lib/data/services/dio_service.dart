@@ -133,7 +133,12 @@ class DioService {
         path.contains('nurse/') ||
         path.contains('payments/') ||
         path.contains('consultations/') ||
-        path.contains('ambulance/bookings/');
+        path.contains('ambulance/bookings') ||
+        path.contains('ambulance/emergency') ||
+        path.contains('ambulance/scheduled') ||
+        path.contains('ambulance/my-bookings') ||
+        path.contains('ambulance/payments') ||
+        path.contains('ambulance/nearby');
   }
 
   /// Get auth token from storage

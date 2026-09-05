@@ -171,6 +171,12 @@ class BloodOrderModel {
     this.deliveryTimeSlot,
     this.estimatedDeliveryTime,
     this.createdAt,
+    this.hospitalName,
+    this.patientName,
+    this.requestType,
+    this.isEmergency = false,
+    this.requiredDate,
+    this.chatEnabled = false,
   });
 
   final String id;
@@ -185,6 +191,12 @@ class BloodOrderModel {
   final String? deliveryTimeSlot;
   final DateTime? estimatedDeliveryTime;
   final DateTime? createdAt;
+  final String? hospitalName;
+  final String? patientName;
+  final String? requestType;
+  final bool isEmergency;
+  final DateTime? requiredDate;
+  final bool chatEnabled;
 
   factory BloodOrderModel.fromJson(Map<String, dynamic> json) {
     return BloodOrderModel(
@@ -206,6 +218,14 @@ class BloodOrderModel {
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
+      hospitalName: json['hospitalName'] as String?,
+      patientName: json['patientName'] as String?,
+      requestType: json['requestType'] as String?,
+      isEmergency: json['isEmergency'] as bool? ?? false,
+      requiredDate: json['requiredDate'] != null
+          ? DateTime.tryParse(json['requiredDate'].toString())
+          : null,
+      chatEnabled: json['chatEnabled'] as bool? ?? false,
     );
   }
 }

@@ -1,9 +1,27 @@
 /// Standard ambulance vehicle types (matches patient search filters).
 const ambulanceVehicleTypes = [
+  'Basic Ambulance',
   'Basic Life Support',
   'Advanced Life Support',
   'Patient Transport',
   'ICU Ambulance',
+  'Neonatal Ambulance',
+];
+
+const ambulanceVehicleStatuses = [
+  'AVAILABLE',
+  'BUSY',
+  'OFFLINE',
+  'MAINTENANCE',
+  'EMERGENCY_ONLY',
+];
+
+const ambulanceDriverStatuses = [
+  'AVAILABLE',
+  'ON_TRIP',
+  'OFFLINE',
+  'ON_BREAK',
+  'SUSPENDED',
 ];
 
 /// Service-level document types for upload.

@@ -13,12 +13,16 @@ class BloodAvailabilityIndicator extends StatelessWidget {
 
   Color get _color {
     switch (level) {
+      case 'available':
       case 'high':
         return AppColors.success;
       case 'medium':
         return const Color(0xFFF9A825);
+      case 'low_stock':
       case 'low':
         return const Color(0xFFE65100);
+      case 'critical':
+        return const Color(0xFFB71C1C);
       default:
         return const Color(0xFFC62828);
     }
@@ -26,14 +30,18 @@ class BloodAvailabilityIndicator extends StatelessWidget {
 
   String get _label {
     switch (level) {
+      case 'available':
       case 'high':
         return 'Available';
       case 'medium':
         return 'Limited';
+      case 'low_stock':
       case 'low':
         return 'Low stock';
+      case 'critical':
+        return 'Critical';
       default:
-        return 'Unavailable';
+        return 'Not available';
     }
   }
 

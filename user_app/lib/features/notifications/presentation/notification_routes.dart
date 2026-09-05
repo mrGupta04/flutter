@@ -63,6 +63,37 @@ void openPatientNotification(
         router.push(AppConstants.routeUserDashboard);
       }
       return;
+    case 'blood_request':
+    case 'emergency_blood':
+    case 'blood_donor':
+      final orderId = data['orderId']?.toString() ?? '';
+      final requestId = data['requestId']?.toString() ?? '';
+      final donorRequest = data['donorRequestId']?.toString() ?? '';
+      if (type == 'blood_donor' || donorRequest.isNotEmpty) {
+        router.push(AppConstants.routeBloodDonorRequests);
+        return;
+      }
+      if (orderId.isNotEmpty) {
+        router.push('${AppConstants.routeBloodRequestDetail}/$orderId');
+        return;
+      }
+      if (requestId.isNotEmpty) {
+        router.push(AppConstants.routeMyBloodRequests);
+        return;
+      }
+      router.push(AppConstants.routeMyBloodRequests);
+      return;
+    case 'ambulance_emergency':
+    case 'ambulance_assigned':
+    case 'ambulance_update':
+      if (bookingId.isNotEmpty) {
+        router.push(
+          '${AppConstants.routeAmbulanceTrack}?bookingId=$bookingId',
+        );
+      } else {
+        router.push(AppConstants.routeAmbulanceHub);
+      }
+      return;
     default:
       if (bookingId.isNotEmpty) {
         router.push(AppConstants.routeUserDashboard);

@@ -373,8 +373,8 @@ class DevicePushService with WidgetsBindingObserver {
   }
 
   static String endpointForRole(String role) {
-    return role == 'nurse'
-        ? AppConstants.endpointNurseDeviceToken
-        : AppConstants.endpointDoctorDeviceToken;
+    if (role == 'nurse') return AppConstants.endpointNurseDeviceToken;
+    if (role == 'ambulance') return AppConstants.endpointAmbulanceDeviceToken;
+    return AppConstants.endpointDoctorDeviceToken;
   }
 }

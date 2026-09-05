@@ -27,6 +27,26 @@ async function listReviewsByBloodBank(bloodBankId, { page = 1, pageSize = 20 } =
 }
 
 async function createBloodReview(data) {
+  if (data.orderId) {
+    const BloodOrder = require('./models/BloodOrder');
+    const order = await BloodOrder.findOne({ id: data.orderId }).lean();
+    if (!order) {
+      const err = new Error('Request not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    if (!['completed', 'delivered', 'collected'].includes(order.status)) {
+      const err = new Error('Reviews are available after a completed request');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (data.patientId && order.patientId && order.patientId !== data.patientId) {
+      const err = new Error('Unauthorized access');
+      err.statusCode = 403;
+      throw err;
+    }
+  }
+
   const review = await BloodReview.create({
     id: data.id || uuidv4(),
     bloodBankId: data.bloodBankId,

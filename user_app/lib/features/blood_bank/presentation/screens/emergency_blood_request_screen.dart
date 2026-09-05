@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -46,6 +47,27 @@ class _EmergencyBloodRequestScreenState extends State<EmergencyBloodRequestScree
       }
       return;
     }
+
+    final loggedIn = await ensureUserLoggedIn(
+      context,
+      message: 'Please log in or create an account before sending an emergency blood request.',
+    );
+    if (!loggedIn || !mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm emergency request'),
+        content: const Text(
+          'Emergency request will notify eligible nearby blood banks immediately.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
 
     setState(() => _isSubmitting = true);
     final repository = BloodBankRepository();

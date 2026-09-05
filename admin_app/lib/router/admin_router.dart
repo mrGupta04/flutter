@@ -6,6 +6,12 @@ import '../core/router/router_transitions.dart';
 import '../core/services/token_storage.dart';
 import '../features/admin/presentation/screens/admin_ambulance_details_screen.dart';
 import '../features/admin/presentation/screens/admin_ambulance_list_screen.dart';
+import '../features/admin/presentation/screens/admin_ambulance_ops_screen.dart';
+import '../features/admin/presentation/screens/admin_ambulance_live_screen.dart';
+import '../features/admin/presentation/screens/admin_ambulance_pricing_screen.dart';
+import '../features/ambulance_dashboard/presentation/screens/ambulance_dashboard_screen.dart';
+import '../features/ambulance_dashboard/presentation/screens/ambulance_operations_screen.dart';
+import '../features/ambulance_dashboard/presentation/screens/ambulance_driver_mode_screen.dart';
 import '../features/admin/presentation/screens/admin_blood_bank_details_screen.dart';
 import '../features/admin/presentation/screens/admin_blood_bank_list_screen.dart';
 import '../features/admin/presentation/screens/admin_dashboard_screen.dart';
@@ -40,6 +46,8 @@ import '../features/scan_dashboard/presentation/screens/scan_dashboard_screen.da
 import '../features/lab_dashboard/presentation/screens/lab_dashboard_screen.dart';
 import '../features/lab_dashboard/presentation/screens/lab_prescription_inbox_screen.dart';
 import '../features/blood_bank_dashboard/presentation/screens/blood_bank_dashboard_screen.dart';
+import '../features/blood_bank_dashboard/presentation/screens/blood_bank_operations_screen.dart';
+import '../features/admin/presentation/screens/admin_blood_analytics_screen.dart';
 import '../features/doctor_dashboard/presentation/screens/doctor_dashboard_screen.dart';
 import '../features/receptionist/presentation/screens/receptionist_dashboard_screen.dart';
 import '../features/receptionist/presentation/screens/receptionist_login_screen.dart';
@@ -92,6 +100,10 @@ bool _isAdminProtectedRoute(String location) {
       location.startsWith(AppConstants.routeAdminAmbulanceDetails) ||
       location.startsWith(AppConstants.routeAdminBloodBankList) ||
       location.startsWith(AppConstants.routeAdminBloodBankDetails) ||
+      location.startsWith(AppConstants.routeAdminBloodAnalytics) ||
+      location.startsWith(AppConstants.routeAdminAmbulanceOps) ||
+      location.startsWith(AppConstants.routeAdminAmbulanceLive) ||
+      location.startsWith(AppConstants.routeAdminAmbulancePricing) ||
       location.startsWith(AppConstants.routeAdminLabList) ||
       location.startsWith(AppConstants.routeAdminLabDetails) ||
       location.startsWith(AppConstants.routeAdminScanList) ||
@@ -117,6 +129,10 @@ bool _isAdminOnlyRoute(String location) {
       location == AppConstants.routeAdminNurseList ||
       location == AppConstants.routeAdminAmbulanceList ||
       location == AppConstants.routeAdminBloodBankList ||
+      location.startsWith(AppConstants.routeAdminBloodAnalytics) ||
+      location.startsWith(AppConstants.routeAdminAmbulanceOps) ||
+      location.startsWith(AppConstants.routeAdminAmbulanceLive) ||
+      location.startsWith(AppConstants.routeAdminAmbulancePricing) ||
       location == AppConstants.routeAdminLabList ||
       location == AppConstants.routeAdminScanList;
 }
@@ -172,6 +188,10 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           loc == AppConstants.routeLabPrescriptionInbox ||
           loc == AppConstants.routeLabPrescriptionDetail ||
           loc == AppConstants.routeBloodBankDashboard ||
+          loc.startsWith(AppConstants.routeBloodBankOperations) ||
+          loc == AppConstants.routeAmbulanceDashboard ||
+          loc.startsWith(AppConstants.routeAmbulanceOperations) ||
+          loc == AppConstants.routeAmbulanceDriverMode ||
           loc == AppConstants.routeProviderProfile) {
         if (ref.read(providerAuthProvider).isAuthenticated) {
           return null;
@@ -566,11 +586,79 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: AppConstants.routeAmbulanceDashboard,
+        name: 'ambulanceDashboard',
+        pageBuilder: (context, state) => fadePage(
+          state,
+          const AmbulanceDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAmbulanceOperations,
+        name: 'ambulanceOperations',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          AmbulanceOperationsScreen(
+            initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAmbulanceDriverMode,
+        name: 'ambulanceDriverMode',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AmbulanceDriverModeScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminAmbulanceOps,
+        name: 'adminAmbulanceOps',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminAmbulanceOpsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminAmbulanceLive,
+        name: 'adminAmbulanceLive',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminAmbulanceLiveScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminAmbulancePricing,
+        name: 'adminAmbulancePricing',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminAmbulancePricingScreen(),
+        ),
+      ),
+      GoRoute(
         path: AppConstants.routeBloodBankDashboard,
         name: 'bloodBankDashboard',
         pageBuilder: (context, state) => fadePage(
           state,
           const BloodBankDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBloodBankOperations,
+        name: 'bloodBankOperations',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          BloodBankOperationsScreen(
+            initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAdminBloodAnalytics,
+        name: 'adminBloodAnalytics',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AdminBloodAnalyticsScreen(),
         ),
       ),
       GoRoute(

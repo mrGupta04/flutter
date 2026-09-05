@@ -58,6 +58,8 @@ class _AdminAppState extends ConsumerState<AdminApp> with WidgetsBindingObserver
   String? _roleFor(ProviderType? type) {
     if (type == ProviderType.nurse) return 'nurse';
     if (type == ProviderType.doctor) return 'doctor';
+    if (type == ProviderType.ambulance) return 'ambulance';
+    if (type == ProviderType.bloodBank) return 'blood-bank';
     return null;
   }
 

@@ -12,7 +12,9 @@ const adminAuthRoutes = require('./routes/adminAuthRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const approvalWorkflowRoutes = require('./routes/approvalWorkflowRoutes');
 const ambulanceRoutes = require('./routes/ambulanceRoutes');
+const ambulanceModuleRoutes = require('./routes/ambulanceModuleRoutes');
 const bloodBankRoutes = require('./routes/bloodBankRoutes');
+const bloodBankModuleRoutes = require('./routes/bloodBankModuleRoutes');
 const labRoutes = require('./routes/labRoutes');
 const scanRoutes = require('./routes/scanRoutes');
 const patientRoutes = require('./routes/patientRoutes');
@@ -42,6 +44,12 @@ const {
 const {
   startNursePaymentExpirationScheduler,
 } = require('./services/nursePaymentExpirationService');
+const {
+  startBloodReservationExpiryScheduler,
+} = require('./services/bloodReservationExpiryService');
+const {
+  startAmbulanceDispatchScheduler,
+} = require('./services/ambulanceExpiryService');
 const { attachTrackingSocket } = require('./services/trackingSocket');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -121,7 +129,9 @@ app.use('/api/v1/doctor', doctorRoutes);
 app.use('/api/v1/receptionist', receptionistRoutes);
 app.use('/api/v1/nurse', nurseRoutes);
 app.use('/api/v1/ambulance', ambulanceRoutes);
+app.use('/api/v1/ambulance', ambulanceModuleRoutes);
 app.use('/api/v1/blood-bank', bloodBankRoutes);
+app.use('/api/v1/blood-bank', bloodBankModuleRoutes);
 app.use('/api/v1/lab', labRoutes);
 app.use('/api/v1/scan', scanRoutes);
 app.use('/api/v1/patient', patientRoutes);
@@ -205,6 +215,8 @@ async function start() {
   startVisitReminderScheduler();
   startApprovalSlaEscalationScheduler();
   startNursePaymentExpirationScheduler();
+  startBloodReservationExpiryScheduler();
+  startAmbulanceDispatchScheduler();
   try {
     const { initFirebaseAdmin } = require('./services/pushNotificationService');
     initFirebaseAdmin();

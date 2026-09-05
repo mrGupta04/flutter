@@ -19,6 +19,38 @@ const STATUS_MESSAGES = {
     patient: 'Your blood order was declined by the blood bank.',
     bloodBank: 'You declined a blood order.',
   },
+  blood_bank_notified: {
+    patient: 'Nearby blood banks have been notified about your request.',
+    bloodBank: 'A new blood request is waiting for review.',
+  },
+  under_review: {
+    patient: 'Your blood request is under review.',
+    bloodBank: 'Request marked under review.',
+  },
+  blood_reserved: {
+    patient: 'Blood units have been reserved for your request.',
+    bloodBank: 'Units reserved for this request.',
+  },
+  ready_for_collection: {
+    patient: 'Your blood request is ready for collection.',
+    bloodBank: 'Request marked ready for collection.',
+  },
+  collected: {
+    patient: 'Blood collection has been recorded.',
+    bloodBank: 'Request marked collected.',
+  },
+  completed: {
+    patient: 'Your blood request is complete.',
+    bloodBank: 'Request completed.',
+  },
+  cancelled: {
+    patient: 'Your blood request was cancelled.',
+    bloodBank: 'A blood request was cancelled.',
+  },
+  expired: {
+    patient: 'Your blood reservation expired. Please place a new request if still needed.',
+    bloodBank: 'A reservation expired and units were released.',
+  },
   blood_ready: {
     patient: 'Your blood order is ready for pickup or delivery.',
     bloodBank: 'Blood units marked ready for patient order.',
@@ -177,6 +209,32 @@ async function notifyBloodOrderStatusChange(order, status) {
   const event = status;
   const messages = STATUS_MESSAGES[status];
   if (!messages) return { skipped: true };
+
+  try {
+    const { createAndPushNotification } = require('../db/notificationRepositories');
+    if (order.patientId) {
+      await createAndPushNotification({
+        userId: order.patientId,
+        userType: 'patient',
+        title: `Blood request ${status.replace(/_/g, ' ')}`,
+        body: messages.patient,
+        type: order.isEmergency ? 'emergency_blood' : 'blood_request',
+        data: { orderId: order.id, event, type: 'blood_order' },
+      });
+    }
+    if (order.bloodBankId) {
+      await createAndPushNotification({
+        userId: order.bloodBankId,
+        userType: 'bloodbank',
+        title: `Blood request ${status.replace(/_/g, ' ')}`,
+        body: messages.bloodBank,
+        type: order.isEmergency ? 'emergency_blood' : 'blood_request',
+        data: { orderId: order.id, event, type: 'blood_order' },
+      });
+    }
+  } catch (err) {
+    console.warn('[blood-notify] in-app failed:', err.message);
+  }
 
   const [patient, bank] = await Promise.all([
     notifyPatientChannels({

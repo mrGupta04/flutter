@@ -42,7 +42,9 @@ const {
   listEmergencyRequestsForBloodBank,
   acceptEmergencyRequest,
   findEmergencyRequestById,
+  maybeNotifyDonors,
 } = require('../db/emergencyBloodRequestRepositories');
+const EmergencyBloodRequest = require('../db/models/EmergencyBloodRequest');
 const {
   notifyEmergencyRequestCreated,
   notifyEmergencyRequestAccepted,
@@ -96,10 +98,11 @@ router.get('/verified', async (req, res) => {
       maxDistanceKm: req.query.maxDistanceKm || '',
     });
 
+    const { toPublicInventory } = require('../db/bloodInventoryUnitRepositories');
     const enriched = await Promise.all(
       bloodBanks.map(async (bank) => {
         const inventory = await listInventoryByBloodBank(bank.id);
-        return { ...bank, inventory };
+        return { ...bank, inventory: toPublicInventory(inventory, bank) };
       }),
     );
 
@@ -110,11 +113,16 @@ router.get('/verified', async (req, res) => {
   }
 });
 
-router.get('/catalog', (_req, res) => {
+router.get('/catalog', async (_req, res) => {
+  const { listCompatibilityRules } = require('../services/bloodCompatibilityService');
+  const compatibility = await listCompatibilityRules();
   return sendSuccess(res, {
     data: {
-      bloodGroups: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Bombay', 'Rare'],
+      bloodGroups: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
       components: DEFAULT_BLOOD_COMPONENTS,
+      compatibility,
+      disclaimer:
+        'Compatibility shown here never replaces professional blood typing or crossmatching.',
       facilities: [
         'Blood Storage',
         'Blood Component Separation',
@@ -183,8 +191,16 @@ router.get('/profile', authOptional, async (req, res) => {
 
     const inventory = await listInventoryByBloodBank(bloodBankId);
     const staff = await listStaffByBloodBank(bloodBankId);
+    const { toPublicInventory } = require('../db/bloodInventoryUnitRepositories');
+    const isOwner =
+      req.auth?.bloodBankId === bloodBankId || req.auth?.type === 'admin';
+    const publicInventory = isOwner
+      ? inventory
+      : toPublicInventory(inventory, bloodBank);
 
-    return sendSuccess(res, { data: { ...bloodBank, inventory, staff } });
+    return sendSuccess(res, {
+      data: { ...bloodBank, inventory: publicInventory, staff: isOwner ? staff : undefined },
+    });
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to fetch profile', 500);
@@ -619,12 +635,17 @@ router.post('/bookings/:orderId/status', authOptional, async (req, res) => {
     const { status, rejectionReason, estimatedDeliveryTime } = req.body || {};
     if (!status) return sendError(res, 'status is required', 400);
 
-    const order = await updateOrderStatus(req.params.orderId, status, {
-      rejectionReason,
-      estimatedDeliveryTime: estimatedDeliveryTime
-        ? new Date(estimatedDeliveryTime)
-        : undefined,
-    });
+    const order = await updateOrderStatus(
+      req.params.orderId,
+      status,
+      {
+        rejectionReason,
+        estimatedDeliveryTime: estimatedDeliveryTime
+          ? new Date(estimatedDeliveryTime)
+          : undefined,
+      },
+      req.auth,
+    );
 
     if (!order) return sendError(res, 'Order not found', 404);
     return sendSuccess(res, { message: 'Order status updated', data: order });
@@ -680,24 +701,21 @@ router.post('/emergency', authOptional, async (req, res) => {
       return sendError(res, 'bloodGroup and units are required', 400);
     }
 
-    const request = await createEmergencyRequest({
+    const created = await createEmergencyRequest({
       ...body,
       patientId: body.patientId || req.auth?.patientId,
     });
+    const request = created.request || created;
+    const notified = created.notifiedBloodBanks || [];
 
-    const { bloodBanks } = await listBloodBanks({
-      status: 'verified',
-      pageSize: 20,
-      bloodGroup: body.bloodGroup,
-      city: body.city,
-      emergencySupply: true,
-    });
-
-    notifyEmergencyRequestCreated(request, bloodBanks).catch((err) =>
+    notifyEmergencyRequestCreated(request, notified).catch((err) =>
       console.error('[emergency] notify failed:', err.message),
     );
 
-    return sendSuccess(res, { message: 'Emergency request created', data: request });
+    return sendSuccess(res, {
+      message: 'Emergency request created',
+      data: { ...request, notifiedBloodBanks: notified },
+    });
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to create emergency request', 500);
@@ -726,6 +744,10 @@ router.post('/emergency/:requestId/accept', authOptional, async (req, res) => {
     if (!bloodBankId) return sendError(res, 'bloodBankId is required', 400);
 
     const request = await acceptEmergencyRequest(req.params.requestId, bloodBankId);
+    if (!request.assignedBloodBankId) {
+      const full = await EmergencyBloodRequest.findOne({ id: request.id });
+      await maybeNotifyDonors(full);
+    }
 
     const bank = await findBloodBankById(bloodBankId);
     notifyEmergencyRequestAccepted(request, bank).catch((err) =>

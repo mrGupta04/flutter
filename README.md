@@ -2,7 +2,7 @@
 
 Doctor onboarding: two self-contained **Flutter** apps + **Node.js/Express** API + **MongoDB Atlas**.
 
-**What is implemented:** see [IMPLEMENTATION.md](./IMPLEMENTATION.md) for a full feature inventory (patient, provider, admin, API) and MVP limitations.
+**What is implemented:** see [IMPLEMENTATION.md](./IMPLEMENTATION.md) for a full feature inventory (patient, provider, admin, API) and MVP limitations. Ambulance dispatch: [AMBULANCE_MODULE.md](./AMBULANCE_MODULE.md).
 
 ## Repository layout
 
@@ -124,3 +124,7 @@ Flow: **Admin app** → register as doctor/nurse → admin verifies → approved
 | Email verification fails / connection timeout | Render free tier blocks Gmail SMTP (ports 465/587). Use **Gmail API** instead: set `EMAIL_PROVIDER=gmail-api` with `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_USER`. Run `node scripts/gmailAuthSetup.js` locally to get the refresh token. Or use mock mode locally (`EMAIL_PROVIDER=mock`) |
 | Atlas connection timeout | Whitelist your IP in Atlas Network Access |
 | Plugin symlink warning on Windows | Enable **Developer Mode** in Windows settings |
+
+
+
+flutter build apk --release --dart-define=API_BASE_URL=https://flutter-njq6.onrender.com/api/v1

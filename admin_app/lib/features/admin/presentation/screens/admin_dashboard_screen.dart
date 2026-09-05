@@ -39,6 +39,13 @@ class AdminDashboardScreen extends ConsumerWidget {
         onTap: () => context.push(AppConstants.routeAdminPatients),
       ),
       _DashboardCardData(
+        icon: Icons.emergency_outlined,
+        title: 'Ambulance operations',
+        subtitle: 'Live map · dispatch · pricing · analytics',
+        color: const Color(0xFFB71C1C),
+        onTap: () => context.push(AppConstants.routeAdminAmbulanceOps),
+      ),
+      _DashboardCardData(
         icon: Icons.analytics_rounded,
         title: 'Marketplace overview',
         subtitle: 'Bookings · revenue · pending KYC',

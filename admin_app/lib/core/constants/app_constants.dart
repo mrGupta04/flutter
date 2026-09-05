@@ -75,6 +75,33 @@ class AppConstants {
   static const String endpointAmbulanceBookings = '/ambulance/bookings';
   static String endpointAmbulanceBookingLocation(String bookingId) =>
       '/ambulance/bookings/$bookingId/location';
+  static const String endpointAmbulanceDashboard = '/ambulance/dashboard';
+  static const String endpointAmbulanceAnalytics = '/ambulance/analytics';
+  static const String endpointAmbulanceFleet = '/ambulance/fleet';
+  static const String endpointAmbulanceRequests = '/ambulance/requests';
+  static String endpointAmbulanceAccept(String id) =>
+      '/ambulance/requests/$id/accept';
+  static String endpointAmbulanceReject(String id) =>
+      '/ambulance/requests/$id/reject';
+  static String endpointAmbulanceTripAction(String id, String action) =>
+      '/ambulance/trips/$id/$action';
+  static String endpointAmbulanceTripLocation(String id) =>
+      '/ambulance/trips/$id/location';
+  static const String endpointAmbulanceOperations = '/ambulance/operations';
+  static const String endpointAmbulanceDriverPresence = '/ambulance/driver/presence';
+  static const String endpointAmbulanceDeviceToken = '/ambulance/device-token';
+  static const String endpointAdminAmbulanceOverview = '/ambulance/admin/overview';
+  static const String endpointAdminAmbulanceAnalytics = '/ambulance/admin/analytics';
+  static const String endpointAdminAmbulanceLive = '/ambulance/admin/live';
+  static const String endpointAdminAmbulanceBookings = '/ambulance/admin/bookings';
+  static const String endpointAdminAmbulancePricing = '/ambulance/admin/pricing';
+  static const String endpointAdminAmbulanceAudit = '/ambulance/admin/audit';
+  static String endpointAdminAmbulanceReassign(String id) =>
+      '/ambulance/admin/dispatch/$id/reassign';
+  static String endpointAdminAmbulanceSuspend(String id) =>
+      '/ambulance/admin/providers/$id/suspend';
+  static String endpointAdminAmbulanceEnable(String id) =>
+      '/ambulance/admin/providers/$id/enable';
   static const String endpointBloodBankBookings = '/blood-bank/bookings';
   static const String endpointBloodBankDashboard = '/blood-bank/dashboard';
   static const String endpointBloodBankEmergency = '/blood-bank/emergency';
@@ -83,6 +110,21 @@ class AppConstants {
       '/blood-bank/upload-document';
   static const String endpointBloodBankUploadGallery =
       '/blood-bank/upload-gallery';
+  static const String endpointBloodBankInventory = '/blood-bank/inventory';
+  static const String endpointBloodBankInventoryUnits =
+      '/blood-bank/provider/inventory/units';
+  static const String endpointBloodBankDonations = '/blood-bank/provider/donations';
+  static const String endpointBloodBankDonors = '/blood-bank/provider/donors';
+  static const String endpointBloodBankStaff = '/blood-bank/staff';
+  static const String endpointBloodBankAnalytics = '/blood-bank/admin/analytics';
+  static String endpointBloodBankRequestAction(String id, String action) =>
+      '/blood-bank/provider/requests/$id/$action';
+  static String endpointEmergencyRespond(String id) =>
+      '/blood-bank/emergency/$id/respond';
+  static String endpointAdminBloodBankDisable(String id) =>
+      '/admin/blood-banks/$id/disable';
+  static String endpointAdminBloodBankEnable(String id) =>
+      '/admin/blood-banks/$id/enable';
 
   // Doctor API Endpoints
   static const String endpointRegisterDoctor = '/doctor/register';
@@ -508,6 +550,14 @@ class AppConstants {
   static const String routeScanDashboard = '/scan-dashboard';
   static const String routeLabDashboard = '/lab-dashboard';
   static const String routeBloodBankDashboard = '/blood-bank-dashboard';
+  static const String routeBloodBankOperations = '/blood-bank-operations';
+  static const String routeAdminBloodAnalytics = '/admin-blood-analytics';
+  static const String routeAmbulanceDashboard = '/ambulance-dashboard';
+  static const String routeAmbulanceOperations = '/ambulance-operations';
+  static const String routeAmbulanceDriverMode = '/ambulance-driver-mode';
+  static const String routeAdminAmbulanceOps = '/admin-ambulance-ops';
+  static const String routeAdminAmbulanceLive = '/admin-ambulance-live';
+  static const String routeAdminAmbulancePricing = '/admin-ambulance-pricing';
   static const String routeDoctorDashboard = '/doctor-dashboard';
   static const String routeDoctorReceptionists = '/doctor-receptionists';
   static const String routeReceptionistLogin = '/receptionist-login';

@@ -240,6 +240,14 @@ class PatientBookingModel {
       'dispatched',
       'en_route',
       'arrived',
+      'searching_ambulance',
+      'ambulance_assigned',
+      'driver_accepted',
+      'driver_en_route',
+      'arrived_at_pickup',
+      'patient_picked_up',
+      'en_route_to_destination',
+      'arrived_at_destination',
     };
     return liveStatuses.contains(status);
   }
@@ -303,6 +311,9 @@ class PatientBookingModel {
         'in_progress',
         'report_ready',
       }.contains(status);
+    }
+    if (serviceType == 'ambulance') {
+      return canTrackAmbulanceLive;
     }
     return isConfirmed;
   }

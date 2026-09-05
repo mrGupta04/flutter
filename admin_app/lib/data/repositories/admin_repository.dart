@@ -1106,6 +1106,53 @@ class AdminRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> getBloodAnalytics() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointBloodBankAnalytics);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] as Map<String, dynamic>? ?? {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<BloodBankModel>> disableBloodBank({
+    required String bloodBankId,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminBloodBankDisable(bloodBankId),
+        data: {'reason': reason},
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => BloodBankModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<BloodBankModel>> enableBloodBank({
+    required String bloodBankId,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAdminBloodBankEnable(bloodBankId),
+      );
+      return ApiResponse.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => BloodBankModel.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   ApiResponse<T> _handleError<T>(DioException error) {
     String message = AppConstants.errorSomethingWentWrong;
     int statusCode = 500;

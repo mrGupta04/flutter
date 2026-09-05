@@ -6,7 +6,7 @@ const bookingChatMessageSchema = new mongoose.Schema(
     bookingId: { type: String, required: true, index: true },
     senderType: {
       type: String,
-      enum: ['patient', 'doctor', 'nurse', 'lab', 'scan_center'],
+      enum: ['patient', 'doctor', 'nurse', 'lab', 'scan_center', 'blood_bank', 'donor', 'ambulance', 'ambulance_driver'],
       required: true,
     },
     senderId: { type: String, required: true },

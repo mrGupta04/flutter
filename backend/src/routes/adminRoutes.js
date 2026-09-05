@@ -26,6 +26,8 @@ const {
   findBloodBankById,
   listBloodBanks,
   suspendBloodBank,
+  disableBloodBank,
+  enableBloodBank,
   requestBloodBankDocuments,
   verifyBloodBankDocument,
   rejectBloodBankDocument,
@@ -1040,6 +1042,34 @@ router.post('/blood-banks/:id/suspend', adminRequired, async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to suspend blood bank', 500);
+  }
+});
+
+router.post('/blood-banks/:id/disable', adminRequired, async (req, res) => {
+  try {
+    const existing = await findBloodBankById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Blood bank not found', 404);
+    }
+    const bloodBank = await disableBloodBank(req.params.id, req.body?.reason);
+    return sendSuccess(res, { message: 'Blood bank disabled', data: bloodBank });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to disable blood bank', 500);
+  }
+});
+
+router.post('/blood-banks/:id/enable', adminRequired, async (req, res) => {
+  try {
+    const existing = await findBloodBankById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Blood bank not found', 404);
+    }
+    const bloodBank = await enableBloodBank(req.params.id);
+    return sendSuccess(res, { message: 'Blood bank enabled', data: bloodBank });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, err.message || 'Failed to enable blood bank', 500);
   }
 });
 

@@ -129,10 +129,10 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                 child: constrain(
                   _HomeQuickActions(
                     onEmergency: () => _openServiceRoute(
-                      AppConstants.routeAmbulanceSearch,
+                      AppConstants.routeAmbulanceHub,
                     ),
                     onFindBlood: () => _openServiceRoute(
-                      AppConstants.routeBloodBankSearch,
+                      AppConstants.routeBloodBanks,
                     ),
                     onMyBookings: () => _openMyBookings(context),
                   ),
@@ -1143,7 +1143,7 @@ const _homeServices = [
     illustrationImage:
         'assets/images/home_cards/ambulance_remove_pg_preview.png',
     illustrationScale: 1.3,
-    route: AppConstants.routeAmbulanceSearch,
+    route: AppConstants.routeAmbulanceHub,
   ),
   _HomeService(
     title: 'Blood Banks',
@@ -1152,7 +1152,7 @@ const _homeServices = [
     color: Color(0xffEC4899),
     illustrationImage:
         'assets/images/home_cards/blood-removebg-preview.png',
-    route: AppConstants.routeBloodBankSearch,
+    route: AppConstants.routeBloodBanks,
   ),
 ];
 

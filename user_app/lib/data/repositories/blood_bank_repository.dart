@@ -148,6 +148,157 @@ class BloodBankRepository {
     }
   }
 
+  Future<ApiResponse<List<BloodOrderModel>>> listMyRequests({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    try {
+      final response = await _dioService.get(
+        AppConstants.endpointBloodRequests,
+        queryParameters: {'page': page, 'pageSize': pageSize},
+      );
+      final body = response.data as Map<String, dynamic>;
+      final list = extractApiList(body['data'])
+          .map((e) => BloodOrderModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return ApiResponse(success: true, data: list);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> getRequestDetails(String id) async {
+    try {
+      final response = await _dioService.get('${AppConstants.endpointBloodRequests}/$id');
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] as Map<String, dynamic>?,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<BloodOrderModel>> cancelRequest(String id, {String? reason}) async {
+    try {
+      final response = await _dioService.post(
+        '${AppConstants.endpointBloodRequests}/$id/cancel',
+        data: {'reason': reason},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: BloodOrderModel.fromJson(body['data'] as Map<String, dynamic>),
+        message: body['message'] as String?,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> getCompatibility() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointBloodCompatibility);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: body['data'] as Map<String, dynamic>? ?? {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> getDonorProfile() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointBloodDonorProfile);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(success: true, data: body['data'] as Map<String, dynamic>?);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> saveDonorProfile(
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointBloodDonorProfile,
+        data: payload,
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] as Map<String, dynamic>?,
+        message: body['message'] as String?,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> getDonationHistory() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointBloodDonorHistory);
+      final body = response.data as Map<String, dynamic>;
+      final list = extractApiList(body['data'])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      return ApiResponse(success: true, data: list);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> getDonorRequests() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointBloodDonorRequests);
+      final body = response.data as Map<String, dynamic>;
+      final list = extractApiList(body['data'])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      return ApiResponse(success: true, data: list);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> respondToDonorRequest(
+    String id, {
+    required bool accept,
+    String? notes,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        '${AppConstants.endpointBloodDonorRequests}/$id/respond',
+        data: {'accept': accept, 'notes': notes},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] as Map<String, dynamic>?,
+        message: body['message'] as String?,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> listMyEmergencyRequests() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointBloodEmergencyMine);
+      final body = response.data as Map<String, dynamic>;
+      final list = extractApiList(body['data'])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      return ApiResponse(success: true, data: list);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   Future<ApiResponse<Map<String, dynamic>>> createEmergencyRequest(
     Map<String, dynamic> payload,
   ) async {

@@ -188,6 +188,317 @@ class AmbulanceRegistrationRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> getDashboard() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointAmbulanceDashboard);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> getAnalytics() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointAmbulanceAnalytics);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> getRequests({
+    String? status,
+    String? kind,
+  }) async {
+    try {
+      final response = await _dioService.get(
+        AppConstants.endpointAmbulanceRequests,
+        queryParameters: {
+          if (status != null) 'status': status,
+          if (kind != null) 'kind': kind,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final list = extractApiList(body['data'])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      return ApiResponse(success: true, data: list);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> acceptRequest(
+    String id, {
+    String? vehicleId,
+    String? driverId,
+    String? dispatchId,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAmbulanceAccept(id),
+        data: {
+          if (vehicleId != null) 'vehicleId': vehicleId,
+          if (driverId != null) 'driverId': driverId,
+          if (dispatchId != null) 'dispatchId': dispatchId,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> rejectRequest(
+    String id, {
+    String? reason,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAmbulanceReject(id),
+        data: {if (reason != null) 'reason': reason},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> tripAction(
+    String id,
+    String action, {
+    Map<String, dynamic>? extra,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAmbulanceTripAction(id, action),
+        data: extra ?? {},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> updateTripLocation(
+    String id, {
+    required double latitude,
+    required double longitude,
+    double? heading,
+    double? speed,
+    double? accuracy,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAmbulanceTripLocation(id),
+        data: {
+          'latitude': latitude,
+          'longitude': longitude,
+          if (heading != null) 'heading': heading,
+          if (speed != null) 'speed': speed,
+          if (accuracy != null) 'accuracy': accuracy,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> saveVehicle(
+    Map<String, dynamic> payload, {
+    String? id,
+  }) async {
+    try {
+      final response = id == null
+          ? await _dioService.post(AppConstants.endpointAmbulanceFleet + '/vehicles', data: payload)
+          : await _dioService.patch('${AppConstants.endpointAmbulanceFleet}/vehicles/$id', data: payload);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> saveDriver(
+    Map<String, dynamic> payload, {
+    String? id,
+  }) async {
+    try {
+      final response = id == null
+          ? await _dioService.post('${AppConstants.endpointAmbulanceFleet}/drivers', data: payload)
+          : await _dioService.patch('${AppConstants.endpointAmbulanceFleet}/drivers/$id', data: payload);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> setDriverPresence({
+    required bool online,
+    String? driverId,
+    double? latitude,
+    double? longitude,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointAmbulanceDriverPresence,
+        data: {
+          'online': online,
+          if (driverId != null) 'driverId': driverId,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> adminOverview() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointAdminAmbulanceOverview);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: body['data'] is Map<String, dynamic> ? body['data'] as Map<String, dynamic> : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> adminLive() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointAdminAmbulanceLive);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: body['data'] is Map<String, dynamic> ? body['data'] as Map<String, dynamic> : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> adminPricing() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointAdminAmbulancePricing);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: body['data'] is Map<String, dynamic> ? body['data'] as Map<String, dynamic> : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> saveAdminPricing(
+    Map<String, dynamic> rules,
+  ) async {
+    try {
+      final response = await _dioService.put(
+        AppConstants.endpointAdminAmbulancePricing,
+        data: {'rules': rules},
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: body['data'] is Map<String, dynamic> ? body['data'] as Map<String, dynamic> : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> adminBookings() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointAdminAmbulanceBookings);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: extractApiList(body['data'])
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList(),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> reassign(String id) async {
+    try {
+      final response = await _dioService.post(AppConstants.endpointAdminAmbulanceReassign(id));
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        data: body['data'] is Map<String, dynamic> ? body['data'] as Map<String, dynamic> : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   Future<ApiResponse<AmbulanceModel>> getProfile({String? ambulanceId}) async {
     try {
       final id = ambulanceId ?? await TokenStorage.instance.getAmbulanceId();

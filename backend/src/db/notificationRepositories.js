@@ -31,6 +31,13 @@ const NOTIFICATION_TYPES = new Set([
   'payment_expired',
   'payment_failed',
   'booking_confirmed',
+  'blood_request',
+  'emergency_blood',
+  'blood_inventory',
+  'blood_donor',
+  'ambulance_emergency',
+  'ambulance_assigned',
+  'ambulance_update',
   'general',
 ]);
 
@@ -159,6 +166,14 @@ async function createAndPushNotification({
   } else if (userType === 'nurse') {
     const nurse = await Nurse.findOne({ id: userId }).lean();
     deviceTokens = nurse?.fcmTokens || [];
+  } else if (userType === 'bloodbank') {
+    const BloodBank = require('./models/BloodBank');
+    const bank = await BloodBank.findOne({ id: userId }).lean();
+    deviceTokens = bank?.fcmTokens || [];
+  } else if (userType === 'ambulance' || userType === 'ambulance_driver') {
+    const Ambulance = require('./models/Ambulance');
+    const service = await Ambulance.findOne({ id: userId }).lean();
+    deviceTokens = service?.fcmTokens || [];
   }
 
   try {
@@ -256,6 +271,12 @@ function modelForUserType(userType) {
   if (userType === 'patient') return Patient;
   if (userType === 'doctor') return Doctor;
   if (userType === 'nurse') return Nurse;
+  if (userType === 'ambulance' || userType === 'ambulance_driver') {
+    return require('./models/Ambulance');
+  }
+  if (userType === 'bloodbank') {
+    return require('./models/BloodBank');
+  }
   return null;
 }
 
