@@ -153,7 +153,10 @@ class AppBackButtonScope extends StatelessWidget {
         path.startsWith(AppConstants.routeSupportTickets) ||
         path.startsWith(AppConstants.routeUserRewards) ||
         path.startsWith(AppConstants.routeFavorites) ||
-        path.startsWith(AppConstants.routeNotifications)) {
+        path.startsWith(AppConstants.routeNotifications) ||
+        path.startsWith(AppConstants.routeCurrentBookings) ||
+        path.startsWith(AppConstants.routeBookingHistory) ||
+        path.startsWith(AppConstants.routeBookingDetails)) {
       return AppConstants.routeUserDashboard;
     }
 

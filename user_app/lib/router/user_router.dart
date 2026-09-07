@@ -34,9 +34,12 @@ import '../features/user_auth/presentation/screens/user_login_screen.dart';
 import '../features/user_auth/presentation/screens/user_register_screen.dart';
 import '../features/user_auth/presentation/screens/forgot_password_screen.dart';
 import '../features/user_dashboard/presentation/screens/edit_patient_profile_screen.dart';
+import '../features/user_dashboard/presentation/screens/account_security_screen.dart';
 import '../features/user_dashboard/presentation/screens/health_profile_screen.dart';
 import '../features/user_dashboard/presentation/screens/support_tickets_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_dashboard_screen.dart';
+import '../features/user_dashboard/presentation/screens/current_bookings_screen.dart';
+import '../features/user_dashboard/presentation/screens/booking_details_screen.dart';
 import '../features/user_dashboard/presentation/screens/nursing_reports_screen.dart';
 import '../features/user_dashboard/presentation/screens/user_rewards_screen.dart';
 import '../features/ambulance/presentation/screens/ambulance_tracking_screen.dart';
@@ -112,6 +115,33 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppConstants.routeCurrentBookings,
+        name: 'currentBookings',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const CurrentBookingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBookingHistory,
+        name: 'bookingHistory',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const BookingHistoryScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBookingDetails,
+        name: 'bookingDetails',
+        pageBuilder: (context, state) {
+          final bookingId = state.uri.queryParameters['bookingId'] ?? '';
+          return slidePage(
+            state,
+            BookingDetailsScreen(bookingId: bookingId),
+          );
+        },
+      ),
+      GoRoute(
         path: AppConstants.routeNotifications,
         name: 'notifications',
         pageBuilder: (context, state) => slidePage(
@@ -159,6 +189,14 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => slidePage(
           state,
           const EditPatientProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeAccountSecurity,
+        name: 'accountSecurity',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const AccountSecurityScreen(),
         ),
       ),
       GoRoute(

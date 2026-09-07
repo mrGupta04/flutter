@@ -177,6 +177,16 @@ class ValidationUtils {
     return null;
   }
 
+  static String? validateOptionalPincode(String? pincode) {
+    if (pincode == null || pincode.trim().isEmpty) return null;
+    return validatePincode(pincode);
+  }
+
+  static String? validateOptionalAddress(String? address) {
+    if (address == null || address.trim().isEmpty) return null;
+    return validateAddress(address);
+  }
+
   /// Check if passwords match
   static String? validatePasswordMatch(String? password, String? confirmPassword) {
     if (password != confirmPassword) {

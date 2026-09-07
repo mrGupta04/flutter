@@ -136,6 +136,50 @@ class UserLocationNotifier extends StateNotifier<UserLocationState> {
     }
   }
 
+  /// Applies a location picked from search, GPS, or a saved address.
+  Future<void> applySelected({
+    required String addressLine,
+    String? city,
+    String? label,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final resolvedCity = normalizeMarketplaceCity(city) ??
+        normalizeMarketplaceCity(addressLine);
+    final rawPlace = () {
+      final named = (label ?? '').trim();
+      if (named.isNotEmpty &&
+          named.toLowerCase() != 'current location' &&
+          named.toLowerCase() != 'selected location') {
+        return named;
+      }
+      return addressLine.split(',').first.trim();
+    }();
+    String? place = rawPlace.isEmpty ? null : rawPlace;
+    if (resolvedCity != null &&
+        place != null &&
+        place.toLowerCase() == resolvedCity.toLowerCase()) {
+      place = null;
+    }
+
+    await _storage.saveLocationPreference(
+      city: resolvedCity,
+      place: place ?? '',
+      latitude: latitude,
+      longitude: longitude,
+      replaceCoordinates: true,
+    );
+    if (!mounted) return;
+    state = UserLocationState(
+      city: resolvedCity,
+      place: place,
+      latitude: latitude,
+      longitude: longitude,
+      isResolving: false,
+      hasResolved: true,
+    );
+  }
+
   Future<void> _refreshSilently() async {
     try {
       if (!await LocationService.isServiceEnabled()) return;

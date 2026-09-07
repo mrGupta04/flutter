@@ -17,6 +17,12 @@ class AppConstants {
   static const String endpointPatientLogin = '/patient/login';
   static const String endpointPatientProfile = '/patient/profile';
   static const String endpointPatientBookings = '/patient/bookings';
+  static String endpointPatientBookingReceipt(String bookingId) =>
+      '/patient/bookings/$bookingId/receipt';
+  static const String endpointPatientLogoutAll = '/patient/logout-all';
+  static const String endpointPatientAccount = '/patient/account';
+  static const String endpointPatientNotificationSettings =
+      '/patient/notification-settings';
   static String endpointPatientBookingPreviousReport(String bookingId) =>
       '/patient/bookings/$bookingId/previous-reports';
   static const String endpointVerifiedDoctors = '/doctor/verified';
@@ -198,6 +204,10 @@ class AppConstants {
   static const String routeUserRewards = '/user/rewards';
   static const String routeUserDashboard = '/user/dashboard';
   static const String routeUserEditProfile = '/user/edit-profile';
+  static const String routeCurrentBookings = '/user/bookings';
+  static const String routeBookingHistory = '/user/booking-history';
+  static const String routeBookingDetails = '/user/booking-details';
+  static const String routeAccountSecurity = '/user/security';
   /// Legacy hyphen paths (redirect to slash paths).
   static const String routeUserDashboardLegacy = '/user-dashboard';
   static const String routeUserEditProfileLegacy = '/user-edit-profile';

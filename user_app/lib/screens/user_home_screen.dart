@@ -21,6 +21,8 @@ import '../features/labs/data/health_package_visuals.dart';
 import '../features/labs/data/models/health_package.dart';
 import '../features/labs/presentation/screens/health_package_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
+import '../features/select_location/select_location_navigation.dart';
+import '../features/select_location/selected_location.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
@@ -60,6 +62,35 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
   Future<void> _requestLocationOnOpen() async {
     if (!mounted) return;
     await ref.read(userLocationProvider.notifier).ensureResolved(context);
+  }
+
+  Future<void> _changeHomeLocation() async {
+    final current = ref.read(userLocationProvider);
+    final selected = await openSelectLocation(
+      context,
+      args: SelectLocationArgs(
+        title: 'Select a location',
+        autofocusSearch: true,
+        initial: current.hasCoordinates ||
+                (current.city != null && current.city!.trim().isNotEmpty)
+            ? SelectedLocationResult(
+                addressLine: current.displayPlaceCity ?? current.displayCity,
+                city: current.city,
+                latitude: current.latitude,
+                longitude: current.longitude,
+              )
+            : null,
+      ),
+    );
+    if (selected == null || !mounted) return;
+    await ref.read(userLocationProvider.notifier).applySelected(
+          addressLine: selected.addressLine,
+          city: selected.city,
+          label: selected.label,
+          latitude: selected.latitude,
+          longitude: selected.longitude,
+        );
+    ref.invalidate(verifiedDoctorsProvider);
   }
 
   Future<void> _refreshHome() async {
@@ -114,9 +145,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                       ? PatientHeaderAvatar(user: user)
                       : const Icon(Icons.person_outline_rounded, size: 20),
                   onTrailingTap: () => _onProfileTap(context, ref),
-                  onLocationTap: () => ref
-                      .read(userLocationProvider.notifier)
-                      .ensureResolved(context, forcePrompt: true),
+                  onLocationTap: _changeHomeLocation,
                   actions: user == null
                       ? null
                       : const NotificationBellButton(iconColor: AppColors.white),

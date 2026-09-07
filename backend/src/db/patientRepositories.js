@@ -1,6 +1,16 @@
 const { v4: uuidv4 } = require('uuid');
 const Patient = require('./models/Patient');
+const crypto = require('crypto');
 const { hashPassword, verifyPassword } = require('../utils/providerAuth');
+const {
+  isValidEmail,
+  isValidIndianPincode,
+  parseDateOfBirth,
+} = require('../utils/patientBookingList');
+const {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  normalizeNotificationSettings,
+} = require('../utils/notificationCategory');
 
 const ALLOWED_GENDERS = ['Male', 'Female', 'Other'];
 
@@ -25,6 +35,7 @@ function toPatient(doc) {
     mobileNumber: d.mobileNumber,
     countryCode: d.countryCode || '91',
     age: d.age,
+    dateOfBirth: d.dateOfBirth || null,
     gender: d.gender,
     aadhaarLast4: d.aadhaarLast4,
     profilePicture: d.profilePicture,
@@ -44,6 +55,10 @@ function toPatient(doc) {
     isBlocked: Boolean(d.isBlocked),
     blockedAt: d.blockedAt || null,
     blockedReason: d.blockedReason || null,
+    deletedAt: d.deletedAt || null,
+    notificationSettings: normalizeNotificationSettings(
+      d.notificationSettings || DEFAULT_NOTIFICATION_SETTINGS,
+    ),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
@@ -244,6 +259,11 @@ async function updatePatient(patientId, data) {
       err.statusCode = 400;
       throw err;
     }
+    if (!isValidEmail(email)) {
+      const err = new Error('Enter a valid email address');
+      err.statusCode = 400;
+      throw err;
+    }
     const existingEmail = await findPatientByEmail(email, patientId);
     if (existingEmail) {
       const err = new Error('Email is already registered');
@@ -286,6 +306,14 @@ async function updatePatient(patientId, data) {
     updates.age = age;
   }
 
+  if (data.dateOfBirth != null) {
+    const parsed = parseDateOfBirth(data.dateOfBirth);
+    if (parsed) {
+      updates.dateOfBirth = parsed.dateOfBirth;
+      updates.age = parsed.age;
+    }
+  }
+
   if (data.gender != null) {
     const gender = String(data.gender).trim();
     if (!ALLOWED_GENDERS.includes(gender)) {
@@ -318,6 +346,10 @@ async function updatePatient(patientId, data) {
 
   if (data.profilePicture) {
     updates.profilePicture = String(data.profilePicture).trim();
+  }
+
+  if (data.removeProfilePicture === true || data.removeProfilePicture === 'true') {
+    updates.profilePicture = 'cleared';
   }
 
   if (data.aadhaarCardUrl) {
@@ -367,11 +399,50 @@ async function updatePatient(patientId, data) {
     };
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (data.bloodGroup != null && !updates.medicalProfile) {
+    updates.medicalProfile = {
+      ...(doc.medicalProfile?.toObject?.() || doc.medicalProfile || {}),
+      bloodGroup: String(data.bloodGroup).trim(),
+    };
+  }
+
+  const addressLine = data.addressLine != null ? String(data.addressLine).trim() : '';
+  const city = data.city != null ? String(data.city).trim() : '';
+  const state = data.state != null ? String(data.state).trim() : '';
+  const pincode = data.pincode != null ? String(data.pincode).trim() : '';
+  const hasAddressPatch = Boolean(addressLine || city || state || pincode);
+
+  if (Object.keys(updates).length === 0 && !hasAddressPatch) {
     return findPatientById(patientId);
   }
 
-  await Patient.updateOne({ id: patientId }, { $set: updates });
+  if (Object.keys(updates).length > 0) {
+    await Patient.updateOne({ id: patientId }, { $set: updates });
+  }
+
+  if (hasAddressPatch) {
+    if (addressLine && addressLine.length < 5) {
+      const err = new Error('Enter a valid address');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (pincode && !isValidIndianPincode(pincode)) {
+      const err = new Error('Enter a valid 6-digit pincode');
+      err.statusCode = 400;
+      throw err;
+    }
+    const defaultAddress = (doc.savedAddresses || []).find((a) => a.isDefault);
+    await upsertSavedAddress(patientId, {
+      id: defaultAddress?.id,
+      label: defaultAddress?.label || 'Home',
+      addressLine: addressLine || defaultAddress?.addressLine || 'Address',
+      city: city || defaultAddress?.city,
+      state: state || defaultAddress?.state,
+      pincode: pincode || defaultAddress?.pincode,
+      isDefault: true,
+    });
+  }
+
   return findPatientById(patientId);
 }
 
@@ -400,7 +471,17 @@ async function upsertFamilyMember(patientId, member) {
       ? String(member.mobileNumber).trim()
       : undefined,
     bloodGroup: member.bloodGroup ? String(member.bloodGroup).trim() : undefined,
+    isEmergencyContact: Boolean(member.isEmergencyContact || member.isPrimary),
+    isPrimary: Boolean(member.isPrimary),
   };
+  if (payload.isPrimary) {
+    for (let i = 0; i < members.length; i += 1) {
+      const current = members[i].toObject ? members[i].toObject() : { ...members[i] };
+      current.isPrimary = current.id === id;
+      if (current.isPrimary) current.isEmergencyContact = true;
+      members[i] = current;
+    }
+  }
   const idx = members.findIndex((m) => m.id === id);
   if (idx >= 0) members[idx] = payload;
   else members.push(payload);
@@ -532,6 +613,11 @@ async function loginPatient(email, password) {
     err.statusCode = 403;
     throw err;
   }
+  if (doc.deletedAt) {
+    const err = new Error('Invalid email or password');
+    err.statusCode = 401;
+    throw err;
+  }
 
   return toPatient(doc);
 }
@@ -564,6 +650,85 @@ async function setPatientBlockedStatus({
   return toPatient(doc);
 }
 
+async function incrementPatientTokenVersion(patientId) {
+  const doc = await Patient.findOne({ id: patientId });
+  if (!doc) {
+    const err = new Error('Patient not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  doc.tokenVersion = Number(doc.tokenVersion || 0) + 1;
+  doc.fcmTokens = [];
+  await doc.save();
+  return Number(doc.tokenVersion);
+}
+
+async function getPatientTokenVersion(patientId) {
+  const doc = await Patient.findOne({ id: patientId }).select('tokenVersion').lean();
+  return Number(doc?.tokenVersion || 0);
+}
+
+async function updateNotificationSettings(patientId, settings) {
+  const doc = await Patient.findOne({ id: patientId });
+  if (!doc) {
+    const err = new Error('Patient not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  doc.notificationSettings = normalizeNotificationSettings(settings);
+  await doc.save();
+  return toPatient(doc);
+}
+
+async function deletePatientAccount(patientId, { password, confirmText } = {}) {
+  const doc = await Patient.findOne({ id: patientId });
+  if (!doc) {
+    const err = new Error('Patient not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (String(confirmText || '').trim().toUpperCase() !== 'DELETE') {
+    const err = new Error('Type DELETE to confirm account deletion');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (!password || !verifyPassword(password, doc.passwordHash)) {
+    const err = new Error('Password is incorrect');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const digest = crypto.createHash('sha256').update(doc.id).digest('hex');
+  const uniqueMobile = `00000${digest.replace(/\D/g, '').slice(0, 5)}`.slice(-10);
+  const uniqueAadhaar = `${digest.replace(/\D/g, '0').slice(0, 12)}`.padEnd(12, '0');
+
+  doc.firstName = 'Deleted';
+  doc.lastName = 'User';
+  doc.email = `deleted.${doc.id}@invalid.local`;
+  doc.mobileNumber = uniqueMobile;
+  doc.aadhaarNumber = uniqueAadhaar;
+  doc.aadhaarLast4 = uniqueAadhaar.slice(-4);
+  doc.profilePicture = 'cleared';
+  doc.aadhaarCardUrl = 'cleared';
+  doc.fcmTokens = [];
+  doc.familyMembers = [];
+  doc.savedAddresses = [];
+  doc.medicalProfile = {
+    allergies: [],
+    chronicDiseases: [],
+    currentMedications: [],
+  };
+  doc.isBlocked = true;
+  doc.blockedAt = new Date();
+  doc.blockedReason = 'Account deleted by user';
+  doc.deletedAt = new Date();
+  doc.deletionReason = 'user_requested';
+  doc.tokenVersion = Number(doc.tokenVersion || 0) + 1;
+  doc.passwordHash = hashPassword(crypto.randomBytes(24).toString('hex'));
+  await doc.save();
+  return { deleted: true };
+}
+
 module.exports = {
   registerPatient,
   loginPatient,
@@ -577,4 +742,8 @@ module.exports = {
   deleteSavedAddress,
   listPatientsForAdmin,
   setPatientBlockedStatus,
+  incrementPatientTokenVersion,
+  getPatientTokenVersion,
+  updateNotificationSettings,
+  deletePatientAccount,
 };

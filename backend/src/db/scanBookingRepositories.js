@@ -166,7 +166,7 @@ async function listScanBookingsForPatient({
 
   const docs = await ScanBooking.find({ $or: orConditions })
     .sort({ createdAt: -1 })
-    .limit(50)
+    .limit(200)
     .lean();
   return docs.map(toScanBooking);
 }
@@ -360,7 +360,7 @@ function toPatientBookingShape(booking) {
     label: `${booking.scanName} · ${booking.timeSlot}`,
     consultationFee: booking.totalAmount,
     status: booking.status === 'requested' ? 'pending' : booking.status,
-    paymentStatus: booking.paymentStatus,
+    ...require('../utils/patientBookingList').paymentFieldsForPatient(booking),
     clinicName: booking.scanCenterName,
     createdAt: booking.createdAt,
     isUpcoming: activeStatuses.includes(booking.status) && slotEnd >= new Date(),

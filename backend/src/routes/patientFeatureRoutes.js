@@ -49,6 +49,7 @@ router.get('/notifications', authRequired, async (req, res) => {
     const data = await listNotifications(patientId, 'patient', {
       limit: req.query.limit,
       unreadOnly: req.query.unreadOnly === 'true',
+      category: req.query.category,
     });
     return sendSuccess(res, { data });
   } catch (err) {
@@ -187,6 +188,18 @@ router.get('/bookings/:bookingId', authRequired, async (req, res) => {
   } catch (err) {
     const status = err.statusCode || 500;
     return sendError(res, err.message || 'Failed to load booking', status);
+  }
+});
+
+router.get('/bookings/:bookingId/receipt', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const { getPatientBookingReceipt } = require('../db/bookingReceiptRepositories');
+    const data = await getPatientBookingReceipt(req.params.bookingId, patientId);
+    return sendSuccess(res, { data });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to load receipt', err.statusCode || 500);
   }
 });
 

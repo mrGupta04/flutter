@@ -60,6 +60,40 @@ enum PatientBookingCategory {
             booking.consultationType == 'blood_bank';
     }
   }
+
+  String? get apiServiceType {
+    switch (this) {
+      case PatientBookingCategory.all:
+        return null;
+      case PatientBookingCategory.onlineConsult:
+      case PatientBookingCategory.hospitalVisit:
+      case PatientBookingCategory.homeVisit:
+        return 'doctor';
+      case PatientBookingCategory.nurse:
+        return 'nurse';
+      case PatientBookingCategory.scan:
+        return 'scan';
+      case PatientBookingCategory.lab:
+        return 'lab';
+      case PatientBookingCategory.ambulance:
+        return 'ambulance';
+      case PatientBookingCategory.bloodBank:
+        return 'blood_bank';
+    }
+  }
+
+  String? get apiConsultationType {
+    switch (this) {
+      case PatientBookingCategory.onlineConsult:
+        return 'online_consult';
+      case PatientBookingCategory.hospitalVisit:
+        return 'visit_site';
+      case PatientBookingCategory.homeVisit:
+        return 'book_home';
+      default:
+        return null;
+    }
+  }
 }
 
 Map<PatientBookingCategory, List<PatientBookingModel>> groupBookingsByCategory(
@@ -180,6 +214,13 @@ class PatientBookingModel {
   final double? liveLatitude;
   final double? liveLongitude;
   final DateTime? liveLocationUpdatedAt;
+  final int? amountPaid;
+  final String? paymentMethod;
+  final String? paymentReference;
+  final DateTime? paidAt;
+  final String? currency;
+  final bool canViewReceipt;
+  final String? invoiceUrl;
 
   const PatientBookingModel({
     required this.id,
@@ -231,6 +272,13 @@ class PatientBookingModel {
     this.liveLatitude,
     this.liveLongitude,
     this.liveLocationUpdatedAt,
+    this.amountPaid,
+    this.paymentMethod,
+    this.paymentReference,
+    this.paidAt,
+    this.currency,
+    this.canViewReceipt = false,
+    this.invoiceUrl,
   });
 
   bool get canTrackAmbulanceLive {
@@ -402,22 +450,52 @@ class PatientBookingModel {
   bool get isAppointmentVerified =>
       appointmentVerifiedAt != null || verificationStatus == 'VERIFIED';
 
-  /// True while the appointment is upcoming or an active home/nurse visit is in progress.
+  bool get isTerminal {
+    const terminal = {
+      'cancelled',
+      'rejected',
+      'nurse_rejected',
+      'payment_expired',
+      'completed',
+      'trip_completed',
+      'failed',
+      'expired',
+      'no_answer',
+      'report_ready',
+    };
+    if (terminal.contains(status)) return true;
+    return visitProgress == 'completed';
+  }
+
+  bool get isPendingRequest {
+    if (isTerminal) return false;
+    return isAwaitingDoctorApproval ||
+        isApprovedPendingPayment ||
+        status == 'pending' ||
+        status == 'requested' ||
+        status == 'held' ||
+        status == 'searching_ambulance';
+  }
+
+  bool get isLiveNow {
+    if (isTerminal || isPendingRequest) return false;
+    if (canTrackAmbulanceLive) return true;
+    if (const {'en_route', 'arrived', 'visit_started'}.contains(visitProgress)) {
+      return true;
+    }
+    if (serviceType == 'lab' &&
+        const {'sample_collected', 'processing'}.contains(status)) {
+      return true;
+    }
+    if (serviceType == 'scan' && status == 'in_progress') return true;
+    if (isClinicVisit && isAppointmentVerified) return true;
+    return false;
+  }
+
+  /// True while the appointment is upcoming, pending, or an active visit.
   bool get isActiveOrUpcoming {
-    if (isAwaitingDoctorApproval || isApprovedPendingPayment) {
-      return true;
-    }
-    if ((isNurseVisit || isHomeVisit) &&
-        status == 'confirmed' &&
-        visitProgress != 'completed') {
-      return true;
-    }
-    if ((isNurseVisit || isHomeVisit) &&
-        visitProgress != null &&
-        visitProgress != 'completed' &&
-        ['en_route', 'arrived', 'visit_started'].contains(visitProgress)) {
-      return true;
-    }
+    if (isTerminal) return false;
+    if (isPendingRequest || isLiveNow) return true;
     return !DateTime.now().isAfter(slotEnd);
   }
 
@@ -503,6 +581,16 @@ class PatientBookingModel {
       liveLocationUpdatedAt: json['liveLocationUpdatedAt'] != null
           ? DateTime.tryParse(json['liveLocationUpdatedAt'].toString())
           : null,
+      amountPaid: (json['amountPaid'] as num?)?.toInt() ??
+          (json['consultationFee'] as num?)?.toInt(),
+      paymentMethod: json['paymentMethod'] as String?,
+      paymentReference: json['paymentReference'] as String?,
+      paidAt: json['paidAt'] != null
+          ? DateTime.tryParse(json['paidAt'].toString())
+          : null,
+      currency: json['currency'] as String? ?? 'INR',
+      canViewReceipt: json['canViewReceipt'] as bool? ?? false,
+      invoiceUrl: json['invoiceUrl'] as String?,
     );
   }
 
@@ -530,13 +618,42 @@ class PatientBookingModel {
   }
 }
 
+class BookingListPagination {
+  const BookingListPagination({
+    this.page = 1,
+    this.limit = 20,
+    this.total = 0,
+    this.totalPages = 1,
+    this.hasMore = false,
+  });
+
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+  final bool hasMore;
+
+  factory BookingListPagination.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const BookingListPagination();
+    return BookingListPagination(
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      limit: (json['limit'] as num?)?.toInt() ?? 20,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      totalPages: (json['totalPages'] as num?)?.toInt() ?? 1,
+      hasMore: json['hasMore'] as bool? ?? false,
+    );
+  }
+}
+
 class PatientBookingsResponse {
   final List<PatientBookingModel> bookings;
   final PatientBookingStats stats;
+  final BookingListPagination pagination;
 
   const PatientBookingsResponse({
     required this.bookings,
     required this.stats,
+    this.pagination = const BookingListPagination(),
   });
 
   factory PatientBookingsResponse.fromJson(Map<String, dynamic> json) {
@@ -551,9 +668,11 @@ class PatientBookingsResponse {
     }
     final statsJson =
         json['stats'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    final paginationJson = json['pagination'] as Map<String, dynamic>?;
     return PatientBookingsResponse(
       bookings: bookings,
       stats: PatientBookingStats.fromJson(statsJson),
+      pagination: BookingListPagination.fromJson(paginationJson),
     );
   }
 }

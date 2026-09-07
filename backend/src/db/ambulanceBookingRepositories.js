@@ -233,7 +233,7 @@ async function listAmbulanceBookingsForPatient({
     filter.status = { $in: ['trip_completed', 'completed'] };
   }
 
-  const docs = await AmbulanceBooking.find(filter).sort({ createdAt: -1 }).limit(80).lean();
+  const docs = await AmbulanceBooking.find(filter).sort({ createdAt: -1 }).limit(200).lean();
   return docs.map(toAmbulanceBooking);
 }
 
@@ -481,7 +481,11 @@ function toPatientBookingShape(booking) {
     label: booking.pickupAddress,
     consultationFee: booking.fare?.total ?? null,
     status: booking.status === 'requested' ? 'pending' : booking.status,
-    paymentStatus: booking.paymentStatus || null,
+    ...require('../utils/patientBookingList').paymentFieldsForPatient({
+      ...booking,
+      amountPaid: booking.amountPaid,
+      totalAmount: booking.fare?.total ?? booking.fareBreakdown?.total,
+    }),
     visitProgress:
       ['en_route', 'dispatched', 'driver_en_route', 'en_route_to_destination'].includes(
         booking.status,

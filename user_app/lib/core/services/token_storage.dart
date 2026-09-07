@@ -246,6 +246,7 @@ class TokenStorage {
     String? place,
     double? latitude,
     double? longitude,
+    bool replaceCoordinates = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     if (city != null && city.trim().isNotEmpty) {
@@ -264,6 +265,10 @@ class TokenStorage {
     }
     if (longitude != null) {
       await prefs.setDouble(_lastLongitudeKey, longitude);
+    }
+    if (replaceCoordinates && latitude == null && longitude == null) {
+      await prefs.remove(_lastLatitudeKey);
+      await prefs.remove(_lastLongitudeKey);
     }
   }
 

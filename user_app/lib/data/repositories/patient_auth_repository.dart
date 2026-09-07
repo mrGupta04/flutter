@@ -278,6 +278,63 @@ class PatientAuthRepository {
     await TokenStorage.instance.clearPatientSession();
   }
 
+  Future<void> logoutAllDevices() async {
+    try {
+      await _dio.post(AppConstants.endpointPatientLogoutAll, data: const {});
+    } on DioException {
+      // Still clear local session even if the server call fails.
+    } finally {
+      await TokenStorage.instance.clearPatientSession();
+    }
+  }
+
+  Future<ApiResponse<void>> deleteAccount({
+    required String password,
+    required String confirmText,
+  }) async {
+    try {
+      final response = await _dio.delete(
+        AppConstants.endpointPatientAccount,
+        data: {
+          'password': password,
+          'confirmText': confirmText,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      await TokenStorage.instance.clearPatientSession();
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        statusCode: body['statusCode'] as int? ?? 200,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<NotificationSettingsModel> fetchNotificationSettings() async {
+    final response = await _dio.get(AppConstants.endpointPatientNotificationSettings);
+    final body = response.data as Map<String, dynamic>;
+    final data = body['data'];
+    return NotificationSettingsModel.fromJson(
+      data is Map<String, dynamic> ? data : null,
+    );
+  }
+
+  Future<NotificationSettingsModel> updateNotificationSettings(
+    NotificationSettingsModel settings,
+  ) async {
+    final response = await _dio.put(
+      AppConstants.endpointPatientNotificationSettings,
+      data: settings.toJson(),
+    );
+    final body = response.data as Map<String, dynamic>;
+    final data = body['data'];
+    return NotificationSettingsModel.fromJson(
+      data is Map<String, dynamic> ? data : null,
+    );
+  }
+
   Future<ApiResponse<PatientUserModel>> _parseAuthResponse(
     Map<String, dynamic> body,
   ) async {

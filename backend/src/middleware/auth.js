@@ -65,10 +65,13 @@ async function authRequired(req, res, next) {
     if (req.auth?.type === 'patient' && req.auth?.patientId) {
       const Patient = require('../db/models/Patient');
       const patient = await Patient.findOne({ id: req.auth.patientId })
-        .select('isBlocked')
+        .select('isBlocked deletedAt tokenVersion')
         .lean();
       if (!patient) {
         return sendError(res, 'Patient not found', 404);
+      }
+      if (patient.deletedAt) {
+        return sendError(res, 'This account has been deleted', 401);
       }
       if (patient.isBlocked) {
         return sendError(
@@ -76,6 +79,11 @@ async function authRequired(req, res, next) {
           'Your account has been blocked. Contact support for help.',
           403,
         );
+      }
+      const tokenVersion = Number(patient.tokenVersion || 0);
+      const claimed = Number(req.auth.tv || 0);
+      if (tokenVersion !== claimed) {
+        return sendError(res, 'Session expired. Please sign in again.', 401);
       }
     }
 

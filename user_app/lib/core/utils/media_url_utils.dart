@@ -18,6 +18,7 @@ class MediaUrlUtils {
   static String resolve(String? url) {
     if (url == null || url.isEmpty) return '';
     final trimmed = url.trim();
+    if (trimmed == 'cleared') return '';
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       final uri = Uri.tryParse(trimmed);
       final path = uri?.path ?? '';

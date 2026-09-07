@@ -102,6 +102,8 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
     String relationship = existing?.relationship ?? 'child';
     String? gender = existing?.gender;
     String? bloodGroup = existing?.bloodGroup;
+    bool emergency = existing?.isEmergencyContact ?? false;
+    bool primary = existing?.isPrimary ?? false;
 
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -200,6 +202,24 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
                         .toList(),
                     onChanged: (v) => setLocal(() => bloodGroup = v),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Emergency contact'),
+                    value: emergency,
+                    onChanged: (v) => setLocal(() {
+                      emergency = v;
+                      if (!v) primary = false;
+                    }),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Primary emergency contact'),
+                    value: primary,
+                    onChanged: (v) => setLocal(() {
+                      primary = v;
+                      if (v) emergency = true;
+                    }),
+                  ),
                   const SizedBox(height: 16),
                   CustomButton(
                     label: 'Save',
@@ -226,6 +246,8 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
             ? null
             : mobileCtrl.text.trim(),
         bloodGroup: bloodGroup,
+        isEmergencyContact: emergency,
+        isPrimary: primary,
       ),
     );
     if (!mounted) return;
@@ -331,6 +353,10 @@ class _FamilyTab extends StatelessWidget {
                   m.relationship,
                   if (m.age != null) '${m.age} yrs',
                   if (m.bloodGroup != null) m.bloodGroup!,
+                  if (m.isPrimary)
+                    'Primary emergency'
+                  else if (m.isEmergencyContact)
+                    'Emergency',
                 ].join(' · '),
               ),
               trailing: Row(

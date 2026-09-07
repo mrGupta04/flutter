@@ -182,6 +182,26 @@ class PatientAuthNotifier extends StateNotifier<PatientAuthState> {
     await _repo.logout();
     state = const PatientAuthState(isInitialized: true);
   }
+
+  Future<void> logoutAllDevices() async {
+    await _repo.logoutAllDevices();
+    state = const PatientAuthState(isInitialized: true);
+  }
+
+  Future<String?> deleteAccount({
+    required String password,
+    required String confirmText,
+  }) async {
+    final res = await _repo.deleteAccount(
+      password: password,
+      confirmText: confirmText,
+    );
+    if (res.success) {
+      state = const PatientAuthState(isInitialized: true);
+      return null;
+    }
+    return res.error ?? res.message ?? 'Could not delete account';
+  }
 }
 
 final patientAuthProvider =

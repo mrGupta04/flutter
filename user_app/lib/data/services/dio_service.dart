@@ -288,6 +288,7 @@ class DioService {
   Future<Response> delete(
     String path, {
     Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? data,
     Options? options,
     CancelToken? cancelToken,
   }) async {
@@ -297,10 +298,12 @@ class DioService {
           path: path,
           method: 'DELETE',
           queryParameters: queryParameters,
+          data: data,
         );
       }
       final response = await _dio.deleteUri(
         resolveUri(path, queryParameters: queryParameters),
+        data: data,
         options: options,
         cancelToken: cancelToken,
       );

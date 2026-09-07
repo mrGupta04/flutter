@@ -5,6 +5,10 @@ const Doctor = require('./models/Doctor');
 const Nurse = require('./models/Nurse');
 const { sendPushNotification } = require('../services/pushNotificationService');
 const { normalizeMobile } = require('../utils/mobile');
+const {
+  notificationCategory,
+  isNotificationCategoryEnabled,
+} = require('../utils/notificationCategory');
 
 const NOTIFICATION_TYPES = new Set([
   'booking_approved',
@@ -151,15 +155,21 @@ async function createAndPushNotification({
     title,
     body,
     type: notification.type,
+    category: notificationCategory(notification.type),
     data,
     createdAt: notification.createdAt,
   };
   emitRealtime(userType, userId, payload);
 
   let deviceTokens = [];
+  let allowPush = true;
   if (userType === 'patient') {
     const patient = await Patient.findOne({ id: userId }).lean();
     deviceTokens = patient?.fcmTokens || [];
+    allowPush = isNotificationCategoryEnabled(
+      patient?.notificationSettings,
+      payload.category,
+    );
   } else if (userType === 'doctor') {
     const doctor = await Doctor.findOne({ id: userId }).lean();
     deviceTokens = doctor?.fcmTokens || [];
@@ -177,22 +187,24 @@ async function createAndPushNotification({
   }
 
   try {
-    const pushResult = await sendPushNotification({
-      userId,
-      title,
-      body,
-      data: {
-        ...data,
-        type: notification.type,
-        notificationId: notification.id,
-        userType,
-        deviceTokens,
-        deviceToken: deviceTokens[0],
-      },
-    });
+    if (allowPush && deviceTokens.length) {
+      const pushResult = await sendPushNotification({
+        userId,
+        title,
+        body,
+        data: {
+          ...data,
+          type: notification.type,
+          notificationId: notification.id,
+          userType,
+          deviceTokens,
+          deviceToken: deviceTokens[0],
+        },
+      });
 
-    if (pushResult?.invalidTokens?.length) {
-      await removeDeviceTokens(userId, userType, pushResult.invalidTokens);
+      if (pushResult?.invalidTokens?.length) {
+        await removeDeviceTokens(userId, userType, pushResult.invalidTokens);
+      }
     }
   } catch (err) {
     console.error('[Notify] FCM send failed:', err.message);
@@ -224,7 +236,11 @@ async function notifyPatient(booking, { title, body, type, data = {} } = {}) {
   });
 }
 
-async function listNotifications(userId, userType, { limit = 50, unreadOnly = false } = {}) {
+async function listNotifications(
+  userId,
+  userType,
+  { limit = 50, unreadOnly = false, category } = {},
+) {
   const filter = { userId, userType };
   if (unreadOnly) filter.readAt = null;
 
@@ -239,8 +255,23 @@ async function listNotifications(userId, userType, { limit = 50, unreadOnly = fa
     readAt: null,
   });
 
+  let notifications = rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    type: row.type,
+    category: notificationCategory(row.type),
+    data: row.data || {},
+    createdAt: row.createdAt,
+    readAt: row.readAt,
+  }));
+  const wanted = String(category || '').trim();
+  if (wanted && wanted !== 'all') {
+    notifications = notifications.filter((item) => item.category === wanted);
+  }
+
   return {
-    notifications: rows,
+    notifications,
     unreadCount,
   };
 }

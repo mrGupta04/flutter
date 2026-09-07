@@ -31,6 +31,10 @@ class _EditPatientProfileScreenState
   late final TextEditingController _mobileController;
   late final TextEditingController _ageController;
   late final TextEditingController _aadhaarController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _stateController;
+  late final TextEditingController _pincodeController;
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -39,7 +43,10 @@ class _EditPatientProfileScreenState
   Uint8List? _aadhaarCardBytes;
   String? _aadhaarCardFileName;
   String? _gender;
+  String? _bloodGroup;
+  DateTime? _dob;
   bool _changePassword = false;
+  bool _removePhoto = false;
 
   @override
   void initState() {
@@ -52,7 +59,13 @@ class _EditPatientProfileScreenState
       text: user?.age != null ? '${user!.age}' : '',
     );
     _aadhaarController = TextEditingController();
+    _addressController = TextEditingController(text: user?.defaultAddress?.addressLine ?? '');
+    _cityController = TextEditingController(text: user?.defaultAddress?.city ?? '');
+    _stateController = TextEditingController(text: user?.defaultAddress?.state ?? '');
+    _pincodeController = TextEditingController(text: user?.defaultAddress?.pincode ?? '');
     _gender = user?.gender;
+    _bloodGroup = user?.medicalProfile.bloodGroup;
+    _dob = user?.dateOfBirth;
   }
 
   @override
@@ -62,6 +75,10 @@ class _EditPatientProfileScreenState
     _mobileController.dispose();
     _ageController.dispose();
     _aadhaarController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _pincodeController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -93,12 +110,28 @@ class _EditPatientProfileScreenState
     final aadhaarNumber =
         aadhaarDigits.length == 12 ? aadhaarDigits : null;
 
+    int age;
+    if (_ageController.text.trim().isNotEmpty) {
+      age = int.parse(_ageController.text.trim());
+    } else if (_dob != null) {
+      final dob = _dob!;
+      final now = DateTime.now();
+      age = now.year - dob.year;
+      if (now.month < dob.month ||
+          (now.month == dob.month && now.day < dob.day)) {
+        age -= 1;
+      }
+    } else {
+      SnackBarHelper.showError(context, 'Age or date of birth is required');
+      return;
+    }
+
     final ok = await ref.read(patientDashboardProvider.notifier).updateProfile(
           firstName: firstName,
           lastName: lastName,
           email: _emailController.text.trim(),
           mobileNumber: _mobileController.text.trim(),
-          age: int.parse(_ageController.text.trim()),
+          age: age,
           gender: _gender!,
           aadhaarNumber: aadhaarNumber,
           password: _changePassword ? _passwordController.text : null,
@@ -106,6 +139,21 @@ class _EditPatientProfileScreenState
           profilePictureFileName: _profileFileName,
           aadhaarCardBytes: _aadhaarCardBytes,
           aadhaarCardFileName: _aadhaarCardFileName,
+          dateOfBirth: _dob?.toIso8601String(),
+          bloodGroup: _bloodGroup,
+          addressLine: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
+          city: _cityController.text.trim().isEmpty
+              ? null
+              : _cityController.text.trim(),
+          addressState: _stateController.text.trim().isEmpty
+              ? null
+              : _stateController.text.trim(),
+          pincode: _pincodeController.text.trim().isEmpty
+              ? null
+              : _pincodeController.text.trim(),
+          removeProfilePicture: _removePhoto,
         );
 
     if (!mounted) return;
@@ -149,10 +197,21 @@ class _EditPatientProfileScreenState
               const SizedBox(height: 20),
               ProfilePicturePicker(
                 imageBytes: _profileBytes,
+                existingImageUrl: _removePhoto ? null : user?.profilePicture,
+                allowRemove: true,
+                uploading: dash.isSavingProfile,
+                onRemove: () {
+                  setState(() {
+                    _profileBytes = null;
+                    _profileFileName = null;
+                    _removePhoto = true;
+                  });
+                },
                 onImagePicked: (bytes, name) {
                   setState(() {
                     _profileBytes = bytes;
                     _profileFileName = name;
+                    _removePhoto = false;
                   });
                 },
                 onError: (msg) => SnackBarHelper.showError(context, msg),
@@ -170,14 +229,14 @@ class _EditPatientProfileScreenState
               const SizedBox(height: 16),
               CustomTextField(
                 controller: _fullNameController,
-                label: 'Full name',
+                label: 'Full name *',
                 prefixIcon: Icons.person_outline_rounded,
                 validator: (v) => ValidationUtils.validateName(v ?? ''),
               ),
               const SizedBox(height: 12),
               CustomTextField(
                 controller: _emailController,
-                label: 'Email',
+                label: 'Email *',
                 prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 validator: (v) => ValidationUtils.validateEmail(v ?? ''),
@@ -185,7 +244,7 @@ class _EditPatientProfileScreenState
               const SizedBox(height: 12),
               CustomTextField(
                 controller: _mobileController,
-                label: 'Mobile number',
+                label: 'Mobile number *',
                 prefixIcon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [
@@ -196,9 +255,40 @@ class _EditPatientProfileScreenState
                     ValidationUtils.validatePhoneNumber(v ?? ''),
               ),
               const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Date of birth (optional)'),
+                subtitle: Text(
+                  _dob == null
+                      ? 'Not set'
+                      : '${_dob!.day} ${_month(_dob!.month)} ${_dob!.year}',
+                ),
+                trailing: const Icon(Icons.calendar_today_outlined),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _dob ?? DateTime(1998, 1, 1),
+                    firstDate: DateTime(1905),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _dob = picked;
+                      final now = DateTime.now();
+                      var age = now.year - picked.year;
+                      if (now.month < picked.month ||
+                          (now.month == picked.month && now.day < picked.day)) {
+                        age -= 1;
+                      }
+                      _ageController.text = '$age';
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
               CustomTextField(
                 controller: _ageController,
-                label: 'Age',
+                label: 'Age *',
                 prefixIcon: Icons.cake_outlined,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
@@ -215,7 +305,7 @@ class _EditPatientProfileScreenState
                 isExpanded: true,
                 borderRadius: BorderRadius.circular(12),
                 decoration: InputDecoration(
-                  labelText: 'Gender',
+                  labelText: 'Gender *',
                   prefixIcon: const Icon(Icons.wc_outlined),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -226,6 +316,60 @@ class _EditPatientProfileScreenState
                     .toList(),
                 onChanged: (v) => setState(() => _gender = v),
                 validator: (v) => ValidationUtils.validateGender(v),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _bloodGroup,
+                itemHeight: kMinInteractiveDimension,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Blood group (optional)',
+                  prefixIcon: Icon(Icons.bloodtype_outlined),
+                ),
+                items: const [
+                  'A+',
+                  'A-',
+                  'B+',
+                  'B-',
+                  'AB+',
+                  'AB-',
+                  'O+',
+                  'O-',
+                ]
+                    .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                    .toList(),
+                onChanged: (v) => setState(() => _bloodGroup = v),
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _addressController,
+                label: 'Address (optional)',
+                prefixIcon: Icons.home_outlined,
+                validator: (v) => ValidationUtils.validateOptionalAddress(v),
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _cityController,
+                label: 'City (optional)',
+                prefixIcon: Icons.location_city_outlined,
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _stateController,
+                label: 'State (optional)',
+                prefixIcon: Icons.map_outlined,
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _pincodeController,
+                label: 'Pincode (optional)',
+                prefixIcon: Icons.pin_outlined,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
+                validator: (v) => ValidationUtils.validateOptionalPincode(v),
               ),
               const SizedBox(height: 12),
               CustomTextField(
@@ -295,5 +439,23 @@ class _EditPatientProfileScreenState
         ),
       ),
     );
+  }
+
+  String _month(int month) {
+    const names = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return names[month - 1];
   }
 }

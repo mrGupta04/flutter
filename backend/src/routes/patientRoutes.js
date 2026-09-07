@@ -8,8 +8,15 @@ const {
   deleteFamilyMember,
   upsertSavedAddress,
   deleteSavedAddress,
+  getPatientTokenVersion,
+  incrementPatientTokenVersion,
+  updateNotificationSettings,
+  deletePatientAccount,
 } = require('../db/patientRepositories');
 const { listPatientBookings, addPreviousReportToBooking } = require('../db/bookingRepositories');
+const {
+  parseBookingListQuery,
+} = require('../utils/patientBookingList');
 const {
   sendPatientPasswordResetOtp,
   resetPatientPassword,
@@ -121,6 +128,7 @@ router.post(
           patientId: patient.id,
           type: 'patient',
           email: patient.email,
+          tv: await getPatientTokenVersion(patient.id),
         },
         '30d',
       );
@@ -151,6 +159,7 @@ router.post('/login', async (req, res) => {
         patientId: patient.id,
         type: 'patient',
         email: patient.email,
+        tv: await getPatientTokenVersion(patient.id),
       },
       '30d',
     );
@@ -188,6 +197,63 @@ router.get('/profile', authRequired, async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to load profile', 500);
+  }
+});
+
+router.post('/logout-all', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    await incrementPatientTokenVersion(patientId);
+    return sendSuccess(res, {
+      message: 'Signed out from all devices',
+      data: { loggedOut: true },
+    });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to sign out', err.statusCode || 500);
+  }
+});
+
+router.get('/notification-settings', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const patient = await findPatientById(patientId);
+    if (!patient) return sendError(res, 'Patient not found', 404);
+    return sendSuccess(res, { data: patient.notificationSettings });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to load settings', 500);
+  }
+});
+
+router.put('/notification-settings', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const patient = await updateNotificationSettings(patientId, req.body || {});
+    return sendSuccess(res, {
+      message: 'Notification settings updated',
+      data: patient.notificationSettings,
+    });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to update settings', err.statusCode || 500);
+  }
+});
+
+router.delete('/account', authRequired, async (req, res) => {
+  try {
+    const patientId = requirePatientAuth(req, res);
+    if (!patientId) return;
+    const data = await deletePatientAccount(patientId, {
+      password: req.body?.password,
+      confirmText: req.body?.confirmText || req.body?.confirm,
+    });
+    return sendSuccess(res, {
+      message: 'Account deleted. Bookings and payment records are retained as required.',
+      data,
+    });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to delete account', err.statusCode || 500);
   }
 });
 
@@ -431,27 +497,31 @@ router.get('/bookings', authRequired, async (req, res) => {
       return sendError(res, 'Patient not found', 404);
     }
 
-    const bookings = await listPatientBookings(
+    const { page, limit, scope, status, q, serviceType, consultationType } =
+      parseBookingListQuery(req.query);
+    const result = await listPatientBookings(
       patientId,
       patient.mobileNumber,
       patient.email,
+      { page, limit, scope, status, q, serviceType, consultationType },
     );
-
-    const upcoming = bookings.filter((b) => b.isUpcoming).length;
 
     return sendSuccess(res, {
       data: {
-        bookings,
-        stats: {
-          total: bookings.length,
-          upcoming,
-          past: bookings.length - upcoming,
-        },
+        bookings: result.bookings,
+        stats: result.stats,
+        pagination: result.pagination,
       },
+      pagination: result.pagination,
     });
   } catch (err) {
     console.error(err);
-    return sendError(res, err.message || 'Failed to load bookings', 500);
+    const raw = String(err.message || '');
+    const safe =
+      /is not defined|ReferenceError|TypeError|SyntaxError/i.test(raw)
+        ? 'Failed to load bookings'
+        : raw || 'Failed to load bookings';
+    return sendError(res, safe, err.statusCode || 500);
   }
 });
 

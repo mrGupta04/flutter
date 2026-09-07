@@ -19,10 +19,15 @@ const {
 } = require('../utils/slotDateTime');
 const { SLOT_STATUS, bookingRejectionForStatus } = require('../utils/slotStatus');
 const {
+  clinicVerificationFields,
   ensureClinicVisitOtp,
   verifyClinicVisitOtp: verifyClinicVisitOtpForBooking,
 } = require('./clinicVisitVerificationRepositories');
 const { videoJoinFields } = require('../utils/videoJoinWindow');
+const {
+  paginateMergedBookings,
+  paymentFieldsForPatient,
+} = require('../utils/patientBookingList');
 const { findFeedbackByBookingIds, feedbackFieldsForBooking } = require('./feedbackRepositories');
 const {
   findPrescriptionsByBookingIds,
@@ -83,6 +88,77 @@ function bookingAppointmentFields(booking, { includeOtp = true } = {}) {
   const clinic = clinicVerificationFields(booking, { includeOtp });
   if (!clinic.verificationStatus && !booking?.appointmentCode) return {};
   return clinic;
+}
+
+function toBloodOrderPatientShape(order) {
+  const created = order.createdAt ? new Date(order.createdAt) : new Date();
+  const slotStart = order.requiredDate ? new Date(order.requiredDate) : created;
+  const active = [
+    'requested',
+    'under_review',
+    'accepted',
+    'reserved',
+    'blood_reserved',
+    'ready',
+    'payment_pending',
+  ].includes(order.status);
+  return {
+    id: order.id,
+    doctorId: order.bloodBankId,
+    doctorName: order.hospitalName || 'Blood bank',
+    serviceType: 'blood_bank',
+    consultationType: 'blood_bank',
+    typeLabel: order.isEmergency ? 'Emergency blood request' : 'Blood request',
+    patientName: order.patientName,
+    patientMobile: order.patientMobile,
+    patientEmail: order.patientEmail,
+    patientAddress: order.deliveryAddress || order.hospitalAddress,
+    patientNotes: order.notes,
+    slotStart,
+    slotEnd: new Date(slotStart.getTime() + 2 * 60 * 60 * 1000),
+    label: [order.bloodGroup, order.componentType, order.units ? `${order.units} unit(s)` : null]
+      .filter(Boolean)
+      .join(' · '),
+    consultationFee: order.totalAmount,
+    status: order.status === 'requested' ? 'pending' : order.status,
+    ...paymentFieldsForPatient(order),
+    clinicName: order.hospitalName,
+    clinicAddress: order.hospitalAddress,
+    createdAt: order.createdAt,
+    isUpcoming: active,
+  };
+}
+
+function toEmergencyBloodPatientShape(request) {
+  const created = request.createdAt ? new Date(request.createdAt) : new Date();
+  const active = ![
+    'completed',
+    'cancelled',
+    'rejected',
+    'expired',
+    'closed',
+  ].includes(request.status);
+  return {
+    id: request.id,
+    doctorId: request.patientId || '',
+    doctorName: request.hospitalName || 'Emergency blood',
+    serviceType: 'blood_bank',
+    consultationType: 'blood_bank',
+    typeLabel: 'Emergency blood request',
+    patientName: request.patientName,
+    patientMobile: request.contactNumber,
+    patientAddress: request.hospitalAddress,
+    slotStart: created,
+    slotEnd: new Date(created.getTime() + 4 * 60 * 60 * 1000),
+    label: [request.bloodGroup, request.units ? `${request.units} unit(s)` : null]
+      .filter(Boolean)
+      .join(' · '),
+    status: request.status || 'pending',
+    clinicName: request.hospitalName,
+    clinicAddress: request.hospitalAddress,
+    createdAt: request.createdAt,
+    isUpcoming: active,
+  };
 }
 
 function bookingPreviousReportsFields(booking) {
@@ -423,6 +499,7 @@ function formatBookingResponse(booking, doctor) {
     approvalExpiresAt: booking.approvalExpiresAt || null,
     ...bookingAppointmentFields(booking),
     ...bookingPaymentFields(booking),
+    ...paymentFieldsForPatient(booking),
     ...videoJoinFields(booking),
     ...bookingPreviousReportsFields(booking),
     timeline: require('./bookingLifecycleHelpers').buildVisitTimeline(booking),
@@ -1587,7 +1664,12 @@ async function resolveBookingProviderForPatient(booking) {
   };
 }
 
-async function listPatientBookings(patientId, mobileNumber, patientEmail) {
+async function listPatientBookings(
+  patientId,
+  mobileNumber,
+  patientEmail,
+  { page = 1, limit = 100, scope = 'all', status, q, serviceType, consultationType } = {},
+) {
   const mobile = normalizeMobile(mobileNumber);
   const email = String(patientEmail || '').trim().toLowerCase();
   const orConditions = [{ patientId: String(patientId) }];
@@ -1619,7 +1701,7 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
     ],
   })
     .sort({ slotStart: -1 })
-    .limit(100)
+    .limit(500)
     .lean();
 
   const now = new Date();
@@ -1663,6 +1745,8 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
       typeLabel = 'Home visit';
     }
 
+    const terminal = ['payment_expired', 'nurse_rejected', 'cancelled', 'rejected', 'completed'];
+    const liveProgress = ['en_route', 'arrived', 'visit_started'];
     results.push({
       id: b.id,
       doctorId: provider.doctorId,
@@ -1690,7 +1774,7 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
       amount: b.consultationFee,
       status: b.status,
       workflowStatus: require('./nurseBookingStatus').workflowStatus(b),
-      paymentStatus: b.paymentStatus,
+      ...paymentFieldsForPatient(b),
       paymentExpiresAt: b.paymentExpiresAt || null,
       remainingPaymentSeconds: require('./nurseBookingStatus').isPaymentPendingStatus(
         b.status,
@@ -1704,10 +1788,9 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
       clinicAddress: provider.clinicAddress,
       createdAt: b.createdAt,
       isUpcoming:
-        ['payment_expired', 'nurse_rejected', 'cancelled'].includes(b.status)
+        terminal.includes(b.status) || b.visitProgress === 'completed'
           ? false
-          : new Date(b.slotEnd) >= now ||
-            ['en_route', 'arrived', 'visit_started'].includes(b.visitProgress),
+          : new Date(b.slotEnd) >= now || liveProgress.includes(b.visitProgress),
       timeline: buildVisitTimeline(b),
       ...bookingAppointmentFields(b),
       ...videoJoinFields(b, now),
@@ -1772,6 +1855,37 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
     console.error('Failed to merge scan bookings into patient history', err);
   }
 
+  try {
+    const { listOrdersByPatient } = require('./bloodOrderRepositories');
+    const { orders } = await listOrdersByPatient(patientId, {
+      page: 1,
+      pageSize: 200,
+    });
+    for (const order of orders || []) {
+      results.push(toBloodOrderPatientShape(order));
+    }
+  } catch (err) {
+    console.error('Failed to merge blood orders into patient history', err);
+  }
+
+  try {
+    const {
+      listEmergencyRequestsForPatient,
+    } = require('./emergencyBloodRequestRepositories');
+    const { requests } = await listEmergencyRequestsForPatient(patientId, {
+      page: 1,
+      pageSize: 200,
+    });
+    for (const request of requests || []) {
+      results.push(toEmergencyBloodPatientShape(request));
+    }
+  } catch (err) {
+    console.error(
+      'Failed to merge emergency blood requests into patient history',
+      err,
+    );
+  }
+
   results.sort((a, b) => {
     const aTime = new Date(a.slotStart || a.createdAt || 0).getTime();
     const bTime = new Date(b.slotStart || b.createdAt || 0).getTime();
@@ -1789,41 +1903,103 @@ async function listPatientBookings(patientId, mobileNumber, patientEmail) {
     }
   }
 
-  return results;
+  return paginateMergedBookings(results, {
+    page,
+    limit,
+    scope,
+    status,
+    q,
+    serviceType,
+    consultationType,
+  });
 }
 
 async function getPatientBookingById(bookingId, auth) {
   const booking = await ConsultationBooking.findOne({ id: bookingId });
-  if (!booking) {
-    const err = new Error('Booking not found');
-    err.statusCode = 404;
-    throw err;
+  if (booking) {
+    if (auth?.type !== 'patient' || auth.patientId !== booking.patientId) {
+      const err = new Error('Not allowed to view this booking');
+      err.statusCode = 403;
+      throw err;
+    }
+    if (booking.nurseId) {
+      const {
+        expirePendingNurseBookings,
+        formatNurseBookingResponse,
+      } = require('./nurseBookingRepositories');
+      await expirePendingNurseBookings(booking.nurseId);
+      const fresh = await ConsultationBooking.findOne({ id: bookingId });
+      const nurse = await findNurseById(fresh.nurseId);
+      const formatted = formatNurseBookingResponse(fresh, nurse);
+      const provider = await resolveBookingProviderForPatient(fresh);
+      return {
+        ...formatted,
+        ...provider,
+        typeLabel: 'Nurse home visit',
+        isUpcoming:
+          !['payment_expired', 'nurse_rejected', 'cancelled'].includes(fresh.status),
+      };
+    }
+    const doctor = await findDoctorById(booking.doctorId);
+    return formatBookingResponse(booking, doctor);
   }
-  if (auth?.type !== 'patient' || auth.patientId !== booking.patientId) {
+
+  const patientId = auth?.patientId;
+  if (auth?.type !== 'patient' || !patientId) {
     const err = new Error('Not allowed to view this booking');
     err.statusCode = 403;
     throw err;
   }
-  if (booking.nurseId) {
-    const {
-      expirePendingNurseBookings,
-      formatNurseBookingResponse,
-    } = require('./nurseBookingRepositories');
-    await expirePendingNurseBookings(booking.nurseId);
-    const fresh = await ConsultationBooking.findOne({ id: bookingId });
-    const nurse = await findNurseById(fresh.nurseId);
-    const formatted = formatNurseBookingResponse(fresh, nurse);
-    const provider = await resolveBookingProviderForPatient(fresh);
-    return {
-      ...formatted,
-      ...provider,
-      typeLabel: 'Nurse home visit',
-      isUpcoming:
-        !['payment_expired', 'nurse_rejected', 'cancelled'].includes(fresh.status),
-    };
+
+  const LabBooking = require('./models/LabBooking');
+  const lab = await LabBooking.findOne({ id: bookingId }).lean();
+  if (lab) {
+    if (lab.patientId !== patientId) {
+      const err = new Error('Not allowed to view this booking');
+      err.statusCode = 403;
+      throw err;
+    }
+    return require('./labBookingRepositories').toPatientBookingShape(lab);
   }
-  const doctor = await findDoctorById(booking.doctorId);
-  return formatBookingResponse(booking, doctor);
+
+  const ScanBooking = require('./models/ScanBooking');
+  const scan = await ScanBooking.findOne({ id: bookingId }).lean();
+  if (scan) {
+    if (scan.patientId !== patientId) {
+      const err = new Error('Not allowed to view this booking');
+      err.statusCode = 403;
+      throw err;
+    }
+    return require('./scanBookingRepositories').toPatientBookingShape(scan);
+  }
+
+  const AmbulanceBooking = require('./models/AmbulanceBooking');
+  const ambulance = await AmbulanceBooking.findOne({ id: bookingId }).lean();
+  if (ambulance) {
+    if (ambulance.patientId !== patientId) {
+      const err = new Error('Not allowed to view this booking');
+      err.statusCode = 403;
+      throw err;
+    }
+    return require('./ambulanceBookingRepositories').toPatientBookingShape(
+      ambulance,
+    );
+  }
+
+  const BloodOrder = require('./models/BloodOrder');
+  const blood = await BloodOrder.findOne({ id: bookingId }).lean();
+  if (blood) {
+    if (blood.patientId !== patientId) {
+      const err = new Error('Not allowed to view this booking');
+      err.statusCode = 403;
+      throw err;
+    }
+    return toBloodOrderPatientShape(blood);
+  }
+
+  const err = new Error('Booking not found');
+  err.statusCode = 404;
+  throw err;
 }
 
 async function listDoctorBookings(doctorId) {

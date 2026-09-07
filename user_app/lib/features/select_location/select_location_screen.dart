@@ -34,6 +34,7 @@ class SelectLocationScreen extends ConsumerStatefulWidget {
 
 class _SelectLocationScreenState extends ConsumerState<SelectLocationScreen> {
   final _search = TextEditingController();
+  final _searchFocus = FocusNode();
   Timer? _debounce;
   List<PlaceSuggestion> _suggestions = [];
   bool _searching = false;
@@ -48,13 +49,19 @@ class _SelectLocationScreenState extends ConsumerState<SelectLocationScreen> {
   void initState() {
     super.initState();
     _selectedId = widget.args?.initial?.savedAddressId;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapLocation());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bootstrapLocation();
+      if (widget.args?.autofocusSearch == true) {
+        _searchFocus.requestFocus();
+      }
+    });
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     _search.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -247,6 +254,7 @@ class _SelectLocationScreenState extends ConsumerState<SelectLocationScreen> {
             children: [
               LocationSearchBar(
                 controller: _search,
+                focusNode: _searchFocus,
                 onChanged: (value) {
                   setState(() {});
                   _onSearchChanged(value);

@@ -197,7 +197,7 @@ async function listLabBookingsForPatient({
 
   const docs = await LabBooking.find({ $or: orConditions })
     .sort({ createdAt: -1 })
-    .limit(50)
+    .limit(200)
     .lean();
   return docs.map(toLabBooking);
 }
@@ -403,7 +403,7 @@ function toPatientBookingShape(booking) {
     label: `${testNames || 'Lab tests'} · ${booking.timeSlot}`,
     consultationFee: booking.totalAmount,
     status: booking.status === 'requested' ? 'pending' : booking.status,
-    paymentStatus: booking.paymentStatus,
+    ...require('../utils/patientBookingList').paymentFieldsForPatient(booking),
     clinicName: booking.labName,
     clinicAddress: booking.collectionAddress,
     createdAt: booking.createdAt,

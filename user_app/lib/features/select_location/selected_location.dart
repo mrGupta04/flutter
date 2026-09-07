@@ -103,8 +103,10 @@ class SelectLocationArgs {
   const SelectLocationArgs({
     this.initial,
     this.title = 'Select a location',
+    this.autofocusSearch = false,
   });
 
   final SelectedLocationResult? initial;
   final String title;
+  final bool autofocusSearch;
 }

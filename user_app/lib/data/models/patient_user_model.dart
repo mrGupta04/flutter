@@ -10,6 +10,8 @@ class FamilyMemberModel {
     this.gender,
     this.mobileNumber,
     this.bloodGroup,
+    this.isEmergencyContact = false,
+    this.isPrimary = false,
   });
 
   final String id;
@@ -19,6 +21,8 @@ class FamilyMemberModel {
   final String? gender;
   final String? mobileNumber;
   final String? bloodGroup;
+  final bool isEmergencyContact;
+  final bool isPrimary;
 
   factory FamilyMemberModel.fromJson(Map<String, dynamic> json) {
     return FamilyMemberModel(
@@ -31,6 +35,8 @@ class FamilyMemberModel {
       gender: json['gender'] as String?,
       mobileNumber: json['mobileNumber'] as String?,
       bloodGroup: json['bloodGroup'] as String?,
+      isEmergencyContact: json['isEmergencyContact'] as bool? ?? false,
+      isPrimary: json['isPrimary'] as bool? ?? false,
     );
   }
 
@@ -42,6 +48,8 @@ class FamilyMemberModel {
         if (gender != null) 'gender': gender,
         if (mobileNumber != null) 'mobileNumber': mobileNumber,
         if (bloodGroup != null) 'bloodGroup': bloodGroup,
+        'isEmergencyContact': isEmergencyContact,
+        'isPrimary': isPrimary,
       };
 }
 
@@ -183,6 +191,56 @@ class MedicalProfileModel {
       };
 }
 
+class NotificationSettingsModel {
+  const NotificationSettingsModel({
+    this.booking = true,
+    this.payment = true,
+    this.provider = true,
+    this.emergency = true,
+    this.system = true,
+  });
+
+  final bool booking;
+  final bool payment;
+  final bool provider;
+  final bool emergency;
+  final bool system;
+
+  factory NotificationSettingsModel.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const NotificationSettingsModel();
+    return NotificationSettingsModel(
+      booking: json['booking'] as bool? ?? true,
+      payment: json['payment'] as bool? ?? true,
+      provider: json['provider'] as bool? ?? true,
+      emergency: true,
+      system: json['system'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'booking': booking,
+        'payment': payment,
+        'provider': provider,
+        'emergency': true,
+        'system': system,
+      };
+
+  NotificationSettingsModel copyWith({
+    bool? booking,
+    bool? payment,
+    bool? provider,
+    bool? system,
+  }) {
+    return NotificationSettingsModel(
+      booking: booking ?? this.booking,
+      payment: payment ?? this.payment,
+      provider: provider ?? this.provider,
+      emergency: true,
+      system: system ?? this.system,
+    );
+  }
+}
+
 class PatientUserModel {
   final String id;
   final String firstName;
@@ -191,6 +249,7 @@ class PatientUserModel {
   final String mobileNumber;
   final String countryCode;
   final int? age;
+  final DateTime? dateOfBirth;
   final String? gender;
   final String? aadhaarLast4;
   final String? profilePicture;
@@ -201,6 +260,7 @@ class PatientUserModel {
   final String? referralCode;
   final int rewardPoints;
   final String? referredByCode;
+  final NotificationSettingsModel notificationSettings;
 
   const PatientUserModel({
     required this.id,
@@ -210,6 +270,7 @@ class PatientUserModel {
     required this.mobileNumber,
     this.countryCode = PhoneCountries.defaultDialCode,
     this.age,
+    this.dateOfBirth,
     this.gender,
     this.aadhaarLast4,
     this.profilePicture,
@@ -220,6 +281,7 @@ class PatientUserModel {
     this.referralCode,
     this.rewardPoints = 0,
     this.referredByCode,
+    this.notificationSettings = const NotificationSettingsModel(),
   });
 
   String get fullName {
@@ -252,6 +314,11 @@ class PatientUserModel {
     return savedAddresses.first;
   }
 
+  bool get hasProfilePhoto {
+    final value = profilePicture?.trim() ?? '';
+    return value.isNotEmpty && value != 'cleared';
+  }
+
   factory PatientUserModel.fromJson(Map<String, dynamic> json) {
     return PatientUserModel(
       id: json['id'] as String,
@@ -264,6 +331,9 @@ class PatientUserModel {
       age: json['age'] is int
           ? json['age'] as int
           : int.tryParse('${json['age']}'),
+      dateOfBirth: json['dateOfBirth'] != null
+          ? DateTime.tryParse(json['dateOfBirth'].toString())
+          : null,
       gender: json['gender'] as String?,
       aadhaarLast4: json['aadhaarLast4'] as String?,
       profilePicture: json['profilePicture'] as String?,
@@ -288,6 +358,9 @@ class PatientUserModel {
       referralCode: json['referralCode'] as String?,
       rewardPoints: (json['rewardPoints'] as num?)?.toInt() ?? 0,
       referredByCode: json['referredByCode'] as String?,
+      notificationSettings: NotificationSettingsModel.fromJson(
+        json['notificationSettings'] as Map<String, dynamic>?,
+      ),
     );
   }
 
@@ -303,6 +376,7 @@ class PatientUserModel {
     String? referralCode,
     int? rewardPoints,
     String? referredByCode,
+    NotificationSettingsModel? notificationSettings,
   }) {
     return PatientUserModel(
       id: id,
@@ -312,6 +386,7 @@ class PatientUserModel {
       mobileNumber: mobileNumber,
       countryCode: countryCode,
       age: age,
+      dateOfBirth: dateOfBirth,
       gender: gender,
       aadhaarLast4: aadhaarLast4,
       profilePicture: profilePicture,
@@ -322,6 +397,7 @@ class PatientUserModel {
       referralCode: referralCode ?? this.referralCode,
       rewardPoints: rewardPoints ?? this.rewardPoints,
       referredByCode: referredByCode ?? this.referredByCode,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
     );
   }
 }

@@ -7,6 +7,7 @@ class AppNotification {
   final String title;
   final String body;
   final String type;
+  final String category;
   final Map<String, dynamic> data;
   final DateTime? createdAt;
   final DateTime? readAt;
@@ -16,6 +17,7 @@ class AppNotification {
     required this.title,
     required this.body,
     required this.type,
+    this.category = 'system',
     this.data = const {},
     this.createdAt,
     this.readAt,
@@ -29,6 +31,7 @@ class AppNotification {
       title: json['title']?.toString() ?? '',
       body: json['body']?.toString() ?? '',
       type: json['type']?.toString() ?? 'general',
+      category: json['category']?.toString() ?? _categoryFor(json['type']?.toString()),
       data: json['data'] is Map
           ? Map<String, dynamic>.from(json['data'] as Map)
           : const {},
@@ -39,6 +42,26 @@ class AppNotification {
           ? DateTime.tryParse(json['readAt'].toString())
           : null,
     );
+  }
+
+  static String _categoryFor(String? type) {
+    final value = type ?? 'general';
+    if (value == 'ambulance_emergency' ||
+        value == 'emergency_blood' ||
+        value == 'blood_request') {
+      return 'emergency';
+    }
+    if (value.startsWith('payment_') || value == 'prescription_paid') {
+      return 'payment';
+    }
+    if (value == 'chat_message') return 'provider';
+    if (value.startsWith('booking_') ||
+        value.startsWith('visit_') ||
+        value.startsWith('ambulance_') ||
+        value.startsWith('prescription_')) {
+      return 'booking';
+    }
+    return 'system';
   }
 }
 

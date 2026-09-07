@@ -1,47 +1,29 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/services/socket_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/media_url_utils.dart';
+import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/widgets/app_back_navigation.dart';
 import '../../../../data/models/patient_booking_model.dart';
-import '../../../../shared/widgets/appointment_code_display.dart';
 import '../../../../data/models/patient_user_model.dart';
-import '../../../../features/labs/provider/lab_cart_provider.dart';
-import '../../../../features/scans/provider/scan_cart_provider.dart';
-import '../../../user_auth/presentation/widgets/patient_header_avatar.dart';
-import '../../../user_auth/provider/patient_auth_provider.dart';
-import '../../../video_consult/presentation/widgets/join_video_consult_button.dart';
-import '../../provider/patient_dashboard_provider.dart';
-import '../utils/prescription_view_utils.dart';
-import '../utils/nursing_report_view_utils.dart';
-import '../widgets/visit_completion_otp_banner.dart';
-import '../../../feedback/presentation/utils/feedback_prompt_helper.dart';
-import '../../../feedback/presentation/widgets/post_session_feedback_sheet.dart';
-import '../../../notifications/presentation/screens/notifications_screen.dart';
-import '../../../online_consult/provider/online_consult_provider.dart';
-import '../../../../data/services/lab_scan_payment_flow.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
 import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
-import '../../../../core/utils/responsive_utils.dart';
-import '../../../../core/widgets/custom_widgets.dart';
-import '../../../../core/widgets/app_back_navigation.dart';
-import '../../../../data/repositories/booking_lifecycle_repository.dart';
-import '../../../../data/services/dio_service.dart';
-import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
-import '../widgets/reschedule_booking_sheet.dart';
-
-final labScanPaymentFlowProvider = Provider.autoDispose((ref) {
-  final flow = LabScanPaymentFlow();
-  ref.onDispose(flow.dispose);
-  return flow;
-});
+import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../../user_auth/presentation/widgets/patient_header_avatar.dart';
+import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../data/booking_status_config.dart';
+import '../../provider/patient_dashboard_provider.dart';
+import '../widgets/booking_status_badge.dart';
 
 class UserDashboardScreen extends ConsumerStatefulWidget {
   const UserDashboardScreen({super.key});
@@ -52,33 +34,31 @@ class UserDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late TabController _tabController;
-
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(_onTabChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadBookingsWhenReady());
+    SocketService.instance.on('booking-status-update', _onRealtime);
+    SocketService.instance.on('booking_status_update', _onRealtime);
+    SocketService.instance.on('app_notification', _onRealtime);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  void _onTabChanged() {
-    if (!_tabController.indexIsChanging && _tabController.index < 2 && mounted) {
-      ref.read(patientDashboardProvider.notifier).loadBookings();
-    }
+  void _onRealtime(dynamic _) {
+    if (!mounted) return;
+    ref.read(patientDashboardProvider.notifier).loadBookings();
+    ref.invalidate(notificationsProvider);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
-      ref.read(patientDashboardProvider.notifier).loadBookings();
-      ref.invalidate(notificationsProvider);
+      _onRealtime(null);
     }
   }
 
-  Future<void> _loadBookingsWhenReady() async {
+  Future<void> _load() async {
     final auth = ref.read(patientAuthProvider);
     if (!auth.isInitialized) {
       await ref.read(patientAuthProvider.notifier).initialize();
@@ -87,22 +67,31 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
     await ref.read(patientDashboardProvider.notifier).loadBookings();
   }
 
-  Future<void> _openEditProfile() async {
-    if (ref.read(patientAuthProvider).user == null) return;
-    final updated = await context.push<bool>(
-      AppConstants.routeUserEditProfile,
-    );
-    if (updated == true && mounted) {
-      await ref.read(patientDashboardProvider.notifier).refreshAll();
-    }
-  }
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _tabController.removeListener(_onTabChanged);
-    _tabController.dispose();
+    SocketService.instance.off('booking-status-update', _onRealtime);
+    SocketService.instance.off('booking_status_update', _onRealtime);
+    SocketService.instance.off('app_notification', _onRealtime);
     super.dispose();
+  }
+
+  Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log out?'),
+        content: const Text('You will need to sign in again to view bookings and health records.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Stay')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Log out')),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await ref.read(patientAuthProvider.notifier).logout();
+      if (mounted) context.go(AppConstants.routeUserHome);
+    }
   }
 
   @override
@@ -111,13 +100,7 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
     final dash = ref.watch(patientDashboardProvider);
 
     ref.listen<PatientAuthState>(patientAuthProvider, (prev, next) {
-      final becameLoggedIn =
-          next.isLoggedIn && prev?.isLoggedIn != true;
-      final authReadyWithUser =
-          next.isInitialized &&
-              next.isLoggedIn &&
-              prev?.isInitialized != true;
-      if (becameLoggedIn || authReadyWithUser) {
+      if (next.isLoggedIn && prev?.isLoggedIn != true) {
         ref.read(patientDashboardProvider.notifier).loadBookings();
       }
     });
@@ -126,1730 +109,499 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
       isHomeTab: false,
       homeRoute: AppConstants.routeUserHome,
       child: UserAdaptiveScaffold(
-      currentTab: UserNavTab.profile,
-      backgroundColor: AppColors.background,
-      constrainBody: false,
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverAppBar(
-            expandedHeight: 268,
-            pinned: true,
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.white,
-            title: innerBoxIsScrolled
-                ? Text(
-                    user?.fullName ?? 'My account',
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  )
-                : null,
-            actions: [
-              const DiagnosticCartIconButton(iconColor: AppColors.white),
-              const NotificationBellButton(iconColor: AppColors.white),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: AppColors.gradientHero,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 68),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '1mg',
-                                style: AppTextStyles.titleLarge.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Care',
-                              style: AppTextStyles.titleMedium.copyWith(
-                                color: AppColors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        if (user != null) ...[
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _openEditProfile,
-                              borderRadius: BorderRadius.circular(20),
-                              splashColor:
-                                  AppColors.white.withValues(alpha: 0.18),
-                              highlightColor:
-                                  AppColors.white.withValues(alpha: 0.08),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 4,
-                                ),
-                                child: Column(
-                                  children: [
-                                    Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        PatientHeaderAvatar(
-                                          user: user,
-                                          size: 72,
-                                          cornerRadius: 16,
-                                        ),
-                                        Positioned(
-                                          right: -4,
-                                          bottom: -4,
-                                          child: Container(
-                                            width: 26,
-                                            height: 26,
-                                            decoration: BoxDecoration(
-                                              color: AppColors.white,
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.16),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: const Icon(
-                                              Icons.edit_rounded,
-                                              size: 14,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      user.fullName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: AppTextStyles.titleMedium.copyWith(
-                                        color: AppColors.white,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    if (user.email.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        user.email,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                        style:
-                                            AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.white
-                                              .withValues(alpha: 0.92),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(48),
-              child: Container(
-                color: AppColors.white,
-                child: _DashboardNavRow(
-                  tabController: _tabController,
-                  user: user,
-                  onEdit: user == null ? null : _openEditProfile,
-                  onMenuSelected: (value) async {
-                    if (value == 'favorites') {
-                      if (context.mounted) {
-                        context.push(AppConstants.routeFavorites);
-                      }
-                    } else if (value == 'support') {
-                      if (context.mounted) {
-                        context.push(AppConstants.routeSupportTickets);
-                      }
-                    } else if (value == 'rewards') {
-                      if (context.mounted) {
-                        context.push(AppConstants.routeUserRewards);
-                      }
-                    } else if (value == 'theme') {
-                      ref.read(themeModeProvider.notifier).toggle();
-                    } else if (value == 'logout') {
-                      await ref.read(patientAuthProvider.notifier).logout();
-                      if (context.mounted) {
-                        context.go(AppConstants.routeUserHome);
-                      }
-                    }
-                  },
-                  isDarkTheme:
-                      ref.watch(themeModeProvider) == ThemeMode.dark,
-                ),
-              ),
-            ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _CurrentBookingsTab(
-              dash: dash,
-              onRefresh: () =>
-                  ref.read(patientDashboardProvider.notifier).loadBookings(),
-            ),
-            _PastBookingsTab(
-              dash: dash,
-              onRefresh: () =>
-                  ref.read(patientDashboardProvider.notifier).loadBookings(),
-            ),
-            _ProfileTab(
-              user: user,
-              prescriptions: dash.bookings
-                  .where((b) => b.hasPrescription && b.isPrescriptionEligible)
-                  .toList(),
-              pendingPrescriptions: dash.bookings
-                  .where(
-                    (b) =>
-                        b.isPrescriptionEligible &&
-                        b.prescriptionPending &&
-                        !b.hasPrescription,
-                  )
-                  .toList(),
-            ),
+        currentTab: UserNavTab.profile,
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Profile'),
+          actions: const [
+            DiagnosticCartIconButton(),
+            NotificationBellButton(),
           ],
         ),
+        body: user == null
+            ? const Center(child: Text('Not signed in'))
+            : RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(patientDashboardProvider.notifier).refreshAll(),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  children: [
+                    ResponsivePage(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _ProfileHeader(user: user),
+                          const SizedBox(height: 16),
+                          if (dash.emergencyActive != null) ...[
+                            _EmergencyBanner(booking: dash.emergencyActive!),
+                            const SizedBox(height: 12),
+                          ],
+                          _UpcomingSummary(booking: dash.nextUpcoming),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _QuickTile(
+                                  icon: Icons.event_available_rounded,
+                                  label: 'Bookings',
+                                  onTap: () => context.push(
+                                    AppConstants.routeCurrentBookings,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _QuickTile(
+                                  icon: Icons.history_rounded,
+                                  label: 'History',
+                                  onTap: () => context.push(
+                                    AppConstants.routeBookingHistory,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _QuickTile(
+                                  icon: Icons.folder_outlined,
+                                  label: 'Documents',
+                                  onTap: () => context.push(
+                                    AppConstants.routeNursingReports,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _MenuSection(
+                            title: 'My bookings',
+                            items: [
+                              _MenuItem(
+                                icon: Icons.upcoming_outlined,
+                                label: 'Current bookings',
+                                onTap: () => context.push(
+                                  AppConstants.routeCurrentBookings,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.history_rounded,
+                                label: 'Booking history',
+                                onTap: () => context.push(
+                                  AppConstants.routeBookingHistory,
+                                ),
+                              ),
+                            ],
+                          ),
+                          _MenuSection(
+                            title: 'Health',
+                            items: [
+                              _MenuItem(
+                                icon: Icons.health_and_safety_outlined,
+                                label: 'Medical information',
+                                onTap: () => context.push(
+                                  AppConstants.routeHealthProfile,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.picture_as_pdf_outlined,
+                                label: 'Prescriptions & reports',
+                                onTap: () => context.push(
+                                  AppConstants.routeNursingReports,
+                                ),
+                              ),
+                            ],
+                          ),
+                          _MenuSection(
+                            title: 'Account',
+                            items: [
+                              _MenuItem(
+                                icon: Icons.edit_outlined,
+                                label: 'Edit profile',
+                                onTap: () => context.push(
+                                  AppConstants.routeUserEditProfile,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.notifications_outlined,
+                                label: 'Notifications',
+                                onTap: () => context.push(
+                                  AppConstants.routeNotifications,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.favorite_outline_rounded,
+                                label: 'Favorites',
+                                onTap: () => context.push(
+                                  AppConstants.routeFavorites,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.card_giftcard_outlined,
+                                label: 'Rewards',
+                                onTap: () => context.push(
+                                  AppConstants.routeUserRewards,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.lock_outline_rounded,
+                                label: 'Security',
+                                onTap: () => context.push(
+                                  AppConstants.routeAccountSecurity,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.lock_reset_outlined,
+                                label: 'Change password',
+                                onTap: () => context.push(
+                                  AppConstants.routeForgotPassword,
+                                ),
+                              ),
+                              _MenuItem(
+                                icon: Icons.brightness_6_outlined,
+                                label: 'Appearance',
+                                onTap: () {
+                                  ref.read(themeModeProvider.notifier).toggle();
+                                },
+                              ),
+                            ],
+                          ),
+                          _MenuSection(
+                            title: 'Support',
+                            items: [
+                              _MenuItem(
+                                icon: Icons.support_agent_outlined,
+                                label: 'Help & support',
+                                onTap: () => context.push(
+                                  AppConstants.routeSupportTickets,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: _logout,
+                            icon: const Icon(Icons.logout_rounded),
+                            label: const Text('Log out'),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () =>
+                                context.push(AppConstants.routeAccountSecurity),
+                            child: const Text('Delete account'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
       ),
-    ),
     );
   }
 }
 
-class _DashboardNavRow extends StatelessWidget {
-  const _DashboardNavRow({
-    required this.tabController,
-    required this.user,
-    required this.onEdit,
-    required this.onMenuSelected,
-    required this.isDarkTheme,
-  });
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.user});
 
-  final TabController tabController;
-  final PatientUserModel? user;
-  final VoidCallback? onEdit;
-  final ValueChanged<String> onMenuSelected;
-  final bool isDarkTheme;
+  final PatientUserModel user;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: tabController,
-      builder: (context, _) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-          child: Row(
+    final imageUrl = MediaUrlUtils.resolve(user.profilePicture);
+    final verified = user.email.isNotEmpty && user.mobileNumber.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: AppDecorations.borderRadiusLg,
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Column(
+        children: [
+          TappableProfilePhoto(
+            imageUrl: imageUrl,
+            child: PatientHeaderAvatar(
+              user: user,
+              size: 80,
+              cornerRadius: 40,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            user.fullName,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text(user.email, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+          if (user.mobileNumber.isNotEmpty)
+            Text(
+              '${user.countryCode} ${user.mobileNumber}',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _NavChip(
-                        label: 'Current Booking',
-                        selected: tabController.index == 0,
-                        onTap: () => tabController.animateTo(0),
-                      ),
-                      const SizedBox(width: 6),
-                      _NavChip(
-                        label: 'History',
-                        selected: tabController.index == 1,
-                        onTap: () => tabController.animateTo(1),
-                      ),
-                      const SizedBox(width: 6),
-                      _NavChip(
-                        label: 'Profile',
-                        selected: tabController.index == 2,
-                        onTap: () => tabController.animateTo(2),
-                      ),
-                    ],
-                  ),
+              Icon(
+                verified ? Icons.verified_rounded : Icons.info_outline_rounded,
+                size: 16,
+                color: verified ? AppColors.success : AppColors.warning,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                verified ? 'Verified' : 'Complete your profile',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: verified ? AppColors.success : AppColors.warning,
+                  fontWeight: FontWeight.w800,
                 ),
-              ),
-              IconButton(
-                tooltip: 'Edit profile',
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 20),
-                visualDensity: VisualDensity.compact,
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 20),
-                padding: EdgeInsets.zero,
-                onSelected: onMenuSelected,
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'favorites',
-                    child: Text('Favorites'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'support',
-                    child: Text('Support'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'rewards',
-                    child: Text('Rewards'),
-                  ),
-                  PopupMenuItem(
-                    value: 'theme',
-                    child: Text(isDarkTheme ? 'Light mode' : 'Dark mode'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'logout',
-                    child: Text('Log out'),
-                  ),
-                ],
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-}
-
-class _NavChip extends StatelessWidget {
-  const _NavChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.primarySoft : AppColors.grey50,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.grey200,
-            ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => context.push(AppConstants.routeUserEditProfile),
+            icon: const Icon(Icons.edit_rounded, size: 18),
+            label: const Text('Edit profile'),
           ),
-          child: Text(
-            label,
-            style: AppTextStyles.labelMedium.copyWith(
-              fontWeight: FontWeight.w700,
-              color: selected ? AppColors.primary : AppColors.textSecondary,
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _DiagnosticCartCard extends StatelessWidget {
-  const _DiagnosticCartCard({
-    required this.labCount,
-    required this.scanCount,
-  });
+class _EmergencyBanner extends StatelessWidget {
+  const _EmergencyBanner({required this.booking});
 
-  final int labCount;
-  final int scanCount;
-
-  int get total => labCount + scanCount;
+  final PatientBookingModel booking;
 
   @override
   Widget build(BuildContext context) {
+    final ambulance = booking.serviceType == 'ambulance';
     return Material(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(16),
+      color: AppColors.error.withValues(alpha: 0.08),
+      borderRadius: AppDecorations.borderRadiusLg,
       child: InkWell(
-        onTap: () => context.push(AppConstants.routeLabCart),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.grey200),
-          ),
+        borderRadius: AppDecorations.borderRadiusLg,
+        onTap: () => context.push(
+          '${AppConstants.routeBookingDetails}?bookingId=${Uri.encodeComponent(booking.id)}',
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Badge(
-                  isLabelVisible: total > 0,
-                  label: Text('$total'),
-                  child: const Icon(
-                    Icons.shopping_cart_outlined,
-                    color: AppColors.primary,
-                  ),
-                ),
+              Icon(
+                ambulance ? Icons.emergency_rounded : Icons.directions_run_rounded,
+                color: AppColors.error,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'My cart',
-                      style: AppTextStyles.labelLarge.copyWith(
+                      ambulance ? 'ACTIVE AMBULANCE' : 'ACTIVE CARE',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.error,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 2),
                     Text(
-                      total == 0
-                          ? 'Add lab tests or scans to book together'
-                          : '$labCount lab • $scanCount scan${scanCount == 1 ? '' : 's'}',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      BookingStatusView.of(booking).label,
+                      style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.grey400),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileTab extends ConsumerWidget {
-  const _ProfileTab({
-    required this.user,
-    required this.prescriptions,
-    required this.pendingPrescriptions,
-  });
-
-  final PatientUserModel? user;
-  final List<PatientBookingModel> prescriptions;
-  final List<PatientBookingModel> pendingPrescriptions;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (user == null) {
-      return const Center(child: Text('Not signed in'));
-    }
-
-    final u = user!;
-    final dateFmt = DateFormat('EEE, dd MMM yyyy');
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-      children: [
-        ResponsivePage(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-        _DiagnosticCartCard(
-          labCount: ref.watch(labCartProvider).itemCount,
-          scanCount: ref.watch(scanCartProvider).itemCount,
-        ),
-        const SizedBox(height: 12),
-        if (pendingPrescriptions.isNotEmpty) ...[
-          _InfoCard(
-            title: 'Pending prescriptions',
-            children: [
-              ...pendingPrescriptions.map(
-                (booking) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _PrescriptionPendingBanner(
-                    doctorName: booking.doctorName,
-                    processing: booking.prescriptionProcessing,
-                    slotLabel: booking.label,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-        ],
-        if (prescriptions.isNotEmpty) ...[
-          _InfoCard(
-            title: 'My prescriptions',
-            children: [
               Text(
-                'Prescriptions from your online and home visit consultations appear here and are also emailed to you.',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ...prescriptions.map((booking) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.grey50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.grey200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          booking.doctorName,
-                          style: AppTextStyles.labelLarge.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          booking.label,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          dateFmt.format(booking.slotStart),
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () => openPatientPrescriptionPdf(
-                              context,
-                              bookingId: booking.id,
-                              prescriptionPdfUrl: booking.prescriptionPdfUrl,
-                              repository:
-                                  ref.read(patientDashboardRepositoryProvider),
-                            ),
-                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-                            label: Text(
-                              booking.prescriptionFileName != null &&
-                                      booking.prescriptionFileName!.isNotEmpty
-                                  ? 'View prescription'
-                                  : 'View prescription PDF',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-          const SizedBox(height: 12),
-        ],
-        const SizedBox(height: 12),
-        _InfoCard(
-          title: 'Medical records',
-          children: [
-            Text(
-              'View nursing visit reports, vitals, and care summaries from completed home visits.',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => context.push(AppConstants.routeNursingReports),
-                icon: const Icon(Icons.health_and_safety_outlined),
-                label: const Text('Nursing reports'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _InfoCard(
-          title: 'Personal details',
-          children: [
-            _InfoRow(label: 'Full name', value: u.fullName),
-            _InfoRow(label: 'Email', value: u.email),
-            _InfoRow(label: 'Mobile', value: u.mobileNumber),
-            _InfoRow(
-              label: 'Age',
-              value: u.age != null ? '${u.age} years' : '—',
-            ),
-            _InfoRow(label: 'Gender', value: u.gender ?? '—'),
-            _InfoRow(
-              label: 'Aadhaar',
-              value: u.aadhaarMaskedDisplay,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (u.profilePicture != null && u.profilePicture!.isNotEmpty)
-          _InfoCard(
-            title: 'Profile photo',
-            children: [
-              TappableProfilePhoto(
-                imageUrl: MediaUrlUtils.resolve(u.profilePicture),
-                title: u.fullName,
-                child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: MediaUrlUtils.resolve(u.profilePicture),
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              ),
-            ],
-          ),
-        const SizedBox(height: 12),
-        if (u.aadhaarCardUrl != null && u.aadhaarCardUrl!.isNotEmpty)
-          _InfoCard(
-            title: 'Aadhaar card',
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: MediaUrlUtils.resolve(u.aadhaarCardUrl),
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ],
-          ),
-        const SizedBox(height: 24),
-        FilledButton.icon(
-          onPressed: () => context.push(AppConstants.routeUserEditProfile),
-          icon: const Icon(Icons.edit_rounded),
-          label: const Text('Edit profile'),
-        ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: () => context.push(AppConstants.routeHealthProfile),
-          icon: const Icon(Icons.health_and_safety_outlined),
-          label: const Text('Family, addresses & medical'),
-        ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CurrentBookingsTab extends StatelessWidget {
-  const _CurrentBookingsTab({required this.dash, required this.onRefresh});
-
-  final PatientDashboardState dash;
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return _CategorizedBookingsTab(
-      dash: dash,
-      onRefresh: onRefresh,
-      bookings: dash.upcomingBookings,
-      isUpcoming: true,
-    );
-  }
-}
-
-class _PastBookingsTab extends StatelessWidget {
-  const _PastBookingsTab({required this.dash, required this.onRefresh});
-
-  final PatientDashboardState dash;
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return _CategorizedBookingsTab(
-      dash: dash,
-      onRefresh: onRefresh,
-      bookings: dash.pastBookings,
-      isUpcoming: false,
-    );
-  }
-}
-
-class _CategorizedBookingsTab extends StatelessWidget {
-  const _CategorizedBookingsTab({
-    required this.dash,
-    required this.onRefresh,
-    required this.bookings,
-    required this.isUpcoming,
-  });
-
-  final PatientDashboardState dash;
-  final Future<void> Function() onRefresh;
-  final List<PatientBookingModel> bookings;
-  final bool isUpcoming;
-
-  IconData _sectionIcon(PatientBookingCategory category) {
-    switch (category) {
-      case PatientBookingCategory.onlineConsult:
-        return Icons.videocam_rounded;
-      case PatientBookingCategory.hospitalVisit:
-        return Icons.local_hospital_rounded;
-      case PatientBookingCategory.homeVisit:
-        return Icons.home_rounded;
-      case PatientBookingCategory.nurse:
-        return Icons.health_and_safety_rounded;
-      case PatientBookingCategory.scan:
-        return Icons.radar_rounded;
-      case PatientBookingCategory.lab:
-        return Icons.biotech_rounded;
-      case PatientBookingCategory.bloodBank:
-        return Icons.bloodtype_rounded;
-      case PatientBookingCategory.ambulance:
-        return Icons.local_shipping_rounded;
-      case PatientBookingCategory.all:
-        return Icons.event_note_rounded;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (dash.isLoadingBookings && dash.bookings.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final grouped = groupBookingsByCategory(bookings);
-    final totalCount = bookings.length;
-
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          ResponsivePage(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-          Row(
-            children: [
-              _StatChip(
-                label: isUpcoming ? 'Upcoming' : 'Past',
-                value: '$totalCount',
-                color: isUpcoming ? AppColors.success : AppColors.textSecondary,
-              ),
-            ],
-          ),
-          if (dash.error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              dash.error!,
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
-            ),
-          ],
-          if (totalCount == 0 && dash.error == null && !dash.isLoadingBookings) ...[
-            const SizedBox(height: 8),
-            Text(
-              isUpcoming
-                  ? 'No upcoming bookings yet. After you book a nurse visit, consult, or lab test, it will appear here.'
-                  : 'No past bookings yet. Completed visits and consultations appear here.',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          ...PatientBookingCategory.bookingSections.map((category) {
-            final sectionBookings = grouped[category] ?? const [];
-            return _BookingCategorySection(
-              title: category.label,
-              icon: _sectionIcon(category),
-              bookings: sectionBookings,
-              isUpcoming: isUpcoming,
-              onRefresh: onRefresh,
-            );
-          }),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BookingCategorySection extends StatelessWidget {
-  const _BookingCategorySection({
-    required this.title,
-    required this.icon,
-    required this.bookings,
-    required this.isUpcoming,
-    required this.onRefresh,
-  });
-
-  final String title;
-  final IconData icon;
-  final List<PatientBookingModel> bookings;
-  final bool isUpcoming;
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 20, color: AppColors.primary),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: AppTextStyles.titleSmall.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.grey100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${bookings.length}',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (bookings.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  isUpcoming
-                      ? 'No upcoming bookings in this category.'
-                      : 'No past bookings in this category.',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              )
-            else
-              ...bookings.map(
-                (booking) => _BookingCard(
-                  booking: booking,
-                  isUpcoming: isUpcoming,
-                  onVideoEnded: isUpcoming ? onRefresh : null,
-                  onRefresh: onRefresh,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BookingCard extends ConsumerStatefulWidget {
-  const _BookingCard({
-    required this.booking,
-    required this.isUpcoming,
-    this.onVideoEnded,
-    this.onRefresh,
-  });
-
-  final PatientBookingModel booking;
-  final bool isUpcoming;
-  final Future<void> Function()? onVideoEnded;
-  final Future<void> Function()? onRefresh;
-
-  @override
-  ConsumerState<_BookingCard> createState() => _BookingCardState();
-}
-
-class _BookingCardState extends ConsumerState<_BookingCard> {
-  late bool _expanded;
-
-  PatientBookingModel get booking => widget.booking;
-  bool get isUpcoming => widget.isUpcoming;
-  Future<void> Function()? get onVideoEnded => widget.onVideoEnded;
-  Future<void> Function()? get onRefresh => widget.onRefresh;
-
-  bool get _showDetails => isUpcoming || _expanded;
-
-  @override
-  void initState() {
-    super.initState();
-    _expanded = widget.isUpcoming;
-  }
-
-  @override
-  void didUpdateWidget(covariant _BookingCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isUpcoming != widget.isUpcoming) {
-      _expanded = widget.isUpcoming;
-    }
-  }
-
-  void _toggleExpanded() {
-    if (isUpcoming) return;
-    setState(() => _expanded = !_expanded);
-  }
-
-  Future<void> _payForBooking(BuildContext context) async {
-    if (booking.isNurseVisit) {
-      if (!context.mounted) return;
-      context.push(nursePaymentRoute(booking.id));
-      return;
-    }
-    try {
-      await ref.read(bookingPaymentFlowProvider).payForExistingBooking(
-            bookingId: booking.id,
-          );
-      if (context.mounted) {
-        SnackBarHelper.showSuccess(
-          context,
-          'Payment successful. Your home visit is confirmed.',
-        );
-      }
-      if (onRefresh != null) await onRefresh!();
-    } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showError(
-          context,
-          e.toString().replaceFirst('Exception: ', ''),
-        );
-      }
-    }
-  }
-
-  Future<void> _payLabOrScan(BuildContext context) async {
-    try {
-      final flow = ref.read(labScanPaymentFlowProvider);
-      if (booking.serviceType == 'scan') {
-        await flow.payScanBooking(
-          bookingId: booking.id,
-          businessName: booking.doctorName,
-        );
-      } else {
-        await flow.payLabBooking(
-          bookingId: booking.id,
-          businessName: booking.doctorName,
-        );
-      }
-      if (context.mounted) {
-        SnackBarHelper.showSuccess(
-          context,
-          'Payment successful. Your booking is paid.',
-        );
-      }
-      if (onRefresh != null) await onRefresh!();
-    } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showError(
-          context,
-          e.toString().replaceFirst('Exception: ', ''),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dateFmt = DateFormat('EEE, dd MMM yyyy');
-    final imageUrl = MediaUrlUtils.resolve(booking.doctorProfilePicture);
-    final category = PatientBookingCategory.resolve(booking);
-    final providerIcon = switch (category) {
-      PatientBookingCategory.nurse => Icons.health_and_safety_rounded,
-      PatientBookingCategory.lab => Icons.biotech_rounded,
-      PatientBookingCategory.scan => Icons.radar_rounded,
-      PatientBookingCategory.bloodBank => Icons.bloodtype_rounded,
-      PatientBookingCategory.ambulance => Icons.local_shipping_rounded,
-      PatientBookingCategory.hospitalVisit => Icons.local_hospital_rounded,
-      PatientBookingCategory.homeVisit => Icons.home_rounded,
-      _ => Icons.medical_services_rounded,
-    };
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      elevation: 0,
-      color: AppColors.grey50,
-      child: InkWell(
-        onTap: isUpcoming ? null : _toggleExpanded,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TappableProfilePhoto(
-              imageUrl: imageUrl,
-              child: CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.grey100,
-              backgroundImage:
-                  imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
-              child: imageUrl.isEmpty
-                  ? Icon(providerIcon, color: AppColors.primary)
-                  : null,
-            ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          booking.doctorName,
-                          style: AppTextStyles.titleSmall.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isUpcoming
-                              ? AppColors.success.withValues(alpha: 0.12)
-                              : AppColors.grey100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          booking.typeLabel,
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: isUpcoming
-                                ? AppColors.success
-                                : AppColors.textSecondary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    booking.label,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    dateFmt.format(booking.slotStart),
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  if (booking.consultationFee != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Fee: ₹${booking.consultationFee}',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                  if (!_showDetails && !isUpcoming) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          'Tap to view details',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          _expanded
-                              ? Icons.expand_less_rounded
-                              : Icons.expand_more_rounded,
-                          size: 18,
-                          color: AppColors.primary,
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (_showDetails && booking.status != 'confirmed') ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      booking.statusLabel,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: booking.needsHomeVisitPayment
-                            ? AppColors.warning
-                            : AppColors.textSecondary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                  if (_showDetails &&
-                      booking.clinicName != null &&
-                      booking.clinicName!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      booking.clinicName!,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                  if (_showDetails &&
-                      booking.clinicAddress != null &&
-                      booking.clinicAddress!.isNotEmpty)
-                    Text(
-                      booking.clinicAddress!,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  if (_showDetails &&
-                      booking.visitReason != null &&
-                      booking.visitReason!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Reason: ${booking.visitReason}',
-                      style: AppTextStyles.bodySmall,
-                    ),
-                  ],
-                  if (_showDetails && booking.needsHomeVisitPayment) ...[
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => _payForBooking(context),
-                        icon: const Icon(Icons.payments_rounded, size: 18),
-                        label: Text(
-                          booking.consultationFee != null
-                              ? 'Pay ₹${booking.consultationFee} to confirm'
-                              : 'Pay to confirm booking',
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (_showDetails && booking.needsLabOrScanPayment && isUpcoming) ...[
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => _payLabOrScan(context),
-                        icon: const Icon(Icons.payments_rounded, size: 18),
-                        label: Text(
-                          booking.consultationFee != null
-                              ? 'Pay ₹${booking.consultationFee} now'
-                              : 'Pay now',
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (_showDetails &&
-                      booking.isClinicVisit &&
-                      isUpcoming &&
-                      booking.status == 'confirmed') ...[
-                    const SizedBox(height: 12),
-                    AppointmentCodeDisplay(
-                      code: booking.appointmentCode ?? '0000',
-                      verified: booking.isAppointmentVerified,
-                      compact: true,
-                      bookingId: booking.id,
-                      onRegenerate: booking.isAppointmentVerified
-                          ? null
-                          : () async {
-                              try {
-                                final code = await ref
-                                    .read(patientDashboardRepositoryProvider)
-                                    .regenerateClinicOtp(booking.id);
-                                if (onRefresh != null) await onRefresh!();
-                                return code;
-                              } catch (e) {
-                                if (context.mounted) {
-                                  SnackBarHelper.showError(
-                                    context,
-                                    e.toString().replaceFirst('Exception: ', ''),
-                                  );
-                                }
-                                return null;
-                              }
-                            },
-                    ),
-                  ],
-                  if (_showDetails && booking.isOnlineConsult && isUpcoming) ...[
-                    const SizedBox(height: 12),
-                    JoinVideoConsultButton(
-                      bookingId: booking.id,
-                      canJoinVideo: booking.canJoinVideo,
-                      peerName: booking.doctorName,
-                      doctorId: booking.doctorId,
-                      doctorProfilePicture: booking.doctorProfilePicture,
-                      consultationType: booking.consultationType,
-                      sessionLabel: booking.label,
-                      videoStartsInMinutes: booking.videoStartsInMinutes,
-                      onReturned: onVideoEnded,
-                    ),
-                  ],
-                  if (_showDetails &&
-                      booking.isNurseVisit &&
-                      booking.isConfirmed &&
-                      isUpcoming &&
-                      booking.visitProgress != 'completed') ...[
-                    const SizedBox(height: 12),
-                    VisitCompletionOtpBanner(bookingId: booking.id),
-                  ],
-                  if (_showDetails &&
-                      booking.isNurseVisit &&
-                      (booking.nursingReportPdfUrl != null &&
-                          booking.nursingReportPdfUrl!.isNotEmpty)) ...[
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => openNursingReportPdf(
-                          context,
-                          bookingId: booking.id,
-                          pdfUrl: booking.nursingReportPdfUrl,
-                          repository:
-                              ref.read(patientDashboardRepositoryProvider),
-                        ),
-                        icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-                        label: const Text('View nursing report'),
-                      ),
-                    ),
-                  ],
-                  if (_showDetails && !isUpcoming && booking.hasPrescription) ...[
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => openPatientPrescriptionPdf(
-                          context,
-                          bookingId: booking.id,
-                          prescriptionPdfUrl: booking.prescriptionPdfUrl,
-                          repository:
-                              ref.read(patientDashboardRepositoryProvider),
-                        ),
-                        icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-                        label: Text(
-                          booking.prescriptionFileName != null &&
-                                  booking.prescriptionFileName!.isNotEmpty
-                              ? 'View prescription'
-                              : 'View prescription PDF',
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (_showDetails &&
-                      booking.isPrescriptionEligible &&
-                      !booking.hasPrescription &&
-                      (booking.prescriptionPending ||
-                          (booking.isOnlineConsult &&
-                              isUpcoming &&
-                              booking.canJoinVideo))) ...[
-                    const SizedBox(height: 12),
-                    _PrescriptionPendingBanner(
-                      doctorName: booking.doctorName,
-                      processing: booking.prescriptionProcessing,
-                      slotLabel: booking.label,
-                    ),
-                  ],
-                  if (_showDetails && !isUpcoming && booking.canRequestFeedback) ...[
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await showFeedbackAfterSession(
-                            context,
-                            PostSessionFeedbackInfo(
-                              bookingId: booking.id,
-                              doctorId: booking.doctorId,
-                              doctorName: booking.doctorName,
-                              doctorProfilePicture: booking.doctorProfilePicture,
-                              consultationType: booking.consultationType,
-                              sessionLabel: booking.label,
-                            ),
-                          );
-                          if (onRefresh != null) await onRefresh!();
-                        },
-                        icon: const Icon(Icons.star_outline_rounded, size: 18),
-                        label: const Text('Rate your experience'),
-                      ),
-                    ),
-                  ],
-                  if (_showDetails && booking.canTrackHomeVisitLive) ...[
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          context.push(
-                            '${AppConstants.routeHomeVisitTrack}?bookingId=${Uri.encodeComponent(booking.id)}',
-                          );
-                        },
-                        icon: const Icon(Icons.my_location_rounded, size: 18),
-                        label: Text(
-                          booking.isNurseVisit
-                              ? 'Track nurse live'
-                              : 'Track doctor live',
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (_showDetails) ...[
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          context.push(
-                            '${AppConstants.routeBookingTimeline}?bookingId=${booking.id}',
-                          );
-                        },
-                        icon: const Icon(Icons.timeline, size: 16),
-                        label: const Text('Track'),
-                      ),
-                      if (booking.canTrackAmbulanceLive)
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            context.push(
-                              '${AppConstants.routeAmbulanceTrack}?bookingId=${booking.id}',
-                            );
-                          },
-                          icon: const Icon(Icons.my_location_rounded, size: 16),
-                          label: const Text('Track live'),
-                        ),
-                      if (booking.canChat)
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            context.push(
-                              '${AppConstants.routeBookingChat}?bookingId=${booking.id}&title=${Uri.encodeComponent(booking.doctorName)}',
-                            );
-                          },
-                          icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                          label: const Text('Chat'),
-                        ),
-                      if (booking.hasVisitNote)
-                        OutlinedButton.icon(
-                          onPressed: () => _showVisitNote(context, booking.id),
-                          icon: const Icon(Icons.note_alt_outlined, size: 16),
-                          label: const Text('Care summary'),
-                        ),
-                      if (booking.canCancel && isUpcoming)
-                        OutlinedButton.icon(
-                          onPressed: () => _cancelBooking(context),
-                          icon: const Icon(Icons.cancel_outlined, size: 16),
-                          label: const Text('Cancel'),
-                        ),
-                      if (booking.canCancel &&
-                          isUpcoming &&
-                          (booking.isConfirmed ||
-                              booking.isApprovedPendingPayment ||
-                              booking.status == 'pending'))
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final ok = await showRescheduleBookingSheet(
-                              context,
-                              booking: booking,
-                            );
-                            if (ok && onRefresh != null) await onRefresh!();
-                            if (ok && context.mounted) {
-                              SnackBarHelper.showSuccess(
-                                context,
-                                'Visit rescheduled',
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.event_repeat, size: 16),
-                          label: const Text('Reschedule'),
-                        ),
-                      if (!isUpcoming &&
-                          (booking.serviceType == 'doctor' ||
-                              booking.serviceType == 'nurse'))
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            if (booking.isNurseVisit) {
-                              context.push(
-                                '${AppConstants.routeNurseHomeVisitBooking}?nurseId=${Uri.encodeComponent(booking.providerId)}',
-                              );
-                            } else {
-                              context.push(
-                                '${AppConstants.routeDoctorProfile}?id=${booking.providerId}',
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.replay, size: 16),
-                          label: const Text('Book again'),
-                        ),
-                    ],
-                  ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-
-  Future<void> _cancelBooking(BuildContext context) async {
-    final repo = BookingLifecycleRepository();
-    try {
-      final policy = await repo.fetchPolicy(booking.id);
-      if (!context.mounted) return;
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Cancel booking?'),
-          content: Text(policy.message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Keep'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Cancel booking'),
-            ),
-          ],
-        ),
-      );
-      if (confirm != true) return;
-      await repo.cancel(booking.id);
-      if (context.mounted) {
-        SnackBarHelper.showSuccess(context, 'Booking cancelled');
-      }
-      if (onRefresh != null) await onRefresh!();
-    } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showError(
-          context,
-          e.toString().replaceFirst('Exception: ', ''),
-        );
-      }
-    }
-  }
-
-  Future<void> _showVisitNote(BuildContext context, String bookingId) async {
-    try {
-      final dio = DioService();
-      final response =
-          await dio.get(AppConstants.endpointPatientVisitNote(bookingId));
-      final body = response.data as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>? ?? {};
-      if (!context.mounted) return;
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        builder: (ctx) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            16 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Care summary',
-                style: AppTextStyles.titleMedium.copyWith(
+                ambulance ? 'Track now' : 'View',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.error,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(data['careSummary']?.toString() ?? ''),
-              if ((data['vitals']?.toString() ?? '').isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text('Vitals: ${data['vitals']}'),
-              ],
-              if ((data['proceduresDone']?.toString() ?? '').isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text('Procedures: ${data['proceduresDone']}'),
-              ],
-              if ((data['advice']?.toString() ?? '').isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text('Advice: ${data['advice']}'),
-              ],
-              const SizedBox(height: 16),
             ],
           ),
-        ),
-      );
-    } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showError(
-          context,
-          e.toString().replaceFirst('Exception: ', ''),
-        );
-      }
-    }
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTextStyles.titleSmall.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
         ),
       ),
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+class _UpcomingSummary extends StatelessWidget {
+  const _UpcomingSummary({this.booking});
 
+  final PatientBookingModel? booking;
+
+  @override
+  Widget build(BuildContext context) {
+    if (booking == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: AppDecorations.borderRadiusLg,
+          border: Border.all(color: AppColors.grey200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Upcoming', style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            Text(
+              'No upcoming appointments',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: () => context.go(AppConstants.routeUserHome),
+              child: const Text('Book a service'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final item = booking!;
+    final when =
+        '${DateFormat('d MMM').format(item.slotStart.toLocal())} • ${DateFormat('h:mm a').format(item.slotStart.toLocal())}';
+    return Material(
+      color: AppColors.primaryLight,
+      borderRadius: AppDecorations.borderRadiusLg,
+      child: InkWell(
+        borderRadius: AppDecorations.borderRadiusLg,
+        onTap: () => context.push(
+          '${AppConstants.routeBookingDetails}?bookingId=${Uri.encodeComponent(item.id)}',
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Upcoming', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.doctorName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    Text(when, style: AppTextStyles.bodySmall),
+                    const SizedBox(height: 6),
+                    BookingStatusBadge(status: BookingStatusView.of(item)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickTile extends StatelessWidget {
+  const _QuickTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
   final String label;
-  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      borderRadius: AppDecorations.borderRadiusLg,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppDecorations.borderRadiusLg,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: AppDecorations.borderRadiusLg,
+            border: Border.all(color: AppColors.grey200),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: AppColors.primary),
+              const SizedBox(height: 6),
+              Text(label, style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuSection extends StatelessWidget {
+  const _MenuSection({required this.title, required this.items});
+
+  final String title;
+  final List<_MenuItem> items;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+          Text(
+            title.toUpperCase(),
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.grey500,
+              letterSpacing: 0.7,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTextStyles.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: AppDecorations.borderRadiusLg,
+              border: Border.all(color: AppColors.grey200),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: AppTextStyles.titleLarge.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            Text(
-              label,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PrescriptionPendingBanner extends StatelessWidget {
-  const _PrescriptionPendingBanner({
-    required this.doctorName,
-    required this.processing,
-    this.slotLabel,
-  });
-
-  final String doctorName;
-  final bool processing;
-  final String? slotLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = processing ? AppColors.warning : AppColors.primary;
-    final title = processing
-        ? 'Prescription being prepared'
-        : 'Prescription pending';
-    final message = processing
-        ? 'Your prescription from this consultation will appear here shortly. A copy will also be emailed to you.'
-        : 'Dr. $doctorName will share your prescription after the consultation. It will appear here and be emailed to you.';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (processing)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: color,
-                ),
-              ),
-            )
-          else
-            Icon(Icons.hourglass_top_rounded, size: 18, color: color),
-          const SizedBox(width: 10),
-          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                if (slotLabel != null && slotLabel!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    slotLabel!,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  items[i],
                 ],
-                const SizedBox(height: 4),
-                Text(
-                  message,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textPrimary,
-                    height: 1.35,
-                  ),
-                ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  const _MenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(label, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.grey400),
+      onTap: onTap,
     );
   }
 }

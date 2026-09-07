@@ -21,6 +21,8 @@ const familyMemberSchema = new mongoose.Schema(
     gender: String,
     mobileNumber: String,
     bloodGroup: String,
+    isEmergencyContact: { type: Boolean, default: false },
+    isPrimary: { type: Boolean, default: false },
   },
   { _id: false },
 );
@@ -68,6 +70,7 @@ const patientSchema = new mongoose.Schema(
     countryCode: { type: String, default: '91' },
     passwordHash: { type: String, required: true },
     age: { type: Number, required: true, min: 1, max: 120 },
+    dateOfBirth: Date,
     gender: { type: String, required: true },
     aadhaarNumber: { type: String, required: true, unique: true, index: true },
     aadhaarLast4: { type: String, required: true },
@@ -91,6 +94,16 @@ const patientSchema = new mongoose.Schema(
     blockedAt: Date,
     blockedReason: String,
     blockedByAdminId: String,
+    tokenVersion: { type: Number, default: 0 },
+    deletedAt: { type: Date, default: null, index: true },
+    deletionReason: String,
+    notificationSettings: {
+      booking: { type: Boolean, default: true },
+      payment: { type: Boolean, default: true },
+      provider: { type: Boolean, default: true },
+      emergency: { type: Boolean, default: true },
+      system: { type: Boolean, default: true },
+    },
   },
   { timestamps: true },
 );
