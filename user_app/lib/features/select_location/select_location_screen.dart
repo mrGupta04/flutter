@@ -99,6 +99,7 @@ class _SelectLocationScreenState extends ConsumerState<SelectLocationScreen> {
           city: resolved.city,
           state: resolved.state,
           pincode: resolved.pincode,
+          label: 'Current location',
           latitude: captured.latitude,
           longitude: captured.longitude,
         ),
@@ -141,6 +142,10 @@ class _SelectLocationScreenState extends ConsumerState<SelectLocationScreen> {
       MaterialPageRoute(builder: (_) => AddAddressScreen(existing: existing)),
     );
     if (result != null && mounted) {
+      if (existing == null) {
+        _returnResult(result);
+        return;
+      }
       setState(() => _selectedId = result.savedAddressId);
     }
   }
@@ -255,48 +260,75 @@ class _SelectLocationScreenState extends ConsumerState<SelectLocationScreen> {
                 const SizedBox(height: 8),
                 const LinearProgressIndicator(minHeight: 2),
               ],
-              if (_suggestions.isNotEmpty) ...[
+              if (_search.text.trim().length >= 2) ...[
                 const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: AppDecorations.borderRadiusLg,
-                    boxShadow: AppDecorations.softShadow(opacity: 0.04),
-                  ),
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < _suggestions.length; i++) ...[
-                        if (i > 0) const Divider(height: 1),
-                        ListTile(
-                          leading: const Icon(
-                            Icons.place_outlined,
-                            color: AppColors.primary,
-                          ),
-                          title: Text(
-                            _suggestions[i].displayName,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              fontWeight: FontWeight.w600,
+                if (_suggestions.isEmpty && !_searching)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'No places found. Try a street, area, or landmark.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: AppDecorations.borderRadiusLg,
+                      boxShadow: AppDecorations.softShadow(opacity: 0.04),
+                    ),
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < _suggestions.length; i++) ...[
+                          if (i > 0) const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(
+                              Icons.location_on_outlined,
+                              color: AppColors.primary,
                             ),
-                          ),
-                          onTap: () {
-                            final place = _suggestions[i];
-                            _returnResult(
-                              SelectedLocationResult(
-                                addressLine: place.address.address,
-                                city: place.address.city,
-                                state: place.address.state,
-                                pincode: place.address.pincode,
-                                latitude: place.latitude,
-                                longitude: place.longitude,
+                            title: Text(
+                              _suggestions[i].title,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                            subtitle: _suggestions[i].subtitle.isEmpty
+                                ? null
+                                : Text(
+                                    _suggestions[i].subtitle,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                            trailing: const Icon(
+                              Icons.north_west_rounded,
+                              size: 16,
+                              color: AppColors.grey400,
+                            ),
+                            onTap: () {
+                              final place = _suggestions[i];
+                              _returnResult(
+                                SelectedLocationResult(
+                                  addressLine: place.address.address,
+                                  city: place.address.city,
+                                  state: place.address.state,
+                                  pincode: place.address.pincode,
+                                  label: place.title,
+                                  latitude: place.latitude,
+                                  longitude: place.longitude,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+              ] else ...[
               const SizedBox(height: 14),
               LocationPermissionBanner(
                 state: _permission,
@@ -344,6 +376,7 @@ class _SelectLocationScreenState extends ConsumerState<SelectLocationScreen> {
                   ),
                   const SizedBox(height: 10),
                 ],
+              ],
             ],
           ),
         ),

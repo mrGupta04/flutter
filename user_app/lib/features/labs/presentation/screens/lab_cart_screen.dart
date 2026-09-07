@@ -8,7 +8,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/user_auth_guard.dart';
-import '../../../../core/widgets/accidental_selection_binder.dart';
 import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/repositories/lab_repository.dart';
 import '../../../../data/repositories/scan_repository.dart';
@@ -66,6 +65,18 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
     _selectedDate = DateTime.now().add(const Duration(days: 1));
     _selectedSlot = _timeSlots.first;
     _scanSlot = _scanTimeSlots.first;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(patientAuthProvider).user;
+      final address = user?.defaultAddress;
+      if (address == null || !mounted) return;
+      final selected = SelectedLocationResult.fromSaved(address);
+      setState(() {
+        _selectedLocation = selected;
+        _addressController.text = selected.displayLine;
+        _collectionCity = selected.city;
+        _collectionPincode = selected.pincode;
+      });
+    });
   }
 
   @override
@@ -113,10 +124,11 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
       }
 
       if (_collectionOption == SampleCollectionOption.homeVisit &&
-          _addressController.text.trim().length < 5) {
+          (_selectedLocation == null ||
+              _selectedLocation!.addressLine.trim().length < 5)) {
         custom.SnackBarHelper.showError(
           context,
-          'Enter your home collection address.',
+          'Select your home collection address.',
         );
         return;
       }
@@ -504,8 +516,9 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
               const SizedBox(height: 12),
               LocationSelectorField(
                 value: _selectedLocation,
-                hint: 'Select collection address',
+                hint: 'Search for area, street name...',
                 label: 'Collection address',
+                requireCityPincode: true,
                 onChanged: (result) {
                   setState(() {
                     _selectedLocation = result;
@@ -514,17 +527,6 @@ class _LabCartScreenState extends ConsumerState<LabCartScreen> {
                     _collectionPincode = result.pincode;
                   });
                 },
-              ),
-              const SizedBox(height: 8),
-              CaretOnTapTextField(
-                controller: _addressController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Home collection address',
-                  hintText: 'Flat, street, landmark, city',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.home_outlined),
-                ),
               ),
             ],
             const SizedBox(height: 16),

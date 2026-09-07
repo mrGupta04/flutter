@@ -41,6 +41,47 @@ class SelectedLocationResult {
 
   bool get hasCoordinates => latitude != null && longitude != null;
 
+  bool get hasBookingDetails {
+    final pin = (pincode ?? '').replaceAll(RegExp(r'\D'), '');
+    return addressLine.trim().length >= 5 &&
+        (city ?? '').trim().length >= 2 &&
+        pin.length >= 6;
+  }
+
+  String get displayLabel {
+    final raw = (label ?? '').trim();
+    if (raw.isEmpty) return savedAddressId != null ? 'Saved' : 'Selected location';
+    return raw;
+  }
+
+  SelectedLocationResult copyWith({
+    String? addressLine,
+    String? city,
+    String? state,
+    String? pincode,
+    String? landmark,
+    String? label,
+    String? contactName,
+    String? phone,
+    double? latitude,
+    double? longitude,
+    String? savedAddressId,
+  }) {
+    return SelectedLocationResult(
+      addressLine: addressLine ?? this.addressLine,
+      city: city ?? this.city,
+      state: state ?? this.state,
+      pincode: pincode ?? this.pincode,
+      landmark: landmark ?? this.landmark,
+      label: label ?? this.label,
+      contactName: contactName ?? this.contactName,
+      phone: phone ?? this.phone,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      savedAddressId: savedAddressId ?? this.savedAddressId,
+    );
+  }
+
   factory SelectedLocationResult.fromSaved(SavedAddressModel address) {
     return SelectedLocationResult(
       addressLine: address.addressLine,

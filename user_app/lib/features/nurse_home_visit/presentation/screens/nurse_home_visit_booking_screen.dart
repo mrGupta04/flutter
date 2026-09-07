@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -13,8 +12,6 @@ import '../../../../core/utils/media_url_utils.dart';
 import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
-import '../../../../core/constants/india_geography.dart';
-import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../data/models/doctor_model.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
@@ -160,6 +157,15 @@ class _NurseHomeVisitBookingScreenState
         _pincodeController.text = resolved.pincode;
       }
     }
+    _selectedLocation = SelectedLocationResult(
+      addressLine: _addressController.text.trim(),
+      city: _cityController.text.trim(),
+      state: _stateController.text.trim(),
+      pincode: _pincodeController.text.trim(),
+      label: 'Current location',
+      latitude: captured.latitude,
+      longitude: captured.longitude,
+    );
     setState(() {});
   }
 
@@ -370,7 +376,7 @@ class _NurseHomeVisitBookingScreenState
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Share your contact and address for the home visit. Choose a saved address, current location, or add a new one.',
+                        'Tap to search, use current location, or pick a saved Home / Work address.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -380,6 +386,8 @@ class _NurseHomeVisitBookingScreenState
                         value: _selectedLocation,
                         onChanged: _applySelectedLocation,
                         label: 'Visit location',
+                        hint: 'Search for area, street name...',
+                        requireCityPincode: true,
                       ),
                       const SizedBox(height: 12),
                       CustomTextField(
@@ -403,45 +411,6 @@ class _NurseHomeVisitBookingScreenState
                         label: 'Email',
                         prefixIcon: Icons.email_outlined,
                         validator: ValidationUtils.validateEmail,
-                      ),
-                      const SizedBox(height: 12),
-                      CustomTextField(
-                        controller: _addressController,
-                        label: 'Home address',
-                        prefixIcon: Icons.home_outlined,
-                        maxLines: 2,
-                        validator: (v) =>
-                            (v ?? '').trim().length < 5 ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      AddressAutocompleteField(
-                        controller: _cityController,
-                        label: 'City',
-                        hint: 'e.g. Bengaluru',
-                        prefixIcon: Icons.location_city_outlined,
-                        options: IndiaGeography.districtsFor(
-                          state: _stateController.text,
-                        ),
-                        validator: (v) =>
-                            (v ?? '').trim().length < 2 ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      AddressAutocompleteField(
-                        controller: _stateController,
-                        label: 'State',
-                        hint: 'e.g. Karnataka',
-                        prefixIcon: Icons.map_outlined,
-                        options: IndiaGeography.states,
-                        onSelected: (_) => setState(() {}),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                      const SizedBox(height: 12),
-                      CustomTextField(
-                        controller: _pincodeController,
-                        label: 'Pincode',
-                        prefixIcon: Icons.pin_drop_outlined,
-                        validator: (v) =>
-                            (v ?? '').trim().length == 6 ? null : 'Invalid',
                       ),
                       const SizedBox(height: 12),
                       CustomTextField(

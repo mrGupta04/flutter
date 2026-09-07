@@ -255,23 +255,10 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
                               ValidationUtils.validatePhoneNumber(v),
                         ),
                         const SizedBox(height: 12),
-                        CustomTextField(
-                          controller: _pickupController,
-                          label: 'Pickup address',
-                          prefixIcon: Icons.place_outlined,
-                          maxLines: 2,
-                          validator: (v) {
-                            if (v == null || v.trim().length < 5) {
-                              return 'Enter a clear pickup address';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
                         LocationSelectorField(
                           value: _selectedLocation,
-                          label: 'Choose pickup location',
-                          hint: 'Select a location',
+                          label: 'Pickup location',
+                          hint: 'Search for area, street name...',
                           onChanged: (result) {
                             setState(() {
                               _selectedLocation = result;

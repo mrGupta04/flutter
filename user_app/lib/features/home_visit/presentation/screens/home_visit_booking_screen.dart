@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/constants/india_geography.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -12,7 +11,6 @@ import '../../../../core/utils/validation_utils.dart';
 import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
-import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/consultation_booking_price_summary.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
@@ -186,6 +184,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
       city: _cityController.text.trim(),
       state: _stateController.text.trim(),
       pincode: _pincodeController.text.trim(),
+      label: 'Current location',
       latitude: captured.latitude,
       longitude: captured.longitude,
     );
@@ -493,7 +492,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'The doctor will visit you at this address. Choose a saved address, current location, or add a new one.',
+                          'Tap to search, use current location, or pick a saved Home / Work address.',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -503,7 +502,8 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                           value: _selectedLocation,
                           onChanged: _applySelectedLocation,
                           label: 'Visit location',
-                          hint: 'Select a location',
+                          hint: 'Search for area, street name...',
+                          requireCityPincode: true,
                         ),
                         const SizedBox(height: 12),
                         CustomTextField(
@@ -537,72 +537,6 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                             }
                             return ValidationUtils.validateEmail(v);
                           },
-                        ),
-                        const SizedBox(height: 12),
-                        CustomTextField(
-                          controller: _addressController,
-                          label: 'House / flat / street address',
-                          prefixIcon: Icons.home_outlined,
-                          maxLines: 2,
-                          minLines: 2,
-                          validator: (v) {
-                            if (v == null || v.trim().length < 5) {
-                              return 'Enter your complete home address';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: AddressAutocompleteField(
-                                controller: _cityController,
-                                label: 'City',
-                                hint: 'e.g. Bengaluru',
-                                prefixIcon: Icons.location_city_outlined,
-                                options: IndiaGeography.districtsFor(
-                                  state: _stateController.text,
-                                ),
-                                validator: (v) {
-                                  if (v == null || v.trim().length < 2) {
-                                    return 'Required';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: CustomTextField(
-                                controller: _pincodeController,
-                                label: 'Pincode',
-                                prefixIcon: Icons.pin_drop_outlined,
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(6),
-                                ],
-                                validator: (v) {
-                                  if (v == null || v.trim().length < 6) {
-                                    return '6 digits';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        AddressAutocompleteField(
-                          controller: _stateController,
-                          label: 'State (optional)',
-                          hint: 'e.g. Karnataka',
-                          prefixIcon: Icons.map_outlined,
-                          options: IndiaGeography.states,
-                          onSelected: (_) => setState(() {}),
-                          onChanged: (_) => setState(() {}),
                         ),
                         const SizedBox(height: 12),
                         CustomTextField(

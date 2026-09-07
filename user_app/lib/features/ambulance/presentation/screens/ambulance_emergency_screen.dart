@@ -141,7 +141,7 @@ class _AmbulanceEmergencyScreenState extends ConsumerState<AmbulanceEmergencyScr
           const SizedBox(height: 16),
           LocationSelectorField(
             label: 'Pickup location',
-            hint: 'Use current, search, map or saved address',
+            hint: 'Search for area, street name...',
             value: _pickup,
             onChanged: (value) => setState(() => _pickup = value),
           ),

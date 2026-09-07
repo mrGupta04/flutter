@@ -220,6 +220,30 @@ class PlaceSuggestion {
   final double latitude;
   final double longitude;
   final ResolvedAddress address;
+
+  String get title {
+    final parts = displayName
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (parts.isNotEmpty) return parts.first;
+    if (address.place.isNotEmpty) return address.place;
+    return address.address;
+  }
+
+  String get subtitle {
+    final parts = displayName
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (parts.length > 1) return parts.skip(1).take(4).join(', ');
+    return [
+      address.city,
+      address.state,
+    ].where((e) => e.trim().isNotEmpty).join(', ');
+  }
 }
 
 class GeocodingFailure implements Exception {

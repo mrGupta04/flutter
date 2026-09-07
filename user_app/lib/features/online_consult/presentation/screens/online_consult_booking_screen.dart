@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/constants/india_geography.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -14,7 +13,6 @@ import '../../../../core/widgets/custom_widgets.dart';
 import '../../../../data/models/bookable_slot_model.dart';
 import '../../../../data/models/consultation_type.dart';
 import '../../../../data/models/doctor_model.dart';
-import '../../../../shared/widgets/address_autocomplete_field.dart';
 import '../../../../shared/widgets/appointment_code_display.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/consultation_booking_price_summary.dart';
@@ -27,6 +25,8 @@ import '../../../../shared/widgets/previous_reports_picker.dart';
 import '../../../hospital_visit/provider/hospital_visit_provider.dart';
 import '../../../upcoming_meeting/provider/upcoming_meeting_timer_provider.dart';
 import '../../../user_auth/provider/patient_auth_provider.dart';
+import '../../../select_location/location_selector_field.dart';
+import '../../../select_location/selected_location.dart';
 import '../../online_consult_navigation.dart';
 import '../../provider/online_consult_provider.dart';
 
@@ -55,6 +55,7 @@ class _OnlineConsultBookingScreenState
   final _formKey = GlobalKey<FormState>();
   ConsultationType _selectedType = ConsultationType.onlineConsult;
   String? _selectedDateKey;
+  SelectedLocationResult? _selectedLocation;
 
   bool get _isHospitalVisit => _selectedType == ConsultationType.visitSite;
 
@@ -85,6 +86,10 @@ class _OnlineConsultBookingScreenState
       if (_mobileController.text.isEmpty && user.mobileNumber.isNotEmpty) {
         _mobileController.text = user.mobileNumber;
       }
+      final address = user.defaultAddress;
+      if (address != null && _addressController.text.isEmpty) {
+        _applySelectedLocation(SelectedLocationResult.fromSaved(address));
+      }
     }
   }
 
@@ -101,6 +106,21 @@ class _OnlineConsultBookingScreenState
     _pincodeController.dispose();
     _reasonController.dispose();
     super.dispose();
+  }
+
+  void _applySelectedLocation(SelectedLocationResult result) {
+    _selectedLocation = result;
+    _addressController.text = result.addressLine;
+    if (result.city != null && result.city!.trim().isNotEmpty) {
+      _cityController.text = result.city!;
+    }
+    if (result.state != null && result.state!.trim().isNotEmpty) {
+      _stateController.text = result.state!;
+    }
+    if (result.pincode != null && result.pincode!.trim().isNotEmpty) {
+      _pincodeController.text = result.pincode!;
+    }
+    setState(() {});
   }
 
   void _onConsultationTypeSelected(ConsultationType type, DoctorModel doctor) {
@@ -501,65 +521,12 @@ class _OnlineConsultBookingScreenState
                           ),
                           if (_isHospitalVisit) ...[
                             const SizedBox(height: 12),
-                            CustomTextField(
-                              controller: _addressController,
-                              label: 'Your address (street / area)',
-                              prefixIcon: Icons.home_outlined,
-                              maxLines: 2,
-                              minLines: 2,
-                              validator: (v) {
-                                if (v == null || v.trim().length < 5) {
-                                  return 'Enter your full address';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: AddressAutocompleteField(
-                                    controller: _cityController,
-                                    label: 'City',
-                                    hint: 'e.g. Bengaluru',
-                                    prefixIcon: Icons.location_city_outlined,
-                                    options: IndiaGeography.districtsFor(
-                                      state: _stateController.text,
-                                    ),
-                                    validator: (v) {
-                                      if (v == null || v.trim().length < 2) {
-                                        return 'Required';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: CustomTextField(
-                                    controller: _pincodeController,
-                                    label: 'Pincode',
-                                    prefixIcon: Icons.pin_drop_outlined,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                      LengthLimitingTextInputFormatter(6),
-                                    ],
-                                    validator: ValidationUtils.validatePincode,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            AddressAutocompleteField(
-                              controller: _stateController,
-                              label: 'State (optional)',
-                              hint: 'e.g. Karnataka',
-                              prefixIcon: Icons.map_outlined,
-                              options: IndiaGeography.states,
-                              onSelected: (_) => setState(() {}),
-                              onChanged: (_) => setState(() {}),
+                            LocationSelectorField(
+                              value: _selectedLocation,
+                              onChanged: _applySelectedLocation,
+                              label: 'Your address',
+                              hint: 'Search for area, street name...',
+                              requireCityPincode: true,
                             ),
                             const SizedBox(height: 12),
                             CustomTextField(

@@ -131,6 +131,7 @@ class _AmbulanceScheduledScreenState extends ConsumerState<AmbulanceScheduledScr
         children: [
           LocationSelectorField(
             label: 'Pickup',
+            hint: 'Search for area, street name...',
             value: _pickup,
             onChanged: (value) {
               setState(() => _pickup = value);
@@ -140,6 +141,7 @@ class _AmbulanceScheduledScreenState extends ConsumerState<AmbulanceScheduledScr
           const SizedBox(height: 12),
           LocationSelectorField(
             label: 'Destination',
+            hint: 'Search for area, street name...',
             value: _drop,
             onChanged: (value) {
               setState(() => _drop = value);
