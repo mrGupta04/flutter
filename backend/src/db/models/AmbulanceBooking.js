@@ -95,6 +95,7 @@ const ambulanceBookingSchema = new mongoose.Schema(
     assignedVehicleId: String,
     assignedDriverId: String,
     assignedDriverName: String,
+    assignedDriverPhone: String,
     assignedVehicleRegistration: String,
     assignedVehicleType: String,
     currentDispatchId: String,

@@ -3,9 +3,18 @@ const ambulanceVehicleTypes = [
   'Basic Ambulance',
   'Basic Life Support',
   'Advanced Life Support',
-  'Patient Transport',
   'ICU Ambulance',
+  'Cardiac Ambulance',
+  'Trauma Ambulance',
   'Neonatal Ambulance',
+  'Pediatric Ambulance',
+  'Isolation Ambulance',
+  'Bariatric Ambulance',
+  'Patient Transport',
+  'First Responder / Bike Ambulance',
+  'Air Ambulance',
+  'Mortuary Van',
+  'Event Medical Ambulance',
 ];
 
 const ambulanceVehicleStatuses = [

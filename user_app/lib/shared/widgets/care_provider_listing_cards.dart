@@ -649,13 +649,21 @@ class AmbulanceListingCard extends StatelessWidget {
     final subtitleParts = <String>[
       if (ambulance.city != null && ambulance.city!.isNotEmpty) ambulance.city!,
       if (vehicles.isNotEmpty) vehicles.join(', '),
+      if (ambulance.isLiveNow) 'Live now',
+    ];
+    final footerParts = <String>[
+      if (ambulance.isLiveNow) 'Book & track',
+      if (ambulance.available24x7 == true) '24×7 emergency' else 'Limited hours',
+      if (ambulance.ratingAverage != null && ambulance.ratingAverage! > 0)
+        '${ambulance.ratingAverage!.toStringAsFixed(1)} ★',
+      if (ambulance.perKmLabel != null) ambulance.perKmLabel!,
     ];
 
     return _ModernCareCard(
       accentGradient: const [Color(0xFF1565C0), Color(0xFF1976D2)],
       title: ambulance.serviceName ?? 'Ambulance service',
       subtitle: subtitleParts.join(' · '),
-      footer: ambulance.available24x7 == true ? '24×7 emergency' : 'Limited hours',
+      footer: footerParts.join(' · '),
       icon: Icons.local_shipping_rounded,
       iconColor: const Color(0xFF1565C0),
       imageUrl: MediaUrlUtils.resolve(ambulance.profilePicture),

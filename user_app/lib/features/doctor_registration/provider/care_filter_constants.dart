@@ -64,13 +64,8 @@ const nurseGenderFilters = [
   'Female',
 ];
 
-/// Ambulance vehicle type filter chips.
-const ambulanceVehicleTypeFilters = [
-  'Basic Life Support',
-  'Advanced Life Support',
-  'Patient Transport',
-  'ICU Ambulance',
-];
+export '../../../data/models/ambulance_vehicle_types.dart'
+    show ambulanceVehicleTypeFilters;
 
 /// Blood group filter chips.
 const bloodGroupFilters = [

@@ -110,6 +110,13 @@ class _AmbulanceDashboardScreenState extends State<AmbulanceDashboardScreen> {
                         color: AppColors.primary,
                         onTap: () => context.push(AppConstants.routeAmbulanceDriverMode),
                       ),
+                      const SizedBox(height: 16),
+                      const MarketplaceSectionTitle(title: 'Your trip pricing'),
+                      const SizedBox(height: 8),
+                      _PricingCard(
+                        provider: provider,
+                        onSaved: _load,
+                      ),
                     ],
                   ),
                 ),
@@ -126,6 +133,107 @@ class _AmbulanceDashboardScreenState extends State<AmbulanceDashboardScreen> {
             Text('$value', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             Text(label, style: AppTextStyles.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PricingCard extends StatefulWidget {
+  const _PricingCard({required this.provider, required this.onSaved});
+
+  final Map<String, dynamic> provider;
+  final Future<void> Function() onSaved;
+
+  @override
+  State<_PricingCard> createState() => _PricingCardState();
+}
+
+class _PricingCardState extends State<_PricingCard> {
+  late final TextEditingController _base;
+  late final TextEditingController _perKm;
+  late final TextEditingController _min;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _base = TextEditingController(text: '${widget.provider['baseFare'] ?? 400}');
+    _perKm = TextEditingController(text: '${widget.provider['perKm'] ?? 20}');
+    _min = TextEditingController(text: '${widget.provider['minFare'] ?? 0}');
+  }
+
+  @override
+  void didUpdateWidget(covariant _PricingCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.provider != widget.provider) {
+      _base.text = '${widget.provider['baseFare'] ?? 400}';
+      _perKm.text = '${widget.provider['perKm'] ?? 20}';
+      _min.text = '${widget.provider['minFare'] ?? 0}';
+    }
+  }
+
+  @override
+  void dispose() {
+    _base.dispose();
+    _perKm.dispose();
+    _min.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final response = await AmbulanceRegistrationRepository().updateOperations({
+      'baseFare': double.tryParse(_base.text.trim()) ?? 0,
+      'perKm': double.tryParse(_perKm.text.trim()) ?? 0,
+      'minFare': double.tryParse(_min.text.trim()) ?? 0,
+    });
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (response.success) {
+      SnackBarHelper.showSuccess(context, 'Pricing saved. Bookings will use ₹/km.');
+      await widget.onSaved();
+    } else {
+      SnackBarHelper.showError(context, response.error ?? 'Could not save pricing');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Patients are charged your base fare plus distance × per-km rate.',
+              style: AppTextStyles.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _base,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Base fare (₹)'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _perKm,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Price per km (₹)'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _min,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Minimum fare (₹, optional)'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: Text(_saving ? 'Saving…' : 'Save pricing'),
+            ),
           ],
         ),
       ),

@@ -14,6 +14,10 @@ class AmbulanceDriverModel {
   final String? emtCertificateUrl;
   final String? photoUrl;
   final bool backgroundCheckConsent;
+  final bool isOnline;
+  final String status;
+  final double? currentLatitude;
+  final double? currentLongitude;
 
   AmbulanceDriverModel({
     required this.id,
@@ -31,6 +35,10 @@ class AmbulanceDriverModel {
     this.emtCertificateUrl,
     this.photoUrl,
     this.backgroundCheckConsent = false,
+    this.isOnline = false,
+    this.status = 'OFFLINE',
+    this.currentLatitude,
+    this.currentLongitude,
   });
 
   factory AmbulanceDriverModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +58,10 @@ class AmbulanceDriverModel {
       emtCertificateUrl: json['emtCertificateUrl'] as String?,
       photoUrl: json['photoUrl'] as String?,
       backgroundCheckConsent: json['backgroundCheckConsent'] as bool? ?? false,
+      isOnline: json['isOnline'] as bool? ?? false,
+      status: json['status'] as String? ?? 'OFFLINE',
+      currentLatitude: (json['currentLatitude'] as num?)?.toDouble(),
+      currentLongitude: (json['currentLongitude'] as num?)?.toDouble(),
     );
   }
 
@@ -69,6 +81,8 @@ class AmbulanceDriverModel {
         if (emtCertificateUrl != null) 'emtCertificateUrl': emtCertificateUrl,
         if (photoUrl != null) 'photoUrl': photoUrl,
         'backgroundCheckConsent': backgroundCheckConsent,
+        'isOnline': isOnline,
+        'status': status,
       };
 
   AmbulanceDriverModel copyWith({
@@ -87,6 +101,10 @@ class AmbulanceDriverModel {
     String? emtCertificateUrl,
     String? photoUrl,
     bool? backgroundCheckConsent,
+    bool? isOnline,
+    String? status,
+    double? currentLatitude,
+    double? currentLongitude,
   }) {
     return AmbulanceDriverModel(
       id: id ?? this.id,
@@ -108,6 +126,10 @@ class AmbulanceDriverModel {
       photoUrl: photoUrl ?? this.photoUrl,
       backgroundCheckConsent:
           backgroundCheckConsent ?? this.backgroundCheckConsent,
+      isOnline: isOnline ?? this.isOnline,
+      status: status ?? this.status,
+      currentLatitude: currentLatitude ?? this.currentLatitude,
+      currentLongitude: currentLongitude ?? this.currentLongitude,
     );
   }
 }

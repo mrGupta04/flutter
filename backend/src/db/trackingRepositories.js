@@ -66,14 +66,34 @@ function assertHomeVisitConfirmed(booking) {
 
 async function loadAuthorizedBooking(bookingId, auth) {
   const booking = await ConsultationBooking.findOne({ id: bookingId });
-  if (!booking) {
+  if (booking) {
+    await assertBookingActor(booking, auth);
+    return booking;
+  }
+
+  const AmbulanceBooking = require('./models/AmbulanceBooking');
+  const ambulance = await AmbulanceBooking.findOne({ id: bookingId });
+  if (!ambulance) {
     const err = new Error('Booking not found');
     err.statusCode = 404;
     err.code = 'INVALID_BOOKING';
     throw err;
   }
-  await assertBookingActor(booking, auth);
-  return booking;
+  const isPatient =
+    auth?.type === 'patient' &&
+    auth.patientId &&
+    (!ambulance.patientId || ambulance.patientId === auth.patientId);
+  const isAmbulance =
+    (auth?.type === 'ambulance' || auth?.type === 'ambulance_driver') &&
+    auth.ambulanceId &&
+    (!ambulance.ambulanceId || ambulance.ambulanceId === auth.ambulanceId);
+  if (!isPatient && !isAmbulance && auth?.type !== 'admin') {
+    const err = new Error('Not authorized for this ambulance trip');
+    err.statusCode = 403;
+    err.code = 'UNAUTHORIZED';
+    throw err;
+  }
+  return ambulance;
 }
 
 async function assertProviderOwnsBooking(booking, auth) {

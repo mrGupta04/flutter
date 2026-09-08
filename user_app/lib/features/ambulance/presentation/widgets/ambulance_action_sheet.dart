@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/phone_countries.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -106,6 +108,13 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
 
     setState(() => _isSubmitting = true);
     final user = ref.read(patientAuthProvider).user;
+    final firstType = widget.ambulance.vehicles
+            ?.map((v) => v.vehicleType)
+            .firstWhere((t) => t.isNotEmpty, orElse: () => '') ??
+        widget.ambulance.vehicleTypes?.firstWhere(
+          (t) => t.isNotEmpty,
+          orElse: () => '',
+        );
     final response = await AmbulanceRepository().requestAmbulance(
       ambulanceId: ambulanceId,
       patientName: _nameController.text.trim(),
@@ -113,11 +122,15 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
       patientEmail: user?.email,
       patientId: user?.id,
       pickupAddress: _pickupController.text.trim(),
+      pickupCity: _selectedLocation?.city,
+      pickupPincode: _selectedLocation?.pincode,
       pickupLatitude: _pickupLat,
       pickupLongitude: _pickupLng,
       notes: _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),
+      vehicleTypeRequested:
+          firstType != null && firstType.isNotEmpty ? firstType : null,
       isEmergency: true,
       countryCode: user?.countryCode ?? PhoneCountries.defaultDialCode,
     );
@@ -126,12 +139,18 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
     setState(() => _isSubmitting = false);
 
     if (response.success) {
+      final data = response.data;
+      final bookingId = data?['id']?.toString() ??
+          (data?['booking'] is Map ? (data!['booking'] as Map)['id']?.toString() : null);
       Navigator.of(context).pop();
-      SnackBarHelper.showSuccess(
-        context,
-        response.message ??
-            'Ambulance requested. Call them now if this is urgent.',
-      );
+      if (bookingId != null && bookingId.isNotEmpty) {
+        context.push('${AppConstants.routeAmbulanceTrack}?bookingId=$bookingId');
+      } else {
+        SnackBarHelper.showSuccess(
+          context,
+          response.message ?? 'Ambulance requested. Open My bookings to track it.',
+        );
+      }
     } else {
       SnackBarHelper.showError(
         context,
@@ -208,8 +227,8 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'In a medical emergency, call the ambulance immediately. '
-                    'You can also send a request with your pickup location.',
+                    'Book this ambulance to start live tracking, like a ride. '
+                    'In a life-threatening emergency, also call 112 / 108.',
                     style: AppTextStyles.bodySmall.copyWith(height: 1.35),
                   ),
                 ),
@@ -225,9 +244,9 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
                 const SizedBox(height: 10),
                 CustomOutlineButton(
                   label: _showRequestForm
-                      ? 'Hide request form'
-                      : 'Send pickup request',
-                  icon: Icons.local_shipping_outlined,
+                      ? 'Hide booking form'
+                      : 'Book & track live',
+                  icon: Icons.near_me_rounded,
                   onPressed: () =>
                       setState(() => _showRequestForm = !_showRequestForm),
                 ),
@@ -277,8 +296,8 @@ class _AmbulanceActionSheetState extends ConsumerState<AmbulanceActionSheet> {
                         ),
                         const SizedBox(height: 16),
                         CustomButton(
-                          label: 'Request ambulance',
-                          icon: Icons.send_rounded,
+                          label: 'Book ambulance now',
+                          icon: Icons.local_shipping_rounded,
                           isLoading: _isSubmitting,
                           onPressed: _submitRequest,
                         ),

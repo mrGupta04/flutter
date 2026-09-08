@@ -31,6 +31,8 @@ const {
   updateAmbulanceBookingStatus,
   updateAmbulanceLiveLocation,
 } = require('../db/ambulanceBookingRepositories');
+const { startDispatch } = require('../services/ambulanceDispatchService');
+const { actorFromAuth } = require('../middleware/ambulanceAuth');
 
 const router = express.Router();
 mountProviderPasswordResetRoutes(router, 'ambulance');
@@ -181,11 +183,19 @@ router.post('/bookings', authOptional, async (req, res) => {
       patientId: body.patientId || req.auth?.patientId,
       patientEmail: body.patientEmail || req.auth?.email,
     });
+    let dispatched = booking;
+    if (booking.bookingKind === 'emergency') {
+      const result = await startDispatch(booking.id, {
+        actor: actorFromAuth(req.auth || {}),
+        preferredAmbulanceId: booking.ambulanceId,
+      });
+      dispatched = result.booking || booking;
+    }
     return res.status(201).json({
       success: true,
-      message: 'Ambulance request submitted. The service will contact you shortly.',
+      message: 'Ambulance requested. Live tracking is on while we find a nearby vehicle.',
       statusCode: 201,
-      data: booking,
+      data: dispatched,
     });
   } catch (err) {
     console.error(err);

@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../data/models/ambulance_vehicle_types.dart';
 import '../../../../data/repositories/ambulance_repository.dart';
 import '../../../../features/select_location/location_selector_field.dart';
 import '../../../../features/select_location/selected_location.dart';
@@ -167,14 +168,14 @@ class _AmbulanceScheduledScreenState extends ConsumerState<AmbulanceScheduledScr
           DropdownButtonFormField<String>(
             value: _vehicleType,
             decoration: const InputDecoration(labelText: 'Ambulance type'),
-            items: const [
-              DropdownMenuItem(value: 'patient_transport', child: Text('Patient Transport')),
-              DropdownMenuItem(value: 'basic', child: Text('Basic Ambulance')),
-              DropdownMenuItem(value: 'bls', child: Text('Basic Life Support')),
-              DropdownMenuItem(value: 'als', child: Text('Advanced Life Support')),
-              DropdownMenuItem(value: 'icu', child: Text('ICU Ambulance')),
-              DropdownMenuItem(value: 'neonatal', child: Text('Neonatal Ambulance')),
-            ],
+            items: ambulanceVehicleTypes
+                .map(
+                  (type) => DropdownMenuItem(
+                    value: type.id,
+                    child: Text(type.label),
+                  ),
+                )
+                .toList(),
             onChanged: (value) {
               setState(() => _vehicleType = value ?? 'patient_transport');
               _refreshEstimate();

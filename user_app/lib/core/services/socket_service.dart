@@ -22,6 +22,18 @@ const _kTrackingEvents = [
   'nurse_location_update',
   'nurse-started-trip',
   'nurse-arrived',
+  'ambulance_event',
+  'ambulance_location_updated',
+  'ambulance_request_created',
+  'ambulance_assigned',
+  'ambulance_driver_accepted',
+  'ambulance_driver_en_route',
+  'ambulance_arrived',
+  'patient_picked_up',
+  'ambulance_trip_started',
+  'ambulance_destination_reached',
+  'ambulance_trip_completed',
+  'ambulance_request_cancelled',
 ];
 
 /// Authenticated Socket.IO client with auto-reconnect and room restore.

@@ -45,6 +45,13 @@ class AmbulanceModel {
   final DateTime? updatedAt;
   final bool? isApproved;
   final String? approvalNotes;
+  final bool? emergencyAvailable;
+  final double? serviceRadiusKm;
+  final double? ratingAverage;
+  final int? reviewCount;
+  final double? baseFare;
+  final double? perKm;
+  final double? minFare;
 
   AmbulanceModel({
     this.id,
@@ -87,6 +94,13 @@ class AmbulanceModel {
     this.updatedAt,
     this.isApproved,
     this.approvalNotes,
+    this.emergencyAvailable,
+    this.serviceRadiusKm,
+    this.ratingAverage,
+    this.reviewCount,
+    this.baseFare,
+    this.perKm,
+    this.minFare,
   });
 
   factory AmbulanceModel.fromJson(Map<String, dynamic> json) {
@@ -147,6 +161,13 @@ class AmbulanceModel {
           : null,
       isApproved: json['isApproved'] as bool?,
       approvalNotes: json['approvalNotes'] as String?,
+      emergencyAvailable: json['emergencyAvailable'] as bool?,
+      serviceRadiusKm: (json['serviceRadiusKm'] as num?)?.toDouble(),
+      ratingAverage: (json['ratingAverage'] as num?)?.toDouble(),
+      reviewCount: (json['reviewCount'] as num?)?.toInt(),
+      baseFare: (json['baseFare'] as num?)?.toDouble(),
+      perKm: (json['perKm'] as num?)?.toDouble(),
+      minFare: (json['minFare'] as num?)?.toDouble(),
     );
   }
 
@@ -178,6 +199,11 @@ class AmbulanceModel {
       if (longitude != null) 'longitude': longitude,
       if (serviceArea != null) 'serviceArea': serviceArea,
       if (available24x7 != null) 'available24x7': available24x7,
+      if (emergencyAvailable != null) 'emergencyAvailable': emergencyAvailable,
+      if (serviceRadiusKm != null) 'serviceRadiusKm': serviceRadiusKm,
+      if (baseFare != null) 'baseFare': baseFare,
+      if (perKm != null) 'perKm': perKm,
+      if (minFare != null) 'minFare': minFare,
       if (serviceLicenseUrl != null) 'serviceLicenseUrl': serviceLicenseUrl,
       if (companyRegistrationUrl != null)
         'companyRegistrationUrl': companyRegistrationUrl,
@@ -191,6 +217,20 @@ class AmbulanceModel {
       if (cancelledChequeUrl != null) 'cancelledChequeUrl': cancelledChequeUrl,
     };
   }
+
+  bool get isLiveNow {
+    final onlineDrivers = drivers?.any((d) => d.isOnline || d.status == 'AVAILABLE') ?? false;
+    final readyVehicles = vehicles?.any((v) => v.isLiveAvailable) ?? false;
+    return onlineDrivers || readyVehicles;
+  }
+
+  bool get canBookNow =>
+      verificationStatus == VerificationStatus.verified &&
+      emergencyAvailable != false &&
+      isApproved != false;
+
+  String? get perKmLabel =>
+      perKm != null && perKm! > 0 ? '₹${perKm!.toStringAsFixed(0)}/km' : null;
 
   static VerificationStatus? _parseStatus(String? status) {
     switch (status) {
@@ -247,6 +287,13 @@ class AmbulanceModel {
     DateTime? updatedAt,
     bool? isApproved,
     String? approvalNotes,
+    bool? emergencyAvailable,
+    double? serviceRadiusKm,
+    double? ratingAverage,
+    int? reviewCount,
+    double? baseFare,
+    double? perKm,
+    double? minFare,
   }) {
     return AmbulanceModel(
       id: id ?? this.id,
@@ -291,6 +338,13 @@ class AmbulanceModel {
       updatedAt: updatedAt ?? this.updatedAt,
       isApproved: isApproved ?? this.isApproved,
       approvalNotes: approvalNotes ?? this.approvalNotes,
+      emergencyAvailable: emergencyAvailable ?? this.emergencyAvailable,
+      serviceRadiusKm: serviceRadiusKm ?? this.serviceRadiusKm,
+      ratingAverage: ratingAverage ?? this.ratingAverage,
+      reviewCount: reviewCount ?? this.reviewCount,
+      baseFare: baseFare ?? this.baseFare,
+      perKm: perKm ?? this.perKm,
+      minFare: minFare ?? this.minFare,
     );
   }
 }

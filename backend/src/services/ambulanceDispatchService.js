@@ -11,6 +11,7 @@ const {
 const { releaseFleetAssignment } = require('../db/ambulanceFleetRepositories');
 const {
   findMatchingCandidates,
+  findMatchingCandidatesPreferType,
   nextDispatchBatch,
   DEFAULT_RADIUS_KM,
 } = require('./ambulanceMatching');
@@ -19,7 +20,12 @@ const {
   notifyAmbulanceStatus,
   notifyEmergencyOffer,
 } = require('./ambulanceNotificationService');
-const { estimateFare, calculateFare, getFareRules } = require('./ambulanceFareService');
+const {
+  estimateFare,
+  calculateFare,
+  getFareRules,
+  resolveProviderRates,
+} = require('./ambulanceFareService');
 const { distanceKm } = require('../utils/geoDistance');
 const { isActiveTrip } = require('./ambulanceStatus');
 
@@ -45,11 +51,11 @@ async function loadVerifiedProviders() {
   return docs.map((doc) => toAmbulance(doc));
 }
 
-async function startDispatch(bookingId, { actor } = {}) {
+async function startDispatch(bookingId, { actor, preferredAmbulanceId } = {}) {
   const booking = await AmbulanceBooking.findOne({ id: bookingId });
   if (!booking) fail('Booking not found', 404);
   if (!['requested', 'searching_ambulance'].includes(booking.status)) {
-    return toAmbulanceBooking(booking);
+    return { booking: toAmbulanceBooking(booking), offered: [] };
   }
 
   booking.status = 'searching_ambulance';
@@ -57,19 +63,148 @@ async function startDispatch(bookingId, { actor } = {}) {
   booking.dispatchRound = (booking.dispatchRound || 0) + 1;
   booking.lastDispatchAt = new Date();
   booking.dispatchExpiresAt = new Date(Date.now() + OFFER_TIMEOUT_MS);
+  if (preferredAmbulanceId && !booking.ambulanceId) {
+    booking.ambulanceId = preferredAmbulanceId;
+  }
   await booking.save();
 
   emitAmbulanceEvent('ambulance_dispatch_started', {
     bookingId: booking.id,
     patientId: booking.patientId,
-    ambulanceId: booking.ambulanceId,
+    ambulanceId: booking.ambulanceId || preferredAmbulanceId,
   });
 
-  const offered = await offerNextBatch(booking, actor);
+  const preferred = preferredAmbulanceId || booking.ambulanceId;
+  const nearest = await findNearestFreeCandidate(booking, preferred);
+  if (nearest) {
+    try {
+      const assigned = await autoAssignNearest(booking, nearest, actor);
+      return { booking: assigned, offered: [nearest], autoAssigned: true };
+    } catch (err) {
+      if (!['VEHICLE_BUSY', 'ALREADY_ASSIGNED', 'DISPATCH_UNAVAILABLE'].includes(err.code)) {
+        throw err;
+      }
+    }
+  }
+
+  const offered = await offerNextBatch(booking, actor, preferred);
   return { booking: toAmbulanceBooking(booking), offered };
 }
 
-async function offerNextBatch(booking, actor) {
+function isCandidateFree(providers, candidate) {
+  const provider = (providers || []).find((item) => item.id === candidate.ambulanceId);
+  const vehicle = (provider?.vehicles || []).find((item) => item.id === candidate.vehicleId);
+  const driver = (provider?.drivers || []).find((item) => item.id === candidate.driverId);
+  if (!vehicle || vehicle.currentBookingId) return false;
+  if (!['AVAILABLE', 'EMERGENCY_ONLY'].includes(vehicle.status)) return false;
+  if (!driver || driver.currentBookingId || driver.status === 'SUSPENDED') return false;
+  return driver.isOnline === true || driver.status === 'AVAILABLE';
+}
+
+async function findNearestFreeCandidate(booking, preferredAmbulanceId) {
+  const providers = await loadVerifiedProviders();
+  const candidates = findMatchingCandidatesPreferType({
+    providers,
+    pickupLatitude: booking.pickupLatitude,
+    pickupLongitude: booking.pickupLongitude,
+    requestedType: booking.vehicleTypeRequested,
+    requirements: booking.requirements || {},
+    emergency: booking.isEmergency !== false,
+    radiusKm: booking.searchRadiusKm || DEFAULT_RADIUS_KM,
+    preferredAmbulanceId,
+  });
+  if (preferredAmbulanceId) {
+    const preferredFree = candidates.find(
+      (item) => item.ambulanceId === preferredAmbulanceId && isCandidateFree(providers, item),
+    );
+    if (preferredFree) return preferredFree;
+  }
+  return candidates.find((item) => isCandidateFree(providers, item)) || null;
+}
+
+async function applyAssignedFare(bookingDoc, provider, vehicle) {
+  const rules = await getFareRules();
+  let distanceKmValue = bookingDoc.tripDistanceKm;
+  if (
+    !Number.isFinite(Number(distanceKmValue)) &&
+    Number.isFinite(bookingDoc.pickupLatitude) &&
+    Number.isFinite(bookingDoc.dropLatitude)
+  ) {
+    distanceKmValue = distanceKm(
+      bookingDoc.pickupLatitude,
+      bookingDoc.pickupLongitude,
+      bookingDoc.dropLatitude,
+      bookingDoc.dropLongitude,
+    );
+  }
+  const fare = calculateFare({
+    rules,
+    vehicleType: bookingDoc.assignedVehicleType || bookingDoc.vehicleTypeRequested,
+    distanceKm: Number(distanceKmValue) || 0,
+    durationMinutes: bookingDoc.estimatedArrivalMinutes || 0,
+    requirements: bookingDoc.requirements || {},
+    isEmergency: bookingDoc.isEmergency !== false,
+    estimated: true,
+    providerRates: resolveProviderRates(provider, vehicle),
+  });
+  bookingDoc.fare = fare;
+  await bookingDoc.save();
+  return fare;
+}
+
+async function autoAssignNearest(booking, candidate, actor) {
+  const dispatch = await AmbulanceDispatch.create({
+    id: uuidv4(),
+    bookingId: booking.id,
+    ambulanceId: candidate.ambulanceId,
+    vehicleId: candidate.vehicleId,
+    driverId: candidate.driverId,
+    round: booking.dispatchRound || 1,
+    status: 'offered',
+    distanceKm: candidate.distanceKm,
+    etaMinutes: candidate.etaMinutes,
+    offeredAt: new Date(),
+    expiresAt: new Date(Date.now() + OFFER_TIMEOUT_MS),
+  });
+  return acceptDispatch({
+    bookingId: booking.id,
+    ambulanceId: candidate.ambulanceId,
+    vehicleId: candidate.vehicleId,
+    driverId: candidate.driverId,
+    dispatchId: dispatch.id,
+    actor,
+  });
+}
+
+async function fallbackPreferredCandidate(preferredAmbulanceId, booking) {
+  if (!preferredAmbulanceId) return null;
+  const provider = (await loadVerifiedProviders()).find((item) => item.id === preferredAmbulanceId);
+  if (!provider) return null;
+  const vehicle = (provider.vehicles || []).find(
+    (item) => !item.currentBookingId && item.status !== 'MAINTENANCE' && item.status !== 'BUSY',
+  );
+  const driver =
+    (provider.drivers || []).find((item) => item.id === vehicle?.assignedDriverId) ||
+    (provider.drivers || []).find((item) => item.status !== 'SUSPENDED');
+  if (!vehicle || !driver) return null;
+  return {
+    ambulanceId: provider.id,
+    ambulanceServiceName: provider.serviceName,
+    vehicleId: vehicle.id,
+    vehicleType: vehicle.vehicleType,
+    vehicleRegistration: vehicle.registrationNumber,
+    driverId: driver.id,
+    driverName: driver.fullName,
+    driverMobile: driver.mobileNumber,
+    distanceKm: null,
+    etaMinutes: booking.estimatedArrivalMinutes || 8,
+    latitude: vehicle.currentLatitude || provider.latitude || null,
+    longitude: vehicle.currentLongitude || provider.longitude || null,
+    score: 0,
+  };
+}
+
+async function offerNextBatch(booking, actor, preferredAmbulanceId) {
   if (booking.dispatchRound > MAX_ROUNDS) {
     booking.status = 'no_answer';
     await booking.save();
@@ -95,7 +230,8 @@ async function offerNextBatch(booking, actor) {
   }
 
   const providers = await loadVerifiedProviders();
-  const candidates = findMatchingCandidates({
+  const preferred = preferredAmbulanceId || booking.ambulanceId;
+  let candidates = findMatchingCandidatesPreferType({
     providers,
     pickupLatitude: booking.pickupLatitude,
     pickupLongitude: booking.pickupLongitude,
@@ -104,10 +240,16 @@ async function offerNextBatch(booking, actor) {
     emergency: booking.isEmergency !== false,
     radiusKm: booking.searchRadiusKm || DEFAULT_RADIUS_KM,
     excludeVehicleIds: booking.offeredAmbulanceIds || [],
+    preferredAmbulanceId: preferred,
   });
 
+  if (preferred && !candidates.some((item) => item.ambulanceId === preferred)) {
+    const fallback = await fallbackPreferredCandidate(preferred, booking);
+    if (fallback) candidates = [fallback, ...candidates];
+  }
+
   const batch = nextDispatchBatch(candidates, {
-    batchSize: BATCH_SIZE,
+    batchSize: preferred ? Math.max(BATCH_SIZE, 1) : BATCH_SIZE,
     alreadyOffered: booking.offeredAmbulanceIds || [],
   });
 
@@ -225,7 +367,7 @@ async function acceptDispatch({
       vehicles: {
         $elemMatch: {
           id: offer.vehicleId,
-          status: { $in: ['AVAILABLE', 'EMERGENCY_ONLY'] },
+          status: { $in: ['AVAILABLE', 'EMERGENCY_ONLY', 'OFFLINE'] },
           $or: [{ currentBookingId: null }, { currentBookingId: { $exists: false } }],
         },
       },
@@ -271,10 +413,11 @@ async function acceptDispatch({
 
   lockedBooking.ambulanceServiceName = provider.serviceName;
   lockedBooking.assignedDriverName = driver?.fullName;
+  lockedBooking.assignedDriverPhone = driver?.mobileNumber;
   lockedBooking.assignedVehicleRegistration = vehicle?.registrationNumber;
   lockedBooking.assignedVehicleType = vehicle?.vehicleType;
   lockedBooking.status = 'driver_accepted';
-  await lockedBooking.save();
+  await applyAssignedFare(lockedBooking, provider, vehicle);
 
   await AmbulanceDispatch.updateMany(
     { bookingId, id: { $ne: offer.id }, status: 'offered' },
@@ -318,6 +461,33 @@ async function acceptDispatch({
   }).catch((err) => console.warn('[ambulance-dispatch] notify accept failed:', err.message));
 
   return publicBooking;
+}
+
+async function acceptDirectAssignment({ bookingId, ambulanceId, vehicleId, driverId, actor }) {
+  const booking = await AmbulanceBooking.findOne({ id: bookingId });
+  if (!booking) fail('Booking not found', 404);
+  const fallback = await fallbackPreferredCandidate(ambulanceId, booking);
+  if (!fallback) fail('No ambulance is available to assign', 409, 'VEHICLE_BUSY');
+  const dispatch = await AmbulanceDispatch.create({
+    id: uuidv4(),
+    bookingId,
+    ambulanceId,
+    vehicleId: vehicleId || fallback.vehicleId,
+    driverId: driverId || fallback.driverId,
+    round: booking.dispatchRound || 1,
+    status: 'offered',
+    etaMinutes: fallback.etaMinutes,
+    offeredAt: new Date(),
+    expiresAt: new Date(Date.now() + OFFER_TIMEOUT_MS),
+  });
+  return acceptDispatch({
+    bookingId,
+    ambulanceId,
+    vehicleId: dispatch.vehicleId,
+    driverId: dispatch.driverId,
+    dispatchId: dispatch.id,
+    actor,
+  });
 }
 
 async function rejectDispatch({ bookingId, ambulanceId, dispatchId, reason, actor }) {
@@ -495,6 +665,8 @@ async function advanceTrip({ bookingId, ambulanceId, action, actor, extra = {} }
     extras.tripDistanceKm = Number(distanceKmValue) || 0;
     extras.tripDurationMinutes = durationMinutes;
     extras.tripNotes = extra.notes;
+    const provider = toAmbulance(await Ambulance.findOne({ id: ambulanceId }).lean());
+    const vehicle = (provider?.vehicles || []).find((item) => item.id === booking.assignedVehicleId);
     extras.fare = calculateFare({
       rules,
       vehicleType: booking.assignedVehicleType || booking.vehicleTypeRequested,
@@ -504,6 +676,7 @@ async function advanceTrip({ bookingId, ambulanceId, action, actor, extra = {} }
       requirements: booking.requirements || {},
       isEmergency: booking.isEmergency !== false,
       estimated: false,
+      providerRates: resolveProviderRates(provider, vehicle),
     });
   }
 
@@ -682,18 +855,40 @@ async function estimateForRequest(input) {
       Number(input.dropLongitude),
     );
   }
+  let providerRates = input.providerRates || null;
+  if (!providerRates && Number.isFinite(Number(input.pickupLatitude))) {
+    const nearby = await nearbyAmbulances({
+      latitude: input.pickupLatitude,
+      longitude: input.pickupLongitude,
+      vehicleType: input.vehicleType,
+      requirements: input.requirements,
+      emergency: input.isEmergency !== false,
+    });
+    const nearest = nearby[0];
+    if (nearest) {
+      const providers = await loadVerifiedProviders();
+      const provider = providers.find((item) => item.id === nearest.ambulanceId);
+      const vehicle = (provider?.vehicles || []).find((item) => item.id === nearest.vehicleId);
+      providerRates = resolveProviderRates(provider, vehicle);
+      if (!Number.isFinite(distance)) {
+        distance = nearest.distanceKm;
+      }
+    }
+  }
   return estimateFare({
     vehicleType: input.vehicleType,
     distanceKm: distance || 8,
     durationMinutes: input.durationMinutes || 20,
     requirements: input.requirements,
     isEmergency: input.isEmergency !== false,
+    providerRates,
   });
 }
 
 module.exports = {
   startDispatch,
   acceptDispatch,
+  acceptDirectAssignment,
   rejectDispatch,
   acceptScheduledBooking,
   rejectScheduledBooking,

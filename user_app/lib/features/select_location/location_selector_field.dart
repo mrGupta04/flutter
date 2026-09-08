@@ -208,6 +208,7 @@ class _SelectedAddressCard extends StatelessWidget {
 
 class _CityPincodeRow extends StatefulWidget {
   const _CityPincodeRow({
+    super.key,
     required this.value,
     required this.onChanged,
   });

@@ -35,4 +35,18 @@ describe('ambulance fare engine', () => {
     });
     assert.equal(fare.emergencySurcharge, 0);
   });
+
+  it('uses the provider per-km rate when set', () => {
+    const fare = calculateFare({
+      rules: DEFAULT_FARE_RULES,
+      vehicleType: 'als',
+      distanceKm: 10,
+      isEmergency: false,
+      at: new Date('2026-01-01T10:00:00'),
+      providerRates: { baseFare: 100, perKm: 15 },
+    });
+    assert.equal(fare.baseFare, 100);
+    assert.equal(fare.distanceCharge, 150);
+    assert.equal(fare.perKm, 15);
+  });
 });

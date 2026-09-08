@@ -14,7 +14,8 @@ const {
   canProviderCancel,
 } = require('../services/ambulanceStatus');
 const { appendAmbulanceStatusHistory, writeAmbulanceAudit } = require('./ambulanceAuditRepositories');
-const { estimateFare } = require('../services/ambulanceFareService');
+const { estimateFare, resolveProviderRates } = require('../services/ambulanceFareService');
+const { distanceKm } = require('../utils/geoDistance');
 
 function fail(message, statusCode = 400, code) {
   const err = new Error(message);
@@ -149,23 +150,34 @@ async function createAmbulanceBooking(input) {
   }
 
   const fields = buildBookingFields(input, ambulance);
-  const autoDispatch = !ambulanceId && fields.bookingKind === 'emergency';
+  const autoDispatch = fields.bookingKind === 'emergency';
+  let distanceKmValue = 0;
+  if (
+    Number.isFinite(fields.pickupLatitude) &&
+    Number.isFinite(fields.pickupLongitude) &&
+    Number.isFinite(fields.dropLatitude) &&
+    Number.isFinite(fields.dropLongitude)
+  ) {
+    distanceKmValue = distanceKm(
+      fields.pickupLatitude,
+      fields.pickupLongitude,
+      fields.dropLatitude,
+      fields.dropLongitude,
+    );
+  }
   const fareEstimate = await estimateFare({
     vehicleType: normalizeVehicleType(fields.vehicleTypeRequested) || 'basic',
-    distanceKm: 0,
+    distanceKm: distanceKmValue,
     durationMinutes: 0,
     requirements: fields.requirements,
     isEmergency: fields.isEmergency,
+    providerRates: resolveProviderRates(ambulance),
   });
 
   const booking = await AmbulanceBooking.create({
     id: uuidv4(),
     ...fields,
-    status: autoDispatch
-      ? 'searching_ambulance'
-      : fields.bookingKind === 'scheduled'
-        ? 'requested'
-        : 'requested',
+    status: autoDispatch ? 'searching_ambulance' : 'requested',
     fare: fareEstimate.fare,
     paymentPolicy: fields.isEmergency
       ? fareEstimate.policy.emergencyPayWhen
@@ -191,6 +203,38 @@ async function listAmbulanceBookingsForProvider(ambulanceId, { status, kind } = 
   if (kind) filter.bookingKind = kind;
   const docs = await AmbulanceBooking.find(filter).sort({ createdAt: -1 }).limit(200).lean();
   return docs.map(toAmbulanceBooking);
+}
+
+async function listIncomingAmbulanceRequests(ambulanceId, { status, kind } = {}) {
+  const AmbulanceDispatch = require('./models/AmbulanceDispatch');
+  const assigned = await listAmbulanceBookingsForProvider(ambulanceId, { status, kind });
+  const offers = await AmbulanceDispatch.find({
+    ambulanceId,
+    status: 'offered',
+    $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }],
+  }).lean();
+  const offerIds = [...new Set(offers.map((item) => item.bookingId).filter(Boolean))];
+  const extra = offerIds.length
+    ? await AmbulanceBooking.find({ id: { $in: offerIds } }).lean()
+    : [];
+  const byId = new Map(assigned.map((item) => [item.id, item]));
+  for (const doc of extra) {
+    const offer = offers.find((item) => item.bookingId === doc.id);
+    const mapped = toAmbulanceBooking(doc);
+    byId.set(doc.id, {
+      ...mapped,
+      dispatchId: offer?.id || null,
+      offerVehicleId: offer?.vehicleId || null,
+      offerDriverId: offer?.driverId || null,
+      incomingOffer: true,
+      estimatedArrivalMinutes: mapped.estimatedArrivalMinutes || offer?.etaMinutes || null,
+    });
+  }
+  return [...byId.values()].sort((a, b) => {
+    const aTime = new Date(a.createdAt || 0).getTime();
+    const bTime = new Date(b.createdAt || 0).getTime();
+    return bTime - aTime;
+  });
 }
 
 async function listAmbulanceBookingsForPatient({
@@ -562,6 +606,7 @@ module.exports = {
   findAmbulanceBookingById,
   findAmbulanceBookingDoc,
   listAmbulanceBookingsForProvider,
+  listIncomingAmbulanceRequests,
   listAmbulanceBookingsForPatient,
   listAllAmbulanceBookings,
   updateAmbulanceBookingStatus,

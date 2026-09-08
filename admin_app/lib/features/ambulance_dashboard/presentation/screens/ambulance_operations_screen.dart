@@ -264,6 +264,7 @@ class _AmbulanceOperationsScreenState extends State<AmbulanceOperationsScreen>
   Future<void> _editVehicle({Map<String, dynamic>? existing}) async {
     final registration = TextEditingController(text: existing?['registrationNumber']?.toString());
     final type = TextEditingController(text: existing?['vehicleType']?.toString() ?? 'Advanced Life Support');
+    final perKm = TextEditingController(text: existing?['perKm']?.toString() ?? '');
     var oxygen = existing?['hasOxygen'] == true;
     var ventilator = existing?['hasVentilator'] == true;
     if (!mounted) return;
@@ -276,6 +277,11 @@ class _AmbulanceOperationsScreenState extends State<AmbulanceOperationsScreen>
           children: [
             TextField(controller: registration, decoration: const InputDecoration(labelText: 'Registration number')),
             TextField(controller: type, decoration: const InputDecoration(labelText: 'Type')),
+            TextField(
+              controller: perKm,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Price per km (₹, optional)'),
+            ),
             StatefulBuilder(
               builder: (context, setLocal) => Column(
                 children: [
@@ -307,6 +313,8 @@ class _AmbulanceOperationsScreenState extends State<AmbulanceOperationsScreen>
       'hasOxygen': oxygen,
       'hasVentilator': ventilator,
       'status': existing?['status'] ?? 'AVAILABLE',
+      if (double.tryParse(perKm.text.trim()) != null)
+        'perKm': double.parse(perKm.text.trim()),
     }, id: existing?['id']?.toString());
     _load();
   }

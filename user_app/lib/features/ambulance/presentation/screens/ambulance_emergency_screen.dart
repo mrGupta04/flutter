@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/widgets/custom_widgets.dart';
+import '../../../../data/models/ambulance_vehicle_types.dart';
 import '../../../../data/repositories/ambulance_repository.dart';
 import '../../../../features/select_location/location_selector_field.dart';
 import '../../../../features/select_location/selected_location.dart';
@@ -39,6 +40,7 @@ class _AmbulanceEmergencyScreenState extends ConsumerState<AmbulanceEmergencyScr
   bool _icu = false;
   bool _submitting = false;
   List<Map<String, dynamic>> _hospitals = [];
+  Map<String, dynamic>? _estimate;
 
   @override
   void initState() {
@@ -79,6 +81,23 @@ class _AmbulanceEmergencyScreenState extends ConsumerState<AmbulanceEmergencyScr
     _condition.dispose();
     _contact.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshEstimate() async {
+    if (_pickup?.latitude == null) return;
+    final estimate = await _repo.estimateFare({
+      'vehicleType': _vehicleType,
+      'pickupLatitude': _pickup?.latitude,
+      'pickupLongitude': _pickup?.longitude,
+      'dropLatitude': _drop?.latitude,
+      'dropLongitude': _drop?.longitude,
+      'isEmergency': true,
+      'oxygen': _oxygen,
+      'ventilator': _ventilator,
+      'cardiacMonitor': _cardiac,
+      'icuSupport': _icu,
+    });
+    if (mounted) setState(() => _estimate = estimate.data);
   }
 
   Future<void> _submit() async {
@@ -143,7 +162,10 @@ class _AmbulanceEmergencyScreenState extends ConsumerState<AmbulanceEmergencyScr
             label: 'Pickup location',
             hint: 'Search for area, street name...',
             value: _pickup,
-            onChanged: (value) => setState(() => _pickup = value),
+            onChanged: (value) {
+              setState(() => _pickup = value);
+              _refreshEstimate();
+            },
           ),
           const SizedBox(height: 16),
           Text('Destination', style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w700)),
@@ -184,7 +206,10 @@ class _AmbulanceEmergencyScreenState extends ConsumerState<AmbulanceEmergencyScr
             label: 'Destination location',
             hint: 'Hospital, home, clinic or other',
             value: _drop,
-            onChanged: (value) => setState(() => _drop = value),
+            onChanged: (value) {
+              setState(() => _drop = value);
+              _refreshEstimate();
+            },
           ),
           const SizedBox(height: 16),
           CustomTextField(controller: _name, label: 'Patient name'),
@@ -242,13 +267,14 @@ class _AmbulanceEmergencyScreenState extends ConsumerState<AmbulanceEmergencyScr
           Text('Ambulance requirement', style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w700)),
           Wrap(
             spacing: 8,
-            children: [
-              ChoiceChip(label: const Text('ALS'), selected: _vehicleType == 'als', onSelected: (_) => setState(() => _vehicleType = 'als')),
-              ChoiceChip(label: const Text('BLS'), selected: _vehicleType == 'bls', onSelected: (_) => setState(() => _vehicleType = 'bls')),
-              ChoiceChip(label: const Text('ICU'), selected: _vehicleType == 'icu', onSelected: (_) => setState(() => _vehicleType = 'icu')),
-              ChoiceChip(label: const Text('Basic'), selected: _vehicleType == 'basic', onSelected: (_) => setState(() => _vehicleType = 'basic')),
-              ChoiceChip(label: const Text('Neonatal'), selected: _vehicleType == 'neonatal', onSelected: (_) => setState(() => _vehicleType = 'neonatal')),
-            ],
+            runSpacing: 8,
+            children: ambulanceVehicleTypes.map((type) {
+              return ChoiceChip(
+                label: Text(type.chipLabel),
+                selected: _vehicleType == type.id,
+                onSelected: (_) => setState(() => _vehicleType = type.id),
+              );
+            }).toList(),
           ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
@@ -274,6 +300,20 @@ class _AmbulanceEmergencyScreenState extends ConsumerState<AmbulanceEmergencyScr
             onChanged: (v) => setState(() => _icu = v ?? false),
             title: const Text('ICU support required'),
           ),
+          if (_estimate?['fare'] is Map) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Estimated fare',
+              style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              '₹${(_estimate!['fare'] as Map)['total']} · nearest free ambulance rate',
+            ),
+            Text(
+              _estimate?['disclaimer']?.toString() ?? '',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
           const SizedBox(height: 16),
           CustomButton(
             label: 'Request now',

@@ -235,7 +235,12 @@ function attachTrackingSocket(httpServer) {
           (socket.data.auth.type === 'doctor' &&
             booking.doctorId === socket.data.auth.doctorId) ||
           (socket.data.auth.type === 'nurse' &&
-            booking.nurseId === socket.data.auth.nurseId);
+            booking.nurseId === socket.data.auth.nurseId) ||
+          ((socket.data.auth.type === 'ambulance' ||
+            socket.data.auth.type === 'ambulance_driver') &&
+            socket.data.auth.ambulanceId &&
+            (!booking.ambulanceId ||
+              booking.ambulanceId === socket.data.auth.ambulanceId));
         if (isProvider) {
           socket.data.providerBookings.add(bookingId);
           clearOfflineTimer(bookingId);

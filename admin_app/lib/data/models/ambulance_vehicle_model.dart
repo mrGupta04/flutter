@@ -19,6 +19,15 @@ class AmbulanceVehicleModel {
   final String? photoFrontUrl;
   final String? photoBackUrl;
   final String? photoInteriorUrl;
+  final String status;
+  final double? currentLatitude;
+  final double? currentLongitude;
+  final DateTime? lastLocationAt;
+  final String? assignedDriverId;
+  final String? currentBookingId;
+  final double? baseFare;
+  final double? perKm;
+  final double? minFare;
 
   AmbulanceVehicleModel({
     required this.id,
@@ -41,6 +50,15 @@ class AmbulanceVehicleModel {
     this.photoFrontUrl,
     this.photoBackUrl,
     this.photoInteriorUrl,
+    this.status = 'OFFLINE',
+    this.currentLatitude,
+    this.currentLongitude,
+    this.lastLocationAt,
+    this.assignedDriverId,
+    this.currentBookingId,
+    this.baseFare,
+    this.perKm,
+    this.minFare,
   });
 
   factory AmbulanceVehicleModel.fromJson(Map<String, dynamic> json) {
@@ -50,7 +68,7 @@ class AmbulanceVehicleModel {
       vehicleType: json['vehicleType'] as String? ?? '',
       make: json['make'] as String? ?? '',
       model: json['model'] as String? ?? '',
-      year: json['year'] as int?,
+      year: (json['year'] as num?)?.toInt(),
       color: json['color'] as String? ?? '',
       capacity: json['capacity'] as int?,
       hasOxygen: json['hasOxygen'] as bool? ?? false,
@@ -65,6 +83,17 @@ class AmbulanceVehicleModel {
       photoFrontUrl: json['photoFrontUrl'] as String?,
       photoBackUrl: json['photoBackUrl'] as String?,
       photoInteriorUrl: json['photoInteriorUrl'] as String?,
+      status: json['status'] as String? ?? 'OFFLINE',
+      currentLatitude: (json['currentLatitude'] as num?)?.toDouble(),
+      currentLongitude: (json['currentLongitude'] as num?)?.toDouble(),
+      lastLocationAt: json['lastLocationAt'] != null
+          ? DateTime.tryParse(json['lastLocationAt'].toString())
+          : null,
+      assignedDriverId: json['assignedDriverId'] as String?,
+      currentBookingId: json['currentBookingId'] as String?,
+      baseFare: (json['baseFare'] as num?)?.toDouble(),
+      perKm: (json['perKm'] as num?)?.toDouble(),
+      minFare: (json['minFare'] as num?)?.toDouble(),
     );
   }
 
@@ -91,6 +120,14 @@ class AmbulanceVehicleModel {
         if (photoFrontUrl != null) 'photoFrontUrl': photoFrontUrl,
         if (photoBackUrl != null) 'photoBackUrl': photoBackUrl,
         if (photoInteriorUrl != null) 'photoInteriorUrl': photoInteriorUrl,
+        'status': status,
+        if (currentLatitude != null) 'currentLatitude': currentLatitude,
+        if (currentLongitude != null) 'currentLongitude': currentLongitude,
+        if (assignedDriverId != null) 'assignedDriverId': assignedDriverId,
+        if (currentBookingId != null) 'currentBookingId': currentBookingId,
+        if (baseFare != null) 'baseFare': baseFare,
+        if (perKm != null) 'perKm': perKm,
+        if (minFare != null) 'minFare': minFare,
       };
 
   AmbulanceVehicleModel copyWith({
@@ -114,6 +151,15 @@ class AmbulanceVehicleModel {
     String? photoFrontUrl,
     String? photoBackUrl,
     String? photoInteriorUrl,
+    String? status,
+    double? currentLatitude,
+    double? currentLongitude,
+    DateTime? lastLocationAt,
+    String? assignedDriverId,
+    String? currentBookingId,
+    double? baseFare,
+    double? perKm,
+    double? minFare,
   }) {
     return AmbulanceVehicleModel(
       id: id ?? this.id,
@@ -138,6 +184,15 @@ class AmbulanceVehicleModel {
       photoFrontUrl: photoFrontUrl ?? this.photoFrontUrl,
       photoBackUrl: photoBackUrl ?? this.photoBackUrl,
       photoInteriorUrl: photoInteriorUrl ?? this.photoInteriorUrl,
+      status: status ?? this.status,
+      currentLatitude: currentLatitude ?? this.currentLatitude,
+      currentLongitude: currentLongitude ?? this.currentLongitude,
+      lastLocationAt: lastLocationAt ?? this.lastLocationAt,
+      assignedDriverId: assignedDriverId ?? this.assignedDriverId,
+      currentBookingId: currentBookingId ?? this.currentBookingId,
+      baseFare: baseFare ?? this.baseFare,
+      perKm: perKm ?? this.perKm,
+      minFare: minFare ?? this.minFare,
     );
   }
 

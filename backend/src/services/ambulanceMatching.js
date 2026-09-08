@@ -31,20 +31,22 @@ function isProviderDispatchable(provider, { emergency = true } = {}) {
   return true;
 }
 
-function isVehicleDispatchable(vehicle, { emergency = true } = {}) {
+function isVehicleDispatchable(vehicle, { emergency = true, allowOffline = false } = {}) {
   if (!vehicle) return false;
   if (vehicle.currentBookingId) return false;
   const status = vehicle.status || 'OFFLINE';
-  if (status === 'BUSY' || status === 'OFFLINE' || status === 'MAINTENANCE') return false;
+  if (status === 'BUSY' || status === 'MAINTENANCE') return false;
+  if (status === 'OFFLINE') return Boolean(allowOffline);
   if (status === 'EMERGENCY_ONLY' && !emergency) return false;
   return status === 'AVAILABLE' || status === 'EMERGENCY_ONLY';
 }
 
-function isDriverDispatchable(driver) {
+function isDriverDispatchable(driver, { allowOffline = false } = {}) {
   if (!driver) return false;
   if (driver.status === 'SUSPENDED') return false;
   if (driver.currentBookingId) return false;
   if (driver.verificationStatus === 'rejected') return false;
+  if (allowOffline) return true;
   return driver.isOnline === true || driver.status === 'AVAILABLE';
 }
 
@@ -76,6 +78,7 @@ function findMatchingCandidates({
   radiusKm = DEFAULT_RADIUS_KM,
   excludeVehicleIds = [],
   excludeAmbulanceIds = [],
+  preferredAmbulanceId,
 }) {
   const pickupReady =
     Number.isFinite(Number(pickupLatitude)) && Number.isFinite(Number(pickupLongitude));
@@ -91,18 +94,21 @@ function findMatchingCandidates({
     const vehicles = provider.vehicles || [];
     const drivers = provider.drivers || [];
 
+    const preferred = preferredAmbulanceId && provider.id === preferredAmbulanceId;
+
     for (const vehicle of vehicles) {
       if (excludedVehicles.has(vehicle.id)) continue;
-      if (!isVehicleDispatchable(vehicle, { emergency })) continue;
+      if (!isVehicleDispatchable(vehicle, { emergency, allowOffline: preferred })) continue;
       if (!vehicleTypeMatches(requestedType, vehicle.vehicleType)) continue;
       if (!vehicleHasEquipment(vehicle, requirements)) continue;
 
       const driver =
         drivers.find((item) => item.id === vehicle.assignedDriverId) ||
         drivers.find((item) => item.assignedVehicleId === vehicle.id) ||
-        drivers.find((item) => isDriverDispatchable(item));
+        drivers.find((item) => isDriverDispatchable(item, { allowOffline: preferred })) ||
+        (preferred ? drivers.find((item) => item.status !== 'SUSPENDED') : null);
 
-      if (!isDriverDispatchable(driver)) continue;
+      if (!isDriverDispatchable(driver, { allowOffline: preferred })) continue;
 
       const point = pointFor(vehicle, driver, provider);
       let distance = null;
@@ -137,10 +143,21 @@ function findMatchingCandidates({
   }
 
   matches.sort((a, b) => {
+    const aPreferred = preferredAmbulanceId && a.ambulanceId === preferredAmbulanceId ? 0 : 1;
+    const bPreferred = preferredAmbulanceId && b.ambulanceId === preferredAmbulanceId ? 0 : 1;
+    if (aPreferred !== bPreferred) return aPreferred - bPreferred;
     if (a.score !== b.score) return a.score - b.score;
     return String(a.vehicleId).localeCompare(String(b.vehicleId));
   });
   return matches;
+}
+
+function findMatchingCandidatesPreferType(opts) {
+  const typed = findMatchingCandidates(opts);
+  if (!opts.requestedType) return typed;
+  const any = findMatchingCandidates({ ...opts, requestedType: undefined });
+  const seen = new Set(typed.map((item) => item.vehicleId));
+  return [...typed, ...any.filter((item) => !seen.has(item.vehicleId))];
 }
 
 function nextDispatchBatch(candidates, { batchSize = 2, alreadyOffered = [] } = {}) {
@@ -158,6 +175,7 @@ module.exports = {
   isVehicleDispatchable,
   isDriverDispatchable,
   findMatchingCandidates,
+  findMatchingCandidatesPreferType,
   nextDispatchBatch,
   etaMinutesFromKm,
 };

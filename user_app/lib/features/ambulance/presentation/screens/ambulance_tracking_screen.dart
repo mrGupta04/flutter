@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/socket_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_widgets.dart';
@@ -38,11 +39,50 @@ class _AmbulanceTrackingScreenState extends State<AmbulanceTrackingScreen> {
     super.initState();
     _fetch();
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _fetch());
+    unawaited(_listenRealtime());
+  }
+
+  Future<void> _listenRealtime() async {
+    try {
+      await SocketService.instance.connectIfAuthenticated();
+      SocketService.instance.joinBookingRoom(widget.bookingId);
+      SocketService.instance.on('ambulance_location_updated', _onRealtime);
+      SocketService.instance.on('ambulance_event', _onRealtime);
+      SocketService.instance.on('ambulance_assigned', _onRealtime);
+      SocketService.instance.on('ambulance_driver_accepted', _onRealtime);
+      SocketService.instance.on('ambulance_driver_en_route', _onRealtime);
+      SocketService.instance.on('ambulance_arrived', _onRealtime);
+      SocketService.instance.on('patient_picked_up', _onRealtime);
+      SocketService.instance.on('ambulance_trip_started', _onRealtime);
+      SocketService.instance.on('ambulance_destination_reached', _onRealtime);
+      SocketService.instance.on('ambulance_trip_completed', _onRealtime);
+      SocketService.instance.on('ambulance_request_cancelled', _onRealtime);
+    } catch (_) {
+      // Polling already covers offline / unsigned-in sessions.
+    }
+  }
+
+  void _onRealtime(dynamic _) {
+    _fetch();
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    SocketService.instance.off('ambulance_location_updated', _onRealtime);
+    SocketService.instance.off('ambulance_event', _onRealtime);
+    SocketService.instance.off('ambulance_assigned', _onRealtime);
+    SocketService.instance.off('ambulance_driver_accepted', _onRealtime);
+    SocketService.instance.off('ambulance_driver_en_route', _onRealtime);
+    SocketService.instance.off('ambulance_arrived', _onRealtime);
+    SocketService.instance.off('patient_picked_up', _onRealtime);
+    SocketService.instance.off('ambulance_trip_started', _onRealtime);
+    SocketService.instance.off('ambulance_destination_reached', _onRealtime);
+    SocketService.instance.off('ambulance_trip_completed', _onRealtime);
+    SocketService.instance.off('ambulance_request_cancelled', _onRealtime);
+    if (SocketService.instance.joinedBookingId == widget.bookingId) {
+      SocketService.instance.leaveBookingRoom();
+    }
     _mapController?.dispose();
     super.dispose();
   }
@@ -98,6 +138,28 @@ class _AmbulanceTrackingScreenState extends State<AmbulanceTrackingScreen> {
       return null;
     }
     return LatLng(booking!.dropLatitude!, booking.dropLongitude!);
+  }
+
+  Set<Polyline> get _polylines {
+    final goingToDrop = const {
+      'patient_picked_up',
+      'en_route_to_destination',
+      'arrived_at_destination',
+    }.contains(_booking?.status);
+    final points = <LatLng>[
+      ?_ambulanceLatLng,
+      ?_pickupLatLng,
+      if (goingToDrop) ?_dropLatLng,
+    ];
+    if (points.length < 2) return {};
+    return {
+      Polyline(
+        polylineId: const PolylineId('route'),
+        points: points,
+        color: const Color(0xFF1565C0),
+        width: 5,
+      ),
+    };
   }
 
   Set<Marker> get _markers {
@@ -185,6 +247,7 @@ class _AmbulanceTrackingScreenState extends State<AmbulanceTrackingScreen> {
                           GoogleMap(
                             initialCameraPosition: CameraPosition(target: initial, zoom: 14),
                             markers: _markers,
+                            polylines: _polylines,
                             myLocationEnabled: true,
                             myLocationButtonEnabled: true,
                             onMapCreated: (controller) => _mapController = controller,
@@ -221,24 +284,68 @@ class _AmbulanceTrackingScreenState extends State<AmbulanceTrackingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            booking.statusLabel ?? 'Updating trip status',
-                            style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  booking.isSearching
+                                      ? 'Finding a nearby ambulance'
+                                      : booking.statusLabel ?? 'Ambulance on the way',
+                                  style: AppTextStyles.titleSmall.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                booking.estimatedArrivalMinutes == null
+                                    ? 'ETA —'
+                                    : '${booking.estimatedArrivalMinutes} min',
+                                style: AppTextStyles.titleSmall.copyWith(
+                                  color: const Color(0xFF1565C0),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
-                          Text('Ambulance: ${booking.ambulanceServiceName ?? 'Searching nearby providers'}'),
-                          Text('Type: ${booking.assignedVehicleType ?? booking.vehicleTypeRequested ?? '—'}'),
-                          Text('Driver: ${booking.assignedDriverName ?? 'Will be assigned on accept'}'),
-                          Text('Vehicle: ${booking.assignedVehicleRegistration ?? '—'}'),
                           Text(
-                            booking.estimatedArrivalMinutes == null
-                                ? 'ETA: calculating'
-                                : 'ETA: ${booking.estimatedArrivalMinutes} min',
+                            booking.ambulanceServiceName ??
+                                'Matching a verified ambulance near your pickup',
                           ),
+                          Text(
+                            [
+                              booking.assignedVehicleType ?? booking.vehicleTypeRequested,
+                              booking.assignedVehicleRegistration,
+                              booking.assignedDriverName,
+                            ].where((item) => item != null && item.toString().isNotEmpty).join(' · '),
+                          ),
+                          if (booking.pickupAddress != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              'Pickup: ${booking.pickupAddress}',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                          if (booking.fare != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              [
+                                'Fare ₹${booking.fare!.total.toStringAsFixed(0)}',
+                                if (booking.fare!.perKm != null)
+                                  '₹${booking.fare!.perKm!.toStringAsFixed(0)}/km',
+                                if (booking.fare!.estimated) 'estimate',
+                              ].join(' · '),
+                              style: AppTextStyles.bodySmall.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                           if (booking.needsEscalation) ...[
                             const SizedBox(height: 10),
                             const Text(
-                              'No ambulance has accepted your request yet. You can expand the search or call local emergency services (112 / 108). This app does not replace professional emergency services.',
+                              'No ambulance has accepted yet. Expand the search or call 112 / 108. This app does not replace emergency services.',
                             ),
                             const SizedBox(height: 8),
                             Row(
@@ -264,9 +371,13 @@ class _AmbulanceTrackingScreenState extends State<AmbulanceTrackingScreen> {
                             children: [
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: () => _call(booking.contactPhone ?? booking.patientMobile),
+                                  onPressed: () => _call(
+                                    booking.assignedDriverPhone ??
+                                        booking.contactPhone ??
+                                        booking.patientMobile,
+                                  ),
                                   icon: const Icon(Icons.call),
-                                  label: const Text('Call'),
+                                  label: const Text('Call driver'),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -283,6 +394,29 @@ class _AmbulanceTrackingScreenState extends State<AmbulanceTrackingScreen> {
                               ),
                             ],
                           ),
+                          if (booking.isActive) ...[
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () async {
+                                final response = await _repo.cancelMine(
+                                  widget.bookingId,
+                                  reason: 'User cancelled from live tracking',
+                                );
+                                if (!mounted) return;
+                                if (!context.mounted) return;
+                                if (response.success) {
+                                  SnackBarHelper.showSuccess(context, 'Trip cancelled');
+                                  context.pop();
+                                } else {
+                                  SnackBarHelper.showError(
+                                    context,
+                                    response.error ?? 'Could not cancel',
+                                  );
+                                }
+                              },
+                              child: const Text('Cancel trip'),
+                            ),
+                          ],
                         ],
                       ),
                     ),

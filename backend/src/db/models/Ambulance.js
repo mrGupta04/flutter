@@ -4,7 +4,11 @@ const vehicleSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
     registrationNumber: String,
-    vehicleType: String,
+    vehicleType: {
+      type: String,
+      // basic, bls, als, icu, cardiac, trauma, neonatal, pediatric,
+      // isolation, bariatric, patient_transport, first_responder, air, mortuary, event
+    },
     make: String,
     model: String,
     year: Number,
@@ -35,6 +39,9 @@ const vehicleSchema = new mongoose.Schema(
     lastLocationHeading: Number,
     lastLocationSpeed: Number,
     serviceRadiusKm: Number,
+    baseFare: Number,
+    perKm: Number,
+    minFare: Number,
     rcBookUrl: String,
     insuranceUrl: String,
     fitnessCertificateUrl: String,
@@ -120,6 +127,9 @@ const ambulanceSchema = new mongoose.Schema(
     operatingHoursStart: { type: String, default: '00:00' },
     operatingHoursEnd: { type: String, default: '23:59' },
     cashPaymentEnabled: { type: Boolean, default: true },
+    baseFare: { type: Number, default: 400 },
+    perKm: { type: Number, default: 20 },
+    minFare: { type: Number, default: 0 },
     fcmTokens: { type: [String], default: [] },
     isDisabled: { type: Boolean, default: false },
     isSuspended: { type: Boolean, default: false },

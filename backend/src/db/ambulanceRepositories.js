@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const Ambulance = require('./models/Ambulance');
 const { toAmbulance } = require('./ambulanceMappers');
+const { vehicleTypeLabel, normalizeVehicleType } = require('./ambulanceConstants');
 const {
   findDocumentsByAmbulanceId,
   assertAmbulanceDocumentsVerified,
@@ -10,6 +11,56 @@ const {
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+function toPlain(item) {
+  return item && item.toObject ? item.toObject() : item;
+}
+
+function mergeFleetItems(incoming, existingList, preserveKeys) {
+  const existingById = new Map(
+    (existingList || []).map((item) => {
+      const plain = toPlain(item) || {};
+      return [plain.id, plain];
+    }),
+  );
+  return (incoming || []).map((item) => {
+    const next = { ...(item || {}) };
+    const prev = existingById.get(next.id);
+    if (!prev) return next;
+    for (const key of preserveKeys) {
+      if (next[key] == null && prev[key] != null) next[key] = prev[key];
+    }
+    return next;
+  });
+}
+
+const VEHICLE_OPERATIONAL_KEYS = [
+  'status',
+  'assignedDriverId',
+  'currentBookingId',
+  'currentLatitude',
+  'currentLongitude',
+  'lastLocationAt',
+  'lastLocationAccuracy',
+  'lastLocationHeading',
+  'lastLocationSpeed',
+  'serviceRadiusKm',
+  'baseFare',
+  'perKm',
+  'minFare',
+];
+
+const DRIVER_OPERATIONAL_KEYS = [
+  'status',
+  'isOnline',
+  'currentLatitude',
+  'currentLongitude',
+  'lastLocationAt',
+  'lastOnlineAt',
+  'currentBookingId',
+  'pinHash',
+  'verificationStatus',
+];
 
 async function findAmbulanceById(id) {
   const doc = await Ambulance.findOne({ id });
@@ -48,10 +99,20 @@ async function upsertAmbulance(data) {
     passwordHash = bcrypt.hashSync(data.password, 10);
   }
 
-  const vehicles = data.vehicles ?? existing?.vehicles ?? [];
-  const drivers = data.drivers ?? existing?.drivers ?? [];
+  const vehicles = data.vehicles
+    ? mergeFleetItems(data.vehicles, existing?.vehicles, VEHICLE_OPERATIONAL_KEYS)
+    : existing?.vehicles ?? [];
+  const drivers = data.drivers
+    ? mergeFleetItems(data.drivers, existing?.drivers, DRIVER_OPERATIONAL_KEYS)
+    : existing?.drivers ?? [];
   const derivedVehicleTypes = vehicles.length
-    ? [...new Set(vehicles.map((v) => v.vehicleType).filter(Boolean))]
+    ? [
+        ...new Set(
+          vehicles
+            .map((v) => vehicleTypeLabel(normalizeVehicleType(v.vehicleType)) || v.vehicleType)
+            .filter(Boolean),
+        ),
+      ]
     : data.vehicleTypes ?? existing?.vehicleTypes ?? [];
 
   const payload = {
@@ -89,6 +150,9 @@ async function upsertAmbulance(data) {
     operatingHoursStart: data.operatingHoursStart ?? existing?.operatingHoursStart,
     operatingHoursEnd: data.operatingHoursEnd ?? existing?.operatingHoursEnd,
     cashPaymentEnabled: data.cashPaymentEnabled ?? existing?.cashPaymentEnabled ?? true,
+    baseFare: data.baseFare ?? existing?.baseFare ?? 400,
+    perKm: data.perKm ?? existing?.perKm ?? 20,
+    minFare: data.minFare ?? existing?.minFare ?? 0,
     serviceLicenseUrl: data.serviceLicenseUrl ?? existing?.serviceLicenseUrl,
     companyRegistrationUrl:
       data.companyRegistrationUrl ?? existing?.companyRegistrationUrl,

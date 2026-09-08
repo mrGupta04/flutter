@@ -3,7 +3,12 @@ const { v4: uuidv4 } = require('uuid');
 const Ambulance = require('./models/Ambulance');
 const AmbulanceBooking = require('./models/AmbulanceBooking');
 const { toAmbulance, toVehicle, toDriver } = require('./ambulanceMappers');
-const { VEHICLE_STATUSES, DRIVER_STATUSES } = require('./ambulanceConstants');
+const {
+  VEHICLE_STATUSES,
+  DRIVER_STATUSES,
+  normalizeVehicleType,
+  vehicleTypeLabel,
+} = require('./ambulanceConstants');
 const { writeAmbulanceAudit } = require('./ambulanceAuditRepositories');
 const { isActiveTrip } = require('../services/ambulanceStatus');
 
@@ -23,7 +28,9 @@ function normalizeVehiclePayload(input, existing = {}) {
   return {
     id: existing.id || input.id || uuidv4(),
     registrationNumber: input.registrationNumber ?? existing.registrationNumber,
-    vehicleType: input.vehicleType ?? existing.vehicleType,
+    vehicleType: vehicleTypeLabel(
+      normalizeVehicleType(input.vehicleType ?? existing.vehicleType),
+    ) || input.vehicleType || existing.vehicleType,
     make: input.make ?? existing.make,
     model: input.model ?? existing.model,
     year: input.year ?? existing.year,
@@ -43,6 +50,9 @@ function normalizeVehiclePayload(input, existing = {}) {
     status: VEHICLE_STATUSES.includes(input.status) ? input.status : existing.status || 'OFFLINE',
     assignedDriverId: input.assignedDriverId ?? existing.assignedDriverId,
     serviceRadiusKm: input.serviceRadiusKm ?? existing.serviceRadiusKm,
+    baseFare: input.baseFare != null ? Number(input.baseFare) : existing.baseFare,
+    perKm: input.perKm != null ? Number(input.perKm) : existing.perKm,
+    minFare: input.minFare != null ? Number(input.minFare) : existing.minFare,
     photoFrontUrl: input.photoFrontUrl ?? existing.photoFrontUrl,
     photoBackUrl: input.photoBackUrl ?? existing.photoBackUrl,
     photoInteriorUrl: input.photoInteriorUrl ?? existing.photoInteriorUrl,
@@ -163,10 +173,32 @@ async function setVehicleStatus(ambulanceId, vehicleId, status, actor) {
   return toVehicle(vehicle);
 }
 
+function resolvePresenceDriver(doc, driverId) {
+  const drivers = doc.drivers || [];
+  if (driverId) {
+    return drivers.find((item) => item.id === driverId) || null;
+  }
+  return (
+    drivers.find((item) => item.isOnline && item.status !== 'SUSPENDED') ||
+    drivers.find((item) => item.status !== 'SUSPENDED') ||
+    null
+  );
+}
+
+function resolvePresenceVehicle(doc, driver) {
+  const vehicles = doc.vehicles || [];
+  return (
+    vehicles.find((item) => item.id === driver.assignedVehicleId) ||
+    vehicles.find((item) => item.assignedDriverId === driver.id) ||
+    vehicles.find((item) => !item.currentBookingId && item.status !== 'MAINTENANCE') ||
+    null
+  );
+}
+
 async function setDriverPresence({ ambulanceId, driverId, online, status, latitude, longitude }) {
   const doc = await loadProvider(ambulanceId);
-  const driver = (doc.drivers || []).find((item) => item.id === driverId);
-  if (!driver) fail('Driver not found', 404);
+  const driver = resolvePresenceDriver(doc, driverId);
+  if (!driver) fail('Driver not found. Add a driver in Fleet first.', 404);
   if (driver.status === 'SUSPENDED') fail('Driver is suspended', 403);
   if (online != null) {
     driver.isOnline = Boolean(online);
@@ -179,6 +211,23 @@ async function setDriverPresence({ ambulanceId, driverId, online, status, latitu
     driver.currentLongitude = Number(longitude);
     driver.lastLocationAt = new Date();
   }
+
+  const vehicle = resolvePresenceVehicle(doc, driver);
+  if (vehicle && !vehicle.currentBookingId && vehicle.status !== 'MAINTENANCE') {
+    if (driver.isOnline) {
+      vehicle.status = 'AVAILABLE';
+      vehicle.assignedDriverId = vehicle.assignedDriverId || driver.id;
+      driver.assignedVehicleId = driver.assignedVehicleId || vehicle.id;
+      if (Number.isFinite(driver.currentLatitude) && Number.isFinite(driver.currentLongitude)) {
+        vehicle.currentLatitude = driver.currentLatitude;
+        vehicle.currentLongitude = driver.currentLongitude;
+        vehicle.lastLocationAt = driver.lastLocationAt;
+      }
+    } else if (vehicle.status !== 'BUSY') {
+      vehicle.status = 'OFFLINE';
+    }
+  }
+
   await doc.save();
   return toDriver(driver);
 }
@@ -211,14 +260,20 @@ async function updateOperationsSettings(ambulanceId, input, actor) {
     'cashPaymentEnabled',
     'latitude',
     'longitude',
+    'baseFare',
+    'perKm',
+    'minFare',
   ];
   const previous = {};
   const next = {};
   fields.forEach((field) => {
     if (input[field] !== undefined) {
       previous[field] = doc[field];
-      doc[field] = input[field];
-      next[field] = input[field];
+      const numeric = ['baseFare', 'perKm', 'minFare', 'serviceRadiusKm', 'latitude', 'longitude'];
+      const value = numeric.includes(field) ? Number(input[field]) : input[field];
+      if (numeric.includes(field) && !Number.isFinite(value)) return;
+      doc[field] = value;
+      next[field] = value;
     }
   });
   await doc.save();

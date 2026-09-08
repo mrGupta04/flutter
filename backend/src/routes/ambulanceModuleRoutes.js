@@ -13,7 +13,7 @@ const { catalogPayload } = require('../db/ambulanceConstants');
 const {
   createAmbulanceBooking,
   findAmbulanceBookingById,
-  listAmbulanceBookingsForProvider,
+  listIncomingAmbulanceRequests,
   listAmbulanceBookingsForPatient,
   listAllAmbulanceBookings,
   cancelAmbulanceBooking,
@@ -33,6 +33,7 @@ const {
 const {
   startDispatch,
   acceptDispatch,
+  acceptDirectAssignment,
   rejectDispatch,
   acceptScheduledBooking,
   rejectScheduledBooking,
@@ -183,10 +184,10 @@ router.post('/emergency', patientRequired, async (req, res) => {
       patientBody: 'Searching for a nearby ambulance. This is a transportation request, not medical advice.',
       patientType: 'ambulance_emergency',
     });
-    let dispatch = null;
-    if (!booking.ambulanceId) {
-      dispatch = await startDispatch(booking.id, { actor: actorFromAuth(req.auth) });
-    }
+    const dispatch = await startDispatch(booking.id, {
+      actor: actorFromAuth(req.auth),
+      preferredAmbulanceId: booking.ambulanceId,
+    });
     return sendSuccess(res, {
       statusCode: 201,
       message: 'Emergency ambulance request created. Searching for a suitable ambulance.',
@@ -558,7 +559,7 @@ router.post('/driver/presence', ambulanceRequired, async (req, res) => {
 
 router.get('/requests', ambulanceRequired, async (req, res) => {
   try {
-    const bookings = await listAmbulanceBookingsForProvider(req.ambulanceId, {
+    const bookings = await listIncomingAmbulanceRequests(req.ambulanceId, {
       status: req.query.status,
       kind: req.query.kind,
     });
@@ -573,23 +574,36 @@ router.post('/requests/:id/accept', ambulanceRequired, async (req, res) => {
     const existing = await findAmbulanceBookingById(req.params.id);
     if (!existing) return sendError(res, 'Request not found', 404);
     const actor = actorFromAuth(req.auth);
-    const booking =
-      existing.bookingKind === 'scheduled' && existing.status === 'requested'
-        ? await acceptScheduledBooking({
-            bookingId: req.params.id,
-            ambulanceId: req.ambulanceId,
-            vehicleId: req.body?.vehicleId,
-            driverId: req.driverId || req.body?.driverId,
-            actor,
-          })
-        : await acceptDispatch({
-            bookingId: req.params.id,
-            ambulanceId: req.ambulanceId,
-            vehicleId: req.body?.vehicleId,
-            driverId: req.driverId || req.body?.driverId,
-            dispatchId: req.body?.dispatchId,
-            actor,
-          });
+    let booking;
+    if (existing.bookingKind === 'scheduled' && existing.status === 'requested') {
+      booking = await acceptScheduledBooking({
+        bookingId: req.params.id,
+        ambulanceId: req.ambulanceId,
+        vehicleId: req.body?.vehicleId,
+        driverId: req.driverId || req.body?.driverId,
+        actor,
+      });
+    } else {
+      try {
+        booking = await acceptDispatch({
+          bookingId: req.params.id,
+          ambulanceId: req.ambulanceId,
+          vehicleId: req.body?.vehicleId,
+          driverId: req.driverId || req.body?.driverId,
+          dispatchId: req.body?.dispatchId,
+          actor,
+        });
+      } catch (err) {
+        if (err.code !== 'DISPATCH_UNAVAILABLE') throw err;
+        booking = await acceptDirectAssignment({
+          bookingId: req.params.id,
+          ambulanceId: req.ambulanceId,
+          vehicleId: req.body?.vehicleId,
+          driverId: req.driverId || req.body?.driverId,
+          actor,
+        });
+      }
+    }
     return sendSuccess(res, { message: 'Request accepted', data: booking });
   } catch (err) {
     return handle(res, err, 'Failed to accept request');

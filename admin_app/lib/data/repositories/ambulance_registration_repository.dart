@@ -203,6 +203,27 @@ class AmbulanceRegistrationRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> updateOperations(
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final response = await _dioService.put(
+        AppConstants.endpointAmbulanceOperations,
+        data: payload,
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : {},
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   Future<ApiResponse<Map<String, dynamic>>> getAnalytics() async {
     try {
       final response = await _dioService.get(AppConstants.endpointAmbulanceAnalytics);

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/models/provider_type.dart';
 import '../../core/services/socket_service.dart';
 import '../../data/models/doctor_booking_model.dart';
+import '../../data/repositories/ambulance_registration_repository.dart';
 import '../auth/provider/provider_auth_provider.dart';
 import '../doctor_dashboard/provider/dashboard_provider.dart';
 import '../nurse_dashboard/provider/nurse_dashboard_provider.dart';
@@ -65,11 +66,23 @@ class IncomingBookingAlertNotifier
     SocketService.instance.on('booking-notification', _onSocketPayload);
     SocketService.instance.on('booking-status-update', _onStatusPayload);
     SocketService.instance.on('booking_status_update', _onStatusPayload);
+    SocketService.instance.on('ambulance_request_created', _onSocketPayload);
+    SocketService.instance.on('ambulance_event', _onSocketPayload);
+    SocketService.instance.on('ambulance_assigned', _onStatusPayload);
+    SocketService.instance.on('ambulance_request_cancelled', _onStatusPayload);
   }
 
   void _onSocketPayload(dynamic data) {
     final map = _asMap(data);
     if (map.isEmpty) return;
+    final event = map['event']?.toString();
+    if (event != null && event.isNotEmpty) {
+      map['type'] = map['type'] ?? event;
+    }
+    if (map['offer'] is Map) {
+      final offer = Map<String, dynamic>.from(map['offer'] as Map);
+      map.addAll(offer);
+    }
     unawaited(handleNotification(map));
   }
 
@@ -300,6 +313,11 @@ class IncomingBookingAlertNotifier
 
   Future<bool> _callAccept(IncomingBookingRequest request) async {
     try {
+      if (request.providerRole == 'ambulance') {
+        final response = await AmbulanceRegistrationRepository()
+            .acceptRequest(request.bookingId);
+        return response.success;
+      }
       if (request.providerRole == 'nurse') {
         return _ref
             .read(nurseDashboardProvider.notifier)
@@ -315,6 +333,11 @@ class IncomingBookingAlertNotifier
 
   Future<bool> _callReject(IncomingBookingRequest request) async {
     try {
+      if (request.providerRole == 'ambulance') {
+        final response = await AmbulanceRegistrationRepository()
+            .rejectRequest(request.bookingId, reason: 'unavailable');
+        return response.success;
+      }
       if (request.providerRole == 'nurse') {
         return _ref
             .read(nurseDashboardProvider.notifier)
@@ -343,6 +366,7 @@ class IncomingBookingAlertNotifier
     final type = _ref.read(providerAuthProvider).providerType;
     if (type == ProviderType.nurse) return 'nurse';
     if (type == ProviderType.doctor) return 'doctor';
+    if (type == ProviderType.ambulance) return 'ambulance';
     return null;
   }
 
@@ -389,6 +413,10 @@ class IncomingBookingAlertNotifier
     SocketService.instance.off('booking-notification', _onSocketPayload);
     SocketService.instance.off('booking-status-update', _onStatusPayload);
     SocketService.instance.off('booking_status_update', _onStatusPayload);
+    SocketService.instance.off('ambulance_request_created', _onSocketPayload);
+    SocketService.instance.off('ambulance_event', _onSocketPayload);
+    SocketService.instance.off('ambulance_assigned', _onStatusPayload);
+    SocketService.instance.off('ambulance_request_cancelled', _onStatusPayload);
     super.dispose();
   }
 }

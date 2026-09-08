@@ -37,7 +37,9 @@ class IncomingBookingRequest {
     final value = status.toLowerCase();
     return value == 'awaiting_doctor_approval' ||
         value == 'pending_nurse_approval' ||
-        value == 'pending';
+        value == 'pending' ||
+        value == 'requested' ||
+        value == 'searching_ambulance';
   }
 
   String get statusLabel {
@@ -45,6 +47,8 @@ class IncomingBookingRequest {
       case 'awaiting_doctor_approval':
       case 'pending_nurse_approval':
       case 'pending':
+      case 'requested':
+      case 'searching_ambulance':
         return 'Awaiting your response';
       case 'expired':
         return 'Expired';
@@ -118,6 +122,8 @@ class IncomingBookingRequest {
     final t = (type ?? '').toLowerCase();
     final action = (data?['action'] ?? '').toString().toLowerCase();
     return t == 'home_visit_request' ||
+        t == 'ambulance_emergency' ||
+        t == 'ambulance_request_created' ||
         action == 'home_visit_request' ||
         action == 'incoming_booking_request';
   }
@@ -135,7 +141,9 @@ class IncomingBookingRequest {
     final value = (status ?? '').toLowerCase();
     return value == 'awaiting_doctor_approval' ||
         value == 'pending_nurse_approval' ||
-        value == 'pending';
+        value == 'pending' ||
+        value == 'requested' ||
+        value == 'searching_ambulance';
   }
 
   factory IncomingBookingRequest.fromBooking(
@@ -183,6 +191,11 @@ class IncomingBookingRequest {
             fallbackRole)
         .toString()
         .toLowerCase();
+    final normalizedRole = role == 'nurse'
+        ? 'nurse'
+        : role == 'ambulance' || role == 'ambulance_driver'
+            ? 'ambulance'
+            : 'doctor';
     final date = _parseDate(merged['date'] ?? merged['slotStart']);
     final alertSeconds = int.tryParse(
           merged['alertSeconds']?.toString() ?? '',
@@ -190,10 +203,14 @@ class IncomingBookingRequest {
         90;
     return IncomingBookingRequest(
       bookingId: bookingId,
-      providerRole: role == 'nurse' ? 'nurse' : 'doctor',
+      providerRole: normalizedRole,
       patientName: (merged['patientName'] ?? 'Patient').toString().trim(),
       serviceType: (merged['service'] ??
-              (role == 'nurse' ? 'Home Nurse Visit' : 'Home Doctor Visit'))
+              (normalizedRole == 'nurse'
+                  ? 'Home Nurse Visit'
+                  : normalizedRole == 'ambulance'
+                      ? 'Emergency ambulance'
+                      : 'Home Doctor Visit'))
           .toString(),
       status: (merged['status'] ?? 'awaiting_doctor_approval').toString(),
       shownAt: DateTime.now(),

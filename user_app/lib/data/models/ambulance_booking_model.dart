@@ -13,6 +13,7 @@ class AmbulanceFareModel {
     this.currency = 'INR',
     this.distanceKm,
     this.durationMinutes,
+    this.perKm,
   });
 
   final double baseFare;
@@ -28,6 +29,7 @@ class AmbulanceFareModel {
   final String currency;
   final double? distanceKm;
   final double? durationMinutes;
+  final double? perKm;
 
   factory AmbulanceFareModel.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const AmbulanceFareModel();
@@ -46,6 +48,7 @@ class AmbulanceFareModel {
       currency: json['currency'] as String? ?? 'INR',
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       durationMinutes: (json['durationMinutes'] as num?)?.toDouble(),
+      perKm: (json['perKm'] as num?)?.toDouble(),
     );
   }
 }
@@ -80,6 +83,7 @@ class AmbulanceBookingModel {
     this.statusLabel,
     this.estimatedArrivalMinutes,
     this.assignedDriverName,
+    this.assignedDriverPhone,
     this.assignedVehicleRegistration,
     this.assignedVehicleType,
     this.liveLatitude,
@@ -122,6 +126,7 @@ class AmbulanceBookingModel {
   final String? statusLabel;
   final int? estimatedArrivalMinutes;
   final String? assignedDriverName;
+  final String? assignedDriverPhone;
   final String? assignedVehicleRegistration;
   final String? assignedVehicleType;
   final double? liveLatitude;
@@ -192,6 +197,7 @@ class AmbulanceBookingModel {
       statusLabel: json['statusLabel'] as String?,
       estimatedArrivalMinutes: (json['estimatedArrivalMinutes'] as num?)?.toInt(),
       assignedDriverName: json['assignedDriverName'] as String?,
+      assignedDriverPhone: json['assignedDriverPhone'] as String?,
       assignedVehicleRegistration: json['assignedVehicleRegistration'] as String?,
       assignedVehicleType: json['assignedVehicleType'] as String?,
       liveLatitude: (json['liveLatitude'] as num?)?.toDouble(),

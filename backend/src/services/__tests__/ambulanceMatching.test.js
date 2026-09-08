@@ -7,6 +7,7 @@ const {
   isVehicleDispatchable,
   isDriverDispatchable,
   findMatchingCandidates,
+  findMatchingCandidatesPreferType,
   nextDispatchBatch,
 } = require('../ambulanceMatching');
 
@@ -25,6 +26,10 @@ describe('ambulance matching', () => {
   it('matches vehicle types by alias', () => {
     assert.equal(vehicleTypeMatches('ALS', 'Advanced Life Support'), true);
     assert.equal(vehicleTypeMatches('icu', 'ICU Ambulance'), true);
+    assert.equal(vehicleTypeMatches('cardiac', 'Cardiac Ambulance'), true);
+    assert.equal(vehicleTypeMatches('air', 'Air Ambulance'), true);
+    assert.equal(vehicleTypeMatches('mortuary', 'Mortuary Van'), true);
+    assert.equal(vehicleTypeMatches('first_responder', 'Bike Ambulance'), true);
     assert.equal(vehicleTypeMatches('als', 'Basic Life Support'), false);
   });
 
@@ -109,6 +114,76 @@ describe('ambulance matching', () => {
     assert.equal(matches.length, 1);
     assert.equal(matches[0].vehicleId, 'v-als');
     assert.ok(matches[0].etaMinutes >= 1);
+  });
+
+  it('prefers a requested ambulance even when that vehicle is offline', () => {
+    const providers = [
+      {
+        id: 'preferred',
+        serviceName: 'City ALS',
+        verificationStatus: 'verified',
+        latitude: 12.97,
+        longitude: 77.59,
+        serviceRadiusKm: 20,
+        vehicles: [
+          {
+            id: 'v-offline',
+            vehicleType: 'ALS',
+            status: 'OFFLINE',
+            assignedDriverId: 'd1',
+          },
+        ],
+        drivers: [{ id: 'd1', fullName: 'Ravi', isOnline: false, status: 'OFFLINE' }],
+      },
+    ];
+    const matches = findMatchingCandidates({
+      providers,
+      pickupLatitude: 12.97,
+      pickupLongitude: 77.59,
+      requestedType: 'als',
+      preferredAmbulanceId: 'preferred',
+    });
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].vehicleId, 'v-offline');
+  });
+
+  it('falls back to another free type when the requested type is unavailable', () => {
+    const providers = [
+      {
+        id: 'p1',
+        serviceName: 'City Fleet',
+        verificationStatus: 'verified',
+        latitude: 12.97,
+        longitude: 77.59,
+        serviceRadiusKm: 20,
+        vehicles: [
+          {
+            id: 'v-basic',
+            vehicleType: 'Basic Ambulance',
+            status: 'AVAILABLE',
+            assignedDriverId: 'd1',
+            currentLatitude: 12.971,
+            currentLongitude: 77.591,
+          },
+        ],
+        drivers: [{ id: 'd1', fullName: 'Asha', isOnline: true, status: 'AVAILABLE' }],
+      },
+    ];
+    const exact = findMatchingCandidates({
+      providers,
+      pickupLatitude: 12.97,
+      pickupLongitude: 77.59,
+      requestedType: 'als',
+    });
+    assert.equal(exact.length, 0);
+    const fallback = findMatchingCandidatesPreferType({
+      providers,
+      pickupLatitude: 12.97,
+      pickupLongitude: 77.59,
+      requestedType: 'als',
+    });
+    assert.equal(fallback.length, 1);
+    assert.equal(fallback[0].vehicleId, 'v-basic');
   });
 
   it('batches dispatch offers instead of notifying everyone at once', () => {
