@@ -5,6 +5,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/media_url_utils.dart';
 import '../../data/models/consultation_type.dart';
 import '../../data/models/doctor_model.dart';
+import '../../features/doctor_registration/data/medical_specialities.dart';
 import 'blinking_online_badge.dart';
 import 'full_screen_image_viewer.dart';
 import 'marketplace_provider_card_ui.dart';
@@ -79,11 +80,8 @@ class DoctorListingCard extends StatelessWidget {
     final metaLine = experienceYears != null
         ? '$experienceYears+ years exp. • $qualification'
         : qualification;
-    final displayName = doctor.fullName.isNotEmpty
-        ? (doctor.fullName.startsWith('Dr.')
-            ? doctor.fullName
-            : 'Dr. ${doctor.fullName}')
-        : 'Doctor';
+    final displayName =
+        doctor.fullName.isNotEmpty ? doctor.fullName : 'Doctor';
     final isVerified =
         doctor.verificationStatus == VerificationStatus.verified;
     final fee = _displayFee;
@@ -132,6 +130,7 @@ class DoctorListingCard extends StatelessWidget {
                   tags: tags,
                   languagesLine: languagesLine,
                   trailing: headerTrailing,
+                  specialtyLogo: _specialtyLogoFor(specialty, specs),
                   avatar: _DoctorAvatar(
                     doctor: doctor,
                     showLiveBadge: doctor.isLiveNow,
@@ -179,7 +178,9 @@ class DoctorListingCard extends StatelessWidget {
                 onButtonPressed: slotAction,
                 buttonEnabled:
                     !fadeUnavailableConsultationButtons || slotAvailable,
-                showButton: slotAction != null || fee != null,
+                showButton: slotAction != null,
+                secondaryButtonLabel: onTap == null ? null : 'Details',
+                onSecondaryPressed: onTap,
               ),
           ] else if (fee != null && fee > 0) ...[
             const SizedBox(height: 14),
@@ -233,6 +234,37 @@ class DoctorListingCard extends StatelessWidget {
     return specs.first;
   }
 
+  Widget? _specialtyLogoFor(String specialty, List<String> specs) {
+    final meta = _resolveSpecialtyMeta(specialty, specs);
+    if (meta == null) return null;
+    return _DoctorSpecialtyLogo(speciality: meta);
+  }
+
+  MedicalSpeciality? _resolveSpecialtyMeta(
+    String specialty,
+    List<String> specs,
+  ) {
+    final direct = findMedicalSpeciality(specialty);
+    if (direct != null) return direct;
+    for (final spec in specs) {
+      final match = findMedicalSpeciality(spec);
+      if (match != null) return match;
+    }
+    final query = specialty.trim().toLowerCase();
+    if (query.isEmpty) return null;
+    for (final item in medicalSpecialities) {
+      final name = item.name.toLowerCase();
+      final term = item.searchTerm.toLowerCase();
+      if (name.contains(query) ||
+          query.contains(name) ||
+          term.contains(query) ||
+          query.contains(term)) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   int? get _displayFee {
     if (consultationFilter != null) {
       return doctor.effectiveFeeForConsultationType(consultationFilter!);
@@ -245,7 +277,7 @@ class DoctorListingCard extends StatelessWidget {
     if (consultationFilter != null) {
       return doctor.originalFeeForConsultationType(consultationFilter!);
     }
-    return null;
+    return doctor.originalFeeForLowestConsultation;
   }
 
   bool get _slotAvailable {
@@ -287,6 +319,38 @@ class DoctorListingCard extends StatelessWidget {
         doctor.city,
         doctor.clinicName,
       ].any((part) => part != null && part.trim().isNotEmpty);
+}
+
+class _DoctorSpecialtyLogo extends StatelessWidget {
+  const _DoctorSpecialtyLogo({required this.speciality});
+
+  final MedicalSpeciality speciality;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: speciality.name,
+      child: Container(
+        width: 22,
+        height: 22,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: speciality.accent.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+        ),
+        child: Image.asset(
+          speciality.imageAsset,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, _, _) => Icon(
+            speciality.icon,
+            size: 14,
+            color: speciality.accent,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _DoctorAvatar extends StatelessWidget {

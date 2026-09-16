@@ -18,7 +18,6 @@ import '../../../../shared/widgets/appointment_code_display.dart';
 import '../../../../shared/widgets/bookable_slots_section.dart';
 import '../../../../shared/widgets/consultation_booking_price_summary.dart';
 import '../../../../shared/widgets/doctor_consultation_fees_banner.dart';
-import '../../../../shared/widgets/doctor_hospital_map_card.dart';
 import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../online_consult/online_consult_navigation.dart';
@@ -288,6 +287,20 @@ class _HospitalVisitBookingScreenState
         ),
         data: (doctor) => Column(
           children: [
+            Material(
+              color: AppColors.background,
+              elevation: 1,
+              shadowColor: Colors.black.withValues(alpha: 0.08),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+                child: DoctorConsultationFeesBanner(
+                  doctor: doctor,
+                  highlightedType: ConsultationType.visitSite,
+                  onTypeSelected: (type) =>
+                      switchConsultationBooking(context, doctor, type),
+                ),
+              ),
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -296,7 +309,7 @@ class _HospitalVisitBookingScreenState
                 },
                 child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -305,13 +318,6 @@ class _HospitalVisitBookingScreenState
                       _DoctorClinicHeader(
                         doctor: doctor,
                         slotsData: slotsAsync.asData?.value,
-                      ),
-                      const SizedBox(height: 12),
-                      DoctorConsultationFeesBanner(
-                        doctor: doctor,
-                        highlightedType: ConsultationType.visitSite,
-                        onTypeSelected: (type) =>
-                            switchConsultationBooking(context, doctor, type),
                       ),
                       const SizedBox(height: 12),
                       ConsultationBookingPriceSummary(
@@ -492,11 +498,7 @@ class _DoctorClinicHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = MediaUrlUtils.resolve(doctor.profilePicture);
-    final name = doctor.fullName.isNotEmpty
-        ? (doctor.fullName.startsWith('Dr.')
-            ? doctor.fullName
-            : 'Dr. ${doctor.fullName}')
-        : 'Doctor';
+    final name = doctor.fullName.isNotEmpty ? doctor.fullName : 'Doctor';
     final clinicName =
         slotsData?.clinicName ?? doctor.clinicName ?? 'Clinic / Hospital';
     final clinicAddress = slotsData?.clinicAddress ??
@@ -626,12 +628,6 @@ class _DoctorClinicHeader extends StatelessWidget {
                 ],
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          DoctorHospitalMapCard(
-            doctor: doctor,
-            clinicName: clinicName,
-            clinicAddress: clinicAddress,
           ),
         ],
       ),

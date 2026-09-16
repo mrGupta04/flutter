@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/lab_model.dart';
 import '../../../data/repositories/lab_repository.dart';
+import '../../../core/utils/geo_distance_utils.dart';
 import '../data/lab_model_utils.dart';
 
 export '../../../data/repositories/lab_repository.dart'
@@ -38,7 +39,7 @@ class LabExploreState {
     this.totalPages = 1,
     this.query = '',
     this.filters = const LabExploreFilters(),
-    this.sort = LabExploreSort.recommended,
+    this.sort = LabExploreSort.nearest,
     this.latitude,
     this.longitude,
   });
@@ -112,12 +113,21 @@ List<LabModel> applyLabExploreFiltersAndSort(
   }
 
   switch (sort) {
-    case LabExploreSort.nearest:
+    case LabExploreSort.highestOffer:
       result.sort((a, b) {
+        final offerCmp = b.bestOfferPercent.compareTo(a.bestOfferPercent);
+        if (offerCmp != 0) return offerCmp;
         final da = a.distanceKm ?? double.infinity;
         final db = b.distanceKm ?? double.infinity;
         return da.compareTo(db);
       });
+    case LabExploreSort.nearest:
+      result.sort((a, b) => compareNearbyThenRating(
+            distanceA: a.distanceKm,
+            distanceB: b.distanceKm,
+            ratingA: a.ratingValue,
+            ratingB: b.ratingValue,
+          ));
     case LabExploreSort.highestRated:
       result.sort((a, b) => b.ratingValue.compareTo(a.ratingValue));
     case LabExploreSort.lowestPrice:
@@ -134,6 +144,9 @@ List<LabModel> applyLabExploreFiltersAndSort(
       });
     case LabExploreSort.recommended:
       result.sort((a, b) {
+        final offerA = a.bestOfferPercent;
+        final offerB = b.bestOfferPercent;
+        if (offerA != offerB) return offerB.compareTo(offerA);
         final scoreA = a.ratingValue * 10 - (a.distanceKm ?? 50);
         final scoreB = b.ratingValue * 10 - (b.distanceKm ?? 50);
         return scoreB.compareTo(scoreA);
@@ -243,9 +256,6 @@ class LabExploreNotifier extends StateNotifier<LabExploreState> {
     state = state.copyWith(
       latitude: lat,
       longitude: lng,
-      sort: (lat != null && lng != null)
-          ? LabExploreSort.nearest
-          : state.sort,
     );
     load(refresh: true);
   }

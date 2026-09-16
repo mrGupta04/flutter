@@ -9,11 +9,13 @@ class CareFilterChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.horizontalPadding = 14,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final double horizontalPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +25,10 @@ class CareFilterChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: 8,
+          ),
           decoration: BoxDecoration(
             color: selected
                 ? AppColors.primary
@@ -41,6 +46,7 @@ class CareFilterChip extends StatelessWidget {
               context,
               selected: selected,
             ).copyWith(
+              fontWeight: FontWeight.w800,
               color: selected
                   ? AppColors.white
                   : InteractiveStyles.onSurface(context),

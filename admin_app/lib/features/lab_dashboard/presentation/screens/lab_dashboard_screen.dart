@@ -188,6 +188,16 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
                       ),
                       const SizedBox(height: 10),
                       ServiceBenefitCard(
+                        icon: Icons.badge_outlined,
+                        title: 'Receptionist management',
+                        subtitle:
+                            'Create lab desk accounts with email and password.',
+                        color: AppColors.primary,
+                        onTap: () =>
+                            context.push(AppConstants.routeLabReceptionists),
+                      ),
+                      const SizedBox(height: 10),
+                      ServiceBenefitCard(
                         icon: Icons.science_outlined,
                         title: 'Tests & packages',
                         subtitle:

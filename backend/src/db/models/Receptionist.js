@@ -3,7 +3,14 @@ const mongoose = require('mongoose');
 const receptionistSchema = new mongoose.Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
-    doctorId: { type: String, required: true, index: true },
+    ownerType: {
+      type: String,
+      enum: ['doctor', 'lab', 'scan', 'blood_bank'],
+      default: 'doctor',
+      index: true,
+    },
+    ownerId: { type: String, index: true },
+    doctorId: { type: String, index: true },
     clinicId: { type: String, index: true },
     name: { type: String, required: true, trim: true },
     email: {
@@ -28,5 +35,6 @@ const receptionistSchema = new mongoose.Schema(
 );
 
 receptionistSchema.index({ doctorId: 1, status: 1 });
+receptionistSchema.index({ ownerType: 1, ownerId: 1, status: 1 });
 
 module.exports = mongoose.model('Receptionist', receptionistSchema);

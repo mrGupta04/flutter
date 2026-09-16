@@ -19,6 +19,9 @@ const { loginProvider } = require('../utils/providerAuth');
 const {
   mountProviderPasswordResetRoutes,
 } = require('./helpers/mountProviderPasswordReset');
+const {
+  mountProviderReceptionistRoutes,
+} = require('./helpers/mountProviderReceptionistRoutes');
 const { toLab } = require('../db/labMappers');
 const { normalizeMobile, validateMobile } = require('../utils/mobile');
 const {
@@ -33,6 +36,12 @@ const { listChatMessages, sendChatMessage } = require('../db/chatRepositories');
 
 const router = express.Router();
 mountProviderPasswordResetRoutes(router, 'lab');
+mountProviderReceptionistRoutes(router, {
+  ownerType: 'lab',
+  authType: 'lab',
+  ownerIdFromAuth: (auth) => auth?.labId,
+  authLabel: 'Lab',
+});
 
 router.get('/verified', async (req, res) => {
   try {

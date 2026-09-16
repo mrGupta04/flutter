@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/service_faqs.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
@@ -15,6 +16,7 @@ import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/lab_model.dart';
 import '../../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
+import '../../../../shared/widgets/service_faq_section.dart';
 import '../../data/lab_catalog_metadata.dart';
 import '../../data/lab_model_utils.dart';
 import '../../data/models/health_package.dart';
@@ -546,11 +548,10 @@ class _LabDetailBodyState extends ConsumerState<_LabDetailBody> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    MarketplaceSectionTitle(title: 'FAQs'),
-                    const SizedBox(height: 8),
-                    ...LabCatalogMetadata.labFaqs.map(
-                      (faq) =>
-                          _FaqTile(question: faq.$1, answer: faq.$2),
+                    const ServiceFaqSection(
+                      title: "General FAQs for Lab Tests",
+                      items: ServiceFaqs.lab,
+                      padding: EdgeInsets.zero,
                     ),
                     const SizedBox(height: 20),
                     MarketplaceSectionTitle(title: 'Similar Labs Nearby'),
@@ -733,32 +734,6 @@ class _ReviewTile extends StatelessWidget {
                 )),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _FaqTile extends StatelessWidget {
-  const _FaqTile({required this.question, required this.answer});
-
-  final String question;
-  final String answer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ExpansionTile(
-        title: Text(question,
-            style: AppTextStyles.labelLarge.copyWith(
-              fontWeight: FontWeight.w700,
-            )),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(answer, style: AppTextStyles.bodySmall),
-          ),
-        ],
       ),
     );
   }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../widgets/app_back_navigation.dart';
+
 CustomTransitionPage<void> fadePage(GoRouterState state, Widget child) {
   return CustomTransitionPage(
     key: state.pageKey,
-    child: child,
+    child: RouteBackScope(child: child),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(opacity: animation, child: child);
     },
@@ -14,7 +16,7 @@ CustomTransitionPage<void> fadePage(GoRouterState state, Widget child) {
 CustomTransitionPage<void> slidePage(GoRouterState state, Widget child) {
   return CustomTransitionPage(
     key: state.pageKey,
-    child: child,
+    child: RouteBackScope(child: child),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       const begin = Offset(1.0, 0.0);
       const end = Offset.zero;

@@ -121,9 +121,21 @@ async function receptionistRequired(req, res, next) {
     if (receptionist.status === 'disabled') {
       return sendError(res, 'This receptionist account is disabled', 403);
     }
-    req.auth.doctorId = receptionist.doctorId;
-    req.auth.clinicId = receptionist.clinicId || receptionist.doctorId;
+    const ownerType = receptionist.ownerType || 'doctor';
+    const ownerId = receptionist.ownerId || receptionist.doctorId;
+    req.auth.ownerType = ownerType;
+    req.auth.ownerId = ownerId;
     req.auth.receptionistName = receptionist.name;
+    if (ownerType === 'doctor') {
+      req.auth.doctorId = ownerId;
+      req.auth.clinicId = receptionist.clinicId || ownerId;
+    } else if (ownerType === 'lab') {
+      req.auth.labId = ownerId;
+    } else if (ownerType === 'scan') {
+      req.auth.scanCenterId = ownerId;
+    } else if (ownerType === 'blood_bank') {
+      req.auth.bloodBankId = ownerId;
+    }
     req.receptionist = receptionist;
     next();
   } catch (err) {

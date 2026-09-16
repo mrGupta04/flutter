@@ -492,10 +492,11 @@ class PatientBookingModel {
     return false;
   }
 
-  /// True while the appointment is upcoming, pending, or an active visit.
+  /// True while the appointment is upcoming, or an active visit is in progress.
+  /// Past slots are excluded even if status is still pending/searching.
   bool get isActiveOrUpcoming {
     if (isTerminal) return false;
-    if (isPendingRequest || isLiveNow) return true;
+    if (isLiveNow) return true;
     return !DateTime.now().isAfter(slotEnd);
   }
 

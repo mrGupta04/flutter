@@ -507,6 +507,17 @@ function toPatientBookingShape(booking) {
     'en_route_to_destination',
     'arrived_at_destination',
   ];
+  const liveStatuses = [
+    'dispatched',
+    'driver_en_route',
+    'en_route',
+    'arrived_at_pickup',
+    'arrived',
+    'patient_picked_up',
+    'en_route_to_destination',
+    'arrived_at_destination',
+  ];
+  const now = new Date();
   return {
     id: booking.id,
     doctorId: booking.ambulanceId,
@@ -548,7 +559,9 @@ function toPatientBookingShape(booking) {
     liveLongitude: booking.liveLongitude,
     liveLocationUpdatedAt: booking.liveLocationUpdatedAt,
     createdAt: booking.createdAt,
-    isUpcoming: activeStatuses.includes(booking.status),
+    isUpcoming:
+      liveStatuses.includes(booking.status) ||
+      (activeStatuses.includes(booking.status) && slotEnd >= now),
     timeline: booking.timeline,
   };
 }

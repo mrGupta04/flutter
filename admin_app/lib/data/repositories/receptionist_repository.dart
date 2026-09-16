@@ -115,9 +115,15 @@ class ReceptionistRepository {
     }
   }
 
-  Future<ApiResponse<List<ReceptionistModel>>> listForDoctor() async {
+  Future<ApiResponse<List<ReceptionistModel>>> listForDoctor() {
+    return listForOwner(ReceptionistOwnerType.doctor);
+  }
+
+  Future<ApiResponse<List<ReceptionistModel>>> listForOwner(
+    ReceptionistOwnerType ownerType,
+  ) async {
     try {
-      final response = await _dio.get(AppConstants.endpointDoctorReceptionists);
+      final response = await _dio.get(_base(ownerType));
       final body = response.data as Map<String, dynamic>;
       final list = extractApiList(body['data']);
       return ApiResponse(
@@ -137,10 +143,11 @@ class ReceptionistRepository {
     required String email,
     required String password,
     String? phone,
+    ReceptionistOwnerType ownerType = ReceptionistOwnerType.doctor,
   }) async {
     try {
       final response = await _dio.post(
-        AppConstants.endpointDoctorReceptionists,
+        _base(ownerType),
         data: {
           'name': name.trim(),
           'email': email.trim(),
@@ -165,10 +172,11 @@ class ReceptionistRepository {
     String? name,
     String? email,
     String? phone,
+    ReceptionistOwnerType ownerType = ReceptionistOwnerType.doctor,
   }) async {
     try {
       final response = await _dio.patch(
-        AppConstants.endpointDoctorReceptionist(id),
+        _item(ownerType, id),
         data: {
           if (name != null) 'name': name.trim(),
           if (email != null) 'email': email.trim(),
@@ -190,10 +198,11 @@ class ReceptionistRepository {
   Future<ApiResponse<ReceptionistModel>> setStatus({
     required String id,
     required String status,
+    ReceptionistOwnerType ownerType = ReceptionistOwnerType.doctor,
   }) async {
     try {
       final response = await _dio.patch(
-        AppConstants.endpointDoctorReceptionistStatus(id),
+        _status(ownerType, id),
         data: {'status': status},
       );
       final body = response.data as Map<String, dynamic>;
@@ -210,10 +219,11 @@ class ReceptionistRepository {
   Future<ApiResponse<void>> resetPassword({
     required String id,
     required String password,
+    ReceptionistOwnerType ownerType = ReceptionistOwnerType.doctor,
   }) async {
     try {
       final response = await _dio.post(
-        AppConstants.endpointDoctorReceptionistPassword(id),
+        _password(ownerType, id),
         data: {'password': password},
       );
       final body = response.data as Map<String, dynamic>;
@@ -226,9 +236,12 @@ class ReceptionistRepository {
     }
   }
 
-  Future<ApiResponse<void>> delete(String id) async {
+  Future<ApiResponse<void>> delete(
+    String id, {
+    ReceptionistOwnerType ownerType = ReceptionistOwnerType.doctor,
+  }) async {
     try {
-      final response = await _dio.delete(AppConstants.endpointDoctorReceptionist(id));
+      final response = await _dio.delete(_item(ownerType, id));
       final body = response.data as Map<String, dynamic>;
       return ApiResponse(
         success: body['success'] as bool? ?? true,
@@ -236,6 +249,58 @@ class ReceptionistRepository {
       );
     } on DioException catch (e) {
       return _handleError(e);
+    }
+  }
+
+  String _base(ReceptionistOwnerType ownerType) {
+    switch (ownerType) {
+      case ReceptionistOwnerType.doctor:
+        return AppConstants.endpointDoctorReceptionists;
+      case ReceptionistOwnerType.lab:
+        return AppConstants.endpointLabReceptionists;
+      case ReceptionistOwnerType.scan:
+        return AppConstants.endpointScanReceptionists;
+      case ReceptionistOwnerType.bloodBank:
+        return AppConstants.endpointBloodBankReceptionists;
+    }
+  }
+
+  String _item(ReceptionistOwnerType ownerType, String id) {
+    switch (ownerType) {
+      case ReceptionistOwnerType.doctor:
+        return AppConstants.endpointDoctorReceptionist(id);
+      case ReceptionistOwnerType.lab:
+        return AppConstants.endpointLabReceptionist(id);
+      case ReceptionistOwnerType.scan:
+        return AppConstants.endpointScanReceptionist(id);
+      case ReceptionistOwnerType.bloodBank:
+        return AppConstants.endpointBloodBankReceptionist(id);
+    }
+  }
+
+  String _status(ReceptionistOwnerType ownerType, String id) {
+    switch (ownerType) {
+      case ReceptionistOwnerType.doctor:
+        return AppConstants.endpointDoctorReceptionistStatus(id);
+      case ReceptionistOwnerType.lab:
+        return AppConstants.endpointLabReceptionistStatus(id);
+      case ReceptionistOwnerType.scan:
+        return AppConstants.endpointScanReceptionistStatus(id);
+      case ReceptionistOwnerType.bloodBank:
+        return AppConstants.endpointBloodBankReceptionistStatus(id);
+    }
+  }
+
+  String _password(ReceptionistOwnerType ownerType, String id) {
+    switch (ownerType) {
+      case ReceptionistOwnerType.doctor:
+        return AppConstants.endpointDoctorReceptionistPassword(id);
+      case ReceptionistOwnerType.lab:
+        return AppConstants.endpointLabReceptionistPassword(id);
+      case ReceptionistOwnerType.scan:
+        return AppConstants.endpointScanReceptionistPassword(id);
+      case ReceptionistOwnerType.bloodBank:
+        return AppConstants.endpointBloodBankReceptionistPassword(id);
     }
   }
 

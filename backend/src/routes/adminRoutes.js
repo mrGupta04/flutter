@@ -1670,8 +1670,12 @@ router.post('/doctors/:id/receptionists', adminRequired, async (req, res) => {
 router.patch('/receptionists/:receptionistId', adminRequired, async (req, res) => {
   try {
     const current = await adminOwnedReceptionist(req.params.receptionistId);
+    const owner = {
+      ownerType: current.ownerType || 'doctor',
+      ownerId: current.ownerId || current.doctorId,
+    };
     const data = await updateReceptionist(
-      current.doctorId,
+      owner,
       current.id,
       req.body || {},
     );
@@ -1692,8 +1696,12 @@ router.patch(
   async (req, res) => {
     try {
       const current = await adminOwnedReceptionist(req.params.receptionistId);
+      const owner = {
+        ownerType: current.ownerType || 'doctor',
+        ownerId: current.ownerId || current.doctorId,
+      };
       const data = await setReceptionistStatus(
-        current.doctorId,
+        owner,
         current.id,
         req.body?.status,
       );
@@ -1715,8 +1723,12 @@ router.post(
   async (req, res) => {
     try {
       const current = await adminOwnedReceptionist(req.params.receptionistId);
+      const owner = {
+        ownerType: current.ownerType || 'doctor',
+        ownerId: current.ownerId || current.doctorId,
+      };
       const data = await resetReceptionistPassword(
-        current.doctorId,
+        owner,
         current.id,
         req.body?.password,
       );
@@ -1735,7 +1747,11 @@ router.post(
 router.delete('/receptionists/:receptionistId', adminRequired, async (req, res) => {
   try {
     const current = await adminOwnedReceptionist(req.params.receptionistId);
-    const data = await deleteReceptionist(current.doctorId, current.id);
+    const owner = {
+      ownerType: current.ownerType || 'doctor',
+      ownerId: current.ownerId || current.doctorId,
+    };
+    const data = await deleteReceptionist(owner, current.id);
     return sendSuccess(res, { message: 'Receptionist deleted', data });
   } catch (err) {
     console.error(err);

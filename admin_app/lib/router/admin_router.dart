@@ -52,6 +52,7 @@ import '../features/doctor_dashboard/presentation/screens/doctor_dashboard_scree
 import '../features/receptionist/presentation/screens/receptionist_dashboard_screen.dart';
 import '../features/receptionist/presentation/screens/receptionist_login_screen.dart';
 import '../features/receptionist/presentation/screens/receptionist_management_screen.dart';
+import '../data/models/receptionist_model.dart';
 import '../features/doctor_registration/presentation/screens/application_submitted_screen.dart';
 import '../features/doctor_registration/presentation/screens/registration_form_screen.dart';
 import '../features/nurse_registration/presentation/screens/nurse_application_submitted_screen.dart';
@@ -181,6 +182,9 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
 
       if (loc == AppConstants.routeDoctorDashboard ||
           loc == AppConstants.routeDoctorReceptionists ||
+          loc == AppConstants.routeLabReceptionists ||
+          loc == AppConstants.routeScanReceptionists ||
+          loc == AppConstants.routeBloodBankReceptionists ||
           loc == AppConstants.routeNurseDashboard ||
           loc == AppConstants.routeProviderHomeVisitTrip ||
           loc == AppConstants.routeScanDashboard ||
@@ -428,6 +432,36 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => slidePage(
           state,
           const ReceptionistManagementScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeLabReceptionists,
+        name: 'labReceptionists',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ReceptionistManagementScreen(
+            ownerType: ReceptionistOwnerType.lab,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeScanReceptionists,
+        name: 'scanReceptionists',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ReceptionistManagementScreen(
+            ownerType: ReceptionistOwnerType.scan,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBloodBankReceptionists,
+        name: 'bloodBankReceptionists',
+        pageBuilder: (context, state) => slidePage(
+          state,
+          const ReceptionistManagementScreen(
+            ownerType: ReceptionistOwnerType.bloodBank,
+          ),
         ),
       ),
       GoRoute(

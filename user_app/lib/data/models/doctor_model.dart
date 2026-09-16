@@ -253,6 +253,22 @@ class DoctorModel {
     return fees.reduce((a, b) => a < b ? a : b);
   }
 
+  /// Regular fee for the cheapest bookable type, when an offer is active.
+  int? get originalFeeForLowestConsultation {
+    ConsultationType? cheapest;
+    int? lowest;
+    for (final type in availableConsultationTypes) {
+      final fee = effectiveFeeForConsultationType(type);
+      if (fee == null || fee <= 0) continue;
+      if (lowest == null || fee < lowest) {
+        lowest = fee;
+        cheapest = type;
+      }
+    }
+    if (cheapest == null) return null;
+    return originalFeeForConsultationType(cheapest);
+  }
+
   /// Uploaded hospital/clinic photos shown on the public profile.
   List<String> get hospitalPhotoUrls => [
         hospitalPhoto1Url,

@@ -5,6 +5,7 @@ import '../models/lab_model.dart';
 import '../services/dio_service.dart';
 
 enum LabExploreSort {
+  highestOffer('Highest Offer'),
   recommended('Recommended'),
   nearest('Nearest'),
   highestRated('Highest Rated'),

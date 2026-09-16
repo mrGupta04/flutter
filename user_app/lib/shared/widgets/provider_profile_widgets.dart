@@ -315,7 +315,12 @@ class ProviderInfoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 24),
+            if (i > 0)
+              Divider(
+                height: 24,
+                thickness: 1,
+                color: AppColors.grey200.withValues(alpha: 0.55),
+              ),
             children[i],
           ],
         ],

@@ -204,7 +204,10 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         name: 'healthProfile',
         pageBuilder: (context, state) => slidePage(
           state,
-          const HealthProfileScreen(),
+          HealthProfileScreen(
+            initialTab:
+                int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+          ),
         ),
       ),
       GoRoute(

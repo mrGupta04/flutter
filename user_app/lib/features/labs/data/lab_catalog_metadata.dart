@@ -455,15 +455,6 @@ class LabCatalogMetadata {
     return null;
   }
 
-  static const labFaqs = [
-    ('Is fasting required?', 'Some tests require fasting. Each test card shows fasting requirements. Follow preparation instructions before sample collection.'),
-    ('How is home sample collection done?', 'A certified phlebotomist visits your address at the selected slot, collects the sample safely, and transports it to the lab.'),
-    ('When will reports be available?', 'Report delivery time is shown on each test. Most routine tests are available within 24–48 hours.'),
-    ('Can I cancel or reschedule?', 'Yes. You can reschedule or cancel up to 2 hours before your slot from My Bookings.'),
-    ('How do I download reports?', 'Reports appear in My Bookings and are also sent to your registered email once ready.'),
-    ('Is NABL certification available?', 'NABL-accredited labs display a badge on their profile. Look for the NABL badge when choosing a lab.'),
-  ];
-
   static const mockReviews = [
     ('Priya Sharma', 5, 'Quick home collection and reports delivered on time. Very professional staff.', '2 days ago'),
     ('Rahul Mehta', 4, 'Good pricing and easy booking. Lab visit was smooth.', '1 week ago'),

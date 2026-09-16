@@ -13,6 +13,7 @@ import '../../../../core/widgets/custom_widgets.dart' as custom;
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
+import '../../../../shared/widgets/searchable_filter_dropdown.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
@@ -67,32 +68,7 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
     if (!mounted) return;
     setState(() {
       _city ??= location.city;
-      _applyLocationPrefill(location);
     });
-  }
-
-  void _applyLocationPrefill(UserLocationState location) {
-    final hasTypedQuery =
-        (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) ||
-            (widget.initialBloodGroup != null &&
-                widget.initialBloodGroup!.trim().isNotEmpty);
-    if (hasTypedQuery) return;
-
-    final label = location.displayPlaceCity;
-    if (label == null || label.isEmpty) return;
-
-    final current = _controller.text.trim();
-    final canReplace = current.isEmpty ||
-        (_locationPrefill != null && current == _locationPrefill);
-    if (!canReplace) return;
-
-    _locationPrefill = label;
-    if (current != label) {
-      _controller.value = TextEditingValue(
-        text: label,
-        selection: TextSelection.collapsed(offset: label.length),
-      );
-    }
   }
 
   @override
@@ -121,13 +97,18 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
     });
   }
 
-  BloodBankSearchParams get _params => BloodBankSearchParams(
+  BloodBankSearchParams get _params {
+    final location = ref.read(userLocationProvider);
+    return BloodBankSearchParams(
         query: _query,
         city: _city,
         bloodGroup: _bloodGroup,
         componentType: _componentType,
         careFilter: _careFilter,
+        latitude: location.latitude,
+        longitude: location.longitude,
       );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,11 +116,20 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
       if (!mounted) return;
       setState(() {
         _city ??= next.city;
-        _applyLocationPrefill(next);
       });
     });
 
-    final asyncResults = ref.watch(bloodBankSearchProvider(_params));
+    final location = ref.watch(userLocationProvider);
+    final params = BloodBankSearchParams(
+      query: _query,
+      city: _city,
+      bloodGroup: _bloodGroup,
+      componentType: _componentType,
+      careFilter: _careFilter,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    );
+    final asyncResults = ref.watch(bloodBankSearchProvider(params));
 
     return UserAdaptiveScaffold(
       currentTab: UserNavTab.care,
@@ -208,15 +198,22 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        HorizontalFilterChips(
-          labels: popularCareCities,
-          selected: _city,
-          onSelected: (city) => setState(() {
-            _city = city;
-            _query = null;
-            _locationPrefill = city;
-            _controller.text = city ?? '';
-          }),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SearchableFilterDropdown(
+            label: 'City',
+            value: _city,
+            allLabel: 'All cities',
+            searchHint: 'Search city or district...',
+            options: doctorSearchCities,
+            sections: careCityPickerSections,
+            matchOption: karnatakaPlaceMatchesQuery,
+            onChanged: (city) => setState(() {
+              _city = city;
+              _query = null;
+              _locationPrefill = null;
+            }),
+          ),
         ),
         const SizedBox(height: 8),
         HorizontalFilterChips(

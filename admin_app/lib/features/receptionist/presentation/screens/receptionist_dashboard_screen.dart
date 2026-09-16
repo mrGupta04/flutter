@@ -23,6 +23,19 @@ class ReceptionistDashboardScreen extends ConsumerWidget {
     ('cancelled', 'Cancelled'),
   ];
 
+  static String _deskSubtitle(String? ownerType) {
+    switch (ownerType) {
+      case 'lab':
+        return 'Lab front desk';
+      case 'scan':
+        return 'Scan center front desk';
+      case 'blood_bank':
+        return 'Blood bank front desk';
+      default:
+        return "Today's clinic visits";
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(receptionistAuthProvider);
@@ -64,7 +77,7 @@ class ReceptionistDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              "Today's clinic visits",
+              _deskSubtitle(auth.profile?.ownerType),
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),

@@ -195,9 +195,7 @@ class SectionHeader extends StatelessWidget {
                   Text(
                     subtitle!,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppColors.darkTextSecondary
-                          : AppColors.textSecondary,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -302,19 +300,16 @@ class StickyActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? AppColors.grey700 : AppColors.border,
-          ),
+        color: AppColors.surface,
+        border: const Border(
+          top: BorderSide(color: AppColors.border),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),

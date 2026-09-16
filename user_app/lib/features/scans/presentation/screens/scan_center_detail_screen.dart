@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/service_faqs.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -12,6 +13,7 @@ import '../../data/models/scan_procedure_model.dart';
 import '../../data/scan_procedure_icons.dart';
 import '../../provider/scan_search_provider.dart';
 import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
+import '../../../../shared/widgets/service_faq_section.dart';
 import '../../provider/scan_cart_provider.dart';
 import '../widgets/scan_booking_sheet.dart';
 
@@ -337,6 +339,11 @@ class _DetailBody extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.calendar_month_rounded, size: 18),
                   label: const Text('Book single scan'),
+                ),
+                const ServiceFaqSection(
+                  title: "General FAQs for Scans",
+                  items: ServiceFaqs.scan,
+                  padding: EdgeInsets.fromLTRB(0, 16, 0, 8),
                 ),
               ],
             ),

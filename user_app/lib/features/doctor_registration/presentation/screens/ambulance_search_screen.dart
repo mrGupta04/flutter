@@ -14,6 +14,7 @@ import '../../../../shared/widgets/ambulance_care_filter_cards.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
+import '../../../../shared/widgets/searchable_filter_dropdown.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
@@ -65,32 +66,7 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
     if (!mounted) return;
     setState(() {
       _city ??= location.city;
-      _applyLocationPrefill(location);
     });
-  }
-
-  void _applyLocationPrefill(UserLocationState location) {
-    final hasTypedQuery =
-        (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) ||
-            (widget.initialVehicleType != null &&
-                widget.initialVehicleType!.trim().isNotEmpty);
-    if (hasTypedQuery) return;
-
-    final label = location.displayPlaceCity;
-    if (label == null || label.isEmpty) return;
-
-    final current = _controller.text.trim();
-    final canReplace = current.isEmpty ||
-        (_locationPrefill != null && current == _locationPrefill);
-    if (!canReplace) return;
-
-    _locationPrefill = label;
-    if (current != label) {
-      _controller.value = TextEditingValue(
-        text: label,
-        selection: TextSelection.collapsed(offset: label.length),
-      );
-    }
   }
 
   @override
@@ -135,7 +111,6 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
       if (!mounted) return;
       setState(() {
         _city ??= next.city;
-        _applyLocationPrefill(next);
       });
     });
 
@@ -199,21 +174,25 @@ class _AmbulanceSearchScreenState extends ConsumerState<AmbulanceSearchScreen> {
           onSelected: (f) => setState(() => _careFilter = f),
         ),
         const SizedBox(height: 8),
-        HorizontalFilterChips(
-          labels: popularCareCities,
-          selected: _city,
-          onSelected: (city) => setState(() {
-            _city = city;
-            if (city != null) {
-              _vehicleType = null;
-              _query = null;
-              _locationPrefill = city;
-              _controller.text = city;
-            } else {
-              _locationPrefill = null;
-              _controller.clear();
-            }
-          }),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SearchableFilterDropdown(
+            label: 'City',
+            value: _city,
+            allLabel: 'All cities',
+            searchHint: 'Search city or district...',
+            options: doctorSearchCities,
+            sections: careCityPickerSections,
+            matchOption: karnatakaPlaceMatchesQuery,
+            onChanged: (city) => setState(() {
+              _city = city;
+              if (city != null) {
+                _vehicleType = null;
+                _query = null;
+                _locationPrefill = null;
+              }
+            }),
+          ),
         ),
         const SizedBox(height: 8),
         HorizontalFilterChips(

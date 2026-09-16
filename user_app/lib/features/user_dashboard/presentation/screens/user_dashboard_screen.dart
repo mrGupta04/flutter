@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/services/socket_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
@@ -76,6 +75,43 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
     super.dispose();
   }
 
+  Future<void> _showInfoSheet(
+    BuildContext context, {
+    required String title,
+    required String body,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: AppTextStyles.titleMedium.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              body,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _logout() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -110,9 +146,17 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
       homeRoute: AppConstants.routeUserHome,
       child: UserAdaptiveScaffold(
         currentTab: UserNavTab.profile,
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.white,
         appBar: AppBar(
           title: const Text('Profile'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: () {
+              if (!AppBackButtonScope.handleSystemBack(context)) {
+                context.go(AppConstants.routeUserHome);
+              }
+            },
+          ),
           actions: const [
             DiagnosticCartIconButton(),
             NotificationBellButton(),
@@ -124,165 +168,126 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                 onRefresh: () =>
                     ref.read(patientDashboardProvider.notifier).refreshAll(),
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                   children: [
                     ResponsivePage(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _ProfileHeader(user: user),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
+                          _MembershipBanner(
+                            onTap: () =>
+                                context.push(AppConstants.routeUserRewards),
+                          ),
                           if (dash.emergencyActive != null) ...[
-                            _EmergencyBanner(booking: dash.emergencyActive!),
                             const SizedBox(height: 12),
+                            _EmergencyBanner(booking: dash.emergencyActive!),
                           ],
-                          _UpcomingSummary(booking: dash.nextUpcoming),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _QuickTile(
-                                  icon: Icons.event_available_rounded,
-                                  label: 'Bookings',
-                                  onTap: () => context.push(
-                                    AppConstants.routeCurrentBookings,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _QuickTile(
-                                  icon: Icons.history_rounded,
-                                  label: 'History',
-                                  onTap: () => context.push(
-                                    AppConstants.routeBookingHistory,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _QuickTile(
-                                  icon: Icons.folder_outlined,
-                                  label: 'Documents',
-                                  onTap: () => context.push(
-                                    AppConstants.routeNursingReports,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          _MenuSection(
-                            title: 'My bookings',
+                          if (dash.nextUpcoming != null) ...[
+                            const SizedBox(height: 12),
+                            _UpcomingSummary(booking: dash.nextUpcoming),
+                          ],
+                          const SizedBox(height: 8),
+                          _ProfileMenuList(
                             items: [
-                              _MenuItem(
-                                icon: Icons.upcoming_outlined,
-                                label: 'Current bookings',
-                                onTap: () => context.push(
-                                  AppConstants.routeCurrentBookings,
-                                ),
-                              ),
-                              _MenuItem(
-                                icon: Icons.history_rounded,
-                                label: 'Booking history',
-                                onTap: () => context.push(
-                                  AppConstants.routeBookingHistory,
-                                ),
-                              ),
-                            ],
-                          ),
-                          _MenuSection(
-                            title: 'Health',
-                            items: [
-                              _MenuItem(
-                                icon: Icons.health_and_safety_outlined,
-                                label: 'Medical information',
-                                onTap: () => context.push(
-                                  AppConstants.routeHealthProfile,
-                                ),
-                              ),
-                              _MenuItem(
-                                icon: Icons.picture_as_pdf_outlined,
-                                label: 'Prescriptions & reports',
-                                onTap: () => context.push(
-                                  AppConstants.routeNursingReports,
-                                ),
-                              ),
-                            ],
-                          ),
-                          _MenuSection(
-                            title: 'Account',
-                            items: [
-                              _MenuItem(
-                                icon: Icons.edit_outlined,
-                                label: 'Edit profile',
-                                onTap: () => context.push(
-                                  AppConstants.routeUserEditProfile,
-                                ),
-                              ),
-                              _MenuItem(
-                                icon: Icons.notifications_outlined,
-                                label: 'Notifications',
-                                onTap: () => context.push(
-                                  AppConstants.routeNotifications,
-                                ),
-                              ),
-                              _MenuItem(
-                                icon: Icons.favorite_outline_rounded,
-                                label: 'Favorites',
-                                onTap: () => context.push(
-                                  AppConstants.routeFavorites,
-                                ),
-                              ),
-                              _MenuItem(
-                                icon: Icons.card_giftcard_outlined,
-                                label: 'Rewards',
+                              _ProfileMenuItem(
+                                icon: Icons.account_balance_wallet_outlined,
+                                label: 'My wallet',
                                 onTap: () => context.push(
                                   AppConstants.routeUserRewards,
                                 ),
                               ),
-                              _MenuItem(
-                                icon: Icons.lock_outline_rounded,
-                                label: 'Security',
+                              _ProfileMenuItem(
+                                icon: Icons.inventory_2_outlined,
+                                label: 'My orders',
                                 onTap: () => context.push(
-                                  AppConstants.routeAccountSecurity,
+                                  AppConstants.routeCurrentBookings,
                                 ),
                               ),
-                              _MenuItem(
-                                icon: Icons.lock_reset_outlined,
-                                label: 'Change password',
+                              _ProfileMenuItem(
+                                icon: Icons.location_on_outlined,
+                                label: 'My addresses',
                                 onTap: () => context.push(
-                                  AppConstants.routeForgotPassword,
+                                  '${AppConstants.routeHealthProfile}?tab=1',
                                 ),
                               ),
-                              _MenuItem(
-                                icon: Icons.brightness_6_outlined,
-                                label: 'Appearance',
-                                onTap: () {
-                                  ref.read(themeModeProvider.notifier).toggle();
-                                },
+                              _ProfileMenuItem(
+                                icon: Icons.medical_information_outlined,
+                                label: 'Health records',
+                                onTap: () => context.push(
+                                  AppConstants.routeNursingReports,
+                                ),
                               ),
-                            ],
-                          ),
-                          _MenuSection(
-                            title: 'Support',
-                            items: [
-                              _MenuItem(
-                                icon: Icons.support_agent_outlined,
+                              _ProfileMenuItem(
+                                icon: Icons.notifications_outlined,
+                                label: 'Notification',
+                                onTap: () => context.push(
+                                  AppConstants.routeNotifications,
+                                ),
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.card_membership_outlined,
+                                label: 'My subscriptions',
+                                onTap: () => context.push(
+                                  AppConstants.routeUserRewards,
+                                ),
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.groups_outlined,
+                                label: 'Family members',
+                                onTap: () => context.push(
+                                  '${AppConstants.routeHealthProfile}?tab=0',
+                                ),
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.bookmark_border_rounded,
+                                label: 'Saved for later',
+                                onTap: () => context.push(
+                                  AppConstants.routeFavorites,
+                                ),
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.help_outline_rounded,
                                 label: 'Help & support',
                                 onTap: () => context.push(
                                   AppConstants.routeSupportTickets,
                                 ),
                               ),
+                              _ProfileMenuItem(
+                                icon: Icons.gavel_outlined,
+                                label: 'Legal information',
+                                onTap: () => _showInfoSheet(
+                                  context,
+                                  title: 'Legal information',
+                                  body:
+                                      '1mg Care is a healthcare marketplace. Bookings are fulfilled by independently verified providers. Use of the app is subject to our terms of service and privacy practices. For account deletion or data requests, open Security.',
+                                ),
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.info_outline_rounded,
+                                label: 'About us',
+                                onTap: () => _showInfoSheet(
+                                  context,
+                                  title: 'About us',
+                                  body:
+                                      '1mg Care helps you find verified doctors, nurses, labs, scan centres, ambulances, and blood banks. We do not replace emergency services — call 108 / 112 in a life-threatening emergency.',
+                                ),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 16),
                           OutlinedButton.icon(
                             onPressed: _logout,
                             icon: const Icon(Icons.logout_rounded),
-                            label: const Text('Log out'),
+                            label: const Text(
+                              'Log out',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 8),
                           TextButton(
                             onPressed: () =>
                                 context.push(AppConstants.routeAccountSecurity),
@@ -307,63 +312,137 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = MediaUrlUtils.resolve(user.profilePicture);
-    final verified = user.email.isNotEmpty && user.mobileNumber.isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: AppDecorations.borderRadiusLg,
-        border: Border.all(color: AppColors.grey200),
-      ),
-      child: Column(
-        children: [
-          TappableProfilePhoto(
-            imageUrl: imageUrl,
-            child: PatientHeaderAvatar(
-              user: user,
-              size: 80,
-              cornerRadius: 40,
-            ),
+    final completion = user.profileCompletionPercent;
+    final phone = user.mobileNumber.isNotEmpty
+        ? '${user.countryCode} ${user.mobileNumber}'
+        : user.email;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TappableProfilePhoto(
+          imageUrl: imageUrl,
+          child: PatientHeaderAvatar(
+            user: user,
+            size: 56,
+            cornerRadius: 28,
           ),
-          const SizedBox(height: 12),
-          Text(
-            user.fullName,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          Text(user.email, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
-          if (user.mobileNumber.isNotEmpty)
-            Text(
-              '${user.countryCode} ${user.mobileNumber}',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-            ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                verified ? Icons.verified_rounded : Icons.info_outline_rounded,
-                size: 16,
-                color: verified ? AppColors.success : AppColors.warning,
-              ),
-              const SizedBox(width: 4),
               Text(
-                verified ? 'Verified' : 'Complete your profile',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: verified ? AppColors.success : AppColors.warning,
+                user.fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.titleMedium.copyWith(
                   fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (phone.isNotEmpty)
+                Text(
+                  phone,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                'Profile Completion: $completion%',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: completion / 100,
+                  minHeight: 6,
+                  backgroundColor: AppColors.grey200,
+                  color: AppColors.primary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () => context.push(AppConstants.routeUserEditProfile),
-            icon: const Icon(Icons.edit_rounded, size: 18),
-            label: const Text('Edit profile'),
+        ),
+        TextButton(
+          onPressed: () => context.push(AppConstants.routeUserEditProfile),
+          child: Text(
+            'Edit',
+            style: AppTextStyles.labelLarge.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MembershipBanner extends StatelessWidget {
+  const _MembershipBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.grey200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Get 1mg Care Rewards',
+                      style: AppTextStyles.titleSmall.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Cashback, extra discount & more',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.grey400),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -503,8 +582,26 @@ class _UpcomingSummary extends StatelessWidget {
   }
 }
 
-class _QuickTile extends StatelessWidget {
-  const _QuickTile({
+class _ProfileMenuList extends StatelessWidget {
+  const _ProfileMenuList({required this.items});
+
+  final List<_ProfileMenuItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) const Divider(height: 1, color: AppColors.divider),
+          items[i],
+        ],
+      ],
+    );
+  }
+}
+
+class _ProfileMenuItem extends StatelessWidget {
+  const _ProfileMenuItem({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -516,92 +613,26 @@ class _QuickTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.white,
-      borderRadius: AppDecorations.borderRadiusLg,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppDecorations.borderRadiusLg,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: AppDecorations.borderRadiusLg,
-            border: Border.all(color: AppColors.grey200),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: AppColors.primary),
-              const SizedBox(height: 6),
-              Text(label, style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w800)),
-            ],
-          ),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 22),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _MenuSection extends StatelessWidget {
-  const _MenuSection({required this.title, required this.items});
-
-  final String title;
-  final List<_MenuItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.grey500,
-              letterSpacing: 0.7,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: AppDecorations.borderRadiusLg,
-              border: Border.all(color: AppColors.grey200),
-            ),
-            child: Column(
-              children: [
-                for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0) const Divider(height: 1),
-                  items[i],
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MenuItem extends StatelessWidget {
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary),
-      title: Text(label, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.grey400),
-      onTap: onTap,
     );
   }
 }

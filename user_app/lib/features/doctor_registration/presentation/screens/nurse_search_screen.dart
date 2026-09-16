@@ -15,7 +15,6 @@ import '../../../../core/widgets/enable_location_services_dialog.dart';
 import '../../../../data/models/nurse_model.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
-import '../../../../shared/widgets/searchable_filter_dropdown.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
@@ -45,23 +44,19 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
   late final TextEditingController _controller;
   Timer? _debounce;
   String? _query;
-  String? _city;
-  String? _specialization;
+  late final String? _city = widget.initialCity;
+  late final String? _specialization = widget.initialSpecialization;
   String? _gender;
   int? _minYearsExperience;
   double? _nearbyLatitude;
   double? _nearbyLongitude;
   bool _nearbyActive = false;
   bool _isFetchingNearby = false;
-  /// Location shown in the search box without applying as a keyword query.
-  String? _locationPrefill;
 
   @override
   void initState() {
     super.initState();
     _query = widget.initialQuery;
-    _city = widget.initialCity;
-    _specialization = widget.initialSpecialization;
     _controller = TextEditingController(text: widget.initialQuery ?? '');
     _controller.addListener(_onTextChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _applyDefaultNearby());
@@ -71,36 +66,12 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
     final location = ref.read(userLocationProvider);
     if (!mounted) return;
     setState(() {
-      _city ??= location.city;
-      _applyLocationPrefill(location);
       if (location.hasCoordinates) {
         _nearbyLatitude = location.latitude;
         _nearbyLongitude = location.longitude;
         _nearbyActive = true;
       }
     });
-  }
-
-  void _applyLocationPrefill(UserLocationState location) {
-    final hasTypedQuery =
-        widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty;
-    if (hasTypedQuery) return;
-
-    final label = location.displayPlaceCity;
-    if (label == null || label.isEmpty) return;
-
-    final current = _controller.text.trim();
-    final canReplace = current.isEmpty ||
-        (_locationPrefill != null && current == _locationPrefill);
-    if (!canReplace) return;
-
-    _locationPrefill = label;
-    if (current != label) {
-      _controller.value = TextEditingValue(
-        text: label,
-        selection: TextSelection.collapsed(offset: label.length),
-      );
-    }
   }
 
   @override
@@ -116,10 +87,6 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
       final text = _controller.text.trim();
-      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
-        setState(() => _query = null);
-        return;
-      }
       setState(() {
         _query = text.isEmpty ? null : text;
       });
@@ -129,14 +96,8 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
   void _clearFilters() {
     setState(() {
       _query = null;
-      _city = null;
-      _specialization = null;
       _gender = null;
       _minYearsExperience = null;
-      _nearbyActive = false;
-      _nearbyLatitude = null;
-      _nearbyLongitude = null;
-      _locationPrefill = null;
       _controller.clear();
     });
   }
@@ -150,10 +111,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
       );
 
   bool get _hasActiveFilters {
-    final text = _controller.text.trim();
-    final isLocationOnly =
-        _locationPrefill != null && text == _locationPrefill!.trim();
-    return _params.hasTextFilters || (text.isNotEmpty && !isLocationOnly);
+    return _params.hasTextFilters || _controller.text.trim().isNotEmpty;
   }
 
   Future<void> _getNursesNearby() async {
@@ -215,8 +173,6 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
     ref.listen<UserLocationState>(userLocationProvider, (prev, next) {
       if (!mounted) return;
       setState(() {
-        _city ??= next.city;
-        _applyLocationPrefill(next);
         if (next.hasCoordinates && !_nearbyActive) {
           _nearbyLatitude = next.latitude;
           _nearbyLongitude = next.longitude;
@@ -280,12 +236,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
             onSubmitted: (value) {
               final text = value.trim();
               setState(() {
-                if (_locationPrefill != null &&
-                    text == _locationPrefill!.trim()) {
-                  _query = null;
-                } else {
-                  _query = text.isEmpty ? null : text;
-                }
+                _query = text.isEmpty ? null : text;
               });
             },
           ),
@@ -324,31 +275,6 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
                   ? AppColors.primary.withValues(alpha: 0.06)
                   : AppColors.white,
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: SearchableFilterDropdown(
-            label: 'City',
-            value: _city,
-            allLabel: 'All cities',
-            searchHint: 'Search city...',
-            options: doctorSearchCities,
-            onChanged: (city) => setState(() => _city = city),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: SearchableFilterDropdown(
-            label: 'Specialization',
-            value: _specialization,
-            allLabel: 'All specializations',
-            searchHint: 'Search specialization...',
-            options: nurseSpecializationFilters,
-            onChanged: (specialization) =>
-                setState(() => _specialization = specialization),
           ),
         ),
         const SizedBox(height: 10),
@@ -399,15 +325,14 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
         ),
       ],
       data: (nurses) {
-        final sortedNurses = _nearbyActive &&
-                _nearbyLatitude != null &&
-                _nearbyLongitude != null
-            ? sortNursesByDistance(
-                nurses,
-                _nearbyLatitude!,
-                _nearbyLongitude!,
-              )
-            : nurses;
+        final location = ref.watch(userLocationProvider);
+        final lat = _nearbyLatitude ?? location.latitude;
+        final lng = _nearbyLongitude ?? location.longitude;
+        final sortedNurses = sortNursesByProximityAndRating(
+          nurses,
+          userLatitude: lat,
+          userLongitude: lng,
+        );
 
         if (sortedNurses.isEmpty) {
           return [
@@ -431,7 +356,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Try another city, specialty, gender, experience, or keyword',
+                        'Try another gender, experience, or keyword',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -462,10 +387,8 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
 
         Widget cardFor(int index) {
           final nurse = applyNurseLiveStatus(sortedNurses[index], liveMap);
-          final distanceKm = _nearbyActive &&
-                  _nearbyLatitude != null &&
-                  _nearbyLongitude != null
-              ? nurseDistanceKm(nurse, _nearbyLatitude!, _nearbyLongitude!)
+          final distanceKm = lat != null && lng != null
+              ? nurseDistanceKm(nurse, lat, lng)
               : null;
           return NurseListingCard(
             nurse: nurse,

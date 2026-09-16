@@ -63,11 +63,20 @@ const { loginProvider } = require('../utils/providerAuth');
 const {
   mountProviderPasswordResetRoutes,
 } = require('./helpers/mountProviderPasswordReset');
+const {
+  mountProviderReceptionistRoutes,
+} = require('./helpers/mountProviderReceptionistRoutes');
 const { toBloodBank } = require('../db/bloodBankMappers');
 const { normalizeMobile, validateMobile } = require('../utils/mobile');
 
 const router = express.Router();
 mountProviderPasswordResetRoutes(router, 'blood-bank');
+mountProviderReceptionistRoutes(router, {
+  ownerType: 'blood_bank',
+  authType: 'bloodbank',
+  ownerIdFromAuth: (auth) => auth?.bloodBankId,
+  authLabel: 'Blood bank',
+});
 
 // ——— Public discovery ———
 

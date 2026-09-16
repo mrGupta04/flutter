@@ -83,6 +83,17 @@ extension LabModelDisplay on LabModel {
     if (offer == null) return null;
     return '$offer% OFF';
   }
+
+  /// Best advertised or test-level discount, used to rank labs with offers first.
+  int get bestOfferPercent {
+    final highlighted = highlightedOfferPercent ?? 0;
+    final fromTests = offeredTests
+            ?.where((t) => t.enabled)
+            .map((t) => t.discountPercent ?? 0)
+            .fold<int>(0, (a, b) => a > b ? a : b) ??
+        0;
+    return highlighted > fromTests ? highlighted : fromTests;
+  }
 }
 
 extension LabOfferedTestDisplay on LabOfferedTest {

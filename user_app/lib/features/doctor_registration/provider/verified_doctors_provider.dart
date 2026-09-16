@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/consultation_type.dart';
 import '../../../data/models/doctor_model.dart';
+import '../../../core/utils/geo_distance_utils.dart';
 import 'doctor_registration_repository_provider.dart';
 
 /// Fetches verified doctors for the public home screen.
@@ -47,9 +48,18 @@ List<DoctorModel> filterDoctorsByConsultation(
 /// Home screen: keep every verified doctor visible; prefer matches for the tab.
 List<DoctorModel> sortDoctorsByConsultationPreference(
   List<DoctorModel> doctors,
-  ConsultationType? type,
-) {
-  if (type == null) return List<DoctorModel>.from(doctors);
+  ConsultationType? type, {
+  double? userLatitude,
+  double? userLongitude,
+}) {
+  List<DoctorModel> rank(List<DoctorModel> list) =>
+      sortDoctorsByProximityAndRating(
+        list,
+        userLatitude: userLatitude,
+        userLongitude: userLongitude,
+      );
+
+  if (type == null) return rank(List<DoctorModel>.from(doctors));
   final matching = <DoctorModel>[];
   final others = <DoctorModel>[];
   for (final doctor in doctors) {
@@ -59,5 +69,5 @@ List<DoctorModel> sortDoctorsByConsultationPreference(
       others.add(doctor);
     }
   }
-  return [...matching, ...others];
+  return [...rank(matching), ...rank(others)];
 }

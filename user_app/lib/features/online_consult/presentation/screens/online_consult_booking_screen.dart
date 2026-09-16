@@ -352,6 +352,20 @@ class _OnlineConsultBookingScreenState
         ),
         data: (doctor) => Column(
           children: [
+            Material(
+              color: AppColors.background,
+              elevation: 1,
+              shadowColor: Colors.black.withValues(alpha: 0.08),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+                child: DoctorConsultationFeesBanner(
+                  doctor: doctor,
+                  highlightedType: _selectedType,
+                  onTypeSelected: (type) =>
+                      _onConsultationTypeSelected(type, doctor),
+                ),
+              ),
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -360,7 +374,7 @@ class _OnlineConsultBookingScreenState
                 },
                 child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -368,13 +382,6 @@ class _OnlineConsultBookingScreenState
                       doctor: doctor,
                       consultationType: _selectedType,
                       slotsData: slotsAsync.asData?.value,
-                    ),
-                    const SizedBox(height: 12),
-                    DoctorConsultationFeesBanner(
-                      doctor: doctor,
-                      highlightedType: _selectedType,
-                      onTypeSelected: (type) =>
-                          _onConsultationTypeSelected(type, doctor),
                     ),
                     const SizedBox(height: 12),
                     ConsultationBookingPriceSummary(
@@ -634,11 +641,7 @@ class _DoctorHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = MediaUrlUtils.resolve(doctor.profilePicture);
-    final name = doctor.fullName.isNotEmpty
-        ? (doctor.fullName.startsWith('Dr.')
-            ? doctor.fullName
-            : 'Dr. ${doctor.fullName}')
-        : 'Doctor';
+    final name = doctor.fullName.isNotEmpty ? doctor.fullName : 'Doctor';
     final isHospital = consultationType == ConsultationType.visitSite;
     final clinicName =
         slotsData?.clinicName ?? doctor.clinicName ?? 'Clinic / Hospital';

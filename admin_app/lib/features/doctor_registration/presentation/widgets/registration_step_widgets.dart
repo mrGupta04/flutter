@@ -210,7 +210,7 @@ class _Step1PersonalInfoState extends ConsumerState<Step1PersonalInfo>
           CustomTextField(
             controller: _fullNameController,
             label: 'Full Name',
-            hint: 'Dr. Aditi Sharma',
+            hint: 'Aditi Sharma',
             prefixIcon: Icons.person,
             validator: ValidationUtils.validateName,
           ),

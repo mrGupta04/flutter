@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/geocoding_service.dart';
 import '../services/location_service.dart';
 import '../services/token_storage.dart';
+import '../constants/karnataka_places.dart';
 import '../../features/doctor_registration/provider/care_filter_constants.dart';
 
 /// Resolved marketplace location used as default city / nearby sort.
@@ -73,6 +74,9 @@ class UserLocationNotifier extends StateNotifier<UserLocationState> {
 
   final _storage = TokenStorage.instance;
   bool _promptInFlight = false;
+  /// True after the first location prompt in this process.
+  /// Resume-from-background must not show another system dialog.
+  bool _askedThisLaunch = false;
 
   Future<void> _loadCached() async {
     final city = await _storage.getPreferredCity();
@@ -93,26 +97,25 @@ class UserLocationNotifier extends StateNotifier<UserLocationState> {
     }
   }
 
-  /// Prompts for location on first open (JioMart-style), then resolves city.
-  /// Safe to call repeatedly — only prompts once unless [forcePrompt] is true.
+  /// Asks for location on a fresh app process, then resolves city.
+  ///
+  /// Safe to call from home and other screens: the OS dialog is shown at most
+  /// once per launch. Returning from the background does not prompt again.
   Future<void> ensureResolved(
     BuildContext context, {
     bool forcePrompt = false,
   }) async {
     if (_promptInFlight || state.isResolving) return;
-    if (state.hasCoordinates && state.city != null && !forcePrompt) {
-      // Soft refresh when permission already granted.
-      await _refreshSilently();
-      return;
-    }
 
-    final alreadyPrompted = await _storage.getLocationPrompted();
-    if (alreadyPrompted && !forcePrompt && !state.hasCoordinates) {
-      state = state.copyWith(hasResolved: true);
+    if (_askedThisLaunch && !forcePrompt) {
+      if (!_promptInFlight) {
+        await _refreshSilently();
+      }
       return;
     }
 
     if (!context.mounted) return;
+    _askedThisLaunch = true;
     _promptInFlight = true;
     state = state.copyWith(isResolving: true);
     try {
@@ -241,8 +244,30 @@ String? normalizeMarketplaceCity(String? raw) {
   if (trimmed.isEmpty) return null;
 
   const aliases = <String, String>{
-    'bengaluru': 'Bangalore',
-    'bangalore': 'Bangalore',
+    'bengaluru': 'Bengaluru',
+    'bangalore': 'Bengaluru',
+    'mysuru': 'Mysuru',
+    'mysore': 'Mysuru',
+    'mangaluru': 'Mangaluru',
+    'mangalore': 'Mangaluru',
+    'hubballi': 'Hubballi',
+    'hubli': 'Hubballi',
+    'belagavi': 'Belagavi',
+    'belgaum': 'Belagavi',
+    'kalaburagi': 'Kalaburagi',
+    'gulbarga': 'Kalaburagi',
+    'ballari': 'Ballari',
+    'bellary': 'Ballari',
+    'vijayapura': 'Vijayapura',
+    'bijapur': 'Vijayapura',
+    'shivamogga': 'Shivamogga',
+    'shimoga': 'Shivamogga',
+    'tumakuru': 'Tumakuru',
+    'tumkur': 'Tumakuru',
+    'davanagere': 'Davanagere',
+    'davangere': 'Davanagere',
+    'hosapete': 'Hosapete',
+    'hospet': 'Hosapete',
     'gurugram': 'Gurgaon',
     'gurgaon': 'Gurgaon',
     'bombay': 'Mumbai',
@@ -261,18 +286,42 @@ String? normalizeMarketplaceCity(String? raw) {
   final lower = trimmed.toLowerCase();
   if (aliases.containsKey(lower)) return aliases[lower];
 
+  String? matchToken(String token) {
+    final t = token.trim().toLowerCase();
+    if (t.isEmpty || t == 'karnataka' || t == 'india') return null;
+    if (aliases.containsKey(t)) return aliases[t];
+    for (final city in doctorSearchCities) {
+      if (city.toLowerCase() == t) return city;
+    }
+    for (final entry in karnatakaPlaceAliases.entries) {
+      for (final alias in entry.value) {
+        if (alias.toLowerCase() == t) return entry.key;
+      }
+    }
+    return null;
+  }
+
+  // Prefer the most local address token (town) over district/state.
+  for (final part in trimmed.split(RegExp(r'[,/|]'))) {
+    final matched = matchToken(part);
+    if (matched != null) return matched;
+  }
+
   for (final entry in aliases.entries) {
     if (lower.contains(entry.key)) return entry.value;
   }
 
+  String? best;
+  var bestLen = 0;
   for (final city in doctorSearchCities) {
     final cityLower = city.toLowerCase();
-    if (lower == cityLower ||
-        lower.contains(cityLower) ||
-        cityLower.contains(lower)) {
-      return city;
+    if (cityLower.length < 3) continue;
+    if (lower.contains(cityLower) && cityLower.length > bestLen) {
+      best = city;
+      bestLen = cityLower.length;
     }
   }
+  if (best != null) return best;
 
   // Prefer a short place name for API city filters.
   final firstPart = trimmed.split(',').first.trim();

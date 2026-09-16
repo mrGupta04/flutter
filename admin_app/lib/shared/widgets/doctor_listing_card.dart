@@ -74,11 +74,8 @@ class DoctorListingCard extends StatelessWidget {
     final fee = doctor.lowestConsultationFee != null
         ? FormattingUtils.formatConsultationFee(doctor.lowestConsultationFee!)
         : null;
-    final displayName = doctor.fullName.isNotEmpty
-        ? (doctor.fullName.startsWith('Dr.')
-            ? doctor.fullName
-            : 'Dr. ${doctor.fullName}')
-        : 'Doctor';
+    final displayName =
+        doctor.fullName.isNotEmpty ? doctor.fullName : 'Doctor';
 
     return Material(
       color: AppColors.white,

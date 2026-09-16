@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../shared/widgets/care_provider_listing_cards.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/home_provider_preview.dart';
@@ -58,9 +60,15 @@ class VerifiedNursesSection extends ConsumerWidget {
               );
             }
 
+            final location = ref.watch(userLocationProvider);
+            final sorted = sortNursesByProximityAndRating(
+              nurses,
+              userLatitude: location.latitude,
+              userLongitude: location.longitude,
+            );
             final liveMap = ref
                     .watch(
-                      nurseLiveStatusProvider(nurseIdsCacheKey(nurses)),
+                      nurseLiveStatusProvider(nurseIdsCacheKey(sorted)),
                     )
                     .valueOrNull ??
                 const <String, bool>{};
@@ -69,13 +77,22 @@ class VerifiedNursesSection extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: HomeProviderScrollList(
                 cardHeight: kNurseListingCardHeight,
-                itemCount: nurses.length,
+                itemCount: sorted.length,
                 itemBuilder: (context, i) {
                   final nurse =
-                      applyNurseLiveStatus(nurses[i], liveMap);
+                      applyNurseLiveStatus(sorted[i], liveMap);
                   return NurseListingCard(
                     nurse: nurse,
                     showBottomDivider: false,
+                    distanceLabel: location.hasCoordinates
+                        ? formatNearbyDistanceLabel(
+                            nurseDistanceKm(
+                              nurse,
+                              location.latitude!,
+                              location.longitude!,
+                            ),
+                          )
+                        : null,
                     onTap: () => openNurseHomeVisitBooking(context, nurse),
                     onBookHomeVisit: () =>
                         openNurseHomeVisitBooking(context, nurse),

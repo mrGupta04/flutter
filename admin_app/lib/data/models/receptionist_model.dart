@@ -1,9 +1,44 @@
+enum ReceptionistOwnerType {
+  doctor,
+  lab,
+  scan,
+  bloodBank;
+
+  String get deskNoun {
+    switch (this) {
+      case ReceptionistOwnerType.doctor:
+        return 'clinic';
+      case ReceptionistOwnerType.lab:
+        return 'lab';
+      case ReceptionistOwnerType.scan:
+        return 'scan center';
+      case ReceptionistOwnerType.bloodBank:
+        return 'blood bank';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case ReceptionistOwnerType.doctor:
+        return 'Clinic receptionists can verify patient arrival using the OTP in the patient’s booking.';
+      case ReceptionistOwnerType.lab:
+        return 'Create desk accounts so lab receptionists can sign in with email and password, just like a clinic.';
+      case ReceptionistOwnerType.scan:
+        return 'Create desk accounts so scan center receptionists can sign in with email and password, just like a clinic.';
+      case ReceptionistOwnerType.bloodBank:
+        return 'Create desk accounts so blood bank receptionists can sign in with email and password, just like a clinic.';
+    }
+  }
+}
+
 class ReceptionistModel {
   const ReceptionistModel({
     required this.id,
     required this.doctorId,
     required this.name,
     required this.email,
+    this.ownerType = 'doctor',
+    this.ownerId,
     this.phone,
     this.clinicId,
     this.status = 'active',
@@ -12,6 +47,8 @@ class ReceptionistModel {
   });
 
   final String id;
+  final String ownerType;
+  final String? ownerId;
   final String doctorId;
   final String? clinicId;
   final String name;
@@ -26,7 +63,9 @@ class ReceptionistModel {
   factory ReceptionistModel.fromJson(Map<String, dynamic> json) {
     return ReceptionistModel(
       id: json['id']?.toString() ?? '',
-      doctorId: json['doctorId']?.toString() ?? '',
+      ownerType: json['ownerType'] as String? ?? 'doctor',
+      ownerId: json['ownerId']?.toString() ?? json['doctorId']?.toString(),
+      doctorId: json['doctorId']?.toString() ?? json['ownerId']?.toString() ?? '',
       clinicId: json['clinicId']?.toString(),
       name: json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',

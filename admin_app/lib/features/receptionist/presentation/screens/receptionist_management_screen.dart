@@ -7,34 +7,41 @@ import '../../../../data/models/receptionist_model.dart';
 import '../../provider/receptionist_providers.dart';
 
 class ReceptionistManagementScreen extends ConsumerWidget {
-  const ReceptionistManagementScreen({super.key});
+  const ReceptionistManagementScreen({
+    super.key,
+    this.ownerType = ReceptionistOwnerType.doctor,
+  });
+
+  final ReceptionistOwnerType ownerType;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(doctorReceptionistsProvider);
+    final state = ref.watch(providerReceptionistsProvider(ownerType));
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Receptionist Management')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showEditor(context, ref),
+        onPressed: () => _showEditor(context, ref, ownerType),
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: const Text('Add Receptionist'),
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(doctorReceptionistsProvider.notifier).load(),
+        onRefresh: () =>
+            ref.read(providerReceptionistsProvider(ownerType).notifier).load(),
         child: state.isLoading && state.items.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : state.error != null && state.items.isEmpty
                 ? AppErrorWidget(
                     message: state.error!,
-                    onRetry: () =>
-                        ref.read(doctorReceptionistsProvider.notifier).load(),
+                    onRetry: () => ref
+                        .read(providerReceptionistsProvider(ownerType).notifier)
+                        .load(),
                   )
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 88),
                     children: [
                       Text(
-                        'Clinic receptionists can verify patient arrival using the OTP in the patient’s booking.',
+                        ownerType.description,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                           height: 1.4,
@@ -42,14 +49,15 @@ class ReceptionistManagementScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                       if (state.items.isEmpty)
-                        const EmptyStateWidget(
+                        EmptyStateWidget(
                           icon: Icons.badge_outlined,
                           title: 'No receptionists yet',
-                          message: 'Create a receptionist account for your clinic desk.',
+                          message:
+                              'Create a receptionist account for your ${ownerType.deskNoun} desk.',
                         )
                       else
                         for (final item in state.items) ...[
-                          _ReceptionistTile(item: item),
+                          _ReceptionistTile(item: item, ownerType: ownerType),
                           const SizedBox(height: 10),
                         ],
                     ],
@@ -60,9 +68,10 @@ class ReceptionistManagementScreen extends ConsumerWidget {
 }
 
 class _ReceptionistTile extends ConsumerWidget {
-  const _ReceptionistTile({required this.item});
+  const _ReceptionistTile({required this.item, required this.ownerType});
 
   final ReceptionistModel item;
+  final ReceptionistOwnerType ownerType;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,10 +90,11 @@ class _ReceptionistTile extends ConsumerWidget {
         isThreeLine: true,
         trailing: PopupMenuButton<String>(
           onSelected: (value) async {
-            final notifier = ref.read(doctorReceptionistsProvider.notifier);
+            final notifier =
+                ref.read(providerReceptionistsProvider(ownerType).notifier);
             switch (value) {
               case 'edit':
-                await _showEditor(context, ref, existing: item);
+                await _showEditor(context, ref, ownerType, existing: item);
               case 'toggle':
                 final err = await notifier.setStatus(
                   item.id,
@@ -94,13 +104,15 @@ class _ReceptionistTile extends ConsumerWidget {
                   SnackBarHelper.showError(context, err);
                 }
               case 'password':
-                await _showPasswordSheet(context, ref, item);
+                await _showPasswordSheet(context, ref, ownerType, item);
               case 'delete':
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Delete receptionist'),
-                    content: Text('Remove ${item.name} from your clinic?'),
+                    content: Text(
+                      'Remove ${item.name} from your ${ownerType.deskNoun}?',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
@@ -138,7 +150,8 @@ class _ReceptionistTile extends ConsumerWidget {
 
 Future<void> _showEditor(
   BuildContext context,
-  WidgetRef ref, {
+  WidgetRef ref,
+  ReceptionistOwnerType ownerType, {
   ReceptionistModel? existing,
 }) async {
   final name = TextEditingController(text: existing?.name ?? '');
@@ -210,7 +223,7 @@ Future<void> _showEditor(
                   onPressed: () async {
                     if (formKey.currentState?.validate() != true) return;
                     final notifier =
-                        ref.read(doctorReceptionistsProvider.notifier);
+                        ref.read(providerReceptionistsProvider(ownerType).notifier);
                     final err = existing == null
                         ? await notifier.create(
                             name: name.text,
@@ -222,6 +235,8 @@ Future<void> _showEditor(
                             ReceptionistModel(
                               id: existing.id,
                               doctorId: existing.doctorId,
+                              ownerType: existing.ownerType,
+                              ownerId: existing.ownerId,
                               name: name.text.trim(),
                               email: email.text.trim(),
                               phone: phone.text.trim(),
@@ -259,6 +274,7 @@ Future<void> _showEditor(
 Future<void> _showPasswordSheet(
   BuildContext context,
   WidgetRef ref,
+  ReceptionistOwnerType ownerType,
   ReceptionistModel item,
 ) async {
   final password = TextEditingController();
@@ -296,7 +312,7 @@ Future<void> _showPasswordSheet(
                   return;
                 }
                 final err = await ref
-                    .read(doctorReceptionistsProvider.notifier)
+                    .read(providerReceptionistsProvider(ownerType).notifier)
                     .resetPassword(item.id, password.text);
                 if (!ctx.mounted) return;
                 if (err != null) {

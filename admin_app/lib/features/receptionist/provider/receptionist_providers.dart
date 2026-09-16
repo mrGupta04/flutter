@@ -183,16 +183,17 @@ class DoctorReceptionistsState {
 }
 
 class DoctorReceptionistsNotifier extends StateNotifier<DoctorReceptionistsState> {
-  DoctorReceptionistsNotifier(this._repository)
+  DoctorReceptionistsNotifier(this._repository, this.ownerType)
       : super(const DoctorReceptionistsState()) {
     load();
   }
 
   final ReceptionistRepository _repository;
+  final ReceptionistOwnerType ownerType;
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true, error: null);
-    final res = await _repository.listForDoctor();
+    final res = await _repository.listForOwner(ownerType);
     if (res.success && res.data != null) {
       state = state.copyWith(isLoading: false, items: res.data);
     } else {
@@ -214,6 +215,7 @@ class DoctorReceptionistsNotifier extends StateNotifier<DoctorReceptionistsState
       email: email,
       password: password,
       phone: phone,
+      ownerType: ownerType,
     );
     if (res.success) {
       await load();
@@ -228,6 +230,7 @@ class DoctorReceptionistsNotifier extends StateNotifier<DoctorReceptionistsState
       name: item.name,
       email: item.email,
       phone: item.phone,
+      ownerType: ownerType,
     );
     if (res.success) {
       await load();
@@ -237,7 +240,11 @@ class DoctorReceptionistsNotifier extends StateNotifier<DoctorReceptionistsState
   }
 
   Future<String?> setStatus(String id, String status) async {
-    final res = await _repository.setStatus(id: id, status: status);
+    final res = await _repository.setStatus(
+      id: id,
+      status: status,
+      ownerType: ownerType,
+    );
     if (res.success) {
       await load();
       return null;
@@ -246,12 +253,16 @@ class DoctorReceptionistsNotifier extends StateNotifier<DoctorReceptionistsState
   }
 
   Future<String?> resetPassword(String id, String password) async {
-    final res = await _repository.resetPassword(id: id, password: password);
+    final res = await _repository.resetPassword(
+      id: id,
+      password: password,
+      ownerType: ownerType,
+    );
     return res.success ? null : (res.error ?? 'Could not reset password');
   }
 
   Future<String?> delete(String id) async {
-    final res = await _repository.delete(id);
+    final res = await _repository.delete(id, ownerType: ownerType);
     if (res.success) {
       await load();
       return null;
@@ -260,7 +271,15 @@ class DoctorReceptionistsNotifier extends StateNotifier<DoctorReceptionistsState
   }
 }
 
-final doctorReceptionistsProvider =
-    StateNotifierProvider<DoctorReceptionistsNotifier, DoctorReceptionistsState>(
-  (ref) => DoctorReceptionistsNotifier(ref.read(receptionistRepositoryProvider)),
+final providerReceptionistsProvider = StateNotifierProvider.family<
+    DoctorReceptionistsNotifier,
+    DoctorReceptionistsState,
+    ReceptionistOwnerType>(
+  (ref, ownerType) => DoctorReceptionistsNotifier(
+    ref.read(receptionistRepositoryProvider),
+    ownerType,
+  ),
 );
+
+final doctorReceptionistsProvider =
+    providerReceptionistsProvider(ReceptionistOwnerType.doctor);

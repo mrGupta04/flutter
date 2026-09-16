@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/constants/service_faqs.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/blood_bank_model.dart';
+import '../../../../shared/widgets/service_faq_section.dart';
 import '../../provider/blood_bank_search_provider.dart';
 import '../widgets/blood_bank_booking_sheet.dart';
 import '../widgets/blood_inventory_indicator.dart';
@@ -293,6 +295,11 @@ class _DetailBody extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const ServiceFaqSection(
+                  title: "General FAQs for Blood Bank Services",
+                  items: ServiceFaqs.bloodBank,
+                  padding: EdgeInsets.fromLTRB(0, 16, 0, 8),
                 ),
               ],
             ),

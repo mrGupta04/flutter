@@ -1427,16 +1427,18 @@ class MarketplaceSectionTitle extends StatelessWidget {
     required this.title,
     this.actionLabel,
     this.onAction,
+    this.padding = const EdgeInsets.fromLTRB(16, 12, 16, 10),
   });
 
   final String title;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: padding,
       child: Row(
         children: [
           Expanded(

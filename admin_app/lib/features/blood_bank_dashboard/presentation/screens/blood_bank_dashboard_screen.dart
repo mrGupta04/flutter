@@ -121,6 +121,13 @@ class _BloodBankDashboardScreenState extends ConsumerState<BloodBankDashboardScr
                           _ActionChip('Emergency inbox', Icons.emergency_rounded, 2),
                           _ActionChip('Donors', Icons.volunteer_activism_outlined, 3),
                           _ActionChip('Staff', Icons.groups_outlined, 4),
+                          ActionChip(
+                            avatar: const Icon(Icons.badge_outlined, size: 18),
+                            label: const Text('Receptionists'),
+                            onPressed: () => context.push(
+                              AppConstants.routeBloodBankReceptionists,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 20),

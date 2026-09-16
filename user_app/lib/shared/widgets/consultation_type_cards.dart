@@ -28,7 +28,7 @@ class ConsultationTypeCards extends StatelessWidget {
               onTap: () => onSelected(ConsultationType.onlineConsult),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Expanded(
             child: _TypeChip(
               icon: Icons.local_hospital_rounded,
@@ -37,7 +37,7 @@ class ConsultationTypeCards extends StatelessWidget {
               onTap: () => onSelected(ConsultationType.visitSite),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Expanded(
             child: _TypeChip(
               icon: Icons.home_rounded,
@@ -67,22 +67,25 @@ class _TypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
+    const surface = AppColors.surface;
+
+    const radius = BorderRadius.all(Radius.circular(10));
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: radius,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
             color: selected
                 ? AppColors.primary.withValues(alpha: 0.1)
                 : surface,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: radius,
             border: Border.all(
               color: selected
                   ? AppColors.primary.withValues(alpha: 0.55)
@@ -104,26 +107,23 @@ class _TypeChip extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 14,
+                size: 18,
                 color: selected ? AppColors.primary : AppColors.textSecondary,
               ),
-              const SizedBox(width: 3),
+              const SizedBox(width: 6),
               Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    softWrap: false,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                      color: selected
-                          ? AppColors.primaryDark
-                          : AppColors.textSecondary,
-                      height: 1.1,
-                    ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.titleSmall.copyWith(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                    color: selected
+                        ? AppColors.primaryDark
+                        : AppColors.textSecondary,
+                    height: 1.15,
                   ),
                 ),
               ),

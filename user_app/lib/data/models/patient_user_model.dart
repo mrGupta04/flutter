@@ -319,6 +319,21 @@ class PatientUserModel {
     return value.isNotEmpty && value != 'cleared';
   }
 
+  /// Rough completion used on the Netmeds-style profile header.
+  int get profileCompletionPercent {
+    var filled = 0;
+    const total = 8;
+    if (firstName.trim().isNotEmpty) filled++;
+    if ((lastName ?? '').trim().isNotEmpty) filled++;
+    if (email.trim().isNotEmpty) filled++;
+    if (mobileNumber.trim().isNotEmpty) filled++;
+    if ((gender ?? '').trim().isNotEmpty) filled++;
+    if (dateOfBirth != null || age != null) filled++;
+    if (hasProfilePhoto) filled++;
+    if (savedAddresses.isNotEmpty) filled++;
+    return ((filled / total) * 100).round().clamp(0, 100);
+  }
+
   factory PatientUserModel.fromJson(Map<String, dynamic> json) {
     return PatientUserModel(
       id: json['id'] as String,

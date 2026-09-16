@@ -49,13 +49,53 @@ class AppBackButtonScope extends StatelessWidget {
   }) {
     final nav = _rootNavigator(context, router: router);
     if (nav == null || !nav.canPop()) return false;
-    Route<dynamic>? top;
+    var poppedDialog = false;
     nav.popUntil((route) {
-      top = route;
+      if (route is PopupRoute) {
+        poppedDialog = true;
+        return false;
+      }
       return true;
     });
-    if (top is PopupRoute) {
-      nav.pop();
+    return poppedDialog;
+  }
+
+  static bool _isHomePath(String path) => path == AppConstants.routeUserHome;
+
+  static bool _isTabRootPath(String path) {
+    return path == AppConstants.routeLabs ||
+        path == AppConstants.routeScans ||
+        path == AppConstants.routeUserDashboard ||
+        path == AppConstants.routeUserDashboardLegacy ||
+        path == AppConstants.routeCareListing;
+  }
+
+  static bool _hasStackedPages(GoRouter? router) {
+    if (router == null) return false;
+    return router.routerDelegate.currentConfiguration.matches.length > 1;
+  }
+
+  /// Handles Android/iOS back: dialogs, multi-step forms, previous route, then
+  /// the parent module. Returns false only on Home so the app can exit.
+  static bool handleSystemBack(
+    BuildContext context, {
+    GoRouter? router,
+  }) {
+    if (_popDialogIfPresent(context, router: router)) return true;
+    if (_runHandlers()) return true;
+    final goRouter = router ?? GoRouter.maybeOf(context);
+    if (_hasStackedPages(goRouter) && canNavigateBack(context, router: router)) {
+      navigateBack(context, router: router);
+      return true;
+    }
+    final path = goRouter?.state.uri.path;
+    if (path != null && _isTabRootPath(path)) {
+      goRouter?.go(AppConstants.routeUserHome);
+      return true;
+    }
+    if (goToPreviousPage(context, router: router)) return true;
+    if (path != null && !_isHomePath(path)) {
+      goRouter?.go(AppConstants.routeUserHome);
       return true;
     }
     return false;
@@ -65,8 +105,8 @@ class AppBackButtonScope extends StatelessWidget {
     BuildContext context, {
     GoRouter? router,
   }) {
-    if (router != null && router.canPop()) return true;
-    final goRouter = GoRouter.maybeOf(context);
+    final goRouter = router ?? GoRouter.maybeOf(context);
+    if (!_hasStackedPages(goRouter)) return false;
     if (goRouter != null && goRouter.canPop()) return true;
     return _rootNavigator(context, router: router)?.canPop() ?? false;
   }
@@ -164,18 +204,24 @@ class AppBackButtonScope extends StatelessWidget {
   }
 
   @override
+  Widget build(BuildContext context) => child;
+}
+
+/// Put this *inside* a [GoRouter] page so Android back is intercepted by the
+/// route itself. Wrapping [MaterialApp] does not stop the navigator from
+/// finishing the activity when the stack has only one page.
+class RouteBackScope extends StatelessWidget {
+  const RouteBackScope({super.key, required this.child});
+
+  final Widget child;
+
+  @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_popDialogIfPresent(context, router: router)) return;
-        if (_runHandlers()) return;
-        if (canNavigateBack(context, router: router)) {
-          navigateBack(context, router: router);
-          return;
-        }
-        if (goToPreviousPage(context, router: router)) return;
+        if (AppBackButtonScope.handleSystemBack(context)) return;
         SystemNavigator.pop();
       },
       child: child,
@@ -205,9 +251,13 @@ class _UserTabBackScopeState extends State<UserTabBackScope> {
 
   bool _onBack() {
     if (widget.isHomeTab) return false;
-    if (AppBackButtonScope.canNavigateBack(context)) return false;
+    if (_hasStackedPagesAboveTab()) return false;
     context.go(widget.homeRoute ?? AppConstants.routeUserHome);
     return true;
+  }
+
+  bool _hasStackedPagesAboveTab() {
+    return AppBackButtonScope.canNavigateBack(context);
   }
 
   @override
@@ -223,7 +273,18 @@ class _UserTabBackScopeState extends State<UserTabBackScope> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    if (widget.isHomeTab) return widget.child;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_onBack()) return;
+        context.go(widget.homeRoute ?? AppConstants.routeUserHome);
+      },
+      child: widget.child,
+    );
+  }
 }
 
 /// Multi-step forms: system back moves to the previous step before leaving.

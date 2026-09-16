@@ -14,10 +14,12 @@ class DoctorConsultationBookingSection extends StatelessWidget {
     super.key,
     required this.doctor,
     required this.onBook,
+    this.titlePadding = const EdgeInsets.fromLTRB(16, 12, 16, 10),
   });
 
   final DoctorModel doctor;
   final ValueChanged<ConsultationType> onBook;
+  final EdgeInsetsGeometry titlePadding;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +35,10 @@ class DoctorConsultationBookingSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const MarketplaceSectionTitle(title: 'Book consultation'),
+        MarketplaceSectionTitle(
+          title: 'Book consultation',
+          padding: titlePadding,
+        ),
         for (var i = 0; i < types.length; i++) ...[
           if (i > 0) const SizedBox(height: 12),
           _ConsultationOptionCard(

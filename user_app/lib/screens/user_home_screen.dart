@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
@@ -10,14 +9,15 @@ import '../core/services/token_storage.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_decorations.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/utils/geo_distance_utils.dart';
 import '../data/models/doctor_model.dart';
 import '../data/models/patient_booking_model.dart';
 import '../features/nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../features/doctor_registration/data/medical_specialities.dart';
+import '../features/doctor_registration/presentation/widgets/browse_by_specialty_section.dart';
 import '../features/doctor_registration/presentation/widgets/doctor_search_result_tile.dart';
 import '../features/doctor_registration/provider/doctor_live_status_provider.dart';
 import '../features/doctor_registration/provider/verified_doctors_provider.dart';
-import '../features/labs/data/health_package_visuals.dart';
 import '../features/labs/data/models/health_package.dart';
 import '../features/labs/presentation/screens/health_package_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
@@ -26,10 +26,10 @@ import '../features/select_location/selected_location.dart';
 import '../features/user_auth/presentation/widgets/patient_header_avatar.dart';
 import '../features/user_auth/provider/patient_auth_provider.dart';
 import '../features/user_dashboard/provider/patient_dashboard_provider.dart';
-import '../core/utils/geo_distance_utils.dart';
 import '../core/utils/responsive_utils.dart';
 import '../shared/widgets/health_service_card.dart';
 import '../shared/widgets/healthcare_ui.dart';
+import '../shared/widgets/home_help_section.dart';
 import '../shared/widgets/marketplace_provider_card_ui.dart';
 import '../shared/widgets/user_adaptive_scaffold.dart';
 import '../shared/widgets/user_app_footer.dart';
@@ -209,6 +209,19 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 8)),
               SliverToBoxAdapter(
                 child: constrain(
+                  BrowseBySpecialtySection(
+                    onViewAll: () =>
+                        context.push(AppConstants.routeFindSpecialists),
+                    onSpecialtySelected: (item) => _openDoctorSearch(
+                      context,
+                      specialization: item.searchTerm,
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+              SliverToBoxAdapter(
+                child: constrain(
                   MarketplaceSectionTitle(
                     title: 'Popular Providers',
                     actionLabel: 'See all',
@@ -231,75 +244,13 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   ),
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 8)),
-              SliverToBoxAdapter(
-                child: constrain(
-                  MarketplaceSectionTitle(
-                    title: 'Providers Near You',
-                    actionLabel: location.hasCoordinates ? 'See all' : null,
-                    onAction: location.hasCoordinates
-                        ? () => _openDoctorSearch(context)
-                        : null,
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: constrain(
-                  _NearbyProvidersSection(
-                    location: location,
-                    asyncDoctors: doctorsAsync,
-                    onRetry: () => ref.invalidate(verifiedDoctorsProvider),
-                    onEnableLocation: () => ref
-                        .read(userLocationProvider.notifier)
-                        .ensureResolved(context, forcePrompt: true),
-                    onSearch: () => context.push(AppConstants.routeGlobalSearch),
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 8)),
-              SliverToBoxAdapter(
-                child: constrain(
-                  MarketplaceSectionTitle(
-                    title: 'Browse by Specialty',
-                    actionLabel: 'View all',
-                    onAction: () =>
-                        context.push(AppConstants.routeFindSpecialists),
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: constrain(
-                  SizedBox(
-                    height: 108,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _homeSpecialties.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 12),
-                      itemBuilder: (context, index) {
-                        final item = _homeSpecialties[index];
-                        return _SpecialtyChip(
-                          organAsset: item.organAsset,
-                          label: item.label,
-                          softColor: item.softColor,
-                          accentColor: item.accentColor,
-                          onTap: () => _openDoctorSearch(
-                            context,
-                            specialization: item.searchTerm,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 8)),
               SliverToBoxAdapter(
                 child: constrain(
                   MarketplaceSectionTitle(
                     title: 'Health Packages',
                     actionLabel: 'See all',
                     onAction: () => _openServiceRoute(AppConstants.routeLabs),
+                    padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
                   ),
                 ),
               ),
@@ -312,6 +263,9 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   ),
                 ),
+              ),
+              SliverToBoxAdapter(
+                child: constrain(const HomeHelpSection()),
               ),
               SliverToBoxAdapter(
                 child: constrain(const UserScrollFooter()),
@@ -624,106 +578,23 @@ class _HomeProviderRail extends StatelessWidget {
   }
 }
 
-class _NearbyProvidersSection extends StatelessWidget {
-  const _NearbyProvidersSection({
-    required this.location,
-    required this.asyncDoctors,
-    required this.onRetry,
-    required this.onEnableLocation,
-    required this.onSearch,
-  });
-
-  final UserLocationState location;
-  final AsyncValue<List<DoctorModel>> asyncDoctors;
-  final VoidCallback onRetry;
-  final VoidCallback onEnableLocation;
-  final VoidCallback onSearch;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!location.hasCoordinates) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: _HomeInlineMessage(
-          title: 'No providers found nearby',
-          subtitle: location.isResolving
-              ? 'Getting your location…'
-              : 'Enable location to see providers near you.',
-          actionLabel: location.isResolving ? null : 'Use my location',
-          onAction: location.isResolving ? null : onEnableLocation,
-          compact: true,
-        ),
-      );
-    }
-
-    return asyncDoctors.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: _HomeHorizontalSkeleton(),
-      ),
-      error: (_, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: _HomeInlineMessage(
-          title: 'Unable to load nearby providers',
-          actionLabel: 'Retry',
-          onAction: onRetry,
-        ),
-      ),
-      data: (doctors) {
-        final nearby = sortDoctorsByDistance(
-          doctors,
-          location.latitude!,
-          location.longitude!,
-        )
-            .where(
-              (doctor) => doctorDistanceKm(
-                    doctor,
-                    location.latitude!,
-                    location.longitude!,
-                  ) !=
-                  null,
-            )
-            .take(8)
-            .toList(growable: false);
-
-        if (nearby.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _HomeInlineMessage(
-              title: 'No providers found nearby',
-              subtitle: 'Try searching for a doctor, nurse, or hospital.',
-              actionLabel: 'Search Providers',
-              onAction: onSearch,
-              compact: true,
-            ),
-          );
-        }
-
-        return _DoctorCardRail(
-          doctors: nearby,
-          userLatitude: location.latitude,
-          userLongitude: location.longitude,
-        );
-      },
-    );
-  }
-}
-
 class _DoctorCardRail extends ConsumerWidget {
   const _DoctorCardRail({
     required this.doctors,
-    this.userLatitude,
-    this.userLongitude,
   });
 
   final List<DoctorModel> doctors;
-  final double? userLatitude;
-  final double? userLongitude;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final location = ref.watch(userLocationProvider);
+    final ranked = sortDoctorsByProximityAndRating(
+      doctors,
+      userLatitude: location.latitude,
+      userLongitude: location.longitude,
+    );
     final liveMap = ref
-            .watch(doctorLiveStatusProvider(doctorIdsCacheKey(doctors)))
+            .watch(doctorLiveStatusProvider(doctorIdsCacheKey(ranked)))
             .valueOrNull ??
         const <String, bool>{};
 
@@ -735,13 +606,10 @@ class _DoctorCardRail extends ConsumerWidget {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
-            itemCount: doctors.length,
+            itemCount: ranked.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              final doctor = applyLiveStatus(doctors[index], liveMap);
-              final distance = userLatitude != null && userLongitude != null
-                  ? doctorDistanceKm(doctor, userLatitude!, userLongitude!)
-                  : null;
+              final doctor = applyLiveStatus(ranked[index], liveMap);
               return Align(
                 alignment: Alignment.topCenter,
                 child: SizedBox(
@@ -749,7 +617,13 @@ class _DoctorCardRail extends ConsumerWidget {
                   child: DoctorSearchResultTile(
                     doctor: doctor,
                     showBottomDivider: false,
-                    distanceKm: distance,
+                    distanceKm: location.hasCoordinates
+                        ? doctorDistanceKm(
+                            doctor,
+                            location.latitude!,
+                            location.longitude!,
+                          )
+                        : null,
                     availabilityLabel:
                         doctor.isLiveNow ? 'Available now' : null,
                   ),
@@ -1015,80 +889,6 @@ class _UpcomingBookingCard extends StatelessWidget {
   }
 }
 
-class _SpecialtyChip extends StatelessWidget {
-  const _SpecialtyChip({
-    required this.organAsset,
-    required this.label,
-    required this.softColor,
-    required this.accentColor,
-    required this.onTap,
-  });
-
-  final String organAsset;
-  final String label;
-  final Color softColor;
-  final Color accentColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isSvg = organAsset.toLowerCase().endsWith('.svg');
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          width: 76,
-          child: Column(
-            children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: softColor,
-                  border: Border.all(
-                    color: accentColor.withValues(alpha: 0.16),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: isSvg
-                      ? SvgPicture.asset(
-                          organAsset,
-                          fit: BoxFit.contain,
-                          colorFilter: ColorFilter.mode(
-                            accentColor,
-                            BlendMode.srcIn,
-                          ),
-                        )
-                      : Image.asset(
-                          organAsset,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                        ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: AppTextStyles.labelSmall.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _HomeService {
   const _HomeService({
     required this.title,
@@ -1109,22 +909,6 @@ class _HomeService {
   final String route;
   final String? routeParams;
   final double illustrationScale;
-}
-
-class _SpecialtyItem {
-  const _SpecialtyItem({
-    required this.organAsset,
-    required this.label,
-    required this.softColor,
-    required this.accentColor,
-    required this.searchTerm,
-  });
-
-  final String organAsset;
-  final String label;
-  final Color softColor;
-  final Color accentColor;
-  final String searchTerm;
 }
 
 const _homeServices = [
@@ -1182,72 +966,6 @@ const _homeServices = [
     illustrationImage:
         'assets/images/home_cards/blood-removebg-preview.png',
     route: AppConstants.routeBloodBanks,
-  ),
-];
-
-const _homeSpecialties = [
-  _SpecialtyItem(
-    organAsset: OrganAssets.heart,
-    label: 'Cardiology',
-    softColor: Color(0xFFFFEBEE),
-    accentColor: Color(0xFFE53935),
-    searchTerm: 'Cardiology',
-  ),
-  _SpecialtyItem(
-    organAsset: OrganAssets.skin,
-    label: 'Dermatology',
-    softColor: Color(0xFFE8EAF6),
-    accentColor: Color(0xFF5C6BC0),
-    searchTerm: 'Dermatology',
-  ),
-  _SpecialtyItem(
-    organAsset: OrganAssets.spine,
-    label: 'Neurology',
-    softColor: Color(0xFFEDE7F6),
-    accentColor: Color(0xFF7E57C2),
-    searchTerm: 'Neurology',
-  ),
-  _SpecialtyItem(
-    organAsset: OrganAssets.bone,
-    label: 'Orthopedics',
-    softColor: Color(0xFFFFF8E1),
-    accentColor: Color(0xFFFB8C00),
-    searchTerm: 'Orthopedics',
-  ),
-  _SpecialtyItem(
-    organAsset: OrganAssets.vitamin,
-    label: 'Pediatrics',
-    softColor: Color(0xFFE8F5E9),
-    accentColor: Color(0xFF43A047),
-    searchTerm: 'Pediatrics',
-  ),
-  _SpecialtyItem(
-    organAsset: OrganAssets.pregnancy,
-    label: 'Gynecology',
-    softColor: Color(0xFFFCE4EC),
-    accentColor: Color(0xFFEC407A),
-    searchTerm: 'Gynecology & Obstetrics',
-  ),
-  _SpecialtyItem(
-    organAsset: OrganAssets.ear,
-    label: 'ENT',
-    softColor: Color(0xFFFFF8E1),
-    accentColor: Color(0xFFF9A825),
-    searchTerm: 'ENT (Otolaryngology)',
-  ),
-  _SpecialtyItem(
-    organAsset: OrganAssets.eye,
-    label: 'Ophthalmology',
-    softColor: Color(0xFFE3F2FD),
-    accentColor: Color(0xFF1E88E5),
-    searchTerm: 'Ophthalmology',
-  ),
-  _SpecialtyItem(
-    organAsset: OrganAssets.tooth,
-    label: 'Dentistry',
-    softColor: Color(0xFFE0F7FA),
-    accentColor: Color(0xFF00ACC1),
-    searchTerm: 'Dentistry',
   ),
 ];
 

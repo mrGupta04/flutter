@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/blood_bank_model.dart';
 import '../../../data/repositories/blood_bank_repository.dart';
+import '../../../core/utils/geo_distance_utils.dart';
 
 final bloodBankRepositoryProvider = Provider((ref) => BloodBankRepository());
 
@@ -119,7 +120,16 @@ final bloodBankSearchProvider = FutureProvider.autoDispose
     );
 
     if (response.success && response.data != null) {
-      return response.data!;
+      final banks = [...response.data!];
+      banks.sort(
+        (a, b) => compareNearbyThenRating(
+          distanceA: a.distanceKm,
+          distanceB: b.distanceKm,
+          ratingA: a.averageRating ?? 0,
+          ratingB: b.averageRating ?? 0,
+        ),
+      );
+      return banks;
     }
     throw Exception(response.error ?? 'Search failed');
   },

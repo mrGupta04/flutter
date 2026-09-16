@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/service_faqs.dart';
 import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -15,6 +16,7 @@ import '../../../../shared/widgets/care_filter_chip.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
 import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
 import '../../provider/scan_search_provider.dart';
+import '../../../../shared/widgets/service_faq_section.dart';
 import '../widgets/scan_explore_card.dart';
 
 class ScanExploreScreen extends ConsumerStatefulWidget {
@@ -28,7 +30,6 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
   Timer? _debounce;
-  String? _locationPrefill;
 
   @override
   void initState() {
@@ -40,7 +41,6 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
 
   Future<void> _initExplore() async {
     final preferred = ref.read(userLocationProvider);
-    _applyLocationPrefill(preferred);
     double? lat = preferred.latitude;
     double? lng = preferred.longitude;
 
@@ -68,26 +68,7 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
     }
   }
 
-  void _applyLocationPrefill(UserLocationState location) {
-    final label = location.displayPlaceCity;
-    if (label == null || label.isEmpty) return;
-
-    final current = _searchController.text.trim();
-    final canReplace = current.isEmpty ||
-        (_locationPrefill != null && current == _locationPrefill);
-    if (!canReplace) return;
-
-    _locationPrefill = label;
-    if (current != label) {
-      _searchController.value = TextEditingValue(
-        text: label,
-        selection: TextSelection.collapsed(offset: label.length),
-      );
-    }
-  }
-
   void _onLocationResolved(UserLocationState location) {
-    _applyLocationPrefill(location);
     if (!location.hasCoordinates) return;
     final state = ref.read(scanExploreProvider);
     if (state.latitude != null && state.longitude != null) return;
@@ -116,11 +97,6 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       final text = value.trim();
-      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
-        ref.read(scanExploreProvider.notifier).setQuery('');
-        return;
-      }
-      _locationPrefill = null;
       ref.read(scanExploreProvider.notifier).setQuery(text);
     });
   }
@@ -286,9 +262,7 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
             onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
+              if (!AppBackButtonScope.handleSystemBack(context)) {
                 context.go(AppConstants.routeUserHome);
               }
             },
@@ -349,6 +323,7 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
                             CareFilterChip(
                               label: 'Sort: ${state.sort.label}',
                               selected: true,
+                              horizontalPadding: 22,
                               onTap: () => _showSortSheet(state),
                             ),
                           ],
@@ -363,17 +338,18 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
                   child: Center(child: CircularProgressIndicator()),
                 )
               else if (state.error != null && state.centers.isEmpty)
-                SliverFillRemaining(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(state.error!, textAlign: TextAlign.center),
-                    ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(state.error!, textAlign: TextAlign.center),
                   ),
                 )
               else if (state.centers.isEmpty)
-                const SliverFillRemaining(
-                  child: Center(child: Text('No scan centers found')),
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: Text('No scan centers found')),
+                  ),
                 )
               else
                 SliverPadding(
@@ -423,6 +399,11 @@ class _ScanExploreScreenState extends ConsumerState<ScanExploreScreen> {
                       childCount: rowCount + 1,
                     ),
                   ),
+                ),
+              if (!(state.isLoading && state.centers.isEmpty))
+                ServiceFaqSection.sliver(
+                  title: "General FAQs for Scans",
+                  items: ServiceFaqs.scan,
                 ),
             ],
           ),

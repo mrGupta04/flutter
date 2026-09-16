@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/providers/theme_provider.dart';
+import 'core/providers/user_location_provider.dart';
 import 'core/services/device_push_service.dart';
 import 'core/services/socket_service.dart';
 import 'core/theme/app_theme.dart';
@@ -35,6 +35,7 @@ class _UserAppState extends ConsumerState<UserApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await DevicePushService.instance.promptOsPermission();
       await _maybeRegisterPush();
+      await _promptLocationOnColdStart();
     });
   }
 
@@ -48,7 +49,23 @@ class _UserAppState extends ConsumerState<UserApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       SocketService.instance.connectIfAuthenticated();
+      // Location is requested only on a fresh process start, never on resume.
     }
+  }
+
+  Future<void> _promptLocationOnColdStart() async {
+    BuildContext? navContext;
+    for (var i = 0; i < 10; i++) {
+      navContext = ref
+          .read(userRouterProvider)
+          .routerDelegate
+          .navigatorKey
+          .currentContext;
+      if (navContext != null && navContext.mounted) break;
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    if (navContext == null || !navContext.mounted) return;
+    await ref.read(userLocationProvider.notifier).ensureResolved(navContext);
   }
 
   Future<void> _maybeRegisterPush() async {
@@ -109,13 +126,12 @@ class _UserAppState extends ConsumerState<UserApp> with WidgetsBindingObserver {
     });
 
     final router = ref.watch(userRouterProvider);
-    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: '1mg Care',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
+      darkTheme: AppTheme.lightTheme,
+      themeMode: ThemeMode.light,
       routerConfig: router,
       builder: (context, child) {
         return AppBackButtonScope(

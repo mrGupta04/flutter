@@ -13,7 +13,9 @@ import '../../../user_auth/provider/patient_auth_provider.dart';
 
 /// Family members, saved addresses, allergies & medical history.
 class HealthProfileScreen extends ConsumerStatefulWidget {
-  const HealthProfileScreen({super.key});
+  const HealthProfileScreen({super.key, this.initialTab = 0});
+
+  final int initialTab;
 
   @override
   ConsumerState<HealthProfileScreen> createState() =>
@@ -28,7 +30,11 @@ class _HealthProfileScreenState extends ConsumerState<HealthProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 2),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(patientAuthProvider.notifier).refreshProfile();
     });

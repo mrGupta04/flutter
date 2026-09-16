@@ -8,24 +8,19 @@ import 'app_text_styles.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get lightTheme => _buildTheme(Brightness.light);
-  static ThemeData get darkTheme => _buildTheme(Brightness.dark);
+  static ThemeData get lightTheme => _buildTheme();
+  static ThemeData get darkTheme => lightTheme;
 
-  static ThemeData _buildTheme(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    final textPrimary =
-        isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
-    final surface = isDark ? AppColors.darkSurface : AppColors.surface;
-    final background =
-        isDark ? AppColors.darkBackground : AppColors.background;
+  static ThemeData _buildTheme() {
+    const textPrimary = AppColors.textPrimary;
+    const textSecondary = AppColors.textSecondary;
+    const surface = AppColors.surface;
+    const background = AppColors.background;
 
     return ThemeData(
       useMaterial3: true,
-      brightness: brightness,
-      colorScheme: ColorScheme(
-        brightness: brightness,
+      brightness: Brightness.light,
+      colorScheme: ColorScheme.light(
         primary: AppColors.primary,
         onPrimary: AppColors.white,
         primaryContainer: AppColors.primaryLight,
@@ -40,26 +35,38 @@ class AppTheme {
         onError: AppColors.white,
         surface: surface,
         onSurface: textPrimary,
+        onSurfaceVariant: textSecondary,
         outline: AppColors.border,
         surfaceTint: AppColors.primary,
       ),
       scaffoldBackgroundColor: background,
+      iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      listTileTheme: const ListTileThemeData(
+        iconColor: AppColors.primary,
+        textColor: AppColors.textPrimary,
+        titleTextStyle: AppTextStyles.bodyMedium,
+      ),
       fontFamily: GoogleFonts.inter().fontFamily,
-      textTheme: GoogleFonts.interTextTheme(
-        ThemeData(brightness: brightness).textTheme,
-      ).apply(bodyColor: textPrimary, displayColor: textPrimary),
+      textTheme: GoogleFonts.interTextTheme().apply(
+        bodyColor: textPrimary,
+        displayColor: textPrimary,
+      ),
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
+        toolbarHeight: 40,
         backgroundColor: AppColors.headerGreen,
         foregroundColor: AppColors.white,
         systemOverlayStyle: SystemUiOverlayStyle.light,
+        titleSpacing: 0,
         titleTextStyle: AppTextStyles.titleMedium.copyWith(
           color: AppColors.white,
           fontWeight: FontWeight.w600,
+          fontSize: 15,
           fontFamily: GoogleFonts.inter().fontFamily,
         ),
-        iconTheme: const IconThemeData(color: AppColors.white, size: 22),
+        iconTheme: const IconThemeData(color: AppColors.white, size: 18),
+        actionsIconTheme: const IconThemeData(color: AppColors.white, size: 18),
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
@@ -212,8 +219,7 @@ class AppTheme {
         hintStyle: AppTextStyles.bodyMedium.copyWith(color: textSecondary),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor:
-            isDark ? AppColors.darkSurfaceElevated : AppColors.white,
+        backgroundColor: AppColors.white,
         selectedColor: AppColors.primary,
         disabledColor: AppColors.grey100,
         labelStyle: AppTextStyles.labelMedium.copyWith(
@@ -222,13 +228,13 @@ class AppTheme {
         secondaryLabelStyle: AppTextStyles.labelMedium.copyWith(
           color: textSecondary,
         ),
-        brightness: brightness,
+        brightness: Brightness.light,
         checkmarkColor: AppColors.white,
         deleteIconColor: textSecondary,
         shape: RoundedRectangleBorder(
           borderRadius: AppDecorations.borderRadiusPill,
           side: BorderSide(
-            color: isDark ? AppColors.grey700 : AppColors.grey200,
+            color: AppColors.grey200,
           ),
         ),
       ),

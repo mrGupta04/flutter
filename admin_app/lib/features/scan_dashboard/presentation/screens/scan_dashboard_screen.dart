@@ -150,6 +150,16 @@ class _ScanDashboardScreenState extends ConsumerState<ScanDashboardScreen> {
                       ),
                       const SizedBox(height: 10),
                       ServiceBenefitCard(
+                        icon: Icons.badge_outlined,
+                        title: 'Receptionist management',
+                        subtitle:
+                            'Create scan desk accounts with email and password.',
+                        color: AppColors.primary,
+                        onTap: () =>
+                            context.push(AppConstants.routeScanReceptionists),
+                      ),
+                      const SizedBox(height: 10),
+                      ServiceBenefitCard(
                         icon: Icons.assignment_outlined,
                         title: 'Booking management',
                         subtitle:

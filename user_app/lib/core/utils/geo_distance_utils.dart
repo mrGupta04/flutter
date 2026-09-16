@@ -19,6 +19,23 @@ double distanceKm(double lat1, double lon1, double lat2, double lon2) {
 
 double _toRadians(double degrees) => degrees * math.pi / 180;
 
+/// Closer first; missing distance last. Equal distance uses higher rating.
+int compareNearbyThenRating({
+  required double? distanceA,
+  required double? distanceB,
+  required double ratingA,
+  required double ratingB,
+}) {
+  if (distanceA == null && distanceB == null) {
+    return ratingB.compareTo(ratingA);
+  }
+  if (distanceA == null) return 1;
+  if (distanceB == null) return -1;
+  final distCmp = distanceA.compareTo(distanceB);
+  if (distCmp != 0) return distCmp;
+  return ratingB.compareTo(ratingA);
+}
+
 /// Distance from the user to a doctor's clinic/base, if coordinates exist.
 double? doctorDistanceKm(
   DoctorModel doctor,
@@ -31,31 +48,49 @@ double? doctorDistanceKm(
   return distanceKm(userLatitude, userLongitude, lat, lng);
 }
 
+/// Nearest doctors first, then higher rated. Falls back to rating only.
+List<DoctorModel> sortDoctorsByProximityAndRating(
+  List<DoctorModel> doctors, {
+  double? userLatitude,
+  double? userLongitude,
+}) {
+  final hasUser = userLatitude != null && userLongitude != null;
+  final ranked = doctors
+      .map(
+        (doctor) => (
+          doctor: doctor,
+          distance: hasUser
+              ? doctorDistanceKm(doctor, userLatitude, userLongitude)
+              : null,
+          rating: doctor.averageRating ?? 0,
+        ),
+      )
+      .toList(growable: false);
+
+  ranked.sort((a, b) {
+    if (!hasUser) return b.rating.compareTo(a.rating);
+    return compareNearbyThenRating(
+      distanceA: a.distance,
+      distanceB: b.distance,
+      ratingA: a.rating,
+      ratingB: b.rating,
+    );
+  });
+
+  return ranked.map((entry) => entry.doctor).toList(growable: false);
+}
+
 /// Doctors with map coordinates first, sorted nearest to farthest.
 List<DoctorModel> sortDoctorsByDistance(
   List<DoctorModel> doctors,
   double userLatitude,
   double userLongitude,
 ) {
-  final ranked = doctors
-      .map(
-        (doctor) => (
-          doctor: doctor,
-          distance: doctorDistanceKm(doctor, userLatitude, userLongitude),
-        ),
-      )
-      .toList(growable: false);
-
-  ranked.sort((a, b) {
-    final distA = a.distance;
-    final distB = b.distance;
-    if (distA == null && distB == null) return 0;
-    if (distA == null) return 1;
-    if (distB == null) return -1;
-    return distA.compareTo(distB);
-  });
-
-  return ranked.map((entry) => entry.doctor).toList(growable: false);
+  return sortDoctorsByProximityAndRating(
+    doctors,
+    userLatitude: userLatitude,
+    userLongitude: userLongitude,
+  );
 }
 
 /// Distance from the user to a nurse's base location, if coordinates exist.
@@ -70,31 +105,49 @@ double? nurseDistanceKm(
   return distanceKm(userLatitude, userLongitude, lat, lng);
 }
 
+/// Nearest nurses first, then higher rated. Falls back to rating only.
+List<NurseModel> sortNursesByProximityAndRating(
+  List<NurseModel> nurses, {
+  double? userLatitude,
+  double? userLongitude,
+}) {
+  final hasUser = userLatitude != null && userLongitude != null;
+  final ranked = nurses
+      .map(
+        (nurse) => (
+          nurse: nurse,
+          distance: hasUser
+              ? nurseDistanceKm(nurse, userLatitude, userLongitude)
+              : null,
+          rating: nurse.averageRating ?? 0,
+        ),
+      )
+      .toList(growable: false);
+
+  ranked.sort((a, b) {
+    if (!hasUser) return b.rating.compareTo(a.rating);
+    return compareNearbyThenRating(
+      distanceA: a.distance,
+      distanceB: b.distance,
+      ratingA: a.rating,
+      ratingB: b.rating,
+    );
+  });
+
+  return ranked.map((entry) => entry.nurse).toList(growable: false);
+}
+
 /// Nurses with map coordinates first, sorted nearest to farthest.
 List<NurseModel> sortNursesByDistance(
   List<NurseModel> nurses,
   double userLatitude,
   double userLongitude,
 ) {
-  final ranked = nurses
-      .map(
-        (nurse) => (
-          nurse: nurse,
-          distance: nurseDistanceKm(nurse, userLatitude, userLongitude),
-        ),
-      )
-      .toList(growable: false);
-
-  ranked.sort((a, b) {
-    final distA = a.distance;
-    final distB = b.distance;
-    if (distA == null && distB == null) return 0;
-    if (distA == null) return 1;
-    if (distB == null) return -1;
-    return distA.compareTo(distB);
-  });
-
-  return ranked.map((entry) => entry.nurse).toList(growable: false);
+  return sortNursesByProximityAndRating(
+    nurses,
+    userLatitude: userLatitude,
+    userLongitude: userLongitude,
+  );
 }
 
 String? formatNearbyDistanceLabel(double? distanceKm) {

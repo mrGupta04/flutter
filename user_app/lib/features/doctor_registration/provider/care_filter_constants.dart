@@ -1,17 +1,34 @@
-/// Shared city chips across care search screens.
+import '../../../core/constants/karnataka_places.dart';
+import '../../../shared/widgets/searchable_filter_dropdown.dart';
+
+export '../../../data/models/ambulance_vehicle_types.dart'
+    show ambulanceVehicleTypeFilters;
+export '../../../core/constants/karnataka_places.dart'
+    show karnatakaPlaceMatchesQuery;
+
+/// Quick city chips for listing screens (Karnataka metros first).
 const popularCareCities = [
+  'Bengaluru',
+  'Mysuru',
+  'Mangaluru',
+  'Hubballi',
+  'Kalaburagi',
+  'Belagavi',
   'Mumbai',
   'Delhi',
-  'Bangalore',
   'Hyderabad',
   'Chennai',
   'Pune',
   'Kolkata',
 ];
 
-/// Cities available in doctor search dropdown (searchable).
-const doctorSearchCities = [
-  ...popularCareCities,
+const otherMarketplaceCities = [
+  'Mumbai',
+  'Delhi',
+  'Hyderabad',
+  'Chennai',
+  'Pune',
+  'Kolkata',
   'Ahmedabad',
   'Jaipur',
   'Lucknow',
@@ -26,7 +43,6 @@ const doctorSearchCities = [
   'Noida',
   'Gurgaon',
   'Thiruvananthapuram',
-  'Mysore',
   'Vadodara',
   'Patna',
   'Guwahati',
@@ -35,9 +51,30 @@ const doctorSearchCities = [
   'Ranchi',
   'Raipur',
   'Bhubaneswar',
-  'Mangalore',
   'Agra',
   'Ludhiana',
+];
+
+/// Cities available in doctor/nurse search. Karnataka districts and towns first.
+final List<String> doctorSearchCities = [
+  ...karnatakaSearchPlaces,
+  ...otherMarketplaceCities,
+];
+
+/// Grouped city picker: every KA district, then towns, then other metros.
+final List<SearchableOptionSection> careCityPickerSections = [
+  const SearchableOptionSection(
+    title: 'Karnataka districts',
+    options: karnatakaDistricts,
+  ),
+  SearchableOptionSection(
+    title: 'Cities & towns',
+    options: karnatakaCanonicalTowns,
+  ),
+  const SearchableOptionSection(
+    title: 'Other cities',
+    options: otherMarketplaceCities,
+  ),
 ];
 
 /// Minimum years of experience filter values for doctor search.
@@ -63,9 +100,6 @@ const nurseGenderFilters = [
   'Male',
   'Female',
 ];
-
-export '../../../data/models/ambulance_vehicle_types.dart'
-    show ambulanceVehicleTypeFilters;
 
 /// Blood group filter chips.
 const bloodGroupFilters = [

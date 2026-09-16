@@ -19,6 +19,9 @@ const { loginProvider } = require('../utils/providerAuth');
 const {
   mountProviderPasswordResetRoutes,
 } = require('./helpers/mountProviderPasswordReset');
+const {
+  mountProviderReceptionistRoutes,
+} = require('./helpers/mountProviderReceptionistRoutes');
 const { toScanCenter } = require('../db/scanCenterMappers');
 const { validateMobile } = require('../utils/mobile');
 const {
@@ -33,6 +36,12 @@ const { listChatMessages, sendChatMessage } = require('../db/chatRepositories');
 
 const router = express.Router();
 mountProviderPasswordResetRoutes(router, 'scan');
+mountProviderReceptionistRoutes(router, {
+  ownerType: 'scan',
+  authType: 'scan_center',
+  ownerIdFromAuth: (auth) => auth?.scanCenterId,
+  authLabel: 'Scan center',
+});
 
 router.get('/verified', async (req, res) => {
   try {

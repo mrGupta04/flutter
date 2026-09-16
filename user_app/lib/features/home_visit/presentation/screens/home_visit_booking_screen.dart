@@ -253,7 +253,7 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Your home visit request was sent to Dr. ${booking?.doctorName ?? doctor.fullName}.',
+                  'Your home visit request was sent to ${booking?.doctorName ?? doctor.fullName}.',
                   style: AppTextStyles.bodyMedium,
                 ),
                 const SizedBox(height: 8),
@@ -401,6 +401,20 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
         ),
         data: (doctor) => Column(
           children: [
+            Material(
+              color: AppColors.background,
+              elevation: 1,
+              shadowColor: Colors.black.withValues(alpha: 0.08),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+                child: DoctorConsultationFeesBanner(
+                  doctor: doctor,
+                  highlightedType: ConsultationType.bookHome,
+                  onTypeSelected: (type) =>
+                      switchConsultationBooking(context, doctor, type),
+                ),
+              ),
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -409,20 +423,13 @@ class _HomeVisitBookingScreenState extends ConsumerState<HomeVisitBookingScreen>
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _DoctorHomeVisitHeader(doctor: doctor),
-                        const SizedBox(height: 12),
-                        DoctorConsultationFeesBanner(
-                          doctor: doctor,
-                          highlightedType: ConsultationType.bookHome,
-                          onTypeSelected: (type) =>
-                              switchConsultationBooking(context, doctor, type),
-                        ),
                         const SizedBox(height: 12),
                         ConsultationBookingPriceSummary(
                           doctor: doctor,
@@ -604,11 +611,7 @@ class _DoctorHomeVisitHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = MediaUrlUtils.resolve(doctor.profilePicture);
-    final name = doctor.fullName.isNotEmpty
-        ? (doctor.fullName.startsWith('Dr.')
-            ? doctor.fullName
-            : 'Dr. ${doctor.fullName}')
-        : 'Doctor';
+    final name = doctor.fullName.isNotEmpty ? doctor.fullName : 'Doctor';
 
     return Container(
       padding: const EdgeInsets.all(16),

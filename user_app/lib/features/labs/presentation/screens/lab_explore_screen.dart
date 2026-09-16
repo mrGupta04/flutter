@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/service_faqs.dart';
 import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -16,6 +17,7 @@ import '../../provider/lab_search_provider.dart';
 import '../widgets/lab_explore_card.dart';
 import '../../../../shared/widgets/diagnostic_cart_icon_button.dart';
 import '../../../../shared/widgets/diagnostic_sticky_cart_bar.dart';
+import '../../../../shared/widgets/service_faq_section.dart';
 
 class LabExploreScreen extends ConsumerStatefulWidget {
   const LabExploreScreen({super.key});
@@ -28,7 +30,6 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
   Timer? _debounce;
-  String? _locationPrefill;
 
   @override
   void initState() {
@@ -40,7 +41,6 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
 
   Future<void> _initExplore() async {
     final preferred = ref.read(userLocationProvider);
-    _applyLocationPrefill(preferred);
     double? lat = preferred.latitude;
     double? lng = preferred.longitude;
 
@@ -68,26 +68,7 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
     }
   }
 
-  void _applyLocationPrefill(UserLocationState location) {
-    final label = location.displayPlaceCity;
-    if (label == null || label.isEmpty) return;
-
-    final current = _searchController.text.trim();
-    final canReplace = current.isEmpty ||
-        (_locationPrefill != null && current == _locationPrefill);
-    if (!canReplace) return;
-
-    _locationPrefill = label;
-    if (current != label) {
-      _searchController.value = TextEditingValue(
-        text: label,
-        selection: TextSelection.collapsed(offset: label.length),
-      );
-    }
-  }
-
   void _onLocationResolved(UserLocationState location) {
-    _applyLocationPrefill(location);
     if (!location.hasCoordinates) return;
     final state = ref.read(labExploreProvider);
     if (state.latitude != null && state.longitude != null) return;
@@ -116,11 +97,6 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       final text = value.trim();
-      if (_locationPrefill != null && text == _locationPrefill!.trim()) {
-        ref.read(labExploreProvider.notifier).setQuery('');
-        return;
-      }
-      _locationPrefill = null;
       ref.read(labExploreProvider.notifier).setQuery(text);
     });
   }
@@ -283,9 +259,7 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
+            if (!AppBackButtonScope.handleSystemBack(context)) {
               context.go(AppConstants.routeUserHome);
             }
           },
@@ -344,6 +318,7 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
                           CareFilterChip(
                             label: 'Sort: ${state.sort.label}',
                             selected: true,
+                            horizontalPadding: 22,
                             onTap: () => _showSortSheet(state),
                           ),
                         ],
@@ -358,17 +333,18 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (state.error != null && state.labs.isEmpty)
-              SliverFillRemaining(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(state.error!, textAlign: TextAlign.center),
-                  ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(state.error!, textAlign: TextAlign.center),
                 ),
               )
             else if (state.labs.isEmpty)
-              const SliverFillRemaining(
-                child: Center(child: Text('No laboratories found')),
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: Text('No laboratories found')),
+                ),
               )
             else
               SliverPadding(
@@ -422,6 +398,11 @@ class _LabExploreScreenState extends ConsumerState<LabExploreScreen> {
                     childCount: rowCount + 1,
                   ),
                 ),
+              ),
+            if (!(state.isLoading && state.labs.isEmpty))
+              ServiceFaqSection.sliver(
+                title: "General FAQs for Lab Tests",
+                items: ServiceFaqs.lab,
               ),
           ],
         ),

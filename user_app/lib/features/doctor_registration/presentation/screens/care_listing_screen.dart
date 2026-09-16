@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/service_faqs.dart';
 import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -20,6 +21,8 @@ import '../../../../shared/widgets/consultation_type_cards.dart';
 import '../../../../shared/widgets/doctor_listing_card.dart';
 import '../../../../shared/widgets/healthcare_ui.dart';
 import '../../../../shared/widgets/horizontal_filter_chips.dart';
+import '../../../../shared/widgets/searchable_filter_dropdown.dart';
+import '../../../../shared/widgets/service_faq_section.dart';
 import '../../../nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
@@ -128,6 +131,17 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     );
   }
 
+  Widget _backButton() {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+      onPressed: () {
+        if (!AppBackButtonScope.handleSystemBack(context)) {
+          context.go(AppConstants.routeUserHome);
+        }
+      },
+    );
+  }
+
   Widget _buildDoctorScaffold(BuildContext context) {
     final asyncDoctors =
         ref.watch(verifiedDoctorsByConsultationProvider(_doctorType));
@@ -138,6 +152,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       constrainBody: true,
       appBar: AppBar(
         title: const Text('Care providers'),
+        leading: _backButton(),
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded),
@@ -184,6 +199,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       constrainBody: true,
       appBar: AppBar(
         title: const Text('Verified nurses'),
+        leading: _backButton(),
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded),
@@ -205,10 +221,18 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                 children: [
                   ..._buildRoleHeader(),
                   const SizedBox(height: 8),
-                  HorizontalFilterChips(
-                    labels: popularCareCities,
-                    selected: _nurseCity,
-                    onSelected: (c) => setState(() => _nurseCity = c),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SearchableFilterDropdown(
+                      label: 'City',
+                      value: _nurseCity,
+                      allLabel: 'All cities',
+                      searchHint: 'Search city or district...',
+                      options: doctorSearchCities,
+                      sections: careCityPickerSections,
+                      matchOption: karnatakaPlaceMatchesQuery,
+                      onChanged: (c) => setState(() => _nurseCity = c),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   HorizontalFilterChips(
@@ -247,6 +271,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       constrainBody: true,
       appBar: AppBar(
         title: const Text('Ambulance services'),
+        leading: _backButton(),
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded),
@@ -272,10 +297,18 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                     onSelected: (f) => setState(() => _ambulanceFilter = f),
                   ),
                   const SizedBox(height: 8),
-                  HorizontalFilterChips(
-                    labels: popularCareCities,
-                    selected: _ambulanceCity,
-                    onSelected: (c) => setState(() => _ambulanceCity = c),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SearchableFilterDropdown(
+                      label: 'City',
+                      value: _ambulanceCity,
+                      allLabel: 'All cities',
+                      searchHint: 'Search city or district...',
+                      options: doctorSearchCities,
+                      sections: careCityPickerSections,
+                      matchOption: karnatakaPlaceMatchesQuery,
+                      onChanged: (c) => setState(() => _ambulanceCity = c),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   HorizontalFilterChips(
@@ -295,10 +328,13 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
   }
 
   Widget _buildBloodBankScaffold(BuildContext context) {
+    final location = ref.watch(userLocationProvider);
     final params = BloodBankSearchParams(
       city: _bloodBankCity,
       bloodGroup: _bloodBankGroup,
       careFilter: _bloodBankFilter,
+      latitude: location.latitude,
+      longitude: location.longitude,
     );
     final asyncBloodBanks = ref.watch(bloodBankSearchProvider(params));
 
@@ -308,6 +344,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       constrainBody: true,
       appBar: AppBar(
         title: const Text('Blood banks'),
+        leading: _backButton(),
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded),
@@ -333,10 +370,18 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
                     onSelected: (f) => setState(() => _bloodBankFilter = f),
                   ),
                   const SizedBox(height: 8),
-                  HorizontalFilterChips(
-                    labels: popularCareCities,
-                    selected: _bloodBankCity,
-                    onSelected: (c) => setState(() => _bloodBankCity = c),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SearchableFilterDropdown(
+                      label: 'City',
+                      value: _bloodBankCity,
+                      allLabel: 'All cities',
+                      searchHint: 'Search city or district...',
+                      options: doctorSearchCities,
+                      sections: careCityPickerSections,
+                      matchOption: karnatakaPlaceMatchesQuery,
+                      onChanged: (c) => setState(() => _bloodBankCity = c),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   HorizontalFilterChips(
@@ -493,15 +538,11 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     }
 
     final location = ref.watch(userLocationProvider);
-    final sorted = (_doctorType == ConsultationType.visitSite ||
-                _doctorType == ConsultationType.bookHome) &&
-            location.hasCoordinates
-        ? sortDoctorsByDistance(
-            items,
-            location.latitude!,
-            location.longitude!,
-          )
-        : items;
+    final sorted = sortDoctorsByProximityAndRating(
+      items,
+      userLatitude: location.latitude,
+      userLongitude: location.longitude,
+    );
 
     final cards = [
       for (var i = 0; i < sorted.length; i++)
@@ -510,9 +551,7 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
           showBottomDivider: false,
           showVerifiedIcon: true,
           consultationFilter: _doctorType,
-          footerNote: location.hasCoordinates &&
-                  (_doctorType == ConsultationType.visitSite ||
-                      _doctorType == ConsultationType.bookHome)
+          footerNote: location.hasCoordinates
               ? formatNearbyDistanceLabel(
                   doctorDistanceKm(
                     sorted[i],
@@ -540,14 +579,17 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
         sliver: SliverList(
           delegate: SliverChildListDelegate([
             MarketplaceSectionTitle(
-              title: location.hasCoordinates &&
-                      (_doctorType == ConsultationType.visitSite ||
-                          _doctorType == ConsultationType.bookHome)
+              title: location.hasCoordinates
                   ? 'Doctors near you'
                   : 'Consult verified doctors',
             ),
             const SizedBox(height: 8),
             ..._responsiveCardRows(cards),
+            const ServiceFaqSection(
+              title: "General FAQs for Doctor Consultations",
+              items: ServiceFaqs.doctor,
+              padding: EdgeInsets.fromLTRB(0, 16, 0, 8),
+            ),
             const UserScrollFooter(),
           ]),
         ),
@@ -592,13 +634,11 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
     }
 
     final location = ref.watch(userLocationProvider);
-    final sorted = location.hasCoordinates
-        ? sortNursesByDistance(
-            items,
-            location.latitude!,
-            location.longitude!,
-          )
-        : items;
+    final sorted = sortNursesByProximityAndRating(
+      items,
+      userLatitude: location.latitude,
+      userLongitude: location.longitude,
+    );
 
     final liveMap = ref
             .watch(nurseLiveStatusProvider(nurseIdsCacheKey(sorted)))
@@ -643,6 +683,11 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
             ),
             const SizedBox(height: 8),
             ..._responsiveCardRows(cards),
+            const ServiceFaqSection(
+              title: "General FAQs for Nursing Care Services",
+              items: ServiceFaqs.nurse,
+              padding: EdgeInsets.fromLTRB(0, 16, 0, 8),
+            ),
             const UserScrollFooter(),
           ]),
         ),
@@ -688,13 +733,41 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       ];
     }
 
+    final location = ref.watch(userLocationProvider);
+    final sorted = [...items]..sort(
+        (a, b) => compareNearbyThenRating(
+          distanceA: location.hasCoordinates &&
+                  a.latitude != null &&
+                  a.longitude != null
+              ? distanceKm(
+                  location.latitude!,
+                  location.longitude!,
+                  a.latitude!,
+                  a.longitude!,
+                )
+              : null,
+          distanceB: location.hasCoordinates &&
+                  b.latitude != null &&
+                  b.longitude != null
+              ? distanceKm(
+                  location.latitude!,
+                  location.longitude!,
+                  b.latitude!,
+                  b.longitude!,
+                )
+              : null,
+          ratingA: 0,
+          ratingB: 0,
+        ),
+      );
+
     final cards = [
-      for (var i = 0; i < items.length; i++)
+      for (var i = 0; i < sorted.length; i++)
         AmbulanceListingCard(
-          ambulance: items[i],
+          ambulance: sorted[i],
           onTap: () => showAmbulanceActionSheet(
             context,
-            ambulance: items[i],
+            ambulance: sorted[i],
           ),
         ),
     ];
@@ -707,6 +780,11 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
             const MarketplaceSectionTitle(title: 'Verified ambulance services'),
             const SizedBox(height: 8),
             ..._responsiveCardRows(cards),
+            const ServiceFaqSection(
+              title: "General FAQs for Ambulance Services",
+              items: ServiceFaqs.ambulance,
+              padding: EdgeInsets.fromLTRB(0, 16, 0, 8),
+            ),
             const UserScrollFooter(),
           ]),
         ),
@@ -752,15 +830,41 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
       ];
     }
 
+    final location = ref.watch(userLocationProvider);
+    final sorted = [...items]..sort(
+        (a, b) => compareNearbyThenRating(
+          distanceA: a.distanceKm ??
+              (location.hasCoordinates && a.latitude != null && a.longitude != null
+                  ? distanceKm(
+                      location.latitude!,
+                      location.longitude!,
+                      a.latitude!,
+                      a.longitude!,
+                    )
+                  : null),
+          distanceB: b.distanceKm ??
+              (location.hasCoordinates && b.latitude != null && b.longitude != null
+                  ? distanceKm(
+                      location.latitude!,
+                      location.longitude!,
+                      b.latitude!,
+                      b.longitude!,
+                    )
+                  : null),
+          ratingA: a.averageRating ?? 0,
+          ratingB: b.averageRating ?? 0,
+        ),
+      );
+
     final cards = [
-      for (var i = 0; i < items.length; i++)
+      for (var i = 0; i < sorted.length; i++)
         BloodBankListingCard(
-          bloodBank: items[i],
+          bloodBank: sorted[i],
           onTap: () => context.push(
-            '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+            '${AppConstants.routeBloodBankDetail}/${sorted[i].id}',
           ),
           onOrder: () => context.push(
-            '${AppConstants.routeBloodBankDetail}/${items[i].id}',
+            '${AppConstants.routeBloodBankDetail}/${sorted[i].id}',
           ),
         ),
     ];
@@ -773,6 +877,11 @@ class _CareListingScreenState extends ConsumerState<CareListingScreen> {
             const MarketplaceSectionTitle(title: 'Verified blood banks'),
             const SizedBox(height: 8),
             ..._responsiveCardRows(cards),
+            const ServiceFaqSection(
+              title: "General FAQs for Blood Bank Services",
+              items: ServiceFaqs.bloodBank,
+              padding: EdgeInsets.fromLTRB(0, 16, 0, 8),
+            ),
             const UserScrollFooter(),
           ]),
         ),

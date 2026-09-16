@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// Text styles for the app using Material 3 design guidelines
+/// Text styles for the app using Material 3 design guidelines.
+/// Colors are set explicitly so labels stay readable on light surfaces.
 class AppTextStyles {
   AppTextStyles._();
 
@@ -11,6 +12,7 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     height: 1.12,
     letterSpacing: 0,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle displayMedium = TextStyle(
@@ -18,6 +20,7 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     height: 1.16,
     letterSpacing: 0,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle displaySmall = TextStyle(
@@ -25,6 +28,7 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     height: 1.22,
     letterSpacing: 0,
+    color: AppColors.textPrimary,
   );
 
   // Headline styles
@@ -33,6 +37,7 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     height: 1.25,
     letterSpacing: 0,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle headlineMedium = TextStyle(
@@ -40,6 +45,7 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     height: 1.29,
     letterSpacing: 0,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle headlineSmall = TextStyle(
@@ -47,6 +53,7 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     height: 1.33,
     letterSpacing: 0,
+    color: AppColors.textPrimary,
   );
 
   // Title styles
@@ -55,6 +62,7 @@ class AppTextStyles {
     fontWeight: FontWeight.w600,
     height: 1.27,
     letterSpacing: 0,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle titleMedium = TextStyle(
@@ -62,6 +70,7 @@ class AppTextStyles {
     fontWeight: FontWeight.w600,
     height: 1.5,
     letterSpacing: 0.15,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle titleSmall = TextStyle(
@@ -69,14 +78,15 @@ class AppTextStyles {
     fontWeight: FontWeight.w600,
     height: 1.43,
     letterSpacing: 0.1,
+    color: AppColors.textPrimary,
   );
 
-  // Body styles (Plus Jakarta Sans applied via theme)
   static const TextStyle bodyLarge = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.normal,
     height: 1.5,
     letterSpacing: 0.5,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle bodyMedium = TextStyle(
@@ -84,6 +94,7 @@ class AppTextStyles {
     fontWeight: FontWeight.normal,
     height: 1.43,
     letterSpacing: 0.25,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle bodySmall = TextStyle(
@@ -91,6 +102,7 @@ class AppTextStyles {
     fontWeight: FontWeight.normal,
     height: 1.33,
     letterSpacing: 0.4,
+    color: AppColors.textPrimary,
   );
 
   // Label styles
@@ -99,6 +111,7 @@ class AppTextStyles {
     fontWeight: FontWeight.w500,
     height: 1.43,
     letterSpacing: 0.1,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle labelMedium = TextStyle(
@@ -106,6 +119,7 @@ class AppTextStyles {
     fontWeight: FontWeight.w500,
     height: 1.33,
     letterSpacing: 0.5,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle labelSmall = TextStyle(
@@ -113,6 +127,7 @@ class AppTextStyles {
     fontWeight: FontWeight.w500,
     height: 1.45,
     letterSpacing: 0.5,
+    color: AppColors.textPrimary,
   );
 
   // Custom styles
@@ -129,6 +144,7 @@ class AppTextStyles {
     fontWeight: FontWeight.w600,
     height: 1.43,
     letterSpacing: 0.1,
+    color: AppColors.textPrimary,
   );
 
   static const TextStyle hint = TextStyle(

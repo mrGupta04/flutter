@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/user_location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/models/consultation_type.dart';
@@ -60,8 +61,13 @@ class _VerifiedDoctorsSectionState extends ConsumerState<VerifiedDoctorsSection>
             ),
           ),
           data: (doctors) {
-            final sortedDoctors =
-                sortDoctorsByConsultationPreference(doctors, _selected);
+            final location = ref.watch(userLocationProvider);
+            final sortedDoctors = sortDoctorsByConsultationPreference(
+              doctors,
+              _selected,
+              userLatitude: location.latitude,
+              userLongitude: location.longitude,
+            );
             final matchingCount = sortedDoctors
                 .where((doctor) => doctor.offersConsultationType(_selected))
                 .length;

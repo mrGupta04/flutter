@@ -48,6 +48,28 @@ class AppConstants {
       '/doctor/receptionists/$id/status';
   static String endpointDoctorReceptionistPassword(String id) =>
       '/doctor/receptionists/$id/reset-password';
+  static const String endpointLabReceptionists = '/lab/receptionists';
+  static String endpointLabReceptionist(String id) =>
+      '/lab/receptionists/$id';
+  static String endpointLabReceptionistStatus(String id) =>
+      '/lab/receptionists/$id/status';
+  static String endpointLabReceptionistPassword(String id) =>
+      '/lab/receptionists/$id/reset-password';
+  static const String endpointScanReceptionists = '/scan/receptionists';
+  static String endpointScanReceptionist(String id) =>
+      '/scan/receptionists/$id';
+  static String endpointScanReceptionistStatus(String id) =>
+      '/scan/receptionists/$id/status';
+  static String endpointScanReceptionistPassword(String id) =>
+      '/scan/receptionists/$id/reset-password';
+  static const String endpointBloodBankReceptionists =
+      '/blood-bank/receptionists';
+  static String endpointBloodBankReceptionist(String id) =>
+      '/blood-bank/receptionists/$id';
+  static String endpointBloodBankReceptionistStatus(String id) =>
+      '/blood-bank/receptionists/$id/status';
+  static String endpointBloodBankReceptionistPassword(String id) =>
+      '/blood-bank/receptionists/$id/reset-password';
   static String endpointDoctorClinicVisitStart(String bookingId) =>
       '/doctor/clinic-visits/$bookingId/start';
   static String endpointDoctorClinicVisitComplete(String bookingId) =>
@@ -560,6 +582,9 @@ class AppConstants {
   static const String routeAdminAmbulancePricing = '/admin-ambulance-pricing';
   static const String routeDoctorDashboard = '/doctor-dashboard';
   static const String routeDoctorReceptionists = '/doctor-receptionists';
+  static const String routeLabReceptionists = '/lab-receptionists';
+  static const String routeScanReceptionists = '/scan-receptionists';
+  static const String routeBloodBankReceptionists = '/blood-bank-receptionists';
   static const String routeReceptionistLogin = '/receptionist-login';
   static const String routeReceptionistDashboard = '/receptionist-dashboard';
   static const String routeSelectLocation = '/select-location';

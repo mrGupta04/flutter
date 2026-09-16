@@ -152,6 +152,35 @@ class AmbulanceRepository {
     }
   }
 
+  Future<ApiResponse<List<Map<String, dynamic>>>> getNearby({
+    required double latitude,
+    required double longitude,
+    String? vehicleType,
+    double? radiusKm,
+  }) async {
+    try {
+      final response = await _dioService.get(
+        AppConstants.endpointAmbulanceNearby,
+        queryParameters: {
+          'latitude': latitude,
+          'longitude': longitude,
+          if (vehicleType != null && vehicleType.isNotEmpty)
+            'vehicleType': vehicleType,
+          if (radiusKm != null) 'radiusKm': radiusKm,
+          'emergency': 'true',
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final list = extractApiList(body['data'])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      return ApiResponse(success: true, data: list);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   Future<ApiResponse<Map<String, dynamic>>> estimateFare(
     Map<String, dynamic> payload,
   ) async {

@@ -6,19 +6,16 @@ import 'app_text_styles.dart';
 class InteractiveStyles {
   InteractiveStyles._();
 
-  static bool isDark(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark;
+  static bool isDark(BuildContext context) => false;
 
   /// Card / chip background when not selected.
-  static Color surface(BuildContext context) =>
-      isDark(context) ? AppColors.darkSurfaceElevated : AppColors.white;
+  static Color surface(BuildContext context) => AppColors.white;
 
   /// Primary text on [surface].
-  static Color onSurface(BuildContext context) =>
-      isDark(context) ? AppColors.darkTextPrimary : AppColors.textPrimary;
+  static Color onSurface(BuildContext context) => AppColors.textPrimary;
 
   static Color secondaryOnSurface(BuildContext context) =>
-      isDark(context) ? AppColors.darkTextSecondary : AppColors.textSecondary;
+      AppColors.textSecondary;
 
   static Color border(BuildContext context, {bool selected = false}) =>
       selected ? AppColors.primary : AppColors.divider;
@@ -42,7 +39,7 @@ class InteractiveStyles {
   }) {
     return BoxDecoration(
       color: selected
-          ? AppColors.primary.withValues(alpha: isDark(context) ? 0.22 : 0.10)
+          ? AppColors.primary.withValues(alpha: 0.10)
           : surface(context),
       borderRadius: radius ?? BorderRadius.circular(8),
       border: Border.all(

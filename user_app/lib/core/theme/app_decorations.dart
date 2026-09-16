@@ -31,11 +31,8 @@ class AppDecorations {
     Gradient? gradient,
     bool elevated = true,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
-      color: gradient == null
-          ? (color ?? (isDark ? AppColors.darkSurfaceElevated : AppColors.white))
-          : null,
+      color: gradient == null ? (color ?? AppColors.white) : null,
       gradient: gradient,
       borderRadius: borderRadiusLg,
       border: Border.all(color: AppColors.grey200),

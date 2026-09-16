@@ -9,7 +9,7 @@ const Color kProviderSpecialtyGold = Color(0xFFC9922A);
 const Color kProviderStatsBarBg = Color(0xFFE6F7EE);
 
 /// Approximate height for home doctor preview rails.
-const double kDoctorListingCardHeight = 286;
+const double kDoctorListingCardHeight = 248;
 
 class MarketplaceCardShell extends StatelessWidget {
   const MarketplaceCardShell({
@@ -27,11 +27,9 @@ class MarketplaceCardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
-
     final card = Ink(
       decoration: BoxDecoration(
-        color: surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor ?? const Color(0xFFE8E8EC)),
         boxShadow: [
@@ -74,6 +72,7 @@ class MarketplaceProviderHeader extends StatelessWidget {
     this.languagesLine,
     this.trailing,
     this.specialtyColor = kProviderSpecialtyGold,
+    this.specialtyLogo,
   });
 
   final String name;
@@ -84,6 +83,7 @@ class MarketplaceProviderHeader extends StatelessWidget {
   final Widget avatar;
   final Widget? trailing;
   final Color specialtyColor;
+  final Widget? specialtyLogo;
 
   @override
   Widget build(BuildContext context) {
@@ -97,23 +97,35 @@ class MarketplaceProviderHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1A1D26),
-                        height: 1.2,
-                        letterSpacing: -0.2,
-                      ),
+                  Flexible(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1A1D26),
+                              height: 1.2,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ),
+                        if (specialtyLogo != null) ...[
+                          const SizedBox(width: 6),
+                          specialtyLogo!,
+                        ],
+                      ],
                     ),
                   ),
-                  if (trailing != null) trailing!,
+                  if (trailing != null) ...[
+                    const SizedBox(width: 6),
+                    trailing!,
+                  ],
                 ],
               ),
               if (specialty != null && specialty!.isNotEmpty) ...[
@@ -331,6 +343,8 @@ class MarketplacePriceActionRow extends StatelessWidget {
     this.adminButtonSubtitle,
     this.onAdminPressed,
     this.useAdminButton = false,
+    this.secondaryButtonLabel,
+    this.onSecondaryPressed,
   });
 
   final int? price;
@@ -345,6 +359,8 @@ class MarketplacePriceActionRow extends StatelessWidget {
   final String? adminButtonSubtitle;
   final VoidCallback? onAdminPressed;
   final bool useAdminButton;
+  final String? secondaryButtonLabel;
+  final VoidCallback? onSecondaryPressed;
 
   int? get _discountPercent {
     if (price == null || originalPrice == null || originalPrice! <= price!) {
@@ -365,49 +381,46 @@ class MarketplacePriceActionRow extends StatelessWidget {
     }
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: price != null && price! > 0
-              ? _PriceBlock(
-                  price: price!,
-                  originalPrice: originalPrice,
-                  discountPercent: _discountPercent,
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: _PriceBlock(
+                    price: price!,
+                    originalPrice: originalPrice,
+                    discountPercent: _discountPercent,
+                  ),
                 )
               : const SizedBox.shrink(),
         ),
+        if (secondaryButtonLabel != null &&
+            secondaryButtonLabel!.trim().isNotEmpty) ...[
+          const SizedBox(width: 8),
+          _CompactCardButton(
+            label: secondaryButtonLabel!,
+            filled: false,
+            accentColor: accentColor,
+            onPressed: onSecondaryPressed,
+          ),
+        ],
         if (showButton) ...[
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           SizedBox(
-            width: 138,
+            width: secondaryButtonLabel != null ? 108 : 138,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 42,
-                  child: FilledButton(
-                    onPressed: buttonEnabled ? onButtonPressed : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: accentColor,
-                      disabledBackgroundColor: AppColors.grey200,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: EdgeInsets.zero,
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      buttonLabel,
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
+                _CompactCardButton(
+                  label: buttonLabel,
+                  filled: true,
+                  accentColor: accentColor,
+                  enabled: buttonEnabled,
+                  onPressed: onButtonPressed,
+                  expand: true,
+                  height: secondaryButtonLabel != null ? 36 : 42,
                 ),
                 if (availabilityLabel != null &&
                     availabilityLabel!.trim().isNotEmpty) ...[
@@ -434,6 +447,87 @@ class MarketplacePriceActionRow extends StatelessWidget {
   }
 }
 
+class _CompactCardButton extends StatelessWidget {
+  const _CompactCardButton({
+    required this.label,
+    required this.filled,
+    required this.accentColor,
+    this.onPressed,
+    this.enabled = true,
+    this.expand = false,
+    this.height = 36,
+  });
+
+  final String label;
+  final bool filled;
+  final Color accentColor;
+  final VoidCallback? onPressed;
+  final bool enabled;
+  final bool expand;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: filled ? AppColors.white : accentColor,
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+      ),
+    );
+
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+    );
+    final style = filled
+        ? FilledButton.styleFrom(
+            backgroundColor: accentColor,
+            disabledBackgroundColor: AppColors.grey200,
+            foregroundColor: AppColors.white,
+            shape: shape,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            minimumSize: Size(0, height),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+            elevation: 0,
+          )
+        : OutlinedButton.styleFrom(
+            foregroundColor: accentColor,
+            side: BorderSide(color: accentColor.withValues(alpha: 0.55)),
+            backgroundColor: AppColors.white,
+            shape: shape,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            minimumSize: Size(0, height),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+          );
+
+    final button = filled
+        ? FilledButton(
+            onPressed: enabled ? onPressed : null,
+            style: style,
+            child: child,
+          )
+        : OutlinedButton(
+            onPressed: enabled ? onPressed : null,
+            style: style,
+            child: child,
+          );
+
+    if (!expand) {
+      return SizedBox(height: height, child: button);
+    }
+    return SizedBox(
+      width: double.infinity,
+      height: height,
+      child: button,
+    );
+  }
+}
+
 class _PriceBlock extends StatelessWidget {
   const _PriceBlock({
     required this.price,
@@ -447,45 +541,47 @@ class _PriceBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showOriginal =
+        originalPrice != null && originalPrice! > price;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        if (discountPercent != null && originalPrice != null) ...[
-          Row(
-            children: [
-              Text(
-                '₹$originalPrice',
-                style: const TextStyle(
-                  color: Color(0xFF9AA3AF),
-                  decoration: TextDecoration.lineThrough,
-                  decorationColor: Color(0xFF9AA3AF),
-                  fontWeight: FontWeight.w500,
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '$discountPercent%',
-                style: const TextStyle(
-                  color: AppColors.offer,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11,
-                ),
-              ),
-            ],
+        if (showOriginal)
+          Text(
+            '₹$originalPrice',
+            textAlign: TextAlign.left,
+            style: const TextStyle(
+              color: Color(0xFF9AA3AF),
+              decoration: TextDecoration.lineThrough,
+              decorationColor: Color(0xFF9AA3AF),
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              height: 1.2,
+            ),
           ),
-          const SizedBox(height: 2),
-        ],
         Text(
           '₹$price',
+          textAlign: TextAlign.left,
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: Color(0xFF1A1D26),
-            height: 1,
-            letterSpacing: -0.5,
+            height: 1.15,
           ),
         ),
+        if (showOriginal && discountPercent != null)
+          Text(
+            '$discountPercent% off',
+            textAlign: TextAlign.left,
+            style: const TextStyle(
+              color: AppColors.offer,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+              height: 1.2,
+            ),
+          ),
       ],
     );
   }

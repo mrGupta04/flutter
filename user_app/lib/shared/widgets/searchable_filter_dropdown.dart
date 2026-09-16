@@ -4,6 +4,17 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/accidental_selection_binder.dart';
 import '../../core/theme/app_text_styles.dart';
 
+/// Optional heading + options for grouped searchable pickers.
+class SearchableOptionSection {
+  const SearchableOptionSection({
+    required this.title,
+    required this.options,
+  });
+
+  final String title;
+  final List<String> options;
+}
+
 /// Dropdown-style field that opens a searchable picker sheet.
 class SearchableFilterDropdown extends StatelessWidget {
   const SearchableFilterDropdown({
@@ -14,6 +25,8 @@ class SearchableFilterDropdown extends StatelessWidget {
     this.value,
     this.allLabel = 'All',
     this.searchHint = 'Search...',
+    this.sections,
+    this.matchOption,
   });
 
   final String label;
@@ -22,6 +35,8 @@ class SearchableFilterDropdown extends StatelessWidget {
   final ValueChanged<String?> onChanged;
   final String allLabel;
   final String searchHint;
+  final List<SearchableOptionSection>? sections;
+  final bool Function(String option, String query)? matchOption;
 
   String get _displayValue => value ?? allLabel;
 
@@ -39,6 +54,8 @@ class SearchableFilterDropdown extends StatelessWidget {
         selected: value,
         allLabel: allLabel,
         searchHint: searchHint,
+        sections: sections,
+        matchOption: matchOption,
       ),
     );
 
@@ -91,6 +108,8 @@ class _SearchablePickerSheet extends StatefulWidget {
     required this.selected,
     required this.allLabel,
     required this.searchHint,
+    this.sections,
+    this.matchOption,
   });
 
   final String title;
@@ -98,6 +117,8 @@ class _SearchablePickerSheet extends StatefulWidget {
   final String? selected;
   final String allLabel;
   final String searchHint;
+  final List<SearchableOptionSection>? sections;
+  final bool Function(String option, String query)? matchOption;
 
   @override
   State<_SearchablePickerSheet> createState() => _SearchablePickerSheetState();
@@ -122,11 +143,57 @@ class _SearchablePickerSheetState extends State<_SearchablePickerSheet> {
     super.dispose();
   }
 
+  bool _matches(String option) {
+    if (_query.isEmpty) return true;
+    if (widget.matchOption != null) {
+      return widget.matchOption!(option, _query);
+    }
+    return option.toLowerCase().contains(_query);
+  }
+
+  List<String> get _allOptions {
+    final sections = widget.sections;
+    if (sections != null && sections.isNotEmpty) {
+      return [
+        for (final section in sections) ...section.options,
+      ];
+    }
+    return widget.options;
+  }
+
   List<String> get _filteredOptions {
-    if (_query.isEmpty) return widget.options;
-    return widget.options
-        .where((option) => option.toLowerCase().contains(_query))
-        .toList();
+    if (_query.isEmpty) return _allOptions;
+    return _allOptions.where(_matches).toList();
+  }
+
+  List<SearchableOptionSection> get _visibleSections {
+    final sections = widget.sections;
+    if (sections == null || sections.isEmpty) return const [];
+    if (_query.isEmpty) {
+      return [
+        for (final section in sections)
+          if (section.options.isNotEmpty) section,
+      ];
+    }
+    return [
+      for (final section in sections)
+        if (section.options.any(_matches))
+          SearchableOptionSection(
+            title: section.title,
+            options: section.options.where(_matches).toList(),
+          ),
+    ];
+  }
+
+  String get _typedCity {
+    final parts = _searchController.text.trim().split(RegExp(r'\s+'));
+    return parts
+        .where((part) => part.isNotEmpty)
+        .map(
+          (part) =>
+              '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
+        )
+        .join(' ');
   }
 
   @override
@@ -195,29 +262,58 @@ class _SearchablePickerSheetState extends State<_SearchablePickerSheet> {
                       selected: widget.selected == null,
                       onTap: () => Navigator.pop(context, ''),
                     ),
-                    ..._filteredOptions.map(
-                      (option) => _PickerTile(
-                        label: option,
-                        selected: widget.selected == option,
-                        onTap: () => Navigator.pop(context, option),
-                      ),
-                    ),
-                    if (_filteredOptions.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Text(
-                          'No matches found',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
+                    if (_visibleSections.isNotEmpty)
+                      for (final section in _visibleSections) ...[
+                        _SectionHeader(section.title),
+                        for (final option in section.options)
+                          _PickerTile(
+                            label: option,
+                            selected: widget.selected == option,
+                            onTap: () => Navigator.pop(context, option),
                           ),
+                      ]
+                    else
+                      for (final option in _filteredOptions)
+                        _PickerTile(
+                          label: option,
+                          selected: widget.selected == option,
+                          onTap: () => Navigator.pop(context, option),
                         ),
+                    if (_query.isNotEmpty &&
+                        !_filteredOptions.any(
+                          (option) => option.toLowerCase() == _query,
+                        ))
+                      _PickerTile(
+                        label: 'Use "$_typedCity"',
+                        selected: false,
+                        onTap: () => Navigator.pop(context, _typedCity),
                       ),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 4),
+      child: Text(
+        title,
+        style: AppTextStyles.bodySmall.copyWith(
+          fontWeight: FontWeight.w800,
+          color: AppColors.primaryDark,
+          letterSpacing: 0.2,
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/scan_center_model.dart';
 import '../../../data/repositories/scan_repository.dart';
+import '../../../core/utils/geo_distance_utils.dart';
 import '../data/models/scan_procedure_model.dart';
 import '../data/scan_model_utils.dart';
 import '../data/scans_catalog.dart';
@@ -61,7 +62,7 @@ class ScanExploreState {
     this.totalPages = 1,
     this.query = '',
     this.filters = const ScanExploreFilters(),
-    this.sort = ScanExploreSort.recommended,
+    this.sort = ScanExploreSort.nearest,
     this.latitude,
     this.longitude,
   });
@@ -136,11 +137,12 @@ List<ScanCenterModel> applyScanExploreFiltersAndSort(
 
   switch (sort) {
     case ScanExploreSort.nearest:
-      result.sort((a, b) {
-        final da = a.distanceKm ?? double.infinity;
-        final db = b.distanceKm ?? double.infinity;
-        return da.compareTo(db);
-      });
+      result.sort((a, b) => compareNearbyThenRating(
+            distanceA: a.distanceKm,
+            distanceB: b.distanceKm,
+            ratingA: a.ratingValue,
+            ratingB: b.ratingValue,
+          ));
     case ScanExploreSort.highestRated:
       result.sort((a, b) => b.ratingValue.compareTo(a.ratingValue));
     case ScanExploreSort.lowestPrice:

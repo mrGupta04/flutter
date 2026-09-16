@@ -44,8 +44,25 @@ router.get('/me', authRequired, receptionistRequired, async (req, res) => {
   }
 });
 
+function requireClinicReceptionist(req, res) {
+  const ownerType = req.auth?.ownerType || 'doctor';
+  if (ownerType !== 'doctor' || !req.auth?.doctorId) {
+    sendError(
+      res,
+      'Arrival verification is only available for clinic receptionists',
+      400,
+    );
+    return false;
+  }
+  return true;
+}
+
 router.get('/bookings', authRequired, receptionistRequired, async (req, res) => {
   try {
+    const ownerType = req.auth.ownerType || 'doctor';
+    if (ownerType !== 'doctor') {
+      return sendSuccess(res, { data: [] });
+    }
     const filter = String(req.query.filter || 'today').trim();
     const data = await listClinicVisitsForDoctor(req.auth.doctorId, { filter });
     return sendSuccess(res, { data });
@@ -57,6 +74,7 @@ router.get('/bookings', authRequired, receptionistRequired, async (req, res) => 
 
 router.get('/bookings/:bookingId', authRequired, receptionistRequired, async (req, res) => {
   try {
+    if (!requireClinicReceptionist(req, res)) return;
     const data = await getClinicVisitForDoctor(
       req.auth.doctorId,
       req.params.bookingId,
@@ -74,6 +92,7 @@ router.get(
   receptionistRequired,
   async (req, res) => {
     try {
+      if (!requireClinicReceptionist(req, res)) return;
       const data = await getClinicOtpStatus({
         bookingId: req.params.bookingId,
         doctorId: req.auth.doctorId,
@@ -97,6 +116,7 @@ router.post(
   receptionistRequired,
   async (req, res) => {
     try {
+      if (!requireClinicReceptionist(req, res)) return;
       const otp = req.body?.otp || req.body?.code || req.body?.appointmentCode;
       const data = await verifyClinicVisitOtp({
         bookingId: req.params.bookingId,
@@ -128,6 +148,7 @@ router.post(
   receptionistRequired,
   async (req, res) => {
     try {
+      if (!requireClinicReceptionist(req, res)) return;
       const data = await regenerateReceptionistClinicOtp({
         bookingId: req.params.bookingId,
         doctorId: req.auth.doctorId,
