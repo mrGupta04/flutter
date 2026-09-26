@@ -155,7 +155,16 @@ class AppConstants {
   static const String endpointBloodDonorProfile = '/blood-bank/donor/profile';
   static const String endpointBloodDonorHistory = '/blood-bank/donor/history';
   static const String endpointBloodDonorRequests = '/blood-bank/donor/requests';
+  static const String endpointBloodDonationCamps = '/blood-bank/camps';
+  static String endpointBloodCampRegister(String id) =>
+      '/blood-bank/camps/$id/register';
+  static String endpointBloodCampCancel(String id) =>
+      '/blood-bank/camps/$id/cancel';
   static const String endpointBloodRequests = '/blood-bank/requests';
+  static String endpointBloodRequestDocument(String id) =>
+      '/blood-bank/requests/$id/documents';
+  static String endpointBloodRequestConfirmCollection(String id) =>
+      '/blood-bank/requests/$id/confirm-collection';
   static const String endpointBloodEmergencyMine = '/blood-bank/emergency/mine';
 
   // Validation
@@ -240,6 +249,7 @@ class AppConstants {
   static const String routeBloodDonorProfile = '/blood-donor-profile';
   static const String routeBloodDonorHistory = '/blood-donor-history';
   static const String routeBloodDonorRequests = '/blood-donor-requests';
+  static const String routeBloodDonationCamps = '/blood-donation-camps';
   static const String routeCareListing = '/care-listing';
   static const String routeLabs = '/labs';
   static const String routeLabDetail = '/lab';

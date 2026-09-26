@@ -7,6 +7,10 @@ const { findBloodBankById } = require('../db/bloodBankRepositories');
 const APP_NAME = process.env.APP_NAME || 'MedConnect';
 
 const STATUS_MESSAGES = {
+  submitted: {
+    patient: 'Your blood request has been submitted.',
+    bloodBank: 'A new blood request was submitted.',
+  },
   pending: {
     patient: 'Your blood order has been placed and is awaiting confirmation.',
     bloodBank: 'New blood order received — please review and accept.',
@@ -14,6 +18,18 @@ const STATUS_MESSAGES = {
   accepted: {
     patient: 'Your blood order has been accepted by the blood bank.',
     bloodBank: 'You accepted a blood order.',
+  },
+  approved: {
+    patient: 'Your blood request was approved.',
+    bloodBank: 'You approved a blood request.',
+  },
+  partially_available: {
+    patient: 'Some of the requested units are currently available. The blood bank will confirm next steps.',
+    bloodBank: 'Partial availability was recorded for a request.',
+  },
+  document_verification: {
+    patient: 'Additional documents are required for your blood request.',
+    bloodBank: 'Documents requested from the patient.',
   },
   rejected: {
     patient: 'Your blood order was declined by the blood bank.',

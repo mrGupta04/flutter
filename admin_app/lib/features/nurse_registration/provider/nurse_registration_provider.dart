@@ -40,6 +40,7 @@ class NurseRegistrationFormState {
   final List<String> nursingSkills;
   final String homeVisitFee;
   final String homeVisitOfferFee;
+  final String perKmCharge;
   final String address;
   final String city;
   final String state;
@@ -85,6 +86,7 @@ class NurseRegistrationFormState {
     this.nursingSkills = const [],
     this.homeVisitFee = '',
     this.homeVisitOfferFee = '',
+    this.perKmCharge = '',
     this.address = '',
     this.city = '',
     this.state = '',
@@ -141,6 +143,7 @@ class NurseRegistrationFormState {
     List<String>? nursingSkills,
     String? homeVisitFee,
     String? homeVisitOfferFee,
+    String? perKmCharge,
     String? address,
     String? city,
     String? state,
@@ -187,6 +190,7 @@ class NurseRegistrationFormState {
       nursingSkills: nursingSkills ?? this.nursingSkills,
       homeVisitFee: homeVisitFee ?? this.homeVisitFee,
       homeVisitOfferFee: homeVisitOfferFee ?? this.homeVisitOfferFee,
+      perKmCharge: perKmCharge ?? this.perKmCharge,
       address: address ?? this.address,
       city: city ?? this.city,
       state: state ?? this.state,
@@ -242,6 +246,7 @@ class NurseRegistrationFormState {
       homeVisitOfferFee: homeVisitOfferFee.trim().isEmpty
           ? null
           : int.tryParse(homeVisitOfferFee.trim()),
+      perKmCharge: int.tryParse(perKmCharge.trim()) ?? 0,
       bankAccountHolderName: bankAccountHolderName.trim(),
       bankAccountNumber: bankAccountNumber.trim(),
       ifscCode: ifscCode.trim(),
@@ -304,6 +309,7 @@ class NurseRegistrationFormNotifier
     List<String>? nursingSkills,
     String? homeVisitFee,
     String? homeVisitOfferFee,
+    String? perKmCharge,
   }) {
     state = state.copyWith(
       qualification: qualification,
@@ -316,6 +322,7 @@ class NurseRegistrationFormNotifier
       nursingSkills: nursingSkills,
       homeVisitFee: homeVisitFee,
       homeVisitOfferFee: homeVisitOfferFee,
+      perKmCharge: perKmCharge,
       submitError: null,
     );
   }

@@ -57,7 +57,7 @@ const {
 } = require('../db/bloodBankStaffRepositories');
 
 const { sendSuccess, sendError } = require('../utils/response');
-const { signToken, authOptional } = require('../middleware/auth');
+const { signToken, authOptional, authRequired } = require('../middleware/auth');
 const { upload, filePublicUrl } = require('../middleware/multerUpload');
 const { loginProvider } = require('../utils/providerAuth');
 const {
@@ -105,6 +105,7 @@ router.get('/verified', async (req, res) => {
       latitude: req.query.latitude || '',
       longitude: req.query.longitude || '',
       maxDistanceKm: req.query.maxDistanceKm || '',
+      bankType: req.query.bankType || req.query.type || '',
     });
 
     const { toPublicInventory } = require('../db/bloodInventoryUnitRepositories');
@@ -819,6 +820,81 @@ router.delete('/staff/:staffId', authOptional, async (req, res) => {
   } catch (err) {
     console.error(err);
     return sendError(res, err.message || 'Failed to remove staff', 500);
+  }
+});
+
+const {
+  listPublicCamps,
+  findCampById,
+  registerForCamp,
+  cancelRegistration,
+  listMyRegistrations,
+} = require('../db/donationCampRepositories');
+
+router.get('/camps', async (req, res) => {
+  try {
+    const result = await listPublicCamps({
+      city: req.query.city,
+      bloodGroup: req.query.bloodGroup,
+      page: Math.max(1, parseInt(req.query.page || '1', 10)),
+      pageSize: Math.min(50, parseInt(req.query.pageSize || '20', 10)),
+    });
+    return sendSuccess(res, { data: result.camps, pagination: result.pagination });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to load donation camps', 500);
+  }
+});
+
+router.get('/camps/:id', async (req, res) => {
+  try {
+    const camp = await findCampById(req.params.id);
+    if (!camp) return sendError(res, 'Camp not found', 404);
+    return sendSuccess(res, { data: camp });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to load camp', 500);
+  }
+});
+
+router.get('/donor/camps', authRequired, async (req, res) => {
+  try {
+    if (!req.auth?.patientId) return sendError(res, 'Login required', 401);
+    const items = await listMyRegistrations(req.auth.patientId);
+    return sendSuccess(res, { data: items });
+  } catch (err) {
+    return sendError(res, err.message || 'Failed to load registrations', 500);
+  }
+});
+
+router.post('/camps/:id/register', authRequired, async (req, res) => {
+  try {
+    if (!req.auth?.patientId) return sendError(res, 'Login required', 401);
+    const registration = await registerForCamp({
+      campId: req.params.id,
+      userId: req.auth.patientId,
+      patientName: req.body?.patientName,
+      patientMobile: req.body?.patientMobile,
+      bloodGroup: req.body?.bloodGroup,
+      appointmentTime: req.body?.appointmentTime,
+    });
+    return sendSuccess(res, {
+      message: 'Registered. The blood bank will confirm donor eligibility on site.',
+      data: registration,
+    });
+  } catch (err) {
+    return sendError(res, err.message || 'Unable to register', err.statusCode || 500);
+  }
+});
+
+router.post('/camps/:id/cancel', authRequired, async (req, res) => {
+  try {
+    if (!req.auth?.patientId) return sendError(res, 'Login required', 401);
+    const registration = await cancelRegistration({
+      campId: req.params.id,
+      userId: req.auth.patientId,
+    });
+    return sendSuccess(res, { message: 'Registration cancelled', data: registration });
+  } catch (err) {
+    return sendError(res, err.message || 'Unable to cancel', err.statusCode || 500);
   }
 });
 

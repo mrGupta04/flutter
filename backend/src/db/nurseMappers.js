@@ -39,6 +39,7 @@ function toNurse(doc) {
     availableForHomeVisit: d.availableForHomeVisit !== false,
     homeVisitFee: d.homeVisitFee,
     homeVisitOfferFee: d.homeVisitOfferFee,
+    perKmCharge: d.perKmCharge ?? 0,
     shiftAvailability: d.shiftAvailability,
     bankAccountHolderName: d.bankAccountHolderName,
     bankAccountNumber: d.bankAccountNumber,

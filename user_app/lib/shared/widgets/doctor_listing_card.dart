@@ -331,9 +331,9 @@ class _DoctorSpecialtyLogo extends StatelessWidget {
     return Tooltip(
       message: speciality.name,
       child: Container(
-        width: 22,
-        height: 22,
-        padding: const EdgeInsets.all(3),
+        width: 44,
+        height: 44,
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: speciality.accent.withValues(alpha: 0.12),
           shape: BoxShape.circle,
@@ -344,7 +344,7 @@ class _DoctorSpecialtyLogo extends StatelessWidget {
           filterQuality: FilterQuality.high,
           errorBuilder: (_, _, _) => Icon(
             speciality.icon,
-            size: 14,
+            size: 28,
             color: speciality.accent,
           ),
         ),

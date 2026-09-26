@@ -18,6 +18,7 @@ import '../features/blood_bank/presentation/screens/blood_request_detail_screen.
 import '../features/blood_bank/presentation/screens/donor_profile_screen.dart';
 import '../features/blood_bank/presentation/screens/donor_history_screen.dart';
 import '../features/blood_bank/presentation/screens/donor_requests_screen.dart';
+import '../features/blood_bank/presentation/screens/blood_donation_camps_screen.dart';
 import '../features/doctor_registration/presentation/screens/doctor_search_screen.dart';
 import '../features/doctor_registration/presentation/screens/find_specialists_screen.dart';
 import '../features/hospital_visit/presentation/screens/hospital_visit_booking_screen.dart';
@@ -730,6 +731,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             initialCity: state.uri.queryParameters['city'],
             initialBloodGroup: state.uri.queryParameters['bloodGroup'],
             initialComponentType: state.uri.queryParameters['componentType'],
+            initialRadiusKm: state.uri.queryParameters['radiusKm'],
           ),
         ),
       ),
@@ -803,6 +805,12 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           state,
           const DonorRequestsScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppConstants.routeBloodDonationCamps,
+        name: 'bloodDonationCamps',
+        pageBuilder: (context, state) =>
+            slidePage(state, const BloodDonationCampsScreen()),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

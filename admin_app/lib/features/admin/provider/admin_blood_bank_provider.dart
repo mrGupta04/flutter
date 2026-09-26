@@ -157,11 +157,11 @@ class BloodBankDetailsNotifier extends StateNotifier<BloodBankDetailsState> {
     return false;
   }
 
-  Future<bool> suspendBloodBank({
+  Future<bool> disableBloodBank({
     required String bloodBankId,
-    String? reason,
+    required String reason,
   }) async {
-    final response = await repository.suspendBloodBank(
+    final response = await repository.disableBloodBank(
       bloodBankId: bloodBankId,
       reason: reason,
     );
@@ -169,7 +169,17 @@ class BloodBankDetailsNotifier extends StateNotifier<BloodBankDetailsState> {
       state = state.copyWith(bloodBank: response.data);
       return true;
     }
-    state = state.copyWith(error: response.error ?? 'Failed to suspend blood bank');
+    state = state.copyWith(error: response.error ?? 'Failed to disable blood bank');
+    return false;
+  }
+
+  Future<bool> enableBloodBank({required String bloodBankId}) async {
+    final response = await repository.enableBloodBank(bloodBankId: bloodBankId);
+    if (response.success && response.data != null) {
+      state = state.copyWith(bloodBank: response.data);
+      return true;
+    }
+    state = state.copyWith(error: response.error ?? 'Failed to enable blood bank');
     return false;
   }
 

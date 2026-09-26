@@ -93,6 +93,13 @@ class VerifiedNursesSection extends ConsumerWidget {
                             ),
                           )
                         : null,
+                    distanceKm: location.hasCoordinates
+                        ? nurseDistanceKm(
+                            nurse,
+                            location.latitude!,
+                            location.longitude!,
+                          )
+                        : null,
                     onTap: () => openNurseHomeVisitBooking(context, nurse),
                     onBookHomeVisit: () =>
                         openNurseHomeVisitBooking(context, nurse),

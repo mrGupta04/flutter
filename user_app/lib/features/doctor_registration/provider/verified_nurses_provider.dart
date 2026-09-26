@@ -5,7 +5,7 @@ import '../../../data/repositories/nurse_registration_repository.dart';
 final verifiedNursesProvider =
     FutureProvider.autoDispose<List<NurseModel>>((ref) async {
   final repository = NurseRegistrationRepository();
-  final response = await repository.getVerifiedNurses();
+  final response = await repository.getVerifiedNurses(pageSize: 50);
   if (response.success && response.data != null) {
     return response.data!.where((nurse) => !nurse.isProfileDisabled).toList();
   }

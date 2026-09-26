@@ -393,6 +393,7 @@ class _NurseSearchScreenState extends ConsumerState<NurseSearchScreen> {
           return NurseListingCard(
             nurse: nurse,
             distanceLabel: formatNearbyDistanceLabel(distanceKm),
+            distanceKm: distanceKm,
             onTap: () => openNurseHomeVisitBooking(context, nurse),
             onBookHomeVisit: () => openNurseHomeVisitBooking(context, nurse),
             onOpenMapTap: nurseHasMapLocation(nurse)

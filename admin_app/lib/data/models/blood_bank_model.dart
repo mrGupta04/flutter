@@ -168,6 +168,10 @@ class BloodBankModel {
   final bool? homeDeliveryAvailable;
   final bool? hospitalDeliveryAvailable;
   final bool? cashPaymentEnabled;
+  final String? bankType;
+  final String? legalName;
+  final String? website;
+  final String? landmark;
   final List<BloodComponentPricing>? bloodComponents;
   final List<BloodBankOffer>? offers;
   final List<String>? galleryImages;
@@ -178,6 +182,8 @@ class BloodBankModel {
   final DateTime? updatedAt;
   final bool? isApproved;
   final String? approvalNotes;
+  final bool? isDisabled;
+  final String? disabledReason;
 
   BloodBankModel({
     this.id,
@@ -214,6 +220,10 @@ class BloodBankModel {
     this.homeDeliveryAvailable,
     this.hospitalDeliveryAvailable,
     this.cashPaymentEnabled,
+    this.bankType,
+    this.legalName,
+    this.website,
+    this.landmark,
     this.bloodComponents,
     this.offers,
     this.galleryImages,
@@ -224,6 +234,8 @@ class BloodBankModel {
     this.updatedAt,
     this.isApproved,
     this.approvalNotes,
+    this.isDisabled,
+    this.disabledReason,
   });
 
   factory BloodBankModel.fromJson(Map<String, dynamic> json) {
@@ -264,6 +276,10 @@ class BloodBankModel {
       homeDeliveryAvailable: json['homeDeliveryAvailable'] as bool?,
       hospitalDeliveryAvailable: json['hospitalDeliveryAvailable'] as bool?,
       cashPaymentEnabled: json['cashPaymentEnabled'] as bool?,
+      bankType: json['bankType'] as String?,
+      legalName: json['legalName'] as String?,
+      website: json['website'] as String?,
+      landmark: json['landmark'] as String?,
       bloodComponents: (json['bloodComponents'] as List?)
           ?.map((e) => BloodComponentPricing.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -285,6 +301,8 @@ class BloodBankModel {
           : null,
       isApproved: json['isApproved'] as bool?,
       approvalNotes: json['approvalNotes'] as String?,
+      isDisabled: json['isDisabled'] as bool?,
+      disabledReason: json['disabledReason'] as String?,
     );
   }
 
@@ -328,6 +346,10 @@ class BloodBankModel {
       if (hospitalDeliveryAvailable != null)
         'hospitalDeliveryAvailable': hospitalDeliveryAvailable,
       if (cashPaymentEnabled != null) 'cashPaymentEnabled': cashPaymentEnabled,
+      if (bankType != null) 'bankType': bankType,
+      if (legalName != null) 'legalName': legalName,
+      if (website != null) 'website': website,
+      if (landmark != null) 'landmark': landmark,
       if (bloodComponents != null)
         'bloodComponents': bloodComponents!.map((c) => c.toJson()).toList(),
       if (offers != null) 'offers': offers!.map((o) => o.toJson()).toList(),
@@ -383,6 +405,10 @@ class BloodBankModel {
     bool? homeDeliveryAvailable,
     bool? hospitalDeliveryAvailable,
     bool? cashPaymentEnabled,
+    String? bankType,
+    String? legalName,
+    String? website,
+    String? landmark,
     List<BloodComponentPricing>? bloodComponents,
     List<BloodBankOffer>? offers,
     List<String>? galleryImages,
@@ -393,6 +419,8 @@ class BloodBankModel {
     DateTime? updatedAt,
     bool? isApproved,
     String? approvalNotes,
+    bool? isDisabled,
+    String? disabledReason,
   }) {
     return BloodBankModel(
       id: id ?? this.id,
@@ -431,6 +459,10 @@ class BloodBankModel {
       hospitalDeliveryAvailable:
           hospitalDeliveryAvailable ?? this.hospitalDeliveryAvailable,
       cashPaymentEnabled: cashPaymentEnabled ?? this.cashPaymentEnabled,
+      bankType: bankType ?? this.bankType,
+      legalName: legalName ?? this.legalName,
+      website: website ?? this.website,
+      landmark: landmark ?? this.landmark,
       bloodComponents: bloodComponents ?? this.bloodComponents,
       offers: offers ?? this.offers,
       galleryImages: galleryImages ?? this.galleryImages,
@@ -441,6 +473,8 @@ class BloodBankModel {
       updatedAt: updatedAt ?? this.updatedAt,
       isApproved: isApproved ?? this.isApproved,
       approvalNotes: approvalNotes ?? this.approvalNotes,
+      isDisabled: isDisabled ?? this.isDisabled,
+      disabledReason: disabledReason ?? this.disabledReason,
     );
   }
 }

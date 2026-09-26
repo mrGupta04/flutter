@@ -236,6 +236,18 @@ class _ActionBar extends ConsumerWidget {
               isLoading: state.isRejecting,
               onPressed: () => _showRejectDialog(context, ref),
             ),
+            const SizedBox(height: 8),
+            if (state.bloodBank?.isDisabled == true)
+              CustomButton(
+                label: 'Re-enable blood bank',
+                icon: Icons.check_circle_outline,
+                onPressed: () => _enable(context, ref),
+              )
+            else
+              CustomOutlineButton(
+                label: 'Disable blood bank',
+                onPressed: () => _showDisableDialog(context, ref),
+              ),
           ],
         ),
       ),
@@ -284,5 +296,61 @@ class _ActionBar extends ConsumerWidget {
           bloodBankId: bloodBankId,
           reason: reason,
         );
+  }
+
+  Future<void> _showDisableDialog(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Disable blood bank'),
+        content: CaretOnTapTextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Reason for disabling'),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Disable'),
+          ),
+        ],
+      ),
+    );
+    if (reason == null || reason.isEmpty || !context.mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm disable'),
+        content: Text(
+          'This blood bank will be hidden from users. Existing data stays available to admin.\n\nReason: $reason',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Back')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Disable')),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final ok = await ref.read(bloodBankDetailsProvider(bloodBankId).notifier).disableBloodBank(
+          bloodBankId: bloodBankId,
+          reason: reason,
+        );
+    if (context.mounted && ok) {
+      SnackBarHelper.showSuccess(context, 'Blood bank disabled');
+    }
+  }
+
+  Future<void> _enable(BuildContext context, WidgetRef ref) async {
+    final ok = await ref
+        .read(bloodBankDetailsProvider(bloodBankId).notifier)
+        .enableBloodBank(bloodBankId: bloodBankId);
+    if (context.mounted && ok) {
+      SnackBarHelper.showSuccess(context, 'Blood bank re-enabled');
+    }
   }
 }

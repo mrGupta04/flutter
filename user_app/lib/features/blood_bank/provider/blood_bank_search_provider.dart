@@ -31,6 +31,8 @@ class BloodBankSearchParams {
     this.maxDistanceKm,
     this.maxPrice,
     this.minRating,
+    this.bankType,
+    this.minUnits,
   });
 
   final String? query;
@@ -45,6 +47,8 @@ class BloodBankSearchParams {
   final double? maxDistanceKm;
   final double? maxPrice;
   final double? minRating;
+  final String? bankType;
+  final int? minUnits;
 
   @override
   bool operator ==(Object other) {
@@ -61,7 +65,9 @@ class BloodBankSearchParams {
         other.longitude == longitude &&
         other.maxDistanceKm == maxDistanceKm &&
         other.maxPrice == maxPrice &&
-        other.minRating == minRating;
+        other.minRating == minRating &&
+        other.bankType == bankType &&
+        other.minUnits == minUnits;
   }
 
   @override
@@ -78,6 +84,8 @@ class BloodBankSearchParams {
         maxDistanceKm,
         maxPrice,
         minRating,
+        bankType,
+        minUnits,
       );
 }
 
@@ -117,6 +125,7 @@ final bloodBankSearchProvider = FutureProvider.autoDispose
       maxDistanceKm: params.maxDistanceKm,
       maxPrice: params.maxPrice,
       minRating: params.minRating,
+      bankType: _trimOrNull(params.bankType),
     );
 
     if (response.success && response.data != null) {

@@ -8,6 +8,7 @@ import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/utils/validation_utils.dart';
@@ -292,7 +293,18 @@ class _NurseHomeVisitBookingScreenState
           message: e.toString().replaceFirst('Exception: ', ''),
           onRetry: () => ref.invalidate(nurseProfileProvider(widget.nurseId)),
         ),
-        data: (nurse) => Column(
+        data: (nurse) {
+          final visitDistanceKm =
+              _patientLatitude != null && _patientLongitude != null
+                  ? nurseDistanceKm(
+                      nurse,
+                      _patientLatitude!,
+                      _patientLongitude!,
+                    )
+                  : null;
+          final quotedFee = nurse.quotedHomeVisitFee(distanceKm: visitDistanceKm);
+          final travelFee = nurse.travelFeeFor(distanceKm: visitDistanceKm);
+          return Column(
           children: [
             Expanded(
               child: RefreshIndicator(
@@ -309,7 +321,10 @@ class _NurseHomeVisitBookingScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _NurseBookingProfileHeader(nurse: nurse),
+                        _NurseBookingProfileHeader(
+                          nurse: nurse,
+                          distanceKm: visitDistanceKm,
+                        ),
                         const SizedBox(height: 20),
                         slotsAsync.when(
                           skipLoadingOnReload: true,
@@ -428,6 +443,43 @@ class _NurseHomeVisitBookingScreenState
                         prefixIcon: Icons.local_offer_outlined,
                         hint: 'Applied when you pay after approval',
                       ),
+                      if (quotedFee != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              _FareRow(
+                                label: 'Visit fee',
+                                value: FormattingUtils.formatConsultationFee(
+                                  nurse.effectiveHomeVisitFee ?? quotedFee,
+                                ),
+                              ),
+                              if ((nurse.perKmCharge ?? 0) > 0) ...[
+                                const SizedBox(height: 8),
+                                _FareRow(
+                                  label: visitDistanceKm != null
+                                      ? 'Travel (${visitDistanceKm.toStringAsFixed(1)} km × ₹${nurse.perKmCharge})'
+                                      : 'Travel (₹${nurse.perKmCharge}/km)',
+                                  value: travelFee > 0
+                                      ? FormattingUtils.formatConsultationFee(travelFee)
+                                      : 'Added after location',
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              _FareRow(
+                                label: 'Estimated total',
+                                value: FormattingUtils.formatConsultationFee(quotedFee),
+                                emphasized: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -450,16 +502,18 @@ class _NurseHomeVisitBookingScreenState
               ),
             ),
           ],
-        ),
+        );
+        },
       ),
     );
   }
 }
 
 class _NurseBookingProfileHeader extends StatelessWidget {
-  const _NurseBookingProfileHeader({required this.nurse});
+  const _NurseBookingProfileHeader({required this.nurse, this.distanceKm});
 
   final NurseModel nurse;
+  final double? distanceKm;
 
   @override
   Widget build(BuildContext context) {
@@ -626,22 +680,27 @@ class _NurseBookingProfileHeader extends StatelessWidget {
             child: IntrinsicHeight(
               child: Row(
                 children: [
-                  if (nurse.effectiveHomeVisitFee != null)
+                  if (nurse.quotedHomeVisitFee(distanceKm: distanceKm) != null)
                     Expanded(
                       child: _ProfileStatColumn(
                         icon: Icons.currency_rupee_rounded,
                         label: 'Visit fee',
                         value: FormattingUtils.formatConsultationFee(
-                          nurse.effectiveHomeVisitFee!,
+                          nurse.quotedHomeVisitFee(distanceKm: distanceKm)!,
                         ),
-                        strikeValue: nurse.originalHomeVisitFee != null
+                        strikeValue: nurse.quotedOriginalHomeVisitFee(
+                                  distanceKm: distanceKm,
+                                ) !=
+                                null
                             ? FormattingUtils.formatConsultationFee(
-                                nurse.originalHomeVisitFee!,
+                                nurse.quotedOriginalHomeVisitFee(
+                                  distanceKm: distanceKm,
+                                )!,
                               )
                             : null,
                       ),
                     ),
-                  if (nurse.effectiveHomeVisitFee != null &&
+                  if (nurse.quotedHomeVisitFee(distanceKm: distanceKm) != null &&
                       nurse.yearsOfExperience != null)
                     const _ProfileStatDivider(),
                   if (nurse.yearsOfExperience != null)
@@ -813,6 +872,41 @@ class _ProfileStatColumn extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.labelSmall.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FareRow extends StatelessWidget {
+  const _FareRow({
+    required this.label,
+    required this.value,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: emphasized ? AppColors.textPrimary : AppColors.textSecondary,
+              fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: AppTextStyles.bodySmall.copyWith(
             fontWeight: FontWeight.w800,
           ),
         ),

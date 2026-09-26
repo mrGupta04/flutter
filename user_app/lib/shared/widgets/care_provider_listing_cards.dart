@@ -33,6 +33,7 @@ class NurseListingCard extends StatelessWidget {
     this.onBookHomeVisit,
     this.onOpenMapTap,
     this.distanceLabel,
+    this.distanceKm,
     this.availabilityLabel,
   });
 
@@ -43,6 +44,7 @@ class NurseListingCard extends StatelessWidget {
   final VoidCallback? onBookHomeVisit;
   final VoidCallback? onOpenMapTap;
   final String? distanceLabel;
+  final double? distanceKm;
   final String? availabilityLabel;
 
   @override
@@ -218,14 +220,28 @@ class NurseListingCard extends StatelessWidget {
                 ),
               ),
               if (showActionButtons) ...[
-                if (nurse.effectiveHomeVisitFee != null) ...[
+                if (nurse.quotedHomeVisitFee(distanceKm: distanceKm) != null) ...[
                   const SizedBox(height: 14),
                   MarketplacePriceActionRow(
-                    price: nurse.effectiveHomeVisitFee,
-                    originalPrice: nurse.originalHomeVisitFee,
+                    price: nurse.quotedHomeVisitFee(distanceKm: distanceKm),
+                    originalPrice:
+                        nurse.quotedOriginalHomeVisitFee(distanceKm: distanceKm),
                     showButton: false,
                     accentColor: kNurseCardAccent,
                   ),
+                  if ((nurse.perKmCharge ?? 0) > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        distanceKm != null &&
+                                nurse.travelFeeFor(distanceKm: distanceKm) > 0
+                            ? 'Includes ₹${nurse.travelFeeFor(distanceKm: distanceKm)} travel · ₹${nurse.perKmCharge}/km'
+                            : 'Plus ₹${nurse.perKmCharge}/km travel',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
                 ],
                 const SizedBox(height: 14),
                 _NurseBookNowButton(
@@ -680,6 +696,8 @@ class BloodBankListingCard extends StatelessWidget {
     this.onTap,
     this.onOrder,
     this.distanceLabel,
+    this.highlightGroup,
+    this.highlightComponent,
   });
 
   final BloodBankModel bloodBank;
@@ -687,6 +705,8 @@ class BloodBankListingCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onOrder;
   final String? distanceLabel;
+  final String? highlightGroup;
+  final String? highlightComponent;
 
   @override
   Widget build(BuildContext context) {
@@ -706,10 +726,23 @@ class BloodBankListingCard extends StatelessWidget {
         (bloodBank.distanceKm != null
             ? '${bloodBank.distanceKm!.toStringAsFixed(1)} km'
             : null);
+    final match = bloodBank.matchingStock(
+      group: highlightGroup,
+      component: highlightComponent,
+    );
+    final availabilityLine = [
+      if (highlightGroup != null) highlightGroup,
+      if (highlightComponent != null) highlightComponent!.replaceAll('_', ' '),
+      if (match != null && match.availableUnits > 0)
+        'Available: ${match.availableUnits} units'
+      else if (match != null)
+        match.availabilityLevel == 'none' ? 'Currently unavailable' : 'Limited availability',
+    ].whereType<String>().join(' • ');
     final footerParts = <String>[
-      if (distance != null) distance,
+      if (distance != null) '$distance away',
+      bloodBank.openStatusLabel,
       ...features,
-      if (bloodBank.startingPrice != null) 'From ₹${bloodBank.startingPrice}',
+      if (bloodBank.isVerified) 'Verified',
     ];
 
     return Material(
@@ -852,6 +885,16 @@ class BloodBankListingCard extends StatelessWidget {
                       .toList(),
                 ),
               ],
+              if (availabilityLine.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  availabilityLine,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.primaryDark,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
               if (footerParts.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -879,7 +922,7 @@ class BloodBankListingCard extends StatelessWidget {
                         backgroundColor: const Color(0xFFB71C1C),
                         foregroundColor: AppColors.white,
                       ),
-                      child: const Text('Order blood'),
+                      child: const Text('Request Blood'),
                     ),
                   ),
                 ],

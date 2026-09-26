@@ -86,6 +86,7 @@ async function upsertNurse(data) {
     availableForHomeVisit: data.availableForHomeVisit ?? existing?.availableForHomeVisit ?? true,
     homeVisitFee: data.homeVisitFee ?? existing?.homeVisitFee,
     homeVisitOfferFee: data.homeVisitOfferFee ?? existing?.homeVisitOfferFee,
+    perKmCharge: data.perKmCharge ?? existing?.perKmCharge ?? 0,
     shiftAvailability: data.shiftAvailability ?? existing?.shiftAvailability,
     bankAccountHolderName: data.bankAccountHolderName ?? existing?.bankAccountHolderName,
     bankAccountNumber: data.bankAccountNumber ?? existing?.bankAccountNumber,

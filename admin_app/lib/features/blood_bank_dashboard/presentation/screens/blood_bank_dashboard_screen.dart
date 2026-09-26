@@ -65,6 +65,12 @@ class _BloodBankDashboardScreenState extends ConsumerState<BloodBankDashboardScr
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                     children: [
+                      if (bank != null && bank.isDisabled == true)
+                        const OfferPromoCard(
+                          title: 'Blood bank disabled',
+                          subtitle: 'Users cannot see this blood bank or submit new requests until an admin re-enables it.',
+                          icon: Icons.block_rounded,
+                        ),
                       if (bank != null && !isVerified)
                         const OfferPromoCard(
                           title: 'Verification pending',
@@ -102,12 +108,12 @@ class _BloodBankDashboardScreenState extends ConsumerState<BloodBankDashboardScr
                         children: [
                           _StatCard('Today\'s requests', '${dashboard.todayOrders}'),
                           _StatCard('Emergency', '${dashboard.emergencyCount}'),
-                          _StatCard('Inventory', '${dashboard.stats?['totalAvailableUnits'] ?? 0}'),
+                          _StatCard('Available units', '${dashboard.stats?['totalAvailableUnits'] ?? 0}'),
+                          _StatCard('Reserved', '${dashboard.stats?['reservedUnits'] ?? 0}'),
+                          _StatCard('Expiring soon', '${dashboard.stats?['expiringSoon'] ?? 0}'),
+                          _StatCard('Pending requests', '${dashboard.pendingOrders}'),
                           _StatCard('Low stock', '${dashboard.stats?['lowStockGroups'] ?? 0}'),
-                          _StatCard('Critical', '${dashboard.stats?['criticalStockGroups'] ?? 0}'),
-                          _StatCard('Pending donations', '${dashboard.stats?['pendingDonations'] ?? 0}'),
-                          _StatCard('Completed', '${dashboard.completedOrders}'),
-                          _StatCard('Pending', '${dashboard.pendingOrders}'),
+                          _StatCard('Camps', '${dashboard.stats?['upcomingCamps'] ?? 0}'),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -121,6 +127,7 @@ class _BloodBankDashboardScreenState extends ConsumerState<BloodBankDashboardScr
                           _ActionChip('Emergency inbox', Icons.emergency_rounded, 2),
                           _ActionChip('Donors', Icons.volunteer_activism_outlined, 3),
                           _ActionChip('Staff', Icons.groups_outlined, 4),
+                          _ActionChip('Donation camps', Icons.campaign_outlined, 5),
                           ActionChip(
                             avatar: const Icon(Icons.badge_outlined, size: 18),
                             label: const Text('Receptionists'),

@@ -97,19 +97,39 @@ class BloodBankOffer {
 class BloodInventoryEntry {
   const BloodInventoryEntry({
     required this.bloodGroup,
+    this.componentType,
     this.availableUnits = 0,
     this.reservedUnits = 0,
     this.totalUnits = 0,
+    this.availability,
     this.lastUpdated,
   });
 
   final String bloodGroup;
+  final String? componentType;
   final int availableUnits;
   final int reservedUnits;
   final int totalUnits;
+  final String? availability;
   final DateTime? lastUpdated;
 
   String get availabilityLevel {
+    if (availability != null && availability!.isNotEmpty) {
+      switch (availability) {
+        case 'available':
+          return 'high';
+        case 'limited':
+        case 'low_stock':
+          return 'low';
+        case 'critical':
+          return 'critical';
+        case 'unavailable':
+        case 'none':
+          return 'none';
+        default:
+          return availability!;
+      }
+    }
     if (availableUnits <= 0) return 'none';
     if (availableUnits <= 3) return 'low';
     if (availableUnits <= 10) return 'medium';
@@ -119,9 +139,11 @@ class BloodInventoryEntry {
   factory BloodInventoryEntry.fromJson(Map<String, dynamic> json) {
     return BloodInventoryEntry(
       bloodGroup: json['bloodGroup'] as String? ?? '',
+      componentType: json['componentType'] as String?,
       availableUnits: (json['availableUnits'] as num?)?.toInt() ?? 0,
       reservedUnits: (json['reservedUnits'] as num?)?.toInt() ?? 0,
       totalUnits: (json['totalUnits'] as num?)?.toInt() ?? 0,
+      availability: json['availability'] as String?,
       lastUpdated: json['lastUpdated'] != null
           ? DateTime.tryParse(json['lastUpdated'].toString())
           : null,
@@ -273,6 +295,10 @@ class BloodBankModel {
   final int? reviewCount;
   final double? distanceKm;
   final VerificationStatus? verificationStatus;
+  final String? bankType;
+  final String? legalName;
+  final String? website;
+  final String? landmark;
 
   BloodBankModel({
     this.id,
@@ -317,9 +343,46 @@ class BloodBankModel {
     this.reviewCount,
     this.distanceKm,
     this.verificationStatus,
+    this.bankType,
+    this.legalName,
+    this.website,
+    this.landmark,
   });
 
   String get displayName => institutionName ?? 'Blood bank';
+
+  bool get isVerified =>
+      verificationStatus == VerificationStatus.verified;
+
+  String get bankTypeLabel {
+    switch (bankType) {
+      case 'government':
+        return 'Government';
+      case 'hospital':
+        return 'Hospital Blood Bank';
+      case 'private':
+        return 'Private';
+      default:
+        return 'Standalone Blood Centre';
+    }
+  }
+
+  String get openStatusLabel {
+    if (available24x7 == true) return 'Open 24 hours';
+    return isOpenNow ? 'Open now' : 'Closed';
+  }
+
+  BloodInventoryEntry? matchingStock({String? group, String? component}) {
+    final list = inventory ?? const <BloodInventoryEntry>[];
+    for (final entry in list) {
+      final groupOk = group == null || entry.bloodGroup == group;
+      final componentOk = component == null ||
+          entry.componentType == null ||
+          entry.componentType == component;
+      if (groupOk && componentOk) return entry;
+    }
+    return null;
+  }
 
   BloodBankOffer? get activeOffer =>
       offers?.where((o) => o.isActiveNow).cast<BloodBankOffer?>().firstOrNull;
@@ -401,6 +464,10 @@ class BloodBankModel {
       reviewCount: (json['reviewCount'] as num?)?.toInt(),
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       verificationStatus: _parseStatus(json['verificationStatus'] as String?),
+      bankType: json['bankType'] as String?,
+      legalName: json['legalName'] as String?,
+      website: json['website'] as String?,
+      landmark: json['landmark'] as String?,
     );
   }
 
@@ -495,6 +562,10 @@ class BloodBankModel {
       reviewCount: reviewCount ?? this.reviewCount,
       distanceKm: distanceKm ?? this.distanceKm,
       verificationStatus: verificationStatus ?? this.verificationStatus,
+      bankType: this.bankType,
+      legalName: this.legalName,
+      website: this.website,
+      landmark: this.landmark,
     );
   }
 

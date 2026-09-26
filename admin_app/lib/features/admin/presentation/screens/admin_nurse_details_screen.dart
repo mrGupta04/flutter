@@ -171,6 +171,11 @@ class AdminNurseDetailsScreen extends ConsumerWidget {
                     'Home visit fee',
                     FormattingUtils.formatConsultationFee(nurse.homeVisitFee!),
                   ),
+                if (nurse.perKmCharge != null)
+                  _DetailRow(
+                    'Per km charge',
+                    FormattingUtils.formatConsultationFee(nurse.perKmCharge!),
+                  ),
               ],
             ),
             _Section(

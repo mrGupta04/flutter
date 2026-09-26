@@ -81,7 +81,11 @@ class ConsultationBookingPriceSummary extends StatelessWidget {
           ],
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(height: 1),
+            child: Divider(
+              height: 1,
+              thickness: 0.6,
+              color: Color(0xFFE8E8EC),
+            ),
           ),
           _PriceRow(
             label: 'Amount to pay',

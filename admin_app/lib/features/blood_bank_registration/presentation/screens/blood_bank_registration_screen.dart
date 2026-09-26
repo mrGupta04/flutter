@@ -54,6 +54,7 @@ class _BloodBankRegistrationScreenState
   final _pincodeController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _countryCode = PhoneCountries.defaultDialCode;
+  String _bankType = 'standalone';
   double? _latitude;
   double? _longitude;
   RegistrationLocationInputMode _locationMode =
@@ -367,6 +368,7 @@ class _BloodBankRegistrationScreenState
       pincode: _pincodeController.text.trim(),
       latitude: _latitude,
       longitude: _longitude,
+      bankType: _bankType,
       emergencyContact: _emergencyController.text.trim(),
       whatsappNumber: _whatsappController.text.trim().isEmpty
           ? null
@@ -546,6 +548,18 @@ class _BloodBankRegistrationScreenState
             v,
             fieldName: 'Blood bank name',
           ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _bankType,
+          decoration: const InputDecoration(
+            labelText: 'Blood bank type',
+            prefixIcon: Icon(Icons.account_balance_outlined),
+          ),
+          items: kBloodBankTypes
+              .map((t) => DropdownMenuItem(value: t['id'], child: Text(t['name']!)))
+              .toList(),
+          onChanged: (v) => setState(() => _bankType = v ?? 'standalone'),
         ),
         const SizedBox(height: 12),
         CustomTextField(
@@ -927,6 +941,13 @@ class _BloodBankRegistrationScreenState
             style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 16),
         _reviewRow('Blood bank', _nameController.text),
+        _reviewRow(
+          'Type',
+          kBloodBankTypes.firstWhere(
+            (t) => t['id'] == _bankType,
+            orElse: () => {'name': _bankType},
+          )['name']!,
+        ),
         _reviewRow('Owner', _ownerController.text),
         _reviewRow('Email', _emailController.text),
         _reviewRow('City', _cityController.text),

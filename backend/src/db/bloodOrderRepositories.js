@@ -120,7 +120,12 @@ function calculatePricing(bank, componentType, units, couponCode) {
 
 async function createBloodOrder(data) {
   const bankDoc = await BloodBank.findOne({ id: data.bloodBankId });
-  if (!bankDoc || bankDoc.verificationStatus !== 'verified' || bankDoc.isSuspended) {
+  if (
+    !bankDoc ||
+    bankDoc.verificationStatus !== 'verified' ||
+    bankDoc.isSuspended ||
+    bankDoc.isDisabled
+  ) {
     const err = new Error('Blood bank not available');
     err.statusCode = 400;
     throw err;
@@ -141,7 +146,7 @@ async function createBloodOrder(data) {
     await reserveInventory(data.bloodBankId, data.bloodGroup, data.units);
   }
 
-  const initialStatus = data.isEmergency ? 'blood_bank_notified' : 'pending';
+  const initialStatus = data.isEmergency ? 'blood_bank_notified' : 'submitted';
   const order = await BloodOrder.create({
     id: data.id || uuidv4(),
     bloodBankId: data.bloodBankId,
@@ -161,6 +166,11 @@ async function createBloodOrder(data) {
     bloodGroup: data.bloodGroup,
     componentType: data.componentType,
     units: data.units,
+    approvedUnits: data.approvedUnits,
+    attendantName: data.attendantName,
+    attendantPhone: data.attendantPhone,
+    urgency: data.urgency || (data.isEmergency ? 'emergency' : 'normal'),
+    documents: data.documents || [],
     prescriptionUrl: data.prescriptionUrl,
     deliveryMethod: data.deliveryMethod || 'self_pickup',
     deliveryAddress: data.deliveryAddress,
@@ -352,6 +362,19 @@ async function updateOrderStatus(orderId, status, extra = {}, auth = {}) {
   const updates = { status, ...extra };
   const fromStatus = order.status;
 
+  const unitsToReserve = Number(
+    extra.approvedUnits || extra.units || order.approvedUnits || order.units,
+  );
+
+  if (status === 'partially_available') {
+    if (!Number.isFinite(unitsToReserve) || unitsToReserve < 1) {
+      const err = new Error('Approved units are required for partial availability');
+      err.statusCode = 400;
+      throw err;
+    }
+    updates.approvedUnits = unitsToReserve;
+  }
+
   if (status === 'accepted') {
     updates.estimatedDeliveryTime =
       extra.estimatedDeliveryTime || new Date(Date.now() + 2 * 60 * 60 * 1000);
@@ -362,13 +385,14 @@ async function updateOrderStatus(orderId, status, extra = {}, auth = {}) {
           bloodBankId: order.bloodBankId,
           bloodGroup: order.bloodGroup,
           componentType: order.componentType,
-          units: order.units,
+          units: unitsToReserve,
           requestId: order.id,
           actorId: actor.actorId,
           actorRole: actor.actorRole,
         });
         updates.reservationId = reservation.id;
         updates.reservationExpiresAt = reservation.expiresAt;
+        updates.approvedUnits = unitsToReserve;
         updates.status = 'blood_reserved';
       } catch (err) {
         if (err.statusCode === 409 || /Insufficient/i.test(err.message)) {
@@ -386,13 +410,14 @@ async function updateOrderStatus(orderId, status, extra = {}, auth = {}) {
       bloodBankId: order.bloodBankId,
       bloodGroup: order.bloodGroup,
       componentType: order.componentType,
-      units: order.units,
+      units: unitsToReserve,
       requestId: order.id,
       actorId: actor.actorId,
       actorRole: actor.actorRole,
     });
     updates.reservationId = reservation.id;
     updates.reservationExpiresAt = reservation.expiresAt;
+    updates.approvedUnits = unitsToReserve;
   }
 
   if (status === 'rejected' || status === 'cancelled' || status === 'expired') {
@@ -445,7 +470,12 @@ async function updateOrderStatus(orderId, status, extra = {}, auth = {}) {
   });
 
   const eventMap = {
+    submitted: 'blood_request_submitted',
     accepted: 'blood_request_accepted',
+    approved: 'blood_request_approved',
+    partially_available: 'blood_partially_available',
+    document_verification: 'blood_documents_required',
+    under_review: 'blood_request_under_review',
     blood_reserved: 'blood_reserved',
     rejected: 'blood_request_rejected',
     ready_for_collection: 'blood_ready',
@@ -492,7 +522,25 @@ async function getOrderWithHistory(orderId) {
   const reservation = order.reservationId
     ? await findActiveReservation(orderId)
     : null;
-  return { ...order, statusHistory: history, reservation };
+  const bank = await BloodBank.findOne({ id: order.bloodBankId }).lean();
+  return {
+    ...order,
+    statusHistory: history,
+    reservation,
+    bloodBank: bank
+      ? {
+          id: bank.id,
+          institutionName: bank.institutionName,
+          address: bank.address,
+          city: bank.city,
+          mobileNumber: bank.mobileNumber,
+          emergencyContact: bank.emergencyContact,
+          latitude: bank.latitude,
+          longitude: bank.longitude,
+        }
+      : null,
+    bloodBankPhone: bank?.mobileNumber || bank?.emergencyContact,
+  };
 }
 
 async function listAllOrders({ status, page = 1, pageSize = 20 } = {}) {

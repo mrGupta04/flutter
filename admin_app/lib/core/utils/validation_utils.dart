@@ -180,6 +180,23 @@ class ValidationUtils {
     return null;
   }
 
+  static String? validatePerKmCharge(String? fee) {
+    if (fee == null || fee.isEmpty) {
+      return 'Per km charge is required';
+    }
+    final feeInt = int.tryParse(fee);
+    if (feeInt == null) {
+      return 'Please enter a valid per km charge';
+    }
+    if (feeInt < 0) {
+      return 'Per km charge cannot be negative';
+    }
+    if (feeInt > AppConstants.maxConsultationFee) {
+      return 'Per km charge is too high';
+    }
+    return null;
+  }
+
   /// Optional offer/discount price; must be lower than the regular fee when set.
   static String? validateOptionalOfferFee(String? offerFee, String? regularFee) {
     if (offerFee == null || offerFee.trim().isEmpty) return null;

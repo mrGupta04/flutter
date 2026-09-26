@@ -253,6 +253,39 @@ class BloodBankRegistrationRepository {
     }
   }
 
+  Future<ApiResponse<List<Map<String, dynamic>>>> getCamps() async {
+    try {
+      final response = await _dioService.get(AppConstants.endpointBloodBankCamps);
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: true,
+        data: extractApiList(body['data'])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> saveCamp(Map<String, dynamic> payload) async {
+    try {
+      await _dioService.post(AppConstants.endpointBloodBankCamps, data: payload);
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> cancelCamp(String campId) async {
+    try {
+      await _dioService.post(AppConstants.endpointBloodBankCampCancel(campId), data: const {});
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   Future<ApiResponse<List<Map<String, dynamic>>>> getDonors() async {
     try {
       final response = await _dioService.get(AppConstants.endpointBloodBankDonors);

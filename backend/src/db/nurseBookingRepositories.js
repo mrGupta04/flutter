@@ -221,6 +221,26 @@ function getNurseHomeVisitFee(nurse) {
   return regularFee;
 }
 
+function getNursePerKmCharge(nurse) {
+  const value = Number(nurse?.perKmCharge);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function getNurseVisitPricing(nurse, distanceKm) {
+  const baseFee = getNurseHomeVisitFee(nurse) || 0;
+  const perKmCharge = getNursePerKmCharge(nurse);
+  const rawKm = Number(distanceKm);
+  const billedKm = Number.isFinite(rawKm) ? Math.max(0, Math.round(rawKm * 10) / 10) : 0;
+  const travelFee = Math.round(billedKm * perKmCharge);
+  return {
+    baseFee,
+    perKmCharge,
+    distanceKm: Number.isFinite(rawKm) ? billedKm : null,
+    travelFee,
+    totalFee: baseFee + travelFee,
+  };
+}
+
 function resolvePatientDistance(nurse, patientLatitude, patientLongitude) {
   const lat = Number(patientLatitude);
   const lon = Number(patientLongitude);
@@ -266,6 +286,9 @@ function formatNurseBookingResponse(booking, nurse) {
     weekStartDate: booking.weekStartDate,
     consultationFee: booking.consultationFee,
     amount: booking.consultationFee,
+    baseFee: booking.baseFee ?? null,
+    perKmCharge: booking.perKmCharge ?? null,
+    travelFee: booking.travelFee ?? null,
     status: booking.status,
     workflowStatus: workflowStatus(booking),
     visitProgress: booking.visitProgress || null,
@@ -289,7 +312,7 @@ function formatNurseBookingResponse(booking, nurse) {
   };
 }
 
-async function getNurseBookableSlots(nurseId) {
+async function getNurseBookableSlots(nurseId, { latitude, longitude } = {}) {
   const nurse = await findNurseById(nurseId);
   if (!nurse) {
     return { error: 'Nurse not found', status: 404 };
@@ -302,6 +325,9 @@ async function getNurseBookableSlots(nurseId) {
   if (!nurse.availableForHomeVisit) {
     return { error: 'This nurse does not offer home visits', status: 400 };
   }
+
+  const distance = resolvePatientDistance(nurse, latitude, longitude);
+  const pricing = getNurseVisitPricing(nurse, distance);
 
   const availResult = await getActiveAvailabilityForBooking(nurseId);
   if (availResult.error) {
@@ -375,7 +401,11 @@ async function getNurseBookableSlots(nurseId) {
       consultationType: CONSULTATION_TYPE,
       weekStartDate: weekStart.toISOString(),
       weekEndDate: weekEnd.toISOString(),
-      consultationFee: getNurseHomeVisitFee(nurse),
+      consultationFee: pricing.totalFee,
+      homeVisitFee: pricing.baseFee,
+      perKmCharge: pricing.perKmCharge,
+      travelFee: pricing.travelFee,
+      distanceKm: pricing.distanceKm,
       slots: bookable,
       totalBookable: bookable.filter((slot) => slot.bookable).length,
       totalAvailableInWeek: (availability.slots || []).filter((s) => s.available)
@@ -419,12 +449,20 @@ async function validateNurseBookingPayload(payload) {
     throw err;
   }
 
-  const fee = getNurseHomeVisitFee(nurse);
-  if (!fee) {
+  const baseFee = getNurseHomeVisitFee(nurse);
+  if (!baseFee) {
     const err = new Error('Nurse home visit fee is not set');
     err.statusCode = 400;
     throw err;
   }
+
+  const distance = resolvePatientDistance(
+    nurse,
+    payload.patientLatitude,
+    payload.patientLongitude,
+  );
+  const pricing = getNurseVisitPricing(nurse, distance);
+  const fee = pricing.totalFee;
 
   await expirePendingNurseBookings(nurseId);
 
@@ -515,6 +553,7 @@ async function validateNurseBookingPayload(payload) {
     patientPincode: pincode,
     visitReason: visitReason ? String(visitReason).trim() : undefined,
     fee,
+    pricing,
   };
 }
 
@@ -631,7 +670,13 @@ async function holdNurseSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
   }
 
   const paymentExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000);
-  const fee = getNurseHomeVisitFee(nurse);
+  const distance = resolvePatientDistance(
+    nurse,
+    payload.patientLatitude,
+    payload.patientLongitude,
+  );
+  const pricing = getNurseVisitPricing(nurse, distance);
+  const fee = pricing.totalFee;
 
   await assertCurrentNurseSlotIsAvailable(nurseId, d, h);
 
@@ -666,6 +711,10 @@ async function holdNurseSlot(payload, holdMinutes = SLOT_HOLD_MINUTES) {
             slotEnd,
             weekStartDate: weekStart,
             consultationFee: fee,
+            baseFee: pricing.baseFee,
+            perKmCharge: pricing.perKmCharge,
+            travelFee: pricing.travelFee,
+            distanceKm: pricing.distanceKm ?? undefined,
             status: STATUS.HELD,
             paymentStatus: 'pending',
             paymentProvider: 'mock',
@@ -729,6 +778,7 @@ async function createNurseHomeVisitRequest(payload) {
     patientPincode,
     visitReason,
     fee,
+    pricing,
   } = validated;
 
   const { resolvePatientId } = require('./notificationRepositories');
@@ -741,7 +791,7 @@ async function createNurseHomeVisitRequest(payload) {
 
   const patientLatitude = payload.patientLatitude;
   const patientLongitude = payload.patientLongitude;
-  const distance = resolvePatientDistance(nurse, patientLatitude, patientLongitude);
+  const distance = pricing.distanceKm;
   const approvalExpiresAt = new Date(
     Date.now() + HOME_VISIT_APPROVAL_HOURS * 60 * 60 * 1000,
   );
@@ -791,6 +841,10 @@ async function createNurseHomeVisitRequest(payload) {
       ? Number(patientLongitude)
       : undefined;
     existingHold.distanceKm = distance ?? undefined;
+    existingHold.consultationFee = fee;
+    existingHold.baseFee = pricing.baseFee;
+    existingHold.perKmCharge = pricing.perKmCharge;
+    existingHold.travelFee = pricing.travelFee;
     existingHold.approvalExpiresAt = approvalExpiresAt;
     existingHold.paymentStatus = 'pending';
     existingHold.paymentProvider = 'mock';
@@ -845,6 +899,9 @@ async function createNurseHomeVisitRequest(payload) {
     slotEnd,
     weekStartDate: weekStart,
     consultationFee: fee,
+    baseFee: pricing.baseFee,
+    perKmCharge: pricing.perKmCharge,
+    travelFee: pricing.travelFee,
     couponCode: payload.couponCode
       ? String(payload.couponCode).trim().toUpperCase()
       : undefined,
@@ -1087,6 +1144,9 @@ function mapNurseBookingListItem(b, now = new Date()) {
     consultationType: b.consultationType || 'book_home',
     typeLabel: 'Home visit',
     consultationFee: b.consultationFee,
+    baseFee: b.baseFee ?? null,
+    perKmCharge: b.perKmCharge ?? null,
+    travelFee: b.travelFee ?? null,
     isUpcoming:
       (slotEnd >= now && b.visitProgress !== 'completed') ||
       activeProgress ||

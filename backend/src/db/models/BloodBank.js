@@ -81,6 +81,26 @@ const bloodBankSchema = new mongoose.Schema(
     closingTime: String,
     workingDays: { type: [workingDaySchema], default: [] },
     available24x7: { type: Boolean, default: false },
+    bankType: {
+      type: String,
+      enum: ['government', 'private', 'hospital', 'standalone'],
+      default: 'standalone',
+      index: true,
+    },
+    legalName: String,
+    website: String,
+    landmark: String,
+    operatingHours: {
+      type: [
+        {
+          day: String,
+          open: { type: Boolean, default: true },
+          openTime: String,
+          closeTime: String,
+        },
+      ],
+      default: [],
+    },
     emergencyBloodSupply: { type: Boolean, default: false },
     facilities: { type: [String], default: [] },
     bloodGroupsAvailable: [String],

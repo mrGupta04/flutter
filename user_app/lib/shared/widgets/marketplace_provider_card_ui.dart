@@ -93,84 +93,84 @@ class MarketplaceProviderHeader extends StatelessWidget {
         avatar,
         const SizedBox(width: 12),
         Expanded(
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF1A1D26),
-                              height: 1.2,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                        ),
-                        if (specialtyLogo != null) ...[
-                          const SizedBox(width: 6),
-                          specialtyLogo!,
-                        ],
-                      ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1A1D26),
+                        height: 1.2,
+                        letterSpacing: -0.2,
+                      ),
                     ),
-                  ),
-                  if (trailing != null) ...[
-                    const SizedBox(width: 6),
-                    trailing!,
+                    if (specialty != null && specialty!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        specialty!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: kProviderSpecialtyGold,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                    if (metaLine != null && metaLine!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        metaLine!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF6B7280),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                    if (tags.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _ProviderTagRow(tags: tags),
+                    ],
+                    if (languagesLine != null && languagesLine!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        languagesLine!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF374151),
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-              if (specialty != null && specialty!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  specialty!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: kProviderSpecialtyGold,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-              if (metaLine != null && metaLine!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  metaLine!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF6B7280),
-                    height: 1.35,
-                  ),
-                ),
-              ],
-              if (tags.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _ProviderTagRow(tags: tags),
-              ],
-              if (languagesLine != null && languagesLine!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  languagesLine!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF374151),
-                    height: 1.35,
-                    fontWeight: FontWeight.w500,
-                  ),
+              if (trailing != null || specialtyLogo != null) ...[
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (trailing != null) trailing!,
+                    if (trailing != null && specialtyLogo != null)
+                      const SizedBox(height: 6),
+                    if (specialtyLogo != null) specialtyLogo!,
+                  ],
                 ),
               ],
             ],

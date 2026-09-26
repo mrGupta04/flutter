@@ -32,6 +32,7 @@ const nurseSchema = new mongoose.Schema(
     availableForHomeVisit: { type: Boolean, default: true },
     homeVisitFee: Number,
     homeVisitOfferFee: Number,
+    perKmCharge: { type: Number, default: 0 },
     shiftAvailability: String,
     bankAccountHolderName: String,
     bankAccountNumber: String,

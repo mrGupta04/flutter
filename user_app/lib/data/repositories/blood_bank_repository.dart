@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
 import '../models/api_response_model.dart';
@@ -31,6 +33,7 @@ class BloodBankRepository {
     double? latitude,
     double? longitude,
     double? maxDistanceKm,
+    String? bankType,
   }) async {
     try {
       final response = await _dioService.get(
@@ -56,6 +59,7 @@ class BloodBankRepository {
           if (latitude != null) 'latitude': latitude.toString(),
           if (longitude != null) 'longitude': longitude.toString(),
           if (maxDistanceKm != null) 'maxDistanceKm': maxDistanceKm.toString(),
+          if (bankType != null && bankType.isNotEmpty) 'bankType': bankType,
         },
       );
 
@@ -378,5 +382,95 @@ class BloodBankRepository {
       }
     }
     return ApiResponse<T>(success: false, error: message, statusCode: statusCode);
+  }
+
+  Future<ApiResponse<List<Map<String, dynamic>>>> listDonationCamps({
+    String? city,
+    String? bloodGroup,
+  }) async {
+    try {
+      final response = await _dioService.get(
+        AppConstants.endpointBloodDonationCamps,
+        queryParameters: {
+          if (city != null && city.isNotEmpty) 'city': city,
+          if (bloodGroup != null && bloodGroup.isNotEmpty) 'bloodGroup': bloodGroup,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final list = extractApiList(body['data'])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      return ApiResponse(success: true, data: list);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> registerForCamp(
+    String campId, {
+    String? patientName,
+    String? patientMobile,
+    String? bloodGroup,
+  }) async {
+    try {
+      final response = await _dioService.post(
+        AppConstants.endpointBloodCampRegister(campId),
+        data: {
+          if (patientName != null) 'patientName': patientName,
+          if (patientMobile != null) 'patientMobile': patientMobile,
+          if (bloodGroup != null) 'bloodGroup': bloodGroup,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      return ApiResponse(
+        success: body['success'] as bool? ?? true,
+        message: body['message'] as String?,
+        data: body['data'] as Map<String, dynamic>?,
+        error: body['success'] == false ? body['error'] as String? : null,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> cancelCampRegistration(String campId) async {
+    try {
+      await _dioService.post(AppConstants.endpointBloodCampCancel(campId), data: const {});
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> uploadRequestDocument({
+    required String requestId,
+    required Uint8List bytes,
+    required String filename,
+    String type = 'supporting',
+  }) async {
+    try {
+      await _dioService.uploadFile(
+        AppConstants.endpointBloodRequestDocument(requestId),
+        bytes: bytes,
+        filename: filename,
+        fieldName: 'file',
+        additionalFields: {'type': type},
+      );
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> confirmCollection(String requestId) async {
+    try {
+      await _dioService.post(
+        AppConstants.endpointBloodRequestConfirmCollection(requestId),
+        data: const {},
+      );
+      return ApiResponse(success: true);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
   }
 }

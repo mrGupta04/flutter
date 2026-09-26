@@ -59,7 +59,8 @@ class _EmergencyBloodRequestScreenState extends State<EmergencyBloodRequestScree
       builder: (ctx) => AlertDialog(
         title: const Text('Confirm emergency request'),
         content: const Text(
-          'Emergency request will notify eligible nearby blood banks immediately.',
+          'This app does not guarantee emergency blood availability. '
+          'Contact the hospital or blood bank directly for urgent situations.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
@@ -139,7 +140,7 @@ class _EmergencyBloodRequestScreenState extends State<EmergencyBloodRequestScree
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'For life-threatening emergencies, call emergency services immediately.',
+                        'This app does not guarantee emergency blood availability. Contact the hospital or blood bank directly for urgent situations, and call emergency services for life-threatening cases.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: const Color(0xFFB71C1C),
                         ),

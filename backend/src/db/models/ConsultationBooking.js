@@ -38,6 +38,9 @@ const consultationBookingSchema = new mongoose.Schema(
     slotEnd: { type: Date, required: true },
     weekStartDate: { type: Date, required: true },
     consultationFee: Number,
+    baseFee: Number,
+    perKmCharge: Number,
+    travelFee: Number,
     couponCode: String,
     discountAmount: { type: Number, default: 0 },
     status: {

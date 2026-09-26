@@ -560,7 +560,10 @@ router.get('/bookable-slots', async (req, res) => {
 
     }
 
-    const result = await getNurseBookableSlots(nurseId);
+    const result = await getNurseBookableSlots(nurseId, {
+      latitude: req.query.latitude,
+      longitude: req.query.longitude,
+    });
 
     if (result.error) {
 
@@ -1088,6 +1091,12 @@ router.put('/profile', authOptional, async (req, res) => {
 
         : existing.homeVisitOfferFee,
 
+      perKmCharge: body.perKmCharge != null
+
+        ? parseInt(body.perKmCharge, 10)
+
+        : existing.perKmCharge,
+
       shiftAvailability: body.shiftAvailability?.trim(),
 
       bankAccountHolderName: body.bankAccountHolderName?.trim(),
@@ -1301,6 +1310,8 @@ router.post('/register', async (req, res) => {
             String(body.homeVisitOfferFee).trim() !== ''
               ? parseInt(body.homeVisitOfferFee, 10)
               : undefined,
+
+          perKmCharge: parseInt(body.perKmCharge, 10) || 0,
 
           shiftAvailability: body.shiftAvailability?.trim(),
 

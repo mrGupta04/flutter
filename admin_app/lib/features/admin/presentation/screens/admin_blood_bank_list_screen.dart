@@ -71,6 +71,16 @@ class _AdminBloodBankListScreenState
             selected: _statusFilter == 'rejected',
             onTap: () => _applyFilter('rejected'),
           ),
+          _FilterChip(
+            label: 'Disabled',
+            selected: _statusFilter == 'disabled',
+            onTap: () => _applyFilter('disabled'),
+          ),
+          _FilterChip(
+            label: 'All',
+            selected: _statusFilter == null,
+            onTap: () => _applyFilter(null),
+          ),
         ],
       ),
     );

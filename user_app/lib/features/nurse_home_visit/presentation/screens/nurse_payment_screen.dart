@@ -181,6 +181,19 @@ class _NursePaymentScreenState extends ConsumerState<NursePaymentScreen> {
                           const SizedBox(height: 12),
                           _row('Time', timeLabel),
                           const SizedBox(height: 12),
+                          if (_booking?['baseFee'] != null) ...[
+                            _row('Visit fee', '₹${_booking?['baseFee']}'),
+                            const SizedBox(height: 12),
+                          ],
+                          if ((_booking?['travelFee'] as num?)?.toInt() != null &&
+                              ((_booking?['travelFee'] as num?)?.toInt() ?? 0) > 0) ...[
+                            _row(
+                              'Travel',
+                              '₹${_booking?['travelFee']}'
+                              '${_booking?['distanceKm'] != null ? ' (${(_booking?['distanceKm'] as num).toStringAsFixed(1)} km)' : ''}',
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           _row('Amount', amount == null ? '—' : '₹$amount'),
                           const SizedBox(height: 18),
                           Text(

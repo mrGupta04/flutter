@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/user_auth_guard.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../data/models/blood_bank_model.dart';
+import '../../../../data/repositories/blood_bank_repository.dart';
 import '../../../../data/services/blood_order_payment_flow.dart';
 import '../../data/blood_bank_catalog.dart';
 
@@ -37,16 +40,21 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
   final _doctorName = TextEditingController();
   final _doctorContact = TextEditingController();
   final _mobile = TextEditingController();
+  final _attendantName = TextEditingController();
+  final _attendantPhone = TextEditingController();
   final _notes = TextEditingController();
   String? _bloodGroup;
   String? _componentId;
   String _gender = 'Male';
+  String _urgency = 'normal';
   int _units = 1;
   DateTime _requiredDate = DateTime.now().add(const Duration(days: 1));
   String _requiredTime = '10:00 AM';
   String _deliveryMethod = 'self_pickup';
   bool _submitting = false;
   String? _documentName;
+  Uint8List? _documentBytes;
+  double _uploadProgress = 0;
 
   static const _times = ['8:00 AM', '10:00 AM', '12:00 PM', '2:00 PM', '4:00 PM', '6:00 PM'];
 
@@ -57,6 +65,9 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
     _componentId = widget.initialComponentId ??
         widget.bloodBank.bloodComponents?.firstOrNull?.componentId ??
         'whole_blood';
+    if (widget.emergency) {
+      _urgency = 'emergency';
+    }
     if (widget.bloodBank.hospitalDeliveryAvailable == true) {
       _deliveryMethod = 'hospital_delivery';
     }
@@ -70,6 +81,8 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
     _hospitalAddress.dispose();
     _doctorName.dispose();
     _doctorContact.dispose();
+    _attendantName.dispose();
+    _attendantPhone.dispose();
     _mobile.dispose();
     _notes.dispose();
     super.dispose();
@@ -90,22 +103,28 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
     );
     if (!loggedIn || !mounted) return;
 
-    if (widget.emergency) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Confirm emergency request'),
-          content: const Text(
-            'Emergency request will notify eligible nearby blood banks immediately.',
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
-          ],
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Blood Request Summary'),
+        content: Text(
+          'Patient: ${_patientName.text.trim()}\n'
+          'Blood Group: $_bloodGroup\n'
+          'Component: $_componentId\n'
+          'Quantity: $_units units\n'
+          'Urgency: ${_urgency[0].toUpperCase()}${_urgency.substring(1)}\n'
+          'Hospital: ${_hospital.text.trim()}\n'
+          'Required: ${_requiredDate.day}/${_requiredDate.month} · $_requiredTime\n'
+          'Blood Bank: ${widget.bloodBank.displayName}\n\n'
+          '${widget.emergency ? 'Emergency requests may require direct confirmation with the blood bank. Availability is not guaranteed.' : 'Please confirm before submitting this request.'}',
         ),
-      );
-      if (confirmed != true) return;
-    }
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Edit')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Submit Blood Request')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
 
     setState(() => _submitting = true);
     try {
@@ -124,14 +143,30 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
           'hospitalAddress': _hospitalAddress.text.trim(),
           'doctorName': _doctorName.text.trim(),
           'doctorContact': _doctorContact.text.trim(),
+          'attendantName': _attendantName.text.trim(),
+          'attendantPhone': _attendantPhone.text.trim(),
+          'urgency': widget.emergency ? 'emergency' : _urgency,
           'requiredDate': _requiredDate.toIso8601String(),
           'requiredTime': _requiredTime,
           'deliveryMethod': _deliveryMethod,
           'notes': _notes.text.trim(),
           'isEmergency': widget.emergency,
           'requestType': widget.emergency ? 'emergency' : 'normal',
+          if (_documentName != null)
+            'documents': [
+              {'type': 'prescription', 'name': _documentName},
+            ],
         },
       );
+      if (!mounted) return;
+      if (order != null && _documentBytes != null && _documentName != null) {
+        await BloodBankRepository().uploadRequestDocument(
+          requestId: order.id,
+          bytes: _documentBytes!,
+          filename: _documentName!,
+          type: 'prescription',
+        );
+      }
       if (!mounted) return;
       setState(() => _submitting = false);
       if (order != null) {
@@ -268,6 +303,37 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
               decoration: const InputDecoration(labelText: 'Doctor contact'),
             ),
             const SizedBox(height: 12),
+            TextFormField(
+              controller: _attendantName,
+              decoration: const InputDecoration(labelText: 'Attendant name'),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _attendantPhone,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Attendant phone'),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: widget.emergency ? 'emergency' : _urgency,
+              decoration: const InputDecoration(labelText: 'Urgency'),
+              items: const [
+                DropdownMenuItem(value: 'normal', child: Text('Normal')),
+                DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
+                DropdownMenuItem(value: 'emergency', child: Text('Emergency')),
+              ],
+              onChanged: widget.emergency
+                  ? null
+                  : (v) => setState(() => _urgency = v ?? 'normal'),
+            ),
+            if (widget.emergency || _urgency == 'emergency') ...[
+              const SizedBox(height: 8),
+              Text(
+                'Emergency requests may require direct confirmation with the blood bank/hospital. Availability is not guaranteed.',
+                style: AppTextStyles.bodySmall.copyWith(color: const Color(0xFFB71C1C)),
+              ),
+            ],
+            const SizedBox(height: 12),
             if (widget.bloodBank.homeDeliveryAvailable == true ||
                 widget.bloodBank.hospitalDeliveryAvailable == true)
               DropdownButtonFormField<String>(
@@ -288,14 +354,46 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: () async {
-                final result = await FilePicker.platform.pickFiles();
-                if (result != null) {
-                  setState(() => _documentName = result.files.single.name);
+                final result = await FilePicker.platform.pickFiles(
+                  type: FileType.custom,
+                  allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
+                  withData: true,
+                );
+                if (result == null || result.files.isEmpty) return;
+                final file = result.files.single;
+                if (file.size > 10 * 1024 * 1024) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('File must be 10 MB or smaller.')),
+                  );
+                  return;
                 }
+                setState(() {
+                  _documentName = file.name;
+                  _documentBytes = file.bytes;
+                  _uploadProgress = file.bytes == null ? 0 : 1;
+                });
               },
               icon: const Icon(Icons.upload_file_outlined),
-              label: Text(_documentName ?? 'Upload prescription / document'),
+              label: Text(_documentName ?? 'Upload prescription / hospital request'),
             ),
+            if (_documentName != null) ...[
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.insert_drive_file_outlined),
+                title: Text(_documentName!),
+                subtitle: Text(_uploadProgress >= 1 ? 'Ready to attach' : 'Selected'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => setState(() {
+                    _documentName = null;
+                    _documentBytes = null;
+                    _uploadProgress = 0;
+                  }),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _notes,

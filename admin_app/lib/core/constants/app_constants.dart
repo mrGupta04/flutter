@@ -141,6 +141,9 @@ class AppConstants {
   static const String endpointBloodBankAnalytics = '/blood-bank/admin/analytics';
   static String endpointBloodBankRequestAction(String id, String action) =>
       '/blood-bank/provider/requests/$id/$action';
+  static const String endpointBloodBankCamps = '/blood-bank/provider/camps';
+  static String endpointBloodBankCampCancel(String id) =>
+      '/blood-bank/provider/camps/$id/cancel';
   static String endpointEmergencyRespond(String id) =>
       '/blood-bank/emergency/$id/respond';
   static String endpointAdminBloodBankDisable(String id) =>

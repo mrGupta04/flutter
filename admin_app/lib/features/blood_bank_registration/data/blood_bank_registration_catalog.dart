@@ -10,6 +10,13 @@ const List<Map<String, String>> kBloodComponents = [
   {'id': 'cryoprecipitate', 'name': 'Cryoprecipitate'},
 ];
 
+const List<Map<String, String>> kBloodBankTypes = [
+  {'id': 'government', 'name': 'Government'},
+  {'id': 'private', 'name': 'Private'},
+  {'id': 'hospital', 'name': 'Hospital Blood Bank'},
+  {'id': 'standalone', 'name': 'Standalone Blood Centre'},
+];
+
 const List<String> kBloodBankFacilities = [
   'Blood Storage',
   'Blood Component Separation',

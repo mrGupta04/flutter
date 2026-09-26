@@ -11,13 +11,16 @@ import '../core/theme/app_decorations.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/utils/geo_distance_utils.dart';
 import '../data/models/doctor_model.dart';
+import '../data/models/nurse_model.dart';
 import '../data/models/patient_booking_model.dart';
 import '../features/nurse_home_visit/nurse_home_visit_navigation.dart';
 import '../features/doctor_registration/data/medical_specialities.dart';
 import '../features/doctor_registration/presentation/widgets/browse_by_specialty_section.dart';
 import '../features/doctor_registration/presentation/widgets/doctor_search_result_tile.dart';
 import '../features/doctor_registration/provider/doctor_live_status_provider.dart';
+import '../features/doctor_registration/provider/nurse_live_status_provider.dart';
 import '../features/doctor_registration/provider/verified_doctors_provider.dart';
+import '../features/doctor_registration/provider/verified_nurses_provider.dart';
 import '../features/labs/data/models/health_package.dart';
 import '../features/labs/presentation/screens/health_package_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
@@ -31,6 +34,8 @@ import '../shared/widgets/health_service_card.dart';
 import '../shared/widgets/healthcare_ui.dart';
 import '../shared/widgets/home_help_section.dart';
 import '../shared/widgets/marketplace_provider_card_ui.dart';
+import '../shared/widgets/care_provider_listing_cards.dart';
+import '../core/utils/provider_location_utils.dart';
 import '../shared/widgets/user_adaptive_scaffold.dart';
 import '../shared/widgets/user_app_footer.dart';
 
@@ -91,10 +96,12 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
           longitude: selected.longitude,
         );
     ref.invalidate(verifiedDoctorsProvider);
+    ref.invalidate(verifiedNursesProvider);
   }
 
   Future<void> _refreshHome() async {
     ref.invalidate(verifiedDoctorsProvider);
+    ref.invalidate(verifiedNursesProvider);
     if (mounted) {
       await ref
           .read(userLocationProvider.notifier)
@@ -112,6 +119,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
     final dash = ref.watch(patientDashboardProvider);
     final location = ref.watch(userLocationProvider);
     final doctorsAsync = ref.watch(verifiedDoctorsProvider);
+    final nursesAsync = ref.watch(verifiedNursesProvider);
     final nextBooking = dash.upcomingBookings.isNotEmpty
         ? dash.upcomingBookings.first
         : null;
@@ -232,7 +240,7 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
               SliverToBoxAdapter(
                 child: constrain(
                   _HomeProviderRail(
-                    asyncDoctors: doctorsAsync,
+                    asyncItems: doctorsAsync,
                     emptyTitle: 'No popular providers yet',
                     emptySubtitle: 'Verified doctors will appear here.',
                     errorTitle: 'Unable to load popular providers',
@@ -244,13 +252,39 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
                   ),
                 ),
               ),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+              SliverToBoxAdapter(
+                child: constrain(
+                  MarketplaceSectionTitle(
+                    title: 'Popular Nurses',
+                    actionLabel: 'See all',
+                    onAction: () => _openNurseSearch(context),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: constrain(
+                  _HomeProviderRail(
+                    asyncItems: nursesAsync,
+                    emptyTitle: 'No popular nurses yet',
+                    emptySubtitle: 'Verified nurses will appear here.',
+                    errorTitle: 'Unable to load popular nurses',
+                    onRetry: () => ref.invalidate(verifiedNursesProvider),
+                    onSearch: () => _openNurseSearch(context),
+                    itemBuilder: (nurses) => _NurseCardRail(
+                      nurses: nurses.take(8).toList(growable: false),
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
               SliverToBoxAdapter(
                 child: constrain(
                   MarketplaceSectionTitle(
                     title: 'Health Packages',
                     actionLabel: 'See all',
                     onAction: () => _openServiceRoute(AppConstants.routeLabs),
-                    padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   ),
                 ),
               ),
@@ -348,6 +382,14 @@ class _UserHomeScreenState extends ConsumerState<UserHomeScreen> {
         ? AppConstants.routeDoctorSearch
         : '${AppConstants.routeDoctorSearch}?${Uri(queryParameters: params).query}';
 
+    context.push(path);
+  }
+
+  void _openNurseSearch(BuildContext context, {String? city}) {
+    final preferredCity = city ?? ref.read(userLocationProvider).city;
+    final path = preferredCity != null && preferredCity.isNotEmpty
+        ? '${AppConstants.routeNurseSearch}?city=${Uri.encodeComponent(preferredCity)}'
+        : AppConstants.routeNurseSearch;
     context.push(path);
   }
 }
@@ -525,9 +567,9 @@ class _UpcomingBookingSection extends StatelessWidget {
   }
 }
 
-class _HomeProviderRail extends StatelessWidget {
+class _HomeProviderRail<T> extends StatelessWidget {
   const _HomeProviderRail({
-    required this.asyncDoctors,
+    required this.asyncItems,
     required this.emptyTitle,
     required this.emptySubtitle,
     required this.errorTitle,
@@ -536,17 +578,17 @@ class _HomeProviderRail extends StatelessWidget {
     required this.itemBuilder,
   });
 
-  final AsyncValue<List<DoctorModel>> asyncDoctors;
+  final AsyncValue<List<T>> asyncItems;
   final String emptyTitle;
   final String emptySubtitle;
   final String errorTitle;
   final VoidCallback onRetry;
   final VoidCallback onSearch;
-  final Widget Function(List<DoctorModel> doctors) itemBuilder;
+  final Widget Function(List<T> items) itemBuilder;
 
   @override
   Widget build(BuildContext context) {
-    return asyncDoctors.when(
+    return asyncItems.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16),
         child: _HomeHorizontalSkeleton(),
@@ -559,8 +601,8 @@ class _HomeProviderRail extends StatelessWidget {
           onAction: onRetry,
         ),
       ),
-      data: (doctors) {
-        if (doctors.isEmpty) {
+      data: (items) {
+        if (items.isEmpty) {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _HomeInlineMessage(
@@ -572,7 +614,7 @@ class _HomeProviderRail extends StatelessWidget {
             ),
           );
         }
-        return itemBuilder(doctors);
+        return itemBuilder(items);
       },
     );
   }
@@ -626,6 +668,80 @@ class _DoctorCardRail extends ConsumerWidget {
                         : null,
                     availabilityLabel:
                         doctor.isLiveNow ? 'Available now' : null,
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _NurseCardRail extends ConsumerWidget {
+  const _NurseCardRail({
+    required this.nurses,
+  });
+
+  final List<NurseModel> nurses;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final location = ref.watch(userLocationProvider);
+    final ranked = sortNursesByProximityAndRating(
+      nurses,
+      userLatitude: location.latitude,
+      userLongitude: location.longitude,
+    );
+    final liveMap = ref
+            .watch(nurseLiveStatusProvider(nurseIdsCacheKey(ranked)))
+            .valueOrNull ??
+        const <String, bool>{};
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth * 0.86).clamp(280.0, 360.0);
+        return SizedBox(
+          height: kNurseListingCardHeight,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: ranked.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final nurse = applyNurseLiveStatus(ranked[index], liveMap);
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: cardWidth,
+                  child: NurseListingCard(
+                    nurse: nurse,
+                    showBottomDivider: false,
+                    distanceLabel: location.hasCoordinates
+                        ? formatNearbyDistanceLabel(
+                            nurseDistanceKm(
+                              nurse,
+                              location.latitude!,
+                              location.longitude!,
+                            ),
+                          )
+                        : null,
+                    distanceKm: location.hasCoordinates
+                        ? nurseDistanceKm(
+                            nurse,
+                            location.latitude!,
+                            location.longitude!,
+                          )
+                        : null,
+                    availabilityLabel:
+                        nurse.isLiveNow ? 'Available now' : null,
+                    onTap: () => openNurseHomeVisitBooking(context, nurse),
+                    onBookHomeVisit: () =>
+                        openNurseHomeVisitBooking(context, nurse),
+                    onOpenMapTap: nurseHasMapLocation(nurse)
+                        ? () => openNurseInGoogleMaps(context, nurse)
+                        : null,
                   ),
                 ),
               );

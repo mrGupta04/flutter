@@ -14,9 +14,9 @@ const DEFAULT_BLOOD_GROUPS = [
 
 const DEFAULT_BLOOD_COMPONENTS = [
   { componentId: 'whole_blood', componentName: 'Whole Blood' },
-  { componentId: 'packed_rbc', componentName: 'Packed RBC' },
+  { componentId: 'packed_rbc', componentName: 'Packed Red Blood Cells (PRBC)' },
   { componentId: 'platelets', componentName: 'Platelets' },
-  { componentId: 'plasma', componentName: 'Plasma' },
+  { componentId: 'plasma', componentName: 'Fresh Frozen Plasma (FFP)' },
   { componentId: 'cryoprecipitate', componentName: 'Cryoprecipitate' },
 ];
 
@@ -122,6 +122,11 @@ async function upsertBloodBank(data) {
     closingTime: data.closingTime ?? existing?.closingTime,
     workingDays: data.workingDays ?? existing?.workingDays ?? [],
     available24x7: data.available24x7 ?? existing?.available24x7 ?? false,
+    bankType: data.bankType ?? existing?.bankType ?? 'standalone',
+    legalName: data.legalName ?? existing?.legalName,
+    website: data.website ?? existing?.website,
+    landmark: data.landmark ?? existing?.landmark,
+    operatingHours: data.operatingHours ?? existing?.operatingHours ?? [],
     emergencyBloodSupply: data.emergencyBloodSupply ?? existing?.emergencyBloodSupply ?? false,
     facilities: data.facilities ?? existing?.facilities ?? [],
     bloodGroupsAvailable: data.bloodGroupsAvailable ?? existing?.bloodGroupsAvailable ?? [],
@@ -196,12 +201,15 @@ async function listBloodBanks({
   latitude,
   longitude,
   maxDistanceKm,
+  bankType,
 }) {
   const filter = {};
   if (status === 'awaiting_review') {
     filter.verificationStatus = {
       $in: ['pending', 'under_review', 'verifier_approved'],
     };
+  } else if (status === 'disabled') {
+    filter.isDisabled = true;
   } else if (status) {
     filter.verificationStatus = status;
   }
@@ -226,6 +234,9 @@ async function listBloodBanks({
   }
   if (homeDelivery === true || homeDelivery === 'true') {
     filter.homeDeliveryAvailable = true;
+  }
+  if (bankType?.trim()) {
+    filter.bankType = String(bankType).trim().toLowerCase();
   }
   if (bloodGroup?.trim()) {
     const group = bloodGroup.trim().toUpperCase();
@@ -457,7 +468,9 @@ async function getBloodBankDashboardStats(bloodBankId) {
   const BloodOrder = require('./models/BloodOrder');
   const EmergencyBloodRequest = require('./models/EmergencyBloodRequest');
   const BloodInventory = require('./models/BloodInventory');
+  const BloodInventoryUnit = require('./models/BloodInventoryUnit');
   const BloodDonation = require('./models/BloodDonation');
+  const DonationCamp = require('./models/DonationCamp');
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
@@ -474,11 +487,24 @@ async function getBloodBankDashboardStats(bloodBankId) {
     criticalStock,
     pendingDonations,
     openEmergencies,
+    reservedUnits,
+    expiringSoon,
+    upcomingCamps,
+    totalUnits,
   ] = await Promise.all([
     BloodOrder.countDocuments({ bloodBankId }),
     BloodOrder.countDocuments({
       bloodBankId,
-      status: { $in: ['pending', 'blood_bank_notified', 'under_review'] },
+      status: {
+        $in: [
+          'pending',
+          'submitted',
+          'blood_bank_notified',
+          'under_review',
+          'document_verification',
+          'availability_check',
+        ],
+      },
     }),
     BloodOrder.countDocuments({
       bloodBankId,
@@ -500,6 +526,24 @@ async function getBloodBankDashboardStats(bloodBankId) {
     EmergencyBloodRequest.countDocuments({
       status: { $in: ['open', 'emergency_requested', 'blood_bank_alerted', 'response_received'] },
       $or: [{ assignedBloodBankId: bloodBankId }, { notifiedBloodBankIds: bloodBankId }],
+    }),
+    BloodInventoryUnit.countDocuments({ bloodBankId, status: 'reserved' }),
+    BloodInventoryUnit.countDocuments({
+      bloodBankId,
+      status: 'available',
+      expiryDate: {
+        $gte: startOfDay,
+        $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    DonationCamp.countDocuments({
+      bloodBankId,
+      status: 'published',
+      date: { $gte: startOfDay },
+    }),
+    BloodInventoryUnit.countDocuments({
+      bloodBankId,
+      status: { $in: ['available', 'reserved'] },
     }),
   ]);
 
@@ -524,6 +568,10 @@ async function getBloodBankDashboardStats(bloodBankId) {
     criticalStockGroups: criticalStock,
     pendingDonations,
     activeEmergencyRequests: openEmergencies,
+    reservedUnits,
+    expiringSoon,
+    upcomingCamps,
+    totalUnits,
   };
 }
 

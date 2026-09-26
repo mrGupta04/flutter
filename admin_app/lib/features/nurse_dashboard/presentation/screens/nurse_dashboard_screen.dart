@@ -514,6 +514,15 @@ class _ProfileCard extends StatelessWidget {
               ),
             ),
           ],
+          if (nurse.perKmCharge != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Per km charge: ₹${nurse.perKmCharge}',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.white.withValues(alpha: 0.9),
+              ),
+            ),
+          ],
         ],
       ),
     );

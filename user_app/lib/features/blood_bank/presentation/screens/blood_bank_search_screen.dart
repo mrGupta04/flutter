@@ -18,6 +18,7 @@ import '../../../../shared/widgets/shimmer_widgets.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
 import '../../../../shared/widgets/user_app_footer.dart';
 import '../../../doctor_registration/provider/care_filter_constants.dart';
+import '../../data/blood_bank_catalog.dart';
 import '../../provider/blood_bank_search_provider.dart';
 
 class BloodBankSearchScreen extends ConsumerStatefulWidget {
@@ -27,12 +28,14 @@ class BloodBankSearchScreen extends ConsumerStatefulWidget {
     this.initialCity,
     this.initialBloodGroup,
     this.initialComponentType,
+    this.initialRadiusKm,
   });
 
   final String? initialQuery;
   final String? initialCity;
   final String? initialBloodGroup;
   final String? initialComponentType;
+  final String? initialRadiusKm;
 
   @override
   ConsumerState<BloodBankSearchScreen> createState() =>
@@ -48,6 +51,9 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
   String? _componentType;
   BloodBankCareFilter _careFilter = BloodBankCareFilter.all;
   String? _locationPrefill;
+  String? _bankType;
+  bool _showMap = false;
+  double? _maxDistanceKm;
 
   @override
   void initState() {
@@ -56,6 +62,7 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
     _city = widget.initialCity;
     _bloodGroup = widget.initialBloodGroup;
     _componentType = widget.initialComponentType;
+    _maxDistanceKm = double.tryParse(widget.initialRadiusKm ?? '');
     _controller = TextEditingController(
       text: widget.initialQuery ?? widget.initialBloodGroup ?? '',
     );
@@ -107,7 +114,115 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
         careFilter: _careFilter,
         latitude: location.latitude,
         longitude: location.longitude,
+        maxDistanceKm: _maxDistanceKm,
+        bankType: _bankType,
       );
+  }
+
+  Future<void> _openFilters() async {
+    String? group = _bloodGroup;
+    String? component = _componentType;
+    String? type = _bankType;
+    double radius = _maxDistanceKm ?? 10;
+    BloodBankCareFilter care = _careFilter;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheet) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Filters', style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final g in kBloodGroups)
+                        ChoiceChip(
+                          label: Text(g),
+                          selected: group == g,
+                          onSelected: (_) => setSheet(() => group = group == g ? null : g),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final c in kBloodComponents)
+                        ChoiceChip(
+                          label: Text(c['name']!),
+                          selected: component == c['id'],
+                          onSelected: (_) =>
+                              setSheet(() => component = component == c['id'] ? null : c['id']),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final t in kBloodBankTypes)
+                        ChoiceChip(
+                          label: Text(t['name']!),
+                          selected: type == t['id'],
+                          onSelected: (_) =>
+                              setSheet(() => type = type == t['id'] ? null : t['id']),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final km in kBloodSearchRadiiKm)
+                        ChoiceChip(
+                          label: Text('$km km'),
+                          selected: radius == km.toDouble(),
+                          onSelected: (_) => setSheet(() => radius = km.toDouble()),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: BloodBankCareFilter.values
+                        .map(
+                          (f) => ChoiceChip(
+                            label: Text(f.label),
+                            selected: care == f,
+                            onSelected: (_) => setSheet(() => care = f),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () {
+                      setState(() {
+                        _bloodGroup = group;
+                        _componentType = component;
+                        _bankType = type;
+                        _maxDistanceKm = radius;
+                        _careFilter = care;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Apply filters'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -128,6 +243,8 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
       careFilter: _careFilter,
       latitude: location.latitude,
       longitude: location.longitude,
+      maxDistanceKm: _maxDistanceKm,
+      bankType: _bankType,
     );
     final asyncResults = ref.watch(bloodBankSearchProvider(params));
 
@@ -142,6 +259,15 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
+          IconButton(
+            tooltip: _showMap ? 'List view' : 'Map view',
+            icon: Icon(_showMap ? Icons.view_list_rounded : Icons.map_outlined),
+            onPressed: () => setState(() => _showMap = !_showMap),
+          ),
+          IconButton(
+            icon: const Icon(Icons.tune_rounded),
+            onPressed: _openFilters,
+          ),
           IconButton(
             icon: const Icon(Icons.emergency_rounded, color: Color(0xFFB71C1C)),
             onPressed: () => context.push(AppConstants.routeEmergencyBloodRequest),
@@ -242,7 +368,7 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
         SliverFillRemaining(
           hasScrollBody: false,
           child: custom.AppErrorWidget(
-            message: error.toString(),
+            message: 'Unable to load blood availability. Please try again.',
             onRetry: () => ref.invalidate(bloodBankSearchProvider(_params)),
           ),
         ),
@@ -252,12 +378,39 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
           return [
             SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: Text(
-                  'No blood banks found.',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.bloodtype_outlined, size: 48, color: AppColors.grey400),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Sorry, no matching blood is currently available nearby.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Try a larger radius or contact blood banks directly for emergency needs.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => setState(() {
+                        _maxDistanceKm = (_maxDistanceKm ?? 10) >= 50
+                            ? 50
+                            : ((_maxDistanceKm ?? 10) * 2);
+                      }),
+                      child: const Text('Expand Search Radius'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: () => context.push(AppConstants.routeEmergencyBloodRequest),
+                      child: const Text('Contact Blood Banks'),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -274,6 +427,21 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
 
         if (columns <= 1) {
           return [
+            if (_showMap)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Map markers will appear here when maps are configured. Showing ${items.length} nearby blood banks.',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               sliver: SliverList.separated(
@@ -282,6 +450,8 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
                     const SizedBox(height: 12),
                 itemBuilder: (context, index) => BloodBankListingCard(
                   bloodBank: items[index],
+                  highlightGroup: _bloodGroup,
+                  highlightComponent: _componentType,
                   onTap: () => context.push(
                     '${AppConstants.routeBloodBankDetail}/${items[index].id}',
                   ),
@@ -312,6 +482,8 @@ class _BloodBankSearchScreenState extends ConsumerState<BloodBankSearchScreen> {
                         child: start + j < items.length
                             ? BloodBankListingCard(
                                 bloodBank: items[start + j],
+                                highlightGroup: _bloodGroup,
+                                highlightComponent: _componentType,
                                 onTap: () => context.push(
                                   '${AppConstants.routeBloodBankDetail}/${items[start + j].id}',
                                 ),

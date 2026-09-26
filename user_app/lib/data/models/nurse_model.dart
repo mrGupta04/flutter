@@ -31,6 +31,7 @@ class NurseModel {
   final bool? availableForHomeVisit;
   final int? homeVisitFee;
   final int? homeVisitOfferFee;
+  final int? perKmCharge;
   final String? shiftAvailability;
   final VerificationStatus? verificationStatus;
   final ProfileStatus profileStatus;
@@ -96,6 +97,25 @@ class NurseModel {
     return null;
   }
 
+  int travelFeeFor({double? distanceKm}) {
+    final perKm = perKmCharge ?? 0;
+    if (distanceKm == null || distanceKm <= 0 || perKm <= 0) return 0;
+    final billedKm = (distanceKm * 10).round() / 10;
+    return (billedKm * perKm).round();
+  }
+
+  int? quotedHomeVisitFee({double? distanceKm}) {
+    final base = effectiveHomeVisitFee;
+    if (base == null) return null;
+    return base + travelFeeFor(distanceKm: distanceKm);
+  }
+
+  int? quotedOriginalHomeVisitFee({double? distanceKm}) {
+    final original = originalHomeVisitFee;
+    if (original == null) return null;
+    return original + travelFeeFor(distanceKm: distanceKm);
+  }
+
   NurseModel({
     this.id,
     this.firstName,
@@ -124,6 +144,7 @@ class NurseModel {
     this.availableForHomeVisit,
     this.homeVisitFee,
     this.homeVisitOfferFee,
+    this.perKmCharge,
     this.shiftAvailability,
     this.verificationStatus,
     this.profileStatus = ProfileStatus.active,
@@ -167,6 +188,7 @@ class NurseModel {
       availableForHomeVisit: json['availableForHomeVisit'] as bool? ?? true,
       homeVisitFee: _parseInt(json['homeVisitFee']),
       homeVisitOfferFee: _parseInt(json['homeVisitOfferFee']),
+      perKmCharge: _parseInt(json['perKmCharge']),
       shiftAvailability: json['shiftAvailability'] as String?,
       verificationStatus: _isApprovedTruthy(json['isApproved'])
           ? VerificationStatus.verified
@@ -207,6 +229,7 @@ class NurseModel {
         'availableForHomeVisit': availableForHomeVisit,
       if (homeVisitFee != null) 'homeVisitFee': homeVisitFee,
       if (homeVisitOfferFee != null) 'homeVisitOfferFee': homeVisitOfferFee,
+      if (perKmCharge != null) 'perKmCharge': perKmCharge,
       if (shiftAvailability != null) 'shiftAvailability': shiftAvailability,
     };
   }
@@ -238,6 +261,7 @@ class NurseModel {
     bool? availableForHomeVisit,
     int? homeVisitFee,
     int? homeVisitOfferFee,
+    int? perKmCharge,
     String? shiftAvailability,
     VerificationStatus? verificationStatus,
     ProfileStatus? profileStatus,
@@ -274,6 +298,7 @@ class NurseModel {
           availableForHomeVisit ?? this.availableForHomeVisit,
       homeVisitFee: homeVisitFee ?? this.homeVisitFee,
       homeVisitOfferFee: homeVisitOfferFee ?? this.homeVisitOfferFee,
+      perKmCharge: perKmCharge ?? this.perKmCharge,
       shiftAvailability: shiftAvailability ?? this.shiftAvailability,
       verificationStatus: verificationStatus ?? this.verificationStatus,
       profileStatus: profileStatus ?? this.profileStatus,

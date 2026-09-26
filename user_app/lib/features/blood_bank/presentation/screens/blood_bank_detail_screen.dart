@@ -10,9 +10,9 @@ import '../../../../core/utils/geo_distance_utils.dart';
 import '../../../../core/utils/media_url_utils.dart';
 import '../../../../data/models/blood_bank_model.dart';
 import '../../../../shared/widgets/service_faq_section.dart';
+import '../../data/blood_bank_catalog.dart';
 import '../../provider/blood_bank_search_provider.dart';
-import '../widgets/blood_bank_booking_sheet.dart';
-import '../widgets/blood_inventory_indicator.dart';
+import '../screens/blood_request_screen.dart';
 
 class BloodBankDetailScreen extends ConsumerWidget {
   const BloodBankDetailScreen({
@@ -195,17 +195,8 @@ class _DetailBody extends StatelessWidget {
                   ),
                 ),
                 _Section(
-                  title: 'Blood inventory',
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: (bank.inventory ?? [])
-                        .map((e) => BloodGroupChip(
-                              group: e.bloodGroup,
-                              availableUnits: e.availableUnits,
-                            ))
-                        .toList(),
-                  ),
+                  title: 'Blood availability',
+                  child: _InventoryMatrix(entries: bank.inventory ?? const []),
                 ),
                 _Section(
                   title: 'Components & pricing',
@@ -286,12 +277,15 @@ class _DetailBody extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => showBloodBankBookingSheet(
-                          context,
-                          bloodBank: bank,
-                          initialBloodGroup: bloodGroup,
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => BloodRequestScreen(
+                              bloodBank: bank,
+                              initialBloodGroup: bloodGroup,
+                            ),
+                          ),
                         ),
-                        child: const Text('Order blood'),
+                        child: const Text('Request Blood'),
                       ),
                     ),
                   ],
@@ -330,6 +324,83 @@ class _Section extends StatelessWidget {
           const SizedBox(height: 8),
           child,
         ],
+      ),
+    );
+  }
+}
+
+class _InventoryMatrix extends StatelessWidget {
+  const _InventoryMatrix({required this.entries});
+
+  final List<BloodInventoryEntry> entries;
+
+  int _units(String group, String component) {
+    for (final entry in entries) {
+      if (entry.bloodGroup == group &&
+          (entry.componentType == null || entry.componentType == component)) {
+        return entry.availableUnits;
+      }
+    }
+    return 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (entries.isEmpty) {
+      return Text(
+        'This blood bank has not published live inventory yet.',
+        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+      );
+    }
+
+    const components = ['packed_rbc', 'platelets', 'plasma'];
+
+    return Table(
+      columnWidths: const {
+        0: FlexColumnWidth(1.1),
+        1: FlexColumnWidth(1),
+        2: FlexColumnWidth(1.2),
+        3: FlexColumnWidth(1),
+      },
+      children: [
+        const TableRow(
+          children: [
+            _MatrixCell('Group', header: true),
+            _MatrixCell('PRBC', header: true),
+            _MatrixCell('Platelets', header: true),
+            _MatrixCell('Plasma', header: true),
+          ],
+        ),
+        for (final group in kBloodGroups)
+          TableRow(
+            children: [
+              _MatrixCell(group, header: true),
+              for (final component in components)
+                _MatrixCell(_units(group, component) > 0
+                    ? '${_units(group, component)}'
+                    : '—'),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _MatrixCell extends StatelessWidget {
+  const _MatrixCell(this.text, {this.header = false});
+
+  final String text;
+  final bool header;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Text(
+        text,
+        style: AppTextStyles.labelSmall.copyWith(
+          fontWeight: header ? FontWeight.w800 : FontWeight.w600,
+        ),
       ),
     );
   }

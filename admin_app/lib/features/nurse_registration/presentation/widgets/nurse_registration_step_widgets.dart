@@ -618,6 +618,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
   late final TextEditingController _specialization;
   late final TextEditingController _homeVisitFee;
   late final TextEditingController _homeVisitOfferFee;
+  late final TextEditingController _perKmCharge;
   String? _selectedQualification;
   List<String> _selectedSkills = [];
 
@@ -637,6 +638,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
     _specialization = TextEditingController(text: s.specialization);
     _homeVisitFee = TextEditingController(text: s.homeVisitFee);
     _homeVisitOfferFee = TextEditingController(text: s.homeVisitOfferFee);
+    _perKmCharge = TextEditingController(text: s.perKmCharge);
     _selectedQualification = nurseQualifications.contains(s.qualification)
         ? s.qualification
         : (s.qualification.isNotEmpty ? 'Other' : null);
@@ -652,6 +654,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
       _specialization,
       _homeVisitFee,
       _homeVisitOfferFee,
+      _perKmCharge,
     ]) {
       addTextChangeListener(c, (_) => _sync());
     }
@@ -669,6 +672,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
           nursingSkills: _selectedSkills,
           homeVisitFee: _homeVisitFee.text,
           homeVisitOfferFee: _homeVisitOfferFee.text,
+          perKmCharge: _perKmCharge.text,
         );
   }
 
@@ -684,6 +688,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
       _specialization,
       _homeVisitFee,
       _homeVisitOfferFee,
+      _perKmCharge,
     ]) {
       c.dispose();
     }
@@ -707,7 +712,7 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
             ),
             const SizedBox(height: 6),
             Text(
-              'You will offer home nursing visits only. Set your regular fee and an optional offer price.',
+              'You will offer home nursing visits only. Set your regular fee, optional offer price, and per km travel charge.',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
@@ -824,6 +829,16 @@ class _NurseStep2ProfessionalState extends ConsumerState<NurseStep2Professional>
                 v,
                 _homeVisitFee.text,
               ),
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              controller: _perKmCharge,
+              label: 'Per km charge (₹)',
+              hint: 'Travel charge added to the visit fee',
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              prefixIcon: Icons.social_distance_outlined,
+              validator: ValidationUtils.validatePerKmCharge,
             ),
           ],
         ),
@@ -1372,6 +1387,7 @@ class NurseStep7Review extends ConsumerWidget {
                   form.nursingSkills.join(', '),
                 ),
               _ReviewItem('Home visit fee', '₹${form.homeVisitFee}'),
+              _ReviewItem('Per km charge', '₹${form.perKmCharge}'),
               if (form.homeVisitOfferFee.trim().isNotEmpty)
                 _ReviewItem(
                   'Home visit offer',

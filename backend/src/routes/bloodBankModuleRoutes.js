@@ -47,12 +47,15 @@ const { findStaffByEmail } = require('../db/bloodBankStaffRepositories');
 const { findBloodBankById, disableBloodBank, enableBloodBank } = require('../db/bloodBankRepositories');
 const { createAndPushNotification } = require('../db/notificationRepositories');
 const { emitBloodEvent } = require('../services/bloodRealtime');
+const { upload, filePublicUrl } = require('../middleware/multerUpload');
+const { v4: uuidv4 } = require('uuid');
 const BloodOrder = require('../db/models/BloodOrder');
 const BloodBank = require('../db/models/BloodBank');
 const BloodInventory = require('../db/models/BloodInventory');
 const DonorProfile = require('../db/models/DonorProfile');
 const EmergencyBloodRequest = require('../db/models/EmergencyBloodRequest');
 const BloodDonation = require('../db/models/BloodDonation');
+const DonationCamp = require('../db/models/DonationCamp');
 
 const router = express.Router();
 
@@ -220,6 +223,57 @@ router.post('/requests/:id/cancel', patientRequired, async (req, res) => {
   }
 });
 
+router.post(
+  '/requests/:id/documents',
+  patientRequired,
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const order = await BloodOrder.findOne({ id: req.params.id });
+      if (!order || order.patientId !== req.auth.patientId) {
+        return sendError(res, 'Request not found', 404);
+      }
+      if (!req.file) {
+        return sendError(res, 'A PDF, JPG or PNG file is required', 400);
+      }
+      const name = String(req.file.originalname || '');
+      const mime = String(req.file.mimetype || '');
+      const allowedMime = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!allowedMime.includes(mime) && !/\.(pdf|jpe?g|png)$/i.test(name)) {
+        return sendError(res, 'Upload a supported PDF, JPG or PNG file', 400);
+      }
+      const url = await filePublicUrl(req, req.file);
+      const doc = {
+        id: uuidv4(),
+        type: req.body?.type || 'supporting',
+        name,
+        url,
+      };
+      order.documents = [...(order.documents || []), doc];
+      await order.save();
+      return sendSuccess(res, { message: 'Document uploaded', data: doc });
+    } catch (err) {
+      return handle(res, err, 'Document upload failed. Please upload a supported PDF/JPG/PNG file.');
+    }
+  },
+);
+
+router.post('/requests/:id/confirm-collection', patientRequired, async (req, res) => {
+  try {
+    const existing = await findOrderById(req.params.id);
+    if (!existing || existing.patientId !== req.auth.patientId) {
+      return sendError(res, 'Request not found', 404);
+    }
+    if (!['ready_for_collection', 'blood_ready'].includes(existing.status)) {
+      return sendError(res, 'This request is not ready for collection', 400);
+    }
+    const order = await updateOrderStatus(req.params.id, 'collected', {}, req.auth);
+    return sendSuccess(res, { message: 'Collection confirmed', data: order });
+  } catch (err) {
+    return handle(res, err, 'Failed to confirm collection');
+  }
+});
+
 router.get('/emergency/mine', patientRequired, async (req, res) => {
   try {
     const result = await listEmergencyRequestsForPatient(req.auth.patientId, {
@@ -275,6 +329,10 @@ router.post('/emergency/:requestId/respond', bloodBankRequired, requireBloodPerm
 
 const lifecycle = [
   ['accept', 'accepted'],
+  ['approve', 'approved'],
+  ['review', 'under_review'],
+  ['documents', 'document_verification'],
+  ['partial', 'partially_available'],
   ['reject', 'rejected'],
   ['reserve', 'blood_reserved'],
   ['ready', 'ready_for_collection'],
@@ -306,6 +364,9 @@ for (const [action, status] of lifecycle) {
             estimatedDeliveryTime: req.body?.estimatedDeliveryTime,
             assignedStaffId: req.body?.assignedStaffId,
             deliveryStatus: req.body?.deliveryStatus,
+            approvedUnits: req.body?.approvedUnits,
+            units: req.body?.units,
+            notes: req.body?.notes,
           },
           req.auth,
         );
@@ -466,6 +527,8 @@ router.get('/admin/analytics', adminRequired, async (_req, res) => {
       completedRequests,
       donors,
       activeDonors,
+      disabledBanks,
+      upcomingCamps,
       requestsOverTime,
       donationsOverTime,
       demand,
@@ -490,6 +553,8 @@ router.get('/admin/analytics', adminRequired, async (_req, res) => {
       BloodOrder.countDocuments({ status: { $in: ['completed', 'delivered', 'collected'] } }),
       DonorProfile.countDocuments(),
       DonorProfile.countDocuments({ active: true, availableForEmergency: true }),
+      BloodBank.countDocuments({ isDisabled: true }),
+      DonationCamp.countDocuments({ status: 'published', date: { $gte: new Date() } }),
       BloodOrder.aggregate([
         { $match: { createdAt: { $gte: start } } },
         {
@@ -533,12 +598,14 @@ router.get('/admin/analytics', adminRequired, async (_req, res) => {
           verifiedBloodBanks: verifiedBanks,
           pendingVerification: pendingBanks,
           activeBloodBanks: activeBanks,
+          disabledBloodBanks: disabledBanks,
           totalInventory: inventory[0]?.total ?? 0,
           emergencyRequests: emergencyOpen,
           pendingRequests,
           completedRequests,
           registeredDonors: donors,
           activeDonors,
+          donationCamps: upcomingCamps,
           criticalBloodGroups: critical,
           completionRate,
         },
@@ -637,6 +704,47 @@ router.post('/admin/:id/enable', adminRequired, async (req, res) => {
     return sendSuccess(res, { message: 'Blood bank enabled', data: bank });
   } catch (err) {
     return handle(res, err, 'Failed to enable blood bank');
+  }
+});
+
+const {
+  listCampsByBloodBank,
+  upsertCamp,
+  cancelCamp,
+} = require('../db/donationCampRepositories');
+
+router.get('/provider/camps', bloodBankRequired, async (req, res) => {
+  try {
+    const camps = await listCampsByBloodBank(req.auth.bloodBankId);
+    return sendSuccess(res, { data: camps });
+  } catch (err) {
+    return handle(res, err, 'Failed to load camps');
+  }
+});
+
+router.post('/provider/camps', bloodBankRequired, async (req, res) => {
+  try {
+    const camp = await upsertCamp(
+      req.auth.bloodBankId,
+      req.body || {},
+      actorFromAuth(req.auth).actorId,
+    );
+    return sendSuccess(res, { message: 'Camp saved', data: camp });
+  } catch (err) {
+    return handle(res, err, 'Failed to save camp');
+  }
+});
+
+router.post('/provider/camps/:id/cancel', bloodBankRequired, async (req, res) => {
+  try {
+    const camp = await cancelCamp(
+      req.auth.bloodBankId,
+      req.params.id,
+      actorFromAuth(req.auth).actorId,
+    );
+    return sendSuccess(res, { message: 'Camp cancelled', data: camp });
+  } catch (err) {
+    return handle(res, err, 'Failed to cancel camp');
   }
 });
 
