@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "564409613539",
+    "project_id": "doctors-e29cf",
+    "storage_bucket": "doctors-e29cf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:564409613539:android:2039c689754c59b6aad9d6",
+        "android_client_info": {
+          "package_name": "com.onemg.admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzXZdcmY4KMRlx5n_8pGSFB0r5Iqk6SGQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:564409613539:android:b467cca838a66c93aad9d6",
+        "android_client_info": {
+          "package_name": "com.onemg.care"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzXZdcmY4KMRlx5n_8pGSFB0r5Iqk6SGQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
