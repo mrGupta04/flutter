@@ -199,7 +199,10 @@ async function listLabBookingsForPatient({
     .sort({ createdAt: -1 })
     .limit(200)
     .lean();
-  return docs.map(toLabBooking);
+  const currentPatientId = String(patientId || '');
+  return docs
+    .filter((doc) => !doc.patientId || String(doc.patientId) === currentPatientId)
+    .map(toLabBooking);
 }
 
 async function updateLabBookingStatus({
@@ -378,7 +381,6 @@ function toPatientBookingShape(booking) {
     'confirmed',
     'sample_collected',
     'processing',
-    'report_ready',
   ];
   const testNames = (booking.items || []).map((i) => i.testName).join(', ');
 
@@ -407,7 +409,7 @@ function toPatientBookingShape(booking) {
     clinicName: booking.labName,
     clinicAddress: booking.collectionAddress,
     createdAt: booking.createdAt,
-    isUpcoming: activeStatuses.includes(booking.status) && slotEnd >= new Date(),
+    isUpcoming: activeStatuses.includes(booking.status),
     timeline: [
       {
         key: 'requested',

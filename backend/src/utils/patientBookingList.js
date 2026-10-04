@@ -20,6 +20,83 @@ function parseBookingListQuery(query = {}) {
   return { page, limit, scope, status, q, serviceType, consultationType };
 }
 
+const TERMINAL_BOOKING_STATUSES = new Set([
+  'cancelled',
+  'rejected',
+  'nurse_rejected',
+  'payment_expired',
+  'failed',
+  'expired',
+  'no_answer',
+  'completed',
+  'trip_completed',
+  'report_ready',
+  'delivered',
+  'collected',
+  'closed',
+]);
+
+const CURRENT_WORKFLOW_STATUSES = new Set([
+  'held',
+  'pending',
+  'requested',
+  'awaiting_doctor_approval',
+  'pending_nurse_approval',
+  'approved_pending_payment',
+  'payment_pending',
+  'searching_ambulance',
+  'ambulance_assigned',
+  'driver_accepted',
+  'accepted',
+  'dispatched',
+  'driver_en_route',
+  'en_route',
+  'arrived_at_pickup',
+  'arrived',
+  'patient_picked_up',
+  'en_route_to_destination',
+  'arrived_at_destination',
+  'sample_collected',
+  'processing',
+  'in_progress',
+  'under_review',
+  'reserved',
+  'blood_reserved',
+  'ready',
+  'emergency_requested',
+  'response_received',
+]);
+
+const LIVE_VISIT_PROGRESS = new Set(['en_route', 'arrived', 'visit_started']);
+
+function asDate(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return null;
+}
+
+function isCurrentPatientBooking(booking, now = new Date()) {
+  if (!booking) return false;
+  const status = String(booking.status || '');
+  const progress = String(booking.visitProgress || '');
+
+  if (progress === 'completed' || TERMINAL_BOOKING_STATUSES.has(status)) {
+    return false;
+  }
+  if (CURRENT_WORKFLOW_STATUSES.has(status) || LIVE_VISIT_PROGRESS.has(progress)) {
+    return true;
+  }
+  if (typeof booking.isUpcoming === 'boolean') {
+    return booking.isUpcoming;
+  }
+
+  const slotEnd = asDate(booking.slotEnd || booking.slotStart || booking.createdAt);
+  return Boolean(slotEnd && slotEnd >= now);
+}
+
 function paymentFieldsForPatient(record = {}) {
   const paymentStatus = String(record.paymentStatus || 'pending');
   const amount =
@@ -36,7 +113,7 @@ function paymentFieldsForPatient(record = {}) {
     null;
   const paidLike = ['paid', 'success', 'refunded'].includes(paymentStatus);
   const completedPaid =
-    ['completed', 'trip_completed', 'report_ready'].includes(record.status) &&
+    ['completed', 'trip_completed', 'report_ready', 'delivered', 'collected'].includes(record.status) &&
     Number(amount) > 0;
   return {
     paymentStatus,
@@ -57,7 +134,7 @@ function matchesHistoryStatus(booking, status) {
   const progress = String(booking?.visitProgress || '');
   if (wanted === 'completed') {
     return (
-      ['completed', 'trip_completed', 'report_ready'].includes(value) ||
+      ['completed', 'trip_completed', 'report_ready', 'delivered', 'collected'].includes(value) ||
       progress === 'completed'
     );
   }
@@ -72,8 +149,8 @@ function matchesHistoryStatus(booking, status) {
 
 function applyBookingFilters(results, { scope = 'all', status, q, serviceType, consultationType } = {}) {
   let list = Array.isArray(results) ? [...results] : [];
-  if (scope === 'current') list = list.filter((b) => Boolean(b?.isUpcoming));
-  if (scope === 'history') list = list.filter((b) => !b?.isUpcoming);
+  if (scope === 'current') list = list.filter((b) => isCurrentPatientBooking(b));
+  if (scope === 'history') list = list.filter((b) => !isCurrentPatientBooking(b));
   if (status && status !== 'all') {
     list = list.filter((b) => matchesHistoryStatus(b, status));
   }
@@ -109,8 +186,8 @@ function paginateMergedBookings(
   { page = 1, limit = 20, scope = 'all', status, q, serviceType, consultationType } = {},
 ) {
   const list = Array.isArray(results) ? results : [];
-  const current = list.filter((b) => Boolean(b?.isUpcoming));
-  const history = list.filter((b) => !b?.isUpcoming);
+  const current = list.filter((b) => isCurrentPatientBooking(b));
+  const history = list.filter((b) => !isCurrentPatientBooking(b));
   const filtered = applyBookingFilters(list, {
     scope,
     status,
@@ -180,6 +257,7 @@ function parseDateOfBirth(value) {
 module.exports = {
   parseBookingListQuery,
   paymentFieldsForPatient,
+  isCurrentPatientBooking,
   paginateMergedBookings,
   applyBookingFilters,
   matchesHistoryStatus,

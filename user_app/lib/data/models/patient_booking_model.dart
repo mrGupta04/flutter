@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import 'bookable_slot_model.dart';
 import 'previous_report_model.dart';
 
@@ -16,6 +18,75 @@ enum PatientBookingCategory {
   const PatientBookingCategory(this.label);
 
   final String label;
+
+  IconData get icon {
+    switch (this) {
+      case PatientBookingCategory.onlineConsult:
+        return Icons.videocam_rounded;
+      case PatientBookingCategory.hospitalVisit:
+        return Icons.local_hospital_rounded;
+      case PatientBookingCategory.homeVisit:
+        return Icons.home_rounded;
+      case PatientBookingCategory.nurse:
+        return Icons.health_and_safety_rounded;
+      case PatientBookingCategory.scan:
+        return Icons.radar_rounded;
+      case PatientBookingCategory.lab:
+        return Icons.biotech_rounded;
+      case PatientBookingCategory.ambulance:
+        return Icons.emergency_rounded;
+      case PatientBookingCategory.bloodBank:
+        return Icons.bloodtype_rounded;
+      case PatientBookingCategory.all:
+        return Icons.grid_view_rounded;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case PatientBookingCategory.onlineConsult:
+        return const Color(0xFF007A5E);
+      case PatientBookingCategory.hospitalVisit:
+        return const Color(0xFF00897B);
+      case PatientBookingCategory.homeVisit:
+        return const Color(0xFF3949AB);
+      case PatientBookingCategory.nurse:
+        return const Color(0xFF5E35B1);
+      case PatientBookingCategory.scan:
+        return const Color(0xFF0288D1);
+      case PatientBookingCategory.lab:
+        return const Color(0xFFE65100);
+      case PatientBookingCategory.ambulance:
+        return const Color(0xFFD32F2F);
+      case PatientBookingCategory.bloodBank:
+        return const Color(0xFFC2185B);
+      case PatientBookingCategory.all:
+        return const Color(0xFF007A5E);
+    }
+  }
+
+  String get sectionTitle {
+    switch (this) {
+      case PatientBookingCategory.onlineConsult:
+        return 'Online Doctor Consultations';
+      case PatientBookingCategory.hospitalVisit:
+        return 'Hospital & Clinic Visits';
+      case PatientBookingCategory.homeVisit:
+        return 'Doctor Home Visits';
+      case PatientBookingCategory.nurse:
+        return 'Nurse Home Visits';
+      case PatientBookingCategory.scan:
+        return 'Diagnostic Scans & Imaging';
+      case PatientBookingCategory.lab:
+        return 'Lab Tests & Diagnostics';
+      case PatientBookingCategory.ambulance:
+        return 'Ambulance Services';
+      case PatientBookingCategory.bloodBank:
+        return 'Blood Bank Requests';
+      case PatientBookingCategory.all:
+        return 'All Bookings';
+    }
+  }
 
   /// Sections shown on the My bookings tab, in display order.
   static const bookingSections = [
@@ -41,20 +112,27 @@ enum PatientBookingCategory {
       case PatientBookingCategory.all:
         return true;
       case PatientBookingCategory.onlineConsult:
-        return booking.serviceType == 'doctor' && booking.isOnlineConsult;
+        return (booking.serviceType == 'doctor' &&
+                (booking.isOnlineConsult ||
+                    (!booking.isClinicVisit && !booking.isHomeVisit))) ||
+            booking.consultationType == 'online_consult';
       case PatientBookingCategory.hospitalVisit:
-        return booking.serviceType == 'doctor' && booking.isClinicVisit;
+        return (booking.serviceType == 'doctor' && booking.isClinicVisit) ||
+            booking.consultationType == 'visit_site';
       case PatientBookingCategory.homeVisit:
-        return booking.serviceType == 'doctor' && booking.isHomeVisit;
+        return (booking.serviceType == 'doctor' && booking.isHomeVisit) ||
+            booking.consultationType == 'book_home';
       case PatientBookingCategory.nurse:
-        return booking.serviceType == 'nurse';
+        return booking.serviceType == 'nurse' ||
+            booking.consultationType == 'nurse_visit';
       case PatientBookingCategory.scan:
         return booking.serviceType == 'scan' ||
             booking.consultationType == 'scan';
       case PatientBookingCategory.lab:
         return booking.serviceType == 'lab' || booking.consultationType == 'lab';
       case PatientBookingCategory.ambulance:
-        return booking.serviceType == 'ambulance';
+        return booking.serviceType == 'ambulance' ||
+            booking.consultationType == 'ambulance';
       case PatientBookingCategory.bloodBank:
         return booking.serviceType == 'blood_bank' ||
             booking.consultationType == 'blood_bank';
@@ -112,13 +190,26 @@ Map<PatientBookingCategory, List<PatientBookingModel>> groupBookingsByCategory(
   return grouped;
 }
 
-DateTime _parseDateTime(dynamic value) {
+DateTime? _tryParseDateTime(dynamic value) {
   if (value is DateTime) return value;
-  if (value is String && value.isNotEmpty) return DateTime.parse(value);
-  if (value is num) {
-    return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+  if (value is String && value.trim().isNotEmpty) {
+    return DateTime.tryParse(value.trim());
   }
-  throw FormatException('Invalid date: $value');
+  if (value is num) {
+    final raw = value.toInt();
+    if (raw <= 0) return null;
+    final milliseconds = raw < 1000000000000 ? raw * 1000 : raw;
+    return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+  }
+  return null;
+}
+
+DateTime? _firstDateTime(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final parsed = _tryParseDateTime(json[key]);
+    if (parsed != null) return parsed;
+  }
+  return null;
 }
 
 class PatientBookingStats {
@@ -403,14 +494,48 @@ class PatientBookingModel {
       if (status == 'pending' || status == 'requested') {
         return 'Ambulance requested';
       }
+      if (status == 'searching_ambulance') return 'Searching ambulance';
+      if (status == 'ambulance_assigned' || status == 'driver_accepted') {
+        return 'Ambulance assigned';
+      }
       if (status == 'accepted') return 'Ambulance accepted';
-      if (status == 'dispatched' || status == 'en_route') {
+      if (status == 'dispatched' ||
+          status == 'driver_en_route' ||
+          status == 'en_route') {
         return 'Ambulance on the way';
       }
-      if (status == 'arrived') return 'Ambulance arrived';
-      if (status == 'completed') return 'Trip completed';
+      if (status == 'arrived' || status == 'arrived_at_pickup') {
+        return 'Ambulance arrived';
+      }
+      if (status == 'patient_picked_up') return 'Patient picked up';
+      if (status == 'en_route_to_destination') return 'Going to destination';
+      if (status == 'arrived_at_destination') return 'Reached destination';
+      if (status == 'completed' || status == 'trip_completed') {
+        return 'Trip completed';
+      }
       if (status == 'cancelled') return 'Cancelled';
       if (status == 'rejected') return 'Request declined';
+    }
+    if (serviceType == 'blood_bank') {
+      if (status == 'pending' ||
+          status == 'requested' ||
+          status == 'under_review' ||
+          status == 'emergency_requested') {
+        return 'Blood request pending';
+      }
+      if (status == 'response_received') return 'Blood bank responded';
+      if (status == 'accepted') return 'Blood request accepted';
+      if (status == 'reserved' || status == 'blood_reserved') {
+        return 'Blood reserved';
+      }
+      if (status == 'ready') return 'Ready for collection';
+      if (status == 'completed' ||
+          status == 'delivered' ||
+          status == 'collected') {
+        return 'Completed';
+      }
+      if (status == 'cancelled') return 'Cancelled';
+      if (status == 'rejected') return 'Rejected';
     }
     if (isAwaitingDoctorApproval) {
       return isNurseVisit
@@ -462,6 +587,9 @@ class PatientBookingModel {
       'expired',
       'no_answer',
       'report_ready',
+      'delivered',
+      'collected',
+      'closed',
     };
     if (terminal.contains(status)) return true;
     return visitProgress == 'completed';
@@ -474,7 +602,22 @@ class PatientBookingModel {
         status == 'pending' ||
         status == 'requested' ||
         status == 'held' ||
-        status == 'searching_ambulance';
+        status == 'searching_ambulance' ||
+        status == 'under_review' ||
+        status == 'emergency_requested' ||
+        status == 'response_received';
+  }
+
+  bool get isOpenWorkflow {
+    if (isTerminal) return false;
+    return const {
+      'accepted',
+      'reserved',
+      'blood_reserved',
+      'ready',
+      'ambulance_assigned',
+      'driver_accepted',
+    }.contains(status);
   }
 
   bool get isLiveNow {
@@ -492,13 +635,14 @@ class PatientBookingModel {
     return false;
   }
 
-  /// True while the appointment is upcoming, or an active visit is in progress.
-  /// Past slots are excluded even if status is still pending/searching.
+  /// True while the booking still belongs in the current profile tabs.
   bool get isActiveOrUpcoming {
     if (isTerminal) return false;
-    if (isLiveNow) return true;
-    return !DateTime.now().isAfter(slotEnd);
+    if (isPendingRequest || isLiveNow || isOpenWorkflow) return true;
+    return isUpcoming || !DateTime.now().isAfter(slotEnd);
   }
+
+  PatientBookingCategory get category => PatientBookingCategory.resolve(this);
 
   factory PatientBookingModel.fromJson(Map<String, dynamic> json) {
     final id = json['id']?.toString();
@@ -507,6 +651,105 @@ class PatientBookingModel {
     }
 
     final timelineRaw = json['timeline'] as List<dynamic>? ?? [];
+    final createdAt = _tryParseDateTime(json['createdAt']);
+    final slotStart = _firstDateTime(json, const [
+          'slotStart',
+          'scheduledAt',
+          'scheduledDate',
+          'requiredDate',
+          'appointmentDate',
+          'createdAt',
+        ]) ??
+        createdAt ??
+        DateTime.now();
+    final slotEnd = _firstDateTime(json, const [
+          'slotEnd',
+          'scheduledEnd',
+          'endsAt',
+          'endTime',
+        ]) ??
+        slotStart.add(const Duration(hours: 2));
+
+    final serviceType = json['serviceType'] as String? ?? 'doctor';
+    final consultationType =
+        json['consultationType'] as String? ?? 'online_consult';
+
+    String? extractNonEmpty(dynamic val) {
+      if (val is String && val.trim().isNotEmpty) return val.trim();
+      return null;
+    }
+
+    String doctorName = extractNonEmpty(json['doctorName']) ??
+        extractNonEmpty(json['nurseName']) ??
+        extractNonEmpty(json['labName']) ??
+        extractNonEmpty(json['scanCenterName']) ??
+        extractNonEmpty(json['centerName']) ??
+        extractNonEmpty(json['ambulanceServiceName']) ??
+        extractNonEmpty(json['hospitalName']) ??
+        extractNonEmpty(json['providerName']) ??
+        extractNonEmpty(json['institutionName']) ??
+        '';
+
+    if (doctorName.isEmpty || doctorName.toLowerCase() == 'provider') {
+      switch (serviceType) {
+        case 'ambulance':
+          doctorName = 'Ambulance Service';
+          break;
+        case 'lab':
+          doctorName = 'Diagnostic Lab';
+          break;
+        case 'scan':
+          doctorName = 'Scan Centre';
+          break;
+        case 'blood_bank':
+          doctorName = 'Blood Bank';
+          break;
+        case 'nurse':
+          doctorName = 'Home Visit Nurse';
+          break;
+        case 'doctor':
+          doctorName = 'Doctor Consultation';
+          break;
+        default:
+          doctorName = 'Healthcare Provider';
+      }
+    }
+
+    String typeLabel = extractNonEmpty(json['typeLabel']) ?? '';
+    if (typeLabel.isEmpty || typeLabel.toLowerCase() == 'consultation') {
+      switch (serviceType) {
+        case 'ambulance':
+          typeLabel = json['isEmergency'] == true
+              ? 'Emergency ambulance'
+              : 'Ambulance';
+          break;
+        case 'lab':
+          typeLabel = json['collectionType'] == 'home_collection'
+              ? 'Lab home collection'
+              : 'Lab visit';
+          break;
+        case 'scan':
+          typeLabel = 'Diagnostic scan';
+          break;
+        case 'blood_bank':
+          typeLabel = json['isEmergency'] == true
+              ? 'Emergency blood request'
+              : 'Blood request';
+          break;
+        case 'nurse':
+          typeLabel = 'Nurse home visit';
+          break;
+        case 'doctor':
+          typeLabel = consultationType == 'visit_site'
+              ? 'Clinic visit'
+              : consultationType == 'book_home'
+                  ? 'Doctor home visit'
+                  : 'Online consult';
+          break;
+        default:
+          typeLabel = 'Consultation';
+      }
+    }
 
     return PatientBookingModel(
       id: id,
@@ -514,31 +757,22 @@ class PatientBookingModel {
           (json['nurseId'] as String?) ??
           '',
       nurseId: json['nurseId'] as String?,
-      doctorName: json['doctorName'] as String? ??
-          json['nurseName'] as String? ??
-          json['labName'] as String? ??
-          json['centerName'] as String? ??
-          json['institutionName'] as String? ??
-          'Provider',
+      doctorName: doctorName,
       doctorProfilePicture: json['doctorProfilePicture'] as String?,
-      serviceType: json['serviceType'] as String? ?? 'doctor',
-      consultationType: json['consultationType'] as String? ?? 'online_consult',
-      typeLabel: json['typeLabel'] as String? ?? 'Consultation',
-      slotStart: _parseDateTime(json['slotStart']),
-      slotEnd: _parseDateTime(json['slotEnd']),
+      serviceType: serviceType,
+      consultationType: consultationType,
+      typeLabel: typeLabel,
+      slotStart: slotStart,
+      slotEnd: slotEnd,
       label: json['label'] as String? ?? '',
       consultationFee: (json['consultationFee'] as num?)?.toInt(),
       status: json['status'] as String? ?? 'confirmed',
       paymentStatus: json['paymentStatus'] as String?,
       visitProgress: json['visitProgress'] as String?,
-      paymentExpiresAt: json['paymentExpiresAt'] != null
-          ? DateTime.tryParse(json['paymentExpiresAt'].toString())
-          : null,
+      paymentExpiresAt: _tryParseDateTime(json['paymentExpiresAt']),
       remainingPaymentSeconds:
           (json['remainingPaymentSeconds'] as num?)?.toInt(),
-      serverTime: json['serverTime'] != null
-          ? DateTime.tryParse(json['serverTime'].toString())
-          : null,
+      serverTime: _tryParseDateTime(json['serverTime']),
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       clinicName: json['clinicName'] as String?,
       clinicAddress: json['clinicAddress'] as String?,
@@ -547,14 +781,10 @@ class PatientBookingModel {
       patientAddress: json['patientAddress'] as String?,
       patientCity: json['patientCity'] as String?,
       isUpcoming: json['isUpcoming'] as bool? ??
-          !_parseDateTime(json['slotEnd']).isBefore(DateTime.now()),
-      createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'] as String)
-          : null,
+          !slotEnd.isBefore(DateTime.now()),
+      createdAt: createdAt,
       appointmentCode: json['appointmentCode'] as String?,
-      appointmentVerifiedAt: json['appointmentVerifiedAt'] != null
-          ? DateTime.tryParse(json['appointmentVerifiedAt'] as String)
-          : null,
+      appointmentVerifiedAt: _tryParseDateTime(json['appointmentVerifiedAt']),
       verificationStatus: json['verificationStatus'] as String?,
       canJoinVideo: json['canJoinVideo'] as bool? ?? false,
       videoStartsInMinutes: (json['videoStartsInMinutes'] as num?)?.toInt(),
@@ -579,16 +809,12 @@ class PatientBookingModel {
       pickupLongitude: (json['pickupLongitude'] as num?)?.toDouble(),
       liveLatitude: (json['liveLatitude'] as num?)?.toDouble(),
       liveLongitude: (json['liveLongitude'] as num?)?.toDouble(),
-      liveLocationUpdatedAt: json['liveLocationUpdatedAt'] != null
-          ? DateTime.tryParse(json['liveLocationUpdatedAt'].toString())
-          : null,
+      liveLocationUpdatedAt: _tryParseDateTime(json['liveLocationUpdatedAt']),
       amountPaid: (json['amountPaid'] as num?)?.toInt() ??
           (json['consultationFee'] as num?)?.toInt(),
       paymentMethod: json['paymentMethod'] as String?,
       paymentReference: json['paymentReference'] as String?,
-      paidAt: json['paidAt'] != null
-          ? DateTime.tryParse(json['paidAt'].toString())
-          : null,
+      paidAt: _tryParseDateTime(json['paidAt']),
       currency: json['currency'] as String? ?? 'INR',
       canViewReceipt: json['canViewReceipt'] as bool? ?? false,
       invoiceUrl: json['invoiceUrl'] as String?,
@@ -660,9 +886,11 @@ class PatientBookingsResponse {
   factory PatientBookingsResponse.fromJson(Map<String, dynamic> json) {
     final bookings = <PatientBookingModel>[];
     for (final raw in json['bookings'] as List<dynamic>? ?? []) {
-      if (raw is! Map<String, dynamic>) continue;
+      if (raw is! Map) continue;
       try {
-        bookings.add(PatientBookingModel.fromJson(raw));
+        bookings.add(
+          PatientBookingModel.fromJson(Map<String, dynamic>.from(raw)),
+        );
       } catch (_) {
         // Skip malformed rows so one bad booking does not hide the rest.
       }

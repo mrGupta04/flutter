@@ -55,6 +55,43 @@ function normalizeMobile(mobile) {
   return String(mobile || '').replace(/\D/g, '').slice(-10);
 }
 
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function patientOwnsBookingRecord(
+  booking,
+  { patientId, mobileNumber, email } = {},
+) {
+  if (!booking || !patientId) return false;
+  const bookingPatientId = String(booking.patientId || '');
+  if (bookingPatientId) {
+    return bookingPatientId === String(patientId);
+  }
+
+  const mobile = normalizeMobile(mobileNumber);
+  const emailValue = normalizeEmail(email);
+  return (
+    (mobile.length === 10 && normalizeMobile(booking.patientMobile) === mobile) ||
+    (emailValue && normalizeEmail(booking.patientEmail) === emailValue)
+  );
+}
+
+function assertPatientOwnsBookingRecord(booking, auth) {
+  if (
+    auth?.type !== 'patient' ||
+    !patientOwnsBookingRecord(booking, {
+      patientId: auth.patientId,
+      mobileNumber: auth.mobileNumber,
+      email: auth.email,
+    })
+  ) {
+    const err = new Error('Not allowed to view this booking');
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
 async function getActiveAvailabilityForBooking(doctorId, consultationType) {
   const weekDoc = await findAvailabilityForActiveWeek(doctorId, consultationType);
   if (!weekDoc) {
@@ -187,12 +224,12 @@ async function assertPatientCanAccessBooking(bookingId, patientId, mobileNumber)
     throw err;
   }
 
-  const mobile = normalizeMobile(mobileNumber);
-  const ownsBooking =
-    (booking.patientId && booking.patientId === patientId) ||
-    (mobile.length === 10 && normalizeMobile(booking.patientMobile) === mobile);
-
-  if (!ownsBooking) {
+  if (
+    !patientOwnsBookingRecord(booking, {
+      patientId,
+      mobileNumber,
+    })
+  ) {
     const err = new Error('You are not allowed to update this booking');
     err.statusCode = 403;
     throw err;
@@ -1693,6 +1730,7 @@ async function listPatientBookings(
             'payment_pending',
             'payment_expired',
             'nurse_rejected',
+            'held',
             'pending',
             'cancelled',
           ],
@@ -1719,6 +1757,9 @@ async function listPatientBookings(
   const results = [];
   const bookingIdsToLink = [];
   for (const b of bookings) {
+    if (b.patientId && String(b.patientId) !== String(patientId)) {
+      continue;
+    }
     if (!b.patientId) {
       const mobileMatch =
         mobile.length === 10 && normalizeMobile(b.patientMobile) === mobile;
@@ -1917,10 +1958,10 @@ async function listPatientBookings(
 async function getPatientBookingById(bookingId, auth) {
   const booking = await ConsultationBooking.findOne({ id: bookingId });
   if (booking) {
-    if (auth?.type !== 'patient' || auth.patientId !== booking.patientId) {
-      const err = new Error('Not allowed to view this booking');
-      err.statusCode = 403;
-      throw err;
+    assertPatientOwnsBookingRecord(booking, auth);
+    if (!booking.patientId && auth?.patientId) {
+      booking.patientId = String(auth.patientId);
+      await booking.save();
     }
     if (booking.nurseId) {
       const {
@@ -1954,33 +1995,21 @@ async function getPatientBookingById(bookingId, auth) {
   const LabBooking = require('./models/LabBooking');
   const lab = await LabBooking.findOne({ id: bookingId }).lean();
   if (lab) {
-    if (lab.patientId !== patientId) {
-      const err = new Error('Not allowed to view this booking');
-      err.statusCode = 403;
-      throw err;
-    }
+    assertPatientOwnsBookingRecord(lab, auth);
     return require('./labBookingRepositories').toPatientBookingShape(lab);
   }
 
   const ScanBooking = require('./models/ScanBooking');
   const scan = await ScanBooking.findOne({ id: bookingId }).lean();
   if (scan) {
-    if (scan.patientId !== patientId) {
-      const err = new Error('Not allowed to view this booking');
-      err.statusCode = 403;
-      throw err;
-    }
+    assertPatientOwnsBookingRecord(scan, auth);
     return require('./scanBookingRepositories').toPatientBookingShape(scan);
   }
 
   const AmbulanceBooking = require('./models/AmbulanceBooking');
   const ambulance = await AmbulanceBooking.findOne({ id: bookingId }).lean();
   if (ambulance) {
-    if (ambulance.patientId !== patientId) {
-      const err = new Error('Not allowed to view this booking');
-      err.statusCode = 403;
-      throw err;
-    }
+    assertPatientOwnsBookingRecord(ambulance, auth);
     return require('./ambulanceBookingRepositories').toPatientBookingShape(
       ambulance,
     );

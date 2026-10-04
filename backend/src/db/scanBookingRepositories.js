@@ -168,7 +168,10 @@ async function listScanBookingsForPatient({
     .sort({ createdAt: -1 })
     .limit(200)
     .lean();
-  return docs.map(toScanBooking);
+  const currentPatientId = String(patientId || '');
+  return docs
+    .filter((doc) => !doc.patientId || String(doc.patientId) === currentPatientId)
+    .map(toScanBooking);
 }
 
 async function updateScanBookingStatus({
@@ -341,7 +344,6 @@ function toPatientBookingShape(booking) {
     'requested',
     'confirmed',
     'in_progress',
-    'report_ready',
   ];
 
   return {
@@ -363,7 +365,7 @@ function toPatientBookingShape(booking) {
     ...require('../utils/patientBookingList').paymentFieldsForPatient(booking),
     clinicName: booking.scanCenterName,
     createdAt: booking.createdAt,
-    isUpcoming: activeStatuses.includes(booking.status) && slotEnd >= new Date(),
+    isUpcoming: activeStatuses.includes(booking.status),
     timeline: [
       { key: 'requested', label: 'Request submitted', done: true, at: booking.createdAt },
       {

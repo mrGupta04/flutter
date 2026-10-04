@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/friendly_error.dart';
 import '../../../../data/models/patient_booking_model.dart';
 import '../../../../shared/widgets/user_adaptive_scaffold.dart';
@@ -88,7 +90,7 @@ class _CurrentBookingsScreenState extends ConsumerState<CurrentBookingsScreen>
   }
 }
 
-class _BucketList extends ConsumerWidget {
+class _BucketList extends ConsumerStatefulWidget {
   const _BucketList({
     required this.bookings,
     required this.emptyTitle,
@@ -100,20 +102,196 @@ class _BucketList extends ConsumerWidget {
   final String emptySubtitle;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (bookings.isEmpty) {
-      return BookingEmptyState(title: emptyTitle, subtitle: emptySubtitle);
+  ConsumerState<_BucketList> createState() => _BucketListState();
+}
+
+class _BucketListState extends ConsumerState<_BucketList> {
+  PatientBookingCategory _selectedCategory = PatientBookingCategory.all;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.bookings.isEmpty) {
+      return BookingEmptyState(
+        title: widget.emptyTitle,
+        subtitle: widget.emptySubtitle,
+      );
     }
-    return RefreshIndicator(
-      onRefresh: () => ref.read(patientDashboardProvider.notifier).loadBookings(),
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        itemCount: bookings.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          return UnifiedBookingCard(booking: bookings[index]);
-        },
-      ),
+
+    final grouped = groupBookingsByCategory(widget.bookings);
+    final presentCategories = PatientBookingCategory.bookingSections
+        .where((c) => (grouped[c] ?? []).isNotEmpty)
+        .toList();
+
+    final filteredBookings = _selectedCategory == PatientBookingCategory.all
+        ? widget.bookings
+        : widget.bookings.where((b) => _selectedCategory.matches(b)).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (presentCategories.length > 1) ...[
+          Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    avatar: Icon(
+                      Icons.grid_view_rounded,
+                      size: 14,
+                      color: _selectedCategory == PatientBookingCategory.all
+                          ? AppColors.white
+                          : AppColors.primary,
+                    ),
+                    label: Text('All (${widget.bookings.length})'),
+                    selected: _selectedCategory == PatientBookingCategory.all,
+                    selectedColor: AppColors.primary,
+                    labelStyle: TextStyle(
+                      color: _selectedCategory == PatientBookingCategory.all
+                          ? AppColors.white
+                          : AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedCategory = PatientBookingCategory.all;
+                      });
+                    },
+                  ),
+                ),
+                for (final cat in presentCategories) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      avatar: Icon(
+                        cat.icon,
+                        size: 14,
+                        color: _selectedCategory == cat
+                            ? AppColors.white
+                            : cat.color,
+                      ),
+                      label:
+                          Text('${cat.label} (${grouped[cat]?.length ?? 0})'),
+                      selected: _selectedCategory == cat,
+                      selectedColor: cat.color,
+                      labelStyle: TextStyle(
+                        color: _selectedCategory == cat
+                            ? AppColors.white
+                            : AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedCategory = cat;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.grey200),
+        ],
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () =>
+                ref.read(patientDashboardProvider.notifier).loadBookings(),
+            child: filteredBookings.isEmpty
+                ? Center(
+                    child: Text(
+                      'No ${_selectedCategory.label.toLowerCase()} found.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  )
+                : _selectedCategory != PatientBookingCategory.all
+                    ? ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                        itemCount: filteredBookings.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          return UnifiedBookingCard(
+                            booking: filteredBookings[index],
+                            showCategoryTag: false,
+                          );
+                        },
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                        children: [
+                          for (final cat in presentCategories) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8, bottom: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: cat.color.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      cat.icon,
+                                      size: 16,
+                                      color: cat.color,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    cat.sectionTitle,
+                                    style: AppTextStyles.titleSmall.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.grey100,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${grouped[cat]?.length ?? 0}',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            for (final b in (grouped[cat] ??
+                                <PatientBookingModel>[])) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: UnifiedBookingCard(
+                                  booking: b,
+                                  showCategoryTag: false,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                          ],
+                        ],
+                      ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -65,7 +65,7 @@ async function authRequired(req, res, next) {
     if (req.auth?.type === 'patient' && req.auth?.patientId) {
       const Patient = require('../db/models/Patient');
       const patient = await Patient.findOne({ id: req.auth.patientId })
-        .select('isBlocked deletedAt tokenVersion')
+        .select('isBlocked deletedAt tokenVersion email mobileNumber')
         .lean();
       if (!patient) {
         return sendError(res, 'Patient not found', 404);
@@ -85,6 +85,8 @@ async function authRequired(req, res, next) {
       if (tokenVersion !== claimed) {
         return sendError(res, 'Session expired. Please sign in again.', 401);
       }
+      req.auth.email = patient.email || req.auth.email;
+      req.auth.mobileNumber = patient.mobileNumber || req.auth.mobileNumber;
     }
 
     next();

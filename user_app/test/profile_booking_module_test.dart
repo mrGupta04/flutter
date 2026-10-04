@@ -49,6 +49,25 @@ void main() {
     expect(completed.isTerminal, isTrue);
   });
 
+  test('pending bookings stay in current pending section', () {
+    final pending = _booking(status: 'pending', upcoming: false);
+    final view = BookingStatusView.of(pending);
+    expect(pending.isActiveOrUpcoming, isTrue);
+    expect(view.bucket, BookingListBucket.pending);
+  });
+
+  test('report ready bookings stay in history', () {
+    final report = _booking(
+      status: 'report_ready',
+      serviceType: 'lab',
+      consultationType: 'lab',
+      upcoming: true,
+    );
+    final view = BookingStatusView.of(report);
+    expect(report.isActiveOrUpcoming, isFalse);
+    expect(view.bucket, BookingListBucket.history);
+  });
+
   test('history pagination json parses hasMore', () {
     final res = PatientBookingsResponse.fromJson({
       'bookings': [
@@ -87,4 +106,71 @@ void main() {
     });
     expect(n.category, 'payment');
   });
+
+  test('groupBookingsByCategory places bookings in relevant sections', () {
+    final doctorBooking = _booking(
+      status: 'confirmed',
+      serviceType: 'doctor',
+      consultationType: 'online_consult',
+    );
+    final nurseBooking = _booking(
+      status: 'confirmed',
+      serviceType: 'nurse',
+      consultationType: 'nurse_visit',
+    );
+    final labBooking = _booking(
+      status: 'confirmed',
+      serviceType: 'lab',
+      consultationType: 'lab',
+    );
+    final ambulanceBooking = _booking(
+      status: 'confirmed',
+      serviceType: 'ambulance',
+      consultationType: 'ambulance',
+    );
+
+    final grouped = groupBookingsByCategory([
+      doctorBooking,
+      nurseBooking,
+      labBooking,
+      ambulanceBooking,
+    ]);
+
+    expect(grouped[PatientBookingCategory.onlineConsult], contains(doctorBooking));
+    expect(grouped[PatientBookingCategory.nurse], contains(nurseBooking));
+    expect(grouped[PatientBookingCategory.lab], contains(labBooking));
+    expect(grouped[PatientBookingCategory.ambulance], contains(ambulanceBooking));
+    expect(grouped[PatientBookingCategory.scan], isEmpty);
+  });
+
+  test('PatientBookingModel resolves contextual defaults for all services', () {
+    final lab = PatientBookingModel.fromJson({
+      'id': 'lab-1',
+      'serviceType': 'lab',
+      'status': 'confirmed',
+    });
+    expect(lab.doctorName, 'Diagnostic Lab');
+    expect(lab.typeLabel, 'Lab visit');
+    expect(lab.category, PatientBookingCategory.lab);
+
+    final ambulance = PatientBookingModel.fromJson({
+      'id': 'amb-1',
+      'serviceType': 'ambulance',
+      'isEmergency': true,
+      'status': 'confirmed',
+    });
+    expect(ambulance.doctorName, 'Ambulance Service');
+    expect(ambulance.typeLabel, 'Emergency ambulance');
+    expect(ambulance.category, PatientBookingCategory.ambulance);
+
+    final scan = PatientBookingModel.fromJson({
+      'id': 'scan-1',
+      'serviceType': 'scan',
+      'status': 'confirmed',
+    });
+    expect(scan.doctorName, 'Scan Centre');
+    expect(scan.typeLabel, 'Diagnostic scan');
+    expect(scan.category, PatientBookingCategory.scan);
+  });
 }
+

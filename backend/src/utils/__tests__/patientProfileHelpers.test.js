@@ -4,6 +4,7 @@ const {
   paginateMergedBookings,
   parseBookingListQuery,
   paymentFieldsForPatient,
+  isCurrentPatientBooking,
   isValidEmail,
   isValidIndianPincode,
   parseDateOfBirth,
@@ -63,6 +64,30 @@ describe('paginateMergedBookings', () => {
       ['a', 'd'],
     );
     assert.equal(result.pagination.hasMore, false);
+  });
+
+  it('uses workflow status when deciding current vs history', () => {
+    const mixed = [
+      { id: 'pending-old', status: 'pending', isUpcoming: false },
+      { id: 'report', status: 'report_ready', isUpcoming: true },
+      { id: 'ambulance', status: 'driver_en_route', isUpcoming: false },
+    ];
+
+    const current = paginateMergedBookings(mixed, {
+      scope: 'current',
+      limit: 20,
+    });
+    assert.deepEqual(
+      current.bookings.map((b) => b.id),
+      ['pending-old', 'ambulance'],
+    );
+    assert.equal(isCurrentPatientBooking(mixed[1]), false);
+
+    const history = paginateMergedBookings(mixed, {
+      scope: 'history',
+      limit: 20,
+    });
+    assert.deepEqual(history.bookings.map((b) => b.id), ['report']);
   });
 });
 

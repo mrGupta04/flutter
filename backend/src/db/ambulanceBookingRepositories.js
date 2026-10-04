@@ -278,7 +278,10 @@ async function listAmbulanceBookingsForPatient({
   }
 
   const docs = await AmbulanceBooking.find(filter).sort({ createdAt: -1 }).limit(200).lean();
-  return docs.map(toAmbulanceBooking);
+  const currentPatientId = String(patientId || '');
+  return docs
+    .filter((doc) => !doc.patientId || String(doc.patientId) === currentPatientId)
+    .map(toAmbulanceBooking);
 }
 
 async function listAllAmbulanceBookings({
@@ -489,9 +492,8 @@ async function updateAmbulanceLiveLocation({
 
 function toPatientBookingShape(booking) {
   const created = booking.createdAt ? new Date(booking.createdAt) : new Date();
-  const slotEnd = booking.scheduledAt
-    ? new Date(booking.scheduledAt)
-    : new Date(created.getTime() + 2 * 60 * 60 * 1000);
+  const slotStart = booking.scheduledAt ? new Date(booking.scheduledAt) : created;
+  const slotEnd = new Date(slotStart.getTime() + 2 * 60 * 60 * 1000);
   const activeStatuses = [
     'requested',
     'searching_ambulance',
@@ -517,7 +519,6 @@ function toPatientBookingShape(booking) {
     'en_route_to_destination',
     'arrived_at_destination',
   ];
-  const now = new Date();
   return {
     id: booking.id,
     doctorId: booking.ambulanceId,
@@ -531,7 +532,7 @@ function toPatientBookingShape(booking) {
     patientAddress: booking.pickupAddress,
     patientCity: booking.pickupCity,
     patientNotes: booking.notes,
-    slotStart: booking.scheduledAt || created,
+    slotStart,
     slotEnd,
     label: booking.pickupAddress,
     consultationFee: booking.fare?.total ?? null,
@@ -561,7 +562,7 @@ function toPatientBookingShape(booking) {
     createdAt: booking.createdAt,
     isUpcoming:
       liveStatuses.includes(booking.status) ||
-      (activeStatuses.includes(booking.status) && slotEnd >= now),
+      activeStatuses.includes(booking.status),
     timeline: booking.timeline,
   };
 }

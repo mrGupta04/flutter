@@ -77,7 +77,9 @@ class BookingStatusView {
     }
     if (progress == 'completed' ||
         status == 'completed' ||
-        status == 'trip_completed') {
+        status == 'trip_completed' ||
+        status == 'delivered' ||
+        status == 'collected') {
       return const BookingStatusView(
         label: 'Completed',
         tone: BookingStatusTone.completed,
@@ -115,9 +117,16 @@ class BookingStatusView {
     if (status == 'pending' ||
         status == 'requested' ||
         status == 'held' ||
-        status == 'searching_ambulance') {
+        status == 'searching_ambulance' ||
+        status == 'under_review' ||
+        status == 'emergency_requested' ||
+        status == 'response_received') {
       return BookingStatusView(
-        label: service == 'ambulance' ? 'Searching ambulance' : 'Pending',
+        label: service == 'ambulance'
+            ? 'Searching ambulance'
+            : service == 'blood_bank'
+                ? 'Blood request pending'
+                : 'Pending',
         tone: BookingStatusTone.pending,
         icon: Icons.schedule_rounded,
         bucket: BookingListBucket.pending,
@@ -131,9 +140,15 @@ class BookingStatusView {
         status == 'sample_collected' ||
         status == 'processing' ||
         status == 'in_progress' ||
+        status == 'ambulance_assigned' ||
+        status == 'driver_accepted' ||
         status == 'driver_en_route' ||
         status == 'patient_picked_up' ||
-        status == 'en_route_to_destination') {
+        status == 'en_route_to_destination' ||
+        (service == 'blood_bank' && status == 'accepted') ||
+        status == 'reserved' ||
+        status == 'blood_reserved' ||
+        status == 'ready') {
       return BookingStatusView(
         label: _inProgressLabel(booking),
         tone: BookingStatusTone.inProgress,
@@ -171,6 +186,14 @@ class BookingStatusView {
 
   static String _inProgressLabel(PatientBookingModel booking) {
     if (booking.serviceType == 'ambulance') return 'On the way';
+    if (booking.serviceType == 'blood_bank') {
+      if (booking.status == 'accepted') return 'Accepted';
+      if (booking.status == 'ready') return 'Ready';
+      if (booking.status == 'reserved' || booking.status == 'blood_reserved') {
+        return 'Blood reserved';
+      }
+      return 'In progress';
+    }
     if (booking.visitProgress == 'arrived') return 'Provider arrived';
     if (booking.visitProgress == 'visit_started') {
       return booking.isNurseVisit ? 'Visit in progress' : 'In progress';
@@ -187,6 +210,7 @@ class BookingStatusView {
   static String _confirmedLabel(PatientBookingModel booking) {
     if (booking.serviceType == 'lab') return 'Lab confirmed';
     if (booking.serviceType == 'scan') return 'Scan confirmed';
+    if (booking.serviceType == 'blood_bank') return 'Blood request accepted';
     if (booking.isClinicVisit) return 'Clinic visit confirmed';
     return 'Confirmed';
   }

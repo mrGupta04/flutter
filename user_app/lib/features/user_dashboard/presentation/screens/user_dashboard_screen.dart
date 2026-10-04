@@ -23,6 +23,7 @@ import '../../../user_auth/provider/patient_auth_provider.dart';
 import '../../data/booking_status_config.dart';
 import '../../provider/patient_dashboard_provider.dart';
 import '../widgets/booking_status_badge.dart';
+import '../widgets/unified_booking_card.dart';
 
 class UserDashboardScreen extends ConsumerStatefulWidget {
   const UserDashboardScreen({super.key});
@@ -64,6 +65,9 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
     }
     if (!mounted) return;
     await ref.read(patientDashboardProvider.notifier).loadBookings();
+    if (mounted) {
+      ref.read(patientDashboardProvider.notifier).loadHistory(refresh: true);
+    }
   }
 
   @override
@@ -184,25 +188,51 @@ class _UserDashboardScreenState extends ConsumerState<UserDashboardScreen>
                             const SizedBox(height: 12),
                             _EmergencyBanner(booking: dash.emergencyActive!),
                           ],
-                          if (dash.nextUpcoming != null) ...[
-                            const SizedBox(height: 12),
-                            _UpcomingSummary(booking: dash.nextUpcoming),
-                          ],
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 14),
+                          _UserProfileBookingsSection(dash: dash),
+                          const SizedBox(height: 14),
                           _ProfileMenuList(
                             items: [
+                              _ProfileMenuItem(
+                                icon: Icons.calendar_month_rounded,
+                                label: 'My bookings',
+                                trailing: dash.upcomingBookings.isNotEmpty
+                                    ? Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '${dash.upcomingBookings.length}',
+                                          style: const TextStyle(
+                                            color: AppColors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                                onTap: () => context.push(
+                                  AppConstants.routeCurrentBookings,
+                                ),
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.history_rounded,
+                                label: 'Booking history',
+                                onTap: () => context.push(
+                                  AppConstants.routeBookingHistory,
+                                ),
+                              ),
                               _ProfileMenuItem(
                                 icon: Icons.account_balance_wallet_outlined,
                                 label: 'My wallet',
                                 onTap: () => context.push(
                                   AppConstants.routeUserRewards,
-                                ),
-                              ),
-                              _ProfileMenuItem(
-                                icon: Icons.inventory_2_outlined,
-                                label: 'My orders',
-                                onTap: () => context.push(
-                                  AppConstants.routeCurrentBookings,
                                 ),
                               ),
                               _ProfileMenuItem(
@@ -506,74 +536,350 @@ class _EmergencyBanner extends StatelessWidget {
   }
 }
 
-class _UpcomingSummary extends StatelessWidget {
-  const _UpcomingSummary({this.booking});
+class _UserProfileBookingsSection extends StatelessWidget {
+  const _UserProfileBookingsSection({
+    required this.dash,
+  });
 
-  final PatientBookingModel? booking;
+  final PatientDashboardState dash;
 
   @override
   Widget build(BuildContext context) {
-    if (booking == null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: AppDecorations.borderRadiusLg,
-          border: Border.all(color: AppColors.grey200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Upcoming', style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            Text(
-              'No upcoming appointments',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: () => context.go(AppConstants.routeUserHome),
-              child: const Text('Book a service'),
-            ),
-          ],
-        ),
-      );
-    }
+    final upcomingList = dash.upcomingBookings;
+    final activeCount = dash.activeBookings.length;
+    final upcomingConfirmedCount = dash.upcomingConfirmedBookings.length;
+    final pastCount = dash.stats.past > 0
+        ? dash.stats.past
+        : dash.historyBookings.length;
 
-    final item = booking!;
-    final when =
-        '${DateFormat('d MMM').format(item.slotStart.toLocal())} • ${DateFormat('h:mm a').format(item.slotStart.toLocal())}';
-    return Material(
-      color: AppColors.primaryLight,
-      borderRadius: AppDecorations.borderRadiusLg,
-      child: InkWell(
+    final grouped = groupBookingsByCategory(upcomingList);
+    final presentCategories = PatientBookingCategory.bookingSections
+        .where((c) => (grouped[c] ?? []).isNotEmpty)
+        .toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
         borderRadius: AppDecorations.borderRadiusLg,
-        onTap: () => context.push(
-          '${AppConstants.routeBookingDetails}?bookingId=${Uri.encodeComponent(item.id)}',
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+        border: Border.all(color: AppColors.grey200),
+        boxShadow: AppDecorations.softShadow(opacity: 0.04),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.calendar_month_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Upcoming', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
                     Text(
-                      item.doctorName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w800),
+                      'My Bookings',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    Text(when, style: AppTextStyles.bodySmall),
-                    const SizedBox(height: 6),
-                    BookingStatusBadge(status: BookingStatusView.of(item)),
+                    Text(
+                      upcomingList.isNotEmpty
+                          ? '${upcomingList.length} scheduled / in-progress'
+                          : 'Appointments & healthcare visits',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded),
+              TextButton(
+                onPressed: () =>
+                    context.push(AppConstants.routeCurrentBookings),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View all',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Booking Summary Counters
+          Row(
+            children: [
+              Expanded(
+                child: _BookingStatusCounterCard(
+                  title: 'Active',
+                  count: activeCount,
+                  color: activeCount > 0
+                      ? AppColors.error
+                      : AppColors.grey500,
+                  icon: Icons.flash_on_rounded,
+                  onTap: () =>
+                      context.push(AppConstants.routeCurrentBookings),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _BookingStatusCounterCard(
+                  title: 'Upcoming',
+                  count: upcomingConfirmedCount,
+                  color: upcomingConfirmedCount > 0
+                      ? AppColors.primary
+                      : AppColors.grey500,
+                  icon: Icons.event_rounded,
+                  onTap: () =>
+                      context.push(AppConstants.routeCurrentBookings),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _BookingStatusCounterCard(
+                  title: 'Completed',
+                  count: pastCount,
+                  color: pastCount > 0
+                      ? AppColors.success
+                      : AppColors.grey500,
+                  icon: Icons.check_circle_outline_rounded,
+                  onTap: () =>
+                      context.push(AppConstants.routeBookingHistory),
+                ),
+              ),
+            ],
+          ),
+
+          if (dash.isLoadingBookings && upcomingList.isEmpty) ...[
+            const SizedBox(height: 16),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ] else if (upcomingList.isEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.grey50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.grey200),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.event_available_outlined,
+                    size: 34,
+                    color: AppColors.grey400,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No active bookings',
+                    style: AppTextStyles.titleSmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Your active doctor visits, nurse appointments, lab tests, and care bookings will appear here.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                        ),
+                        onPressed: () =>
+                            context.push(AppConstants.routeFindSpecialists),
+                        icon: const Icon(Icons.person_search_rounded,
+                            size: 15),
+                        label: const Text('Find doctor',
+                            style: TextStyle(fontSize: 12)),
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                        ),
+                        onPressed: () => context.go(AppConstants.routeLabs),
+                        icon: const Icon(Icons.biotech_rounded, size: 15),
+                        label: const Text('Book lab test',
+                            style: TextStyle(fontSize: 12)),
+                      ),
+                      if (pastCount > 0)
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () => context
+                              .push(AppConstants.routeBookingHistory),
+                          child: const Text('View history',
+                              style: TextStyle(fontSize: 12)),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 14),
+            // Render bookings grouped under their relevant sections
+            for (final cat in presentCategories) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: cat.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(cat.icon, size: 14, color: cat.color),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      cat.sectionTitle,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.grey100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${grouped[cat]?.length ?? 0}',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              for (final booking in (grouped[cat] ??
+                  <PatientBookingModel>[])) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: UnifiedBookingCard(
+                    booking: booking,
+                    showCategoryTag: false,
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingStatusCounterCard extends StatelessWidget {
+  const _BookingStatusCounterCard({
+    required this.title,
+    required this.count,
+    required this.color,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final int count;
+  final Color color;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 14, color: color),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$count',
+                    style: AppTextStyles.titleSmall.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+              ),
             ],
           ),
         ),
@@ -605,11 +911,13 @@ class _ProfileMenuItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.trailing,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -629,6 +937,15 @@ class _ProfileMenuItem extends StatelessWidget {
                   color: AppColors.textPrimary,
                 ),
               ),
+            ),
+            if (trailing != null) ...[
+              trailing!,
+              const SizedBox(width: 8),
+            ],
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.grey400,
+              size: 20,
             ),
           ],
         ),
